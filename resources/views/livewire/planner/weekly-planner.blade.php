@@ -320,7 +320,5 @@
         @endforeach
     </div>
 
-    <!-- Order Detail Drawer Modal -->
-    <livewire:orders.order-detail-modal />
-
 </div>
+
