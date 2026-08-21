@@ -1,33 +1,85 @@
 <div class="space-y-5">
     
     <!-- Top Header Bar (Sober Light Style) -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
         <div class="flex items-center gap-3 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-stone-100 border border-stone-200 flex items-center justify-center shrink-0">
-                <x-lucide-layout-dashboard class="w-4 h-4 text-zinc-700" />
+            <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <x-lucide-layout-dashboard class="w-4.5 h-4.5 text-stone-100" />
             </div>
             <div class="min-w-0">
-                <h2 class="text-sm font-semibold text-zinc-900 tracking-tight truncate">Centro de Control Operativo</h2>
-                <p class="text-xs text-zinc-500 truncate">
+                <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Centro de Control Operativo</h1>
+                <p class="text-xs text-zinc-500 truncate mt-0.5">
                     Respondiendo la pregunta clave: <span class="text-zinc-700 font-medium italic">¿Qué necesita atención hoy, por qué y quién es responsable?</span>
                 </p>
             </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
             <!-- Search -->
-            <div class="relative w-full sm:w-60">
+            <div class="relative flex-1 sm:flex-none w-full sm:w-60">
                 <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5 shrink-0" />
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar por empresa o tarea..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-8 pr-3 py-1 text-xs text-zinc-800 focus:border-stone-400 focus:outline-none w-full">
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar por empresa o tarea..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg pl-8 pr-3 py-1.5 h-8 text-xs text-zinc-800 focus:border-stone-400 focus:outline-none w-full">
             </div>
 
-            <!-- Designer Filter Dropdown -->
-            <select wire:model.live="selectedDesigner" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-700 focus:border-stone-400 focus:outline-none">
-                <option value="all">Todos los Diseñadores</option>
-                @foreach($designers as $designer)
-                    <option value="{{ $designer->id }}">{{ $designer->name }}</option>
-                @endforeach
-            </select>
+            <!-- Designer Filter Dropdown (Searchable) -->
+            <div class="relative flex-1 sm:flex-none" 
+                 x-data="{ 
+                     open: false,
+                     search: '',
+                     selectDesigner(val) {
+                         $wire.set('selectedDesigner', val);
+                         this.open = false;
+                     }
+                 }">
+                <button 
+                    type="button" 
+                    @click="open = !open" 
+                    @click.outside="open = false"
+                    class="w-full sm:w-48 bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-lg px-2.5 h-8 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
+                    <span class="truncate">
+                        @if($selectedDesigner === 'all')
+                            Diseñadores (Todos)
+                        @else
+                            {{ $designers->firstWhere('id', $selectedDesigner)?->name ?? 'Diseñadores (Todos)' }}
+                        @endif
+                    </span>
+                    <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
+                </button>
+
+                <div 
+                    x-show="open" 
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    class="absolute right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
+                        <input 
+                            type="text" 
+                            x-model="search" 
+                            placeholder="Buscar diseñador..." 
+                            class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
+                    </div>
+                    <div 
+                        @click="selectDesigner('all')" 
+                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>Diseñadores (Todos)</span>
+                        @if($selectedDesigner === 'all')
+                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        @endif
+                    </div>
+                    @foreach($designers as $designer)
+                        <div 
+                            x-show="!search || '{{ strtolower(addslashes($designer->name)) }}'.includes(search.toLowerCase())"
+                            @click="selectDesigner('{{ $designer->id }}')" 
+                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                            <span class="truncate">{{ $designer->name }}</span>
+                            @if((string)$selectedDesigner === (string)$designer->id)
+                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
 
@@ -39,183 +91,256 @@
         </div>
     @endif
 
-    <!-- Notion Light Summary Stat Cards Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-        <button wire:click="setActiveTab('today')" class="p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-1 {{ $activeTab === 'today' ? 'bg-white border-stone-400 shadow-2xs font-semibold' : 'bg-[#f7f7f5] border-[#e9e9e7] hover:bg-[#efefed]' }}">
-            <div class="flex items-center justify-between text-zinc-500 text-xs">
-                <span class="font-medium text-[11px]">Para Hoy</span>
-                <x-lucide-pin class="w-3.5 h-3.5 text-zinc-500" />
+    <!-- Top Section Filter Cards Grid: Single Horizontal Row for all 8 buttons -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
+        <!-- 1. PARA HOY -->
+        <button 
+            wire:click="setActiveTab('all')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ in_array($activeTab, ['all', 'today']) ? 'bg-amber-50/70 border-2 border-amber-400 ring-4 ring-amber-300/40 shadow-xs' : 'bg-white border-amber-200/60 hover:border-amber-300 hover:bg-amber-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-amber-900 truncate">Para Hoy</span>
+                <x-lucide-pin class="w-3.5 h-3.5 text-amber-600 shrink-0 ml-1" />
             </div>
-            <span class="text-base font-mono font-bold text-zinc-900">{{ $toDoTodayOrders->count() }}</span>
+            <span class="text-xl font-bold text-amber-950 font-mono leading-none">{{ $toDoTodayOrders->count() }}</span>
         </button>
 
-        <button wire:click="setActiveTab('overdue')" class="p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-1 {{ $activeTab === 'overdue' ? 'bg-white border-red-300 shadow-2xs font-semibold' : 'bg-[#f7f7f5] border-[#e9e9e7] hover:bg-[#efefed]' }}">
-            <div class="flex items-center justify-between text-zinc-500 text-xs">
-                <span class="font-medium text-[11px] text-red-700">Atrasadas</span>
-                <x-lucide-alert-octagon class="w-3.5 h-3.5 text-red-600" />
+        <!-- 2. ATRASADAS -->
+        <button 
+            wire:click="setActiveTab('overdue')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'overdue' ? 'bg-red-50/70 border-2 border-red-500 ring-4 ring-red-300/40 shadow-xs' : 'bg-white border-red-200/80 hover:border-red-300 hover:bg-red-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-red-700 truncate">Atrasadas</span>
+                <x-lucide-alert-circle class="w-3.5 h-3.5 text-red-600 shrink-0 ml-1" />
             </div>
-            <span class="text-base font-mono font-bold text-red-700">{{ $overdueOrders->count() }}</span>
+            <span class="text-xl font-bold text-red-700 font-mono leading-none">{{ $overdueOrders->count() }}</span>
         </button>
 
-        <button wire:click="setActiveTab('camila')" class="p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-1 {{ $activeTab === 'camila' ? 'bg-white border-purple-300 shadow-2xs font-semibold' : 'bg-[#f7f7f5] border-[#e9e9e7] hover:bg-[#efefed]' }}">
-            <div class="flex items-center justify-between text-zinc-500 text-xs">
-                <span class="font-medium text-[11px]">Camila</span>
-                <x-lucide-user-check class="w-3.5 h-3.5 text-purple-600" />
+        <!-- 3. CAMILA -->
+        <button 
+            wire:click="setActiveTab('camila')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'camila' ? 'bg-purple-50/70 border-2 border-purple-500 ring-4 ring-purple-300/40 shadow-xs' : 'bg-white border-purple-200/80 hover:border-purple-300 hover:bg-purple-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-purple-900 truncate">Camila</span>
+                <x-lucide-user-check class="w-3.5 h-3.5 text-purple-600 shrink-0 ml-1" />
             </div>
-            <span class="text-base font-mono font-bold text-purple-800">{{ $camilaFollowUpTasks->count() }}</span>
+            <span class="text-xl font-bold text-purple-900 font-mono leading-none">{{ $camilaFollowUpTasks->count() }}</span>
         </button>
 
-        <button wire:click="setActiveTab('client')" class="p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-1 {{ $activeTab === 'client' ? 'bg-white border-sky-300 shadow-2xs font-semibold' : 'bg-[#f7f7f5] border-[#e9e9e7] hover:bg-[#efefed]' }}">
-            <div class="flex items-center justify-between text-zinc-500 text-xs">
-                <span class="font-medium text-[11px]">Cliente</span>
-                <x-lucide-mail class="w-3.5 h-3.5 text-sky-600" />
+        <!-- 4. RESOLVER -->
+        <button 
+            wire:click="setActiveTab('resolver')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'resolver' ? 'bg-orange-50/70 border-2 border-orange-500 ring-4 ring-orange-300/40 shadow-xs' : 'bg-white border-orange-200/80 hover:border-orange-300 hover:bg-orange-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-orange-900 truncate">Resolver</span>
+                <x-lucide-shield-alert class="w-3.5 h-3.5 text-orange-600 shrink-0 ml-1" />
             </div>
-            <span class="text-base font-mono font-bold text-sky-800">{{ $clientFollowUpTasks->count() }}</span>
+            <span class="text-xl font-bold text-orange-700 font-mono leading-none">{{ $resolverOrders->count() }}</span>
         </button>
 
-        <button wire:click="setActiveTab('alta')" class="p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-1 {{ $activeTab === 'alta' ? 'bg-white border-emerald-300 shadow-2xs font-semibold' : 'bg-[#f7f7f5] border-[#e9e9e7] hover:bg-[#efefed]' }}">
-            <div class="flex items-center justify-between text-zinc-500 text-xs">
-                <span class="font-medium text-[11px]">Listo ALTA</span>
-                <x-lucide-rocket class="w-3.5 h-3.5 text-emerald-600" />
+        <!-- 5. LISTO ALTA -->
+        <button 
+            wire:click="setActiveTab('alta')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'alta' ? 'bg-emerald-50/70 border-2 border-emerald-500 ring-4 ring-emerald-300/40 shadow-xs' : 'bg-white border-emerald-200/80 hover:border-emerald-300 hover:bg-emerald-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-emerald-800 truncate">Listo ALTA</span>
+                <x-lucide-rocket class="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />
             </div>
-            <span class="text-base font-mono font-bold text-emerald-800">{{ $readyForAltaOrders->count() }}</span>
+            <span class="text-xl font-bold text-emerald-800 font-mono leading-none">{{ $readyForAltaOrders->count() }}</span>
         </button>
 
-        <button wire:click="setActiveTab('resolver')" class="p-3 rounded-xl border text-left transition flex flex-col justify-between space-y-1 {{ $activeTab === 'resolver' ? 'bg-white border-rose-300 shadow-2xs font-semibold' : 'bg-[#f7f7f5] border-[#e9e9e7] hover:bg-[#efefed]' }}">
-            <div class="flex items-center justify-between text-zinc-500 text-xs">
-                <span class="font-medium text-[11px] text-rose-700">Resolver</span>
-                <x-lucide-shield-alert class="w-3.5 h-3.5 text-rose-600" />
+        <!-- 6. PRONÓSTICO ALTA -->
+        <button 
+            wire:click="setActiveTab('pronostico')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'pronostico' ? 'bg-indigo-50/70 border-2 border-indigo-500 ring-4 ring-indigo-300/40 shadow-xs' : 'bg-white border-indigo-200/80 hover:border-indigo-300 hover:bg-indigo-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-indigo-900 truncate">Pronóstico</span>
+                <x-lucide-trending-up class="w-3.5 h-3.5 text-indigo-600 shrink-0 ml-1" />
             </div>
-            <span class="text-base font-mono font-bold text-rose-700">{{ $resolverOrders->count() }}</span>
+            <span class="text-xl font-bold text-indigo-900 font-mono leading-none">{{ $pronosticoAltaOrders->count() }}</span>
+        </button>
+
+        <!-- 7. NUEVAS TRELLO -->
+        <button 
+            wire:click="setActiveTab('new_orders')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'new_orders' ? 'bg-sky-50/70 border-2 border-sky-500 ring-4 ring-sky-300/40 shadow-xs' : 'bg-white border-sky-200/80 hover:border-sky-300 hover:bg-sky-50/30' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-sky-900 truncate">Nuevas</span>
+                <x-lucide-sparkles class="w-3.5 h-3.5 text-sky-600 animate-pulse shrink-0 ml-1" />
+            </div>
+            <span class="text-xl font-bold text-sky-900 font-mono leading-none">{{ $newTrelloOrders->count() }}</span>
+        </button>
+
+        <!-- 8. CLIENTE -->
+        <button 
+            wire:click="setActiveTab('client')" 
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'client' ? 'bg-sky-50/70 border-2 border-sky-400 ring-4 ring-sky-300/40 shadow-xs' : 'bg-white border-stone-200 hover:border-sky-300 hover:bg-stone-50' }}">
+            <div class="flex items-center justify-between text-xs min-w-0">
+                <span class="font-bold text-xs text-sky-900 truncate">Cliente</span>
+                <x-lucide-mail class="w-3.5 h-3.5 text-sky-600 shrink-0 ml-1" />
+            </div>
+            <span class="text-xl font-bold text-sky-900 font-mono leading-none">{{ $clientFollowUpTasks->count() }}</span>
         </button>
     </div>
 
-    <!-- Notion Light Database Tabs Bar -->
-    <div class="flex items-center gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs">
-        <button wire:click="setActiveTab('today')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $activeTab === 'today' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-pin class="w-3.5 h-3.5 text-zinc-500" />
-            <span>Trabajo Para Hoy ({{ $toDoTodayOrders->count() }})</span>
-        </button>
+    <!-- Main Content Area Divided into 4 Core Sections: Para Hoy, Atrasadas, Camila, Resolver -->
+    @if(in_array($activeTab, ['all', 'today', 'overdue', 'camila', 'resolver']))
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            
+            <!-- 1. SECTION: PARA HOY -->
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2.5">
+                        <h3 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
+                            <x-lucide-pin class="w-4 h-4 text-amber-600" /> Trabajo Programado Para Hoy ({{ $toDoTodayOrders->count() }})
+                        </h3>
+                        <span class="text-[10px] text-zinc-400 font-mono">Checkbox = Completar</span>
+                    </div>
 
-        <button wire:click="setActiveTab('overdue')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $activeTab === 'overdue' ? 'bg-white text-red-800 border border-red-200 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-alert-octagon class="w-3.5 h-3.5 text-red-600" />
-            <span>Atrasadas / Overdue ({{ $overdueOrders->count() }})</span>
-        </button>
+                    @if($toDoTodayOrders->isEmpty())
+                        <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes programadas en 'TO DO TODAY' hoy.</p>
+                    @else
+                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($toDoTodayOrders as $order)
+                                <div class="rounded-xl p-3 flex items-center justify-between gap-3 transition min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-[#e9e9e7] hover:border-stone-400' }}">
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <button 
+                                            wire:click="markDoneToday({{ $order->id }})" 
+                                            type="button"
+                                            class="w-4.5 h-4.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                            title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
+                                            <x-lucide-check class="w-3 h-3 stroke-[3]" />
+                                        </button>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                @if($order->substatus)
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                        {{ $order->substatus->value }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        </div>
+                                    </div>
 
-        <button wire:click="setActiveTab('camila')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $activeTab === 'camila' ? 'bg-white text-purple-800 border border-purple-200 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-user-check class="w-3.5 h-3.5 text-purple-600" />
-            <span>Revisiones Camila ({{ $camilaFollowUpTasks->count() }})</span>
-        </button>
-
-        <button wire:click="setActiveTab('client')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $activeTab === 'client' ? 'bg-white text-sky-800 border border-sky-200 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-mail class="w-3.5 h-3.5 text-sky-600" />
-            <span>Follow-ups Cliente ({{ $clientFollowUpTasks->count() }})</span>
-        </button>
-
-        <button wire:click="setActiveTab('alta')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $activeTab === 'alta' ? 'bg-white text-emerald-800 border border-emerald-200 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-rocket class="w-3.5 h-3.5 text-emerald-600" />
-            <span>Listas para ALTA ({{ $readyForAltaOrders->count() }})</span>
-        </button>
-
-        <button wire:click="setActiveTab('resolver')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $activeTab === 'resolver' ? 'bg-white text-rose-800 border border-rose-200 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-shield-alert class="w-3.5 h-3.5 text-rose-600" />
-            <span>Vista Resolver ({{ $resolverOrders->count() }})</span>
-        </button>
-    </div>
-
-    <!-- Active Tab Panel Content -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 min-h-[400px] shadow-2xs">
-        
-        <!-- TAB 1: TO DO TODAY -->
-        @if($activeTab === 'today')
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                    <h3 class="font-semibold text-xs text-zinc-700 uppercase tracking-wider flex items-center gap-2">
-                        <x-lucide-pin class="w-4 h-4 text-zinc-500" /> Trabajo Programado Para Hoy ({{ $toDoTodayOrders->count() }})
-                    </h3>
-                    <span class="text-[11px] text-zinc-400 font-mono">Haz clic en el checkbox al completar</span>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="px-2 py-0.5 rounded bg-stone-100 text-[10px] font-medium text-zinc-600 border border-stone-200 whitespace-nowrap">
+                                            {{ $order->designer?->name }}
+                                        </span>
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
+                                            <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
+                                            <span>Detalle</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
+            </div>
 
-                @if($toDoTodayOrders->isEmpty())
-                    <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes programadas en 'TO DO TODAY' hoy.</p>
-                @else
-                    <div class="space-y-2 max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin">
-                        @foreach($toDoTodayOrders as $order)
-                            <div class="bg-[#fcfcfb] border border-[#e9e9e7] rounded-lg p-3 flex items-center justify-between gap-3 hover:border-stone-400 transition min-w-0">
-                                <div class="flex items-center gap-3 min-w-0 flex-1">
-                                    <button wire:click="markDoneToday({{ $order->id }})" class="w-4 h-4 rounded border flex items-center justify-center transition shrink-0 {{ $order->done_today ? 'bg-stone-800 border-stone-800 text-white font-bold' : 'border-stone-300 hover:border-stone-500 text-transparent' }}">
-                                        <x-lucide-check class="w-3 h-3" />
-                                    </button>
+            <!-- 2. SECTION: ATRASADAS -->
+            <div class="bg-white border border-red-200/80 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-red-100 pb-2.5">
+                        <h3 class="font-bold text-xs text-red-700 uppercase tracking-wider flex items-center gap-2">
+                            <x-lucide-alert-circle class="w-4 h-4 text-red-600" /> Órdenes Atrasadas ({{ $overdueOrders->count() }})
+                        </h3>
+                        <span class="text-[10px] text-red-700 font-semibold bg-red-50 px-2 py-0.5 rounded border border-red-200">Overdue</span>
+                    </div>
+
+                    @if($overdueOrders->isEmpty())
+                        <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes atrasadas en este momento.</p>
+                    @else
+                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($overdueOrders as $order)
+                                <div class="rounded-xl p-3 flex items-center justify-between gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-red-50/30 border border-red-200 hover:border-red-300' }}">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <h4 class="font-medium text-xs text-zinc-900 truncate {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                            @if($order->substatus)
-                                                <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
-                                                    {{ $order->substatus->value }}
-                                                </span>
-                                            @endif
+                                            <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            <span class="px-1.5 py-0.2 rounded bg-red-100 text-red-800 text-[9px] font-mono font-bold shrink-0">
+                                                {{ $order->current_due_date ? $order->current_due_date->format('d M') : 'VENCIDO' }}
+                                            </span>
                                         </div>
-                                        <p class="text-[11px] text-zinc-500 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-red-100 border border-red-200 text-[10px] font-medium text-red-800 transition flex items-center gap-1">
+                                            <x-lucide-panel-right class="w-3 h-3" />
+                                            <span>Detalle</span>
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div class="flex items-center gap-2 shrink-0">
-                                    <span class="px-2 py-0.5 rounded bg-stone-100 text-[10px] font-medium text-zinc-600 border border-stone-200 whitespace-nowrap">
-                                        {{ $order->designer?->name }}
-                                    </span>
-                                    <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
-                                        <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                        <span>Detalle</span>
-                                    </button>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-        @endif
-
-        <!-- TAB 2: OVERDUE -->
-        @if($activeTab === 'overdue')
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                    <h3 class="font-semibold text-xs text-red-700 uppercase tracking-wider flex items-center gap-2">
-                        <x-lucide-alert-octagon class="w-4 h-4 text-red-600" /> Órdenes Atrasadas / Overdue ({{ $overdueOrders->count() }})
-                    </h3>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
+            </div>
 
-                @if($overdueOrders->isEmpty())
-                    <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes atrasadas en este momento.</p>
-                @else
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                        @foreach($overdueOrders as $order)
-                            <div class="bg-[#fcfcfb] border border-red-200 rounded-xl p-3.5 space-y-2.5 shadow-2xs min-w-0">
-                                <div class="flex items-start justify-between gap-2 min-w-0">
+            <!-- 3. SECTION: CAMILA -->
+            <div class="bg-white border border-purple-200/80 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-purple-100 pb-2.5">
+                        <h3 class="font-bold text-xs text-purple-900 uppercase tracking-wider flex items-center gap-2">
+                            <x-lucide-user-check class="w-4 h-4 text-purple-600" /> Revisiones Camila ({{ $camilaFollowUpTasks->count() }})
+                        </h3>
+                        <span class="text-[10px] text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">Seguimiento</span>
+                    </div>
+
+                    @if($camilaFollowUpTasks->isEmpty())
+                        <p class="text-xs text-zinc-400 text-center py-12">No hay tareas o revisiones de Camila pendientes.</p>
+                    @else
+                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($camilaFollowUpTasks as $task)
+                                <div class="bg-purple-50/40 border border-purple-200 rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-purple-300 transition">
                                     <div class="min-w-0 flex-1">
-                                        <span class="px-2 py-0.5 rounded bg-red-50 text-red-700 text-[9px] font-bold uppercase tracking-wider border border-red-200">
-                                            {{ $order->substatus ? $order->substatus->value : 'OVERDUE' }}
-                                        </span>
-                                        <h4 class="font-medium text-xs text-zinc-900 mt-1 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                        <p class="text-[11px] text-zinc-500 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <span class="font-bold text-purple-950 block text-xs truncate">{{ $task->title }}</span>
+                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
                                     </div>
-                                    <span class="px-2 py-0.5 rounded bg-stone-100 text-[10px] font-medium text-zinc-600 border border-stone-200 shrink-0 whitespace-nowrap">
-                                        {{ $order->designer?->name ?? 'Sin Asignar' }}
-                                    </span>
-                                </div>
-
-                                <div class="text-[11px] bg-stone-50 p-2.5 rounded-lg border border-stone-200 space-y-1">
-                                    <div class="flex justify-between text-zinc-600">
-                                        <span>Vencimiento:</span>
-                                        <span class="font-mono text-red-600 font-bold">{{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : 'N/A' }}</span>
-                                    </div>
-                                    <div class="flex justify-between text-zinc-600">
-                                        <span>Lista Actual:</span>
-                                        <span class="font-medium text-zinc-800 truncate ml-2">{{ $order->core_status->label() }}</span>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        @if($task->order)
+                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-purple-100 border border-purple-200 text-[10px] font-medium text-purple-800 transition flex items-center gap-1">
+                                                <x-lucide-panel-right class="w-3 h-3" />
+                                                <span>Orden</span>
+                                            </button>
+                                        @endif
+                                        <button wire:click="completeTask({{ $task->id }})" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition shadow-2xs cursor-pointer">
+                                            Completar ✓
+                                        </button>
                                     </div>
                                 </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            </div>
 
-                                <div class="pt-1 flex items-center justify-between gap-2 min-w-0">
-                                    <span class="text-[10px] text-red-700 font-medium italic truncate">Acción: Enviar Correo de Atraso</span>
+            <!-- 4. SECTION: RESOLVER -->
+            <div class="bg-white border border-orange-200/80 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between border-b border-orange-100 pb-2.5">
+                        <h3 class="font-bold text-xs text-orange-800 uppercase tracking-wider flex items-center gap-2">
+                            <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> Vista Resolver ({{ $resolverOrders->count() }})
+                        </h3>
+                        <span class="text-[10px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Bloqueos</span>
+                    </div>
+
+                    @if($resolverOrders->isEmpty())
+                        <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes bloqueadas o pendientes de resolución.</p>
+                    @else
+                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($resolverOrders as $order)
+                                <div class="rounded-xl p-3 flex items-center justify-between gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-orange-200' }}">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-50 text-orange-800 border border-orange-200 shrink-0 whitespace-nowrap">
+                                                {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
+                                            </span>
+                                        </div>
+                                        <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                    </div>
+
                                     <div class="shrink-0">
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
                                             <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
@@ -223,141 +348,225 @@
                                         </button>
                                     </div>
                                 </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-        @endif
-
-        <!-- TAB 3: CAMILA -->
-        @if($activeTab === 'camila')
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                    <h3 class="font-semibold text-xs text-purple-800 uppercase tracking-wider flex items-center gap-2">
-                        <x-lucide-user-check class="w-4 h-4 text-purple-600" /> Revisiones con Camila Pendientes ({{ $camilaFollowUpTasks->count() }})
-                    </h3>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
-
-                @if($camilaFollowUpTasks->isEmpty())
-                    <p class="text-xs text-zinc-400 text-center py-12">No hay tareas de seguimiento con Camila pendientes.</p>
-                @else
-                    <div class="space-y-2">
-                        @foreach($camilaFollowUpTasks as $task)
-                            <div class="bg-[#fcfcfb] border border-[#e9e9e7] rounded-lg p-3 flex items-center justify-between text-xs gap-3 min-w-0">
-                                <div class="min-w-0 flex-1">
-                                    <span class="font-medium text-purple-900 block text-xs truncate">{{ $task->title }}</span>
-                                    <span class="text-zinc-500 text-[11px] truncate block">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
-                                </div>
-                                <button wire:click="completeTask({{ $task->id }})" class="px-3 py-1 rounded bg-purple-50 text-purple-700 font-medium hover:bg-purple-100 text-xs border border-purple-200 shrink-0">
-                                    Completar ✓
-                                </button>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
             </div>
-        @endif
 
-        <!-- TAB 4: CLIENT -->
-        @if($activeTab === 'client')
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                    <h3 class="font-semibold text-xs text-sky-800 uppercase tracking-wider flex items-center gap-2">
-                        <x-lucide-mail class="w-4 h-4 text-sky-600" /> Follow-ups Cliente ({{ $clientFollowUpTasks->count() }})
-                    </h3>
-                </div>
+        </div>
+    @endif
 
-                @if($clientFollowUpTasks->isEmpty())
-                    <p class="text-xs text-zinc-400 text-center py-12">No hay tareas de seguimiento con cliente pendientes.</p>
-                @else
-                    <div class="space-y-2">
-                        @foreach($clientFollowUpTasks as $task)
-                            <div class="bg-[#fcfcfb] border border-[#e9e9e7] rounded-lg p-3 flex items-center justify-between text-xs gap-3 min-w-0">
-                                <div class="min-w-0 flex-1">
-                                    <span class="font-medium text-sky-900 block text-xs truncate">{{ $task->title }}</span>
-                                    <span class="text-zinc-500 text-[11px] truncate block">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
-                                </div>
-                                <button wire:click="completeTask({{ $task->id }})" class="px-3 py-1 rounded bg-sky-50 text-sky-700 font-medium hover:bg-sky-100 text-xs border border-sky-200 shrink-0">
-                                    Completar ✓
-                                </button>
-                            </div>
-                        @endforeach
+    <!-- Single Secondary Section Display when Secondary Filter is clicked -->
+    @if(in_array($activeTab, ['alta', 'pronostico', 'new_orders', 'client']))
+        <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 min-h-[380px] shadow-2xs">
+            <!-- SECTION 5: ALTA -->
+            @if($activeTab === 'alta')
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-emerald-100 pb-3">
+                        <h3 class="font-bold text-sm text-emerald-900 tracking-tight flex items-center gap-2">
+                            <x-lucide-rocket class="w-4.5 h-4.5 text-emerald-600" /> Órdenes Listas para ALTA ({{ $readyForAltaOrders->count() }})
+                        </h3>
+                        <span class="text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">Producción</span>
                     </div>
-                @endif
-            </div>
-        @endif
 
-        <!-- TAB 5: ALTA -->
-        @if($activeTab === 'alta')
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                    <h3 class="font-semibold text-xs text-emerald-800 uppercase tracking-wider flex items-center gap-2">
-                        <x-lucide-rocket class="w-4 h-4 text-emerald-600" /> Órdenes Listas para ALTA ({{ $readyForAltaOrders->count() }})
-                    </h3>
-                </div>
-
-                @if($readyForAltaOrders->isEmpty())
-                    <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes pendientes de poner en ALTA.</p>
-                @else
-                    <div class="space-y-2">
-                        @foreach($readyForAltaOrders as $order)
-                            <div class="bg-[#fcfcfb] border border-emerald-200 rounded-lg p-3 flex items-center justify-between text-xs gap-3 min-w-0">
-                                <div class="min-w-0 flex-1">
-                                    <span class="font-medium text-zinc-900 block text-xs truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
-                                    <span class="text-emerald-700 text-[11px] font-medium truncate block">Subestatus: PONER EN ALTA • Diseñador: {{ $order->designer?->name }}</span>
-                                </div>
-                                <div class="shrink-0">
-                                    <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
-                                        <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                        <span>Detalle</span>
-                                    </button>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-            </div>
-        @endif
-
-        <!-- TAB 6: RESOLVER -->
-        @if($activeTab === 'resolver')
-            <div class="space-y-3">
-                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                    <h3 class="font-semibold text-xs text-rose-700 uppercase tracking-wider flex items-center gap-2">
-                        <x-lucide-shield-alert class="w-4 h-4 text-rose-600" /> Órdenes Bloqueadas / Vista Resolver ({{ $resolverOrders->count() }})
-                    </h3>
-                </div>
-
-                @if($resolverOrders->isEmpty())
-                    <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes bloqueadas o pendientes de resolución.</p>
-                @else
-                    <div class="space-y-2">
-                        @foreach($resolverOrders as $order)
-                            <div class="bg-[#fcfcfb] border border-rose-200 rounded-lg p-3 flex items-center justify-between gap-3 min-w-0">
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <h4 class="font-medium text-xs text-zinc-900 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                        <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shrink-0 whitespace-nowrap">
-                                            {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
-                                        </span>
+                    @if($readyForAltaOrders->isEmpty())
+                        <div class="text-center py-20 text-zinc-400">
+                            <x-lucide-info class="w-10 h-10 mx-auto text-zinc-300 mb-2" />
+                            <p class="text-xs">No hay órdenes pendientes de poner en ALTA.</p>
+                        </div>
+                    @else
+                        <div class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($readyForAltaOrders as $order)
+                                <div class="rounded-xl p-3.5 flex items-center justify-between text-xs gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-emerald-200' }}">
+                                    <div class="min-w-0 flex-1">
+                                        <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 text-xs font-semibold border border-emerald-300 whitespace-nowrap">
+                                            Diseñador: {{ $order->designer?->name ?? 'Sin Asignar' }}
+                                        </span>
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2.5 py-1 rounded-md bg-stone-100 hover:bg-stone-200 border border-stone-200 text-xs font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
+                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-500" />
+                                            <span>Detalle</span>
+                                        </button>
+                                    </div>
                                 </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
 
-                                <div class="shrink-0">
-                                    <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
-                                        <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                        <span>Detalle</span>
-                                    </button>
-                                </div>
-                            </div>
-                        @endforeach
+            <!-- SECTION 6: PRONÓSTICO ALTA -->
+            @if($activeTab === 'pronostico')
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-indigo-100 pb-3">
+                        <div>
+                            <h3 class="font-bold text-sm text-indigo-900 tracking-tight flex items-center gap-2">
+                                <x-lucide-trending-up class="w-4.5 h-4.5 text-indigo-600" /> Pronóstico de ALTA ({{ $pronosticoAltaOrders->count() }})
+                            </h3>
+                            <p class="text-xs text-zinc-500 mt-0.5">Órdenes enviadas al cliente esta semana con pronóstico de aprobación próxima para entrar a producción ALTA.</p>
+                        </div>
                     </div>
-                @endif
-            </div>
-        @endif
 
-    </div>
+                    @if($pronosticoAltaOrders->isEmpty())
+                        <div class="text-center py-20 text-zinc-400">
+                            <x-lucide-trending-up class="w-10 h-10 mx-auto text-indigo-200 mb-2" />
+                            <p class="text-xs">No hay órdenes enviadas a cliente esta semana en el pronóstico.</p>
+                        </div>
+                    @else
+                        <div class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($pronosticoAltaOrders as $order)
+                                <div class="rounded-xl p-3.5 flex items-center justify-between gap-3 transition min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-indigo-100 hover:border-indigo-300' }}">
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <div class="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
+                                            <x-lucide-send class="w-4 h-4" />
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                @if($order->substatus)
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                        {{ $order->substatus->value }}
+                                                    </span>
+                                                @endif
+                                            </div>
+                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        </div>
+                                    </div>
 
+                                    <div class="flex items-center gap-3 shrink-0">
+                                        <div class="text-right text-[10px] hidden sm:block">
+                                            <span class="text-zinc-400 block uppercase font-medium">Enviado</span>
+                                            <span class="font-mono font-medium text-indigo-700">{{ $order->updated_at ? $order->updated_at->format('d M (H:i)') : 'N/A' }}</span>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-1 shrink-0">
+                                            @forelse($order->assigned_designers as $des)
+                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}">
+                                                    {{ $des->name }}
+                                                </span>
+                                            @empty
+                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-800 shrink-0">
+                                                    Sin Asignar
+                                                </span>
+                                            @endforelse
+                                        </div>
+
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2.5 py-1 rounded-md bg-stone-100 hover:bg-stone-200 border border-stone-200 text-xs font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
+                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-500" />
+                                            <span>Detalle</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <!-- SECTION 7: NEW ORDERS FROM TRELLO -->
+            @if($activeTab === 'new_orders')
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-sky-100 pb-3">
+                        <div>
+                            <h3 class="font-bold text-sm text-sky-900 tracking-tight flex items-center gap-2">
+                                <x-lucide-sparkles class="w-4.5 h-4.5 text-sky-600 animate-pulse" /> New Orders from Trello ({{ $newTrelloOrders->count() }})
+                            </h3>
+                            <p class="text-xs text-zinc-500 mt-0.5">Órdenes recién encontradas durante la sincronización con Trello que están pendientes en el Backlog.</p>
+                        </div>
+                    </div>
+
+                    @if($newTrelloOrders->isEmpty())
+                        <div class="text-center py-20 text-zinc-400">
+                            <x-lucide-check-circle-2 class="w-10 h-10 mx-auto text-sky-300 mb-2" />
+                            <p class="text-xs">No hay órdenes nuevas de Trello pendientes en el Backlog.</p>
+                        </div>
+                    @else
+                        <div class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($newTrelloOrders as $order)
+                                <div class="bg-gradient-to-r from-sky-50/70 via-white to-cyan-50/40 border border-sky-300 rounded-xl p-3.5 flex items-center justify-between gap-3 min-w-0 transition hover:border-sky-400">
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <div class="p-2 rounded-lg bg-sky-100 text-sky-700 shrink-0">
+                                            <x-lucide-sparkles class="w-4 h-4" />
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2 min-w-0 mb-0.5">
+                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <span class="px-1.5 py-0.2 rounded bg-sky-100 text-sky-800 text-[9px] font-bold uppercase tracking-wider border border-sky-300 shrink-0">
+                                                    NUEVA
+                                                </span>
+                                                @if($order->trello_card_id)
+                                                    <a href="https://trello.com/c/{{ $order->trello_card_id }}" target="_blank" class="text-[10px] text-sky-600 hover:underline flex items-center gap-0.5 shrink-0" title="Ver en Trello">
+                                                        <x-lucide-external-link class="w-3 h-3" />
+                                                        <span>Trello</span>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                            <p class="font-bold text-xs text-zinc-900 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button wire:click="moveToWorkspace({{ $order->id }})" class="px-3.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition flex items-center gap-1 shadow-2xs cursor-pointer">
+                                            <x-lucide-arrow-right class="w-3.5 h-3.5" />
+                                            <span>Mover a Workspace</span>
+                                        </button>
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2.5 py-1 rounded-md bg-stone-100 hover:bg-stone-200 border border-stone-200 text-xs font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
+                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-500" />
+                                            <span>Detalle</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <!-- SECTION 8: CLIENT -->
+            @if($activeTab === 'client')
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-sky-100 pb-3">
+                        <h3 class="font-bold text-sm text-sky-900 tracking-tight flex items-center gap-2">
+                            <x-lucide-mail class="w-4.5 h-4.5 text-sky-600" /> Follow-ups Cliente ({{ $clientFollowUpTasks->count() }})
+                        </h3>
+                        <span class="text-xs text-sky-700 font-semibold bg-sky-50 px-2.5 py-1 rounded-md border border-sky-200">Cliente</span>
+                    </div>
+
+                    @if($clientFollowUpTasks->isEmpty())
+                        <div class="text-center py-20 text-zinc-400">
+                            <x-lucide-check-circle-2 class="w-10 h-10 mx-auto text-sky-300 mb-2" />
+                            <p class="text-xs">No hay tareas de seguimiento con cliente pendientes.</p>
+                        </div>
+                    @else
+                        <div class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+                            @foreach($clientFollowUpTasks as $task)
+                                <div class="bg-sky-50/40 border border-sky-200 rounded-xl p-3.5 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-sky-300 transition">
+                                    <div class="min-w-0 flex-1">
+                                        <span class="font-bold text-sky-950 block text-xs truncate">{{ $task->title }}</span>
+                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        @if($task->order)
+                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2.5 py-1 rounded-md bg-white hover:bg-sky-100 border border-sky-200 text-xs font-medium text-sky-800 transition flex items-center gap-1">
+                                                <x-lucide-panel-right class="w-3.5 h-3.5" />
+                                                <span>Orden</span>
+                                            </button>
+                                        @endif
+                                        <button wire:click="completeTask({{ $task->id }})" class="px-3.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-2xs cursor-pointer">
+                                            Completar ✓
+                                        </button>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
+    @endif
+</div>
 </div>

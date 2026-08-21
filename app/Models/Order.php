@@ -9,11 +9,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Order extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
         'trello_card_id',
@@ -43,6 +45,7 @@ class Order extends Model
         'done_today',
         'customer_service_required',
         'in_workspace',
+        'is_new_from_trello',
     ];
 
     protected $casts = [
@@ -62,6 +65,7 @@ class Order extends Model
         'done_today' => 'boolean',
         'customer_service_required' => 'boolean',
         'in_workspace' => 'boolean',
+        'is_new_from_trello' => 'boolean',
         'client_revision_count' => 'integer',
         'internal_revision_count' => 'integer',
     ];
@@ -71,14 +75,71 @@ class Order extends Model
         return $query->where('in_workspace', true);
     }
 
+    public function scopeActiveInWorkspace(Builder $query): Builder
+    {
+        return $query->where('in_workspace', true)
+            ->where('core_status', '!=', CoreStatus::EN_PRODUCCION);
+    }
+
     public function scopeInBacklog(Builder $query): Builder
     {
         return $query->where('in_workspace', false);
     }
 
+    public function scopeNewFromTrello(Builder $query): Builder
+    {
+        return $query->where('is_new_from_trello', true);
+    }
+
     public function designer(): BelongsTo
     {
         return $this->belongsTo(Designer::class);
+    }
+
+    public function designers(): BelongsToMany
+    {
+        return $this->belongsToMany(Designer::class, 'designer_order')->withTimestamps();
+    }
+
+    public function getAssignedDesignersAttribute()
+    {
+        $designers = $this->designers;
+        if ($designers->isEmpty() && $this->designer) {
+            return collect([$this->designer]);
+        }
+
+        return $designers;
+    }
+
+    public function syncDesigners(array $designerIds): void
+    {
+        $cleanIds = array_values(array_unique(array_filter(array_map('intval', $designerIds))));
+
+        if (! empty($cleanIds)) {
+            // Check if any selected designer is an External Designer
+            $hasExternal = Designer::whereIn('id', $cleanIds)
+                ->get()
+                ->contains(fn ($d) => $d->color_type === 'yellow');
+
+            if ($hasExternal) {
+                // Find Euralíz designer ID
+                $euralizId = Designer::where('name', 'like', '%Eural%')
+                    ->orWhere('name', 'like', '%Bravo%')
+                    ->value('id') ?? 1;
+
+                if (! in_array($euralizId, $cleanIds)) {
+                    $cleanIds[] = $euralizId;
+                }
+            }
+        }
+
+        $this->designers()->sync($cleanIds);
+
+        // Keep primary designer_id updated for backwards compatibility
+        $primaryId = reset($cleanIds) ?: null;
+        if ($this->designer_id !== $primaryId) {
+            $this->updateQuietly(['designer_id' => $primaryId]);
+        }
     }
 
     public function relatedTasks(): HasMany
@@ -102,7 +163,7 @@ class Order extends Model
             return true;
         }
 
-        if ($this->current_due_date && ($this->current_due_date->isToday() || $this->current_due_date->isPast()) && !$this->isPaused() && $this->core_status !== CoreStatus::EN_PRODUCCION) {
+        if ($this->current_due_date && ($this->current_due_date->isToday() || $this->current_due_date->isPast()) && ! $this->isPaused() && $this->core_status !== CoreStatus::EN_PRODUCCION) {
             return true;
         }
 
@@ -119,8 +180,48 @@ class Order extends Model
         return $this->trello_card_id ? "https://trello.com/c/{$this->trello_card_id}" : null;
     }
 
+    public function scopePrioritizeUrgente(Builder $query): Builder
+    {
+        return $query->orderByRaw("CASE WHEN substatus = 'URGENTE' THEN 0 ELSE 1 END");
+    }
+
     public function isBlocked(): bool
     {
         return $this->substatus === Substatus::BLOQUEADA;
+    }
+
+    public function isUrgente(): bool
+    {
+        return $this->substatus === Substatus::URGENTE || (is_string($this->substatus) ? $this->substatus === 'URGENTE' : $this->substatus?->value === 'URGENTE');
+    }
+
+    public function getSubstatusInlineStyleAttribute(): string
+    {
+        $name = is_string($this->substatus) ? $this->substatus : $this->substatus?->value;
+        if (! $name) {
+            return 'background-color: #f3f4f6; color: #374151; border-color: #e5e7eb;';
+        }
+
+        $style = \App\Models\Substatus::getStyleFor($name);
+
+        return $style['inline'];
+    }
+
+    public function getDesignerBadgeStyle(): string
+    {
+        if (! $this->designer) {
+            return 'bg-amber-100 text-amber-800 border-amber-300 font-semibold';
+        }
+
+        return $this->designer->badge_style;
+    }
+
+    public function getDesignerDotColorClass(): string
+    {
+        if (! $this->designer) {
+            return 'bg-amber-400';
+        }
+
+        return $this->designer->dot_color_class;
     }
 }

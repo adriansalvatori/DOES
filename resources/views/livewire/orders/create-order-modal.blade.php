@@ -10,11 +10,20 @@
                 <div class="px-5 py-4 border-b border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
                         <div class="p-1.5 rounded-lg bg-stone-900 text-white shrink-0">
-                            <x-lucide-plus-circle class="w-4 h-4" />
+                            @if($isDuplicating)
+                                <x-lucide-copy class="w-4 h-4 text-indigo-300" />
+                            @else
+                                <x-lucide-plus-circle class="w-4 h-4" />
+                            @endif
                         </div>
                         <div>
-                            <h3 class="text-sm font-semibold text-zinc-900 tracking-tight">Crear Nueva Orden</h3>
-                            <p class="text-[11px] text-zinc-500">Añade una nueva orden directamente al flujo de trabajo activo.</p>
+                            @if($isDuplicating)
+                                <h3 class="text-sm font-semibold text-zinc-900 tracking-tight">Duplicar Orden</h3>
+                                <p class="text-[11px] text-zinc-500">Modifica los datos para crear la nueva copia de la orden.</p>
+                            @else
+                                <h3 class="text-sm font-semibold text-zinc-900 tracking-tight">Crear Nueva Orden</h3>
+                                <p class="text-[11px] text-zinc-500">Añade una nueva orden directamente al flujo de trabajo activo.</p>
+                            @endif
                         </div>
                     </div>
                     <button wire:click="closeModal" class="p-1 text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 rounded-md transition">
@@ -25,37 +34,185 @@
                 <!-- Form Fields Container -->
                 <form wire:submit.prevent="save" class="p-5 space-y-4 text-xs">
                     
-                    <!-- Row 1: WO Number & Responsible Person -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <!-- Row 1: WO Number, Trello ID & Responsible Person -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
                             <label class="font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-hash class="w-3 h-3 text-zinc-400" />
-                                <span>Número de Orden (Opcional)</span>
+                                <span>WO (Opcional)</span>
                             </label>
                             <div class="flex rounded-md shadow-2xs">
-                                <span class="inline-flex items-center px-2.5 rounded-l-md border border-r-0 border-[#e9e9e7] bg-stone-100 text-zinc-600 font-mono font-bold text-xs select-none">
+                                <span class="inline-flex items-center px-2 rounded-l-md border border-r-0 border-[#e9e9e7] bg-stone-100 text-zinc-600 font-mono font-bold text-xs select-none">
                                     WO
                                 </span>
-                                <input type="text" wire:model="woNumber" placeholder="16350" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-r-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono font-semibold">
+                                <input type="text" wire:model="woNumber" placeholder="16350" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-r-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono font-semibold">
                             </div>
                         </div>
 
-                        <div>
+                        <div class="relative" 
+                             x-data="{ 
+                                 open: false,
+                                 selectCard(id) {
+                                     $wire.set('trelloCardId', id);
+                                     this.open = false;
+                                 }
+                             }">
+                            <label class="font-medium text-zinc-700 mb-1 flex items-center gap-1">
+                                <x-lucide-external-link class="w-3 h-3 text-blue-600" />
+                                <span>ID Tarjeta Trello</span>
+                            </label>
+
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    wire:model.live="trelloCardId" 
+                                    @focus="open = true"
+                                    @click.outside="open = false"
+                                    autocomplete="off"
+                                    placeholder="Ej. AbCdEf12 o buscar..." 
+                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono pr-7">
+
+                                <button 
+                                    type="button" 
+                                    @click="open = !open" 
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+                                    title="Ver tarjetas de Trello">
+                                    <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+
+                            <!-- Custom Searchable Dropdown Popup -->
+                            <div 
+                                x-show="open" 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-44 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                
+                                <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
+                                    Tarjetas Disponibles ({{ count($availableTrelloCards) }})
+                                </div>
+
+                                @forelse($availableTrelloCards as $tc)
+                                    <div 
+                                        x-show="!$wire.trelloCardId || '{{ strtolower(addslashes($tc->trello_card_id . ' ' . $tc->wo_number . ' ' . $tc->company_name . ' ' . $tc->task_name . ' ' . $tc->trello_title)) }}'.includes(($wire.trelloCardId || '').toLowerCase())"
+                                        @click="selectCard('{{ $tc->trello_card_id }}')" 
+                                        class="p-2 hover:bg-blue-50/70 cursor-pointer flex items-center justify-between gap-2 transition">
+                                        <div class="min-w-0">
+                                            <span class="font-bold text-zinc-900 block truncate text-[11px]">
+                                                {{ $tc->wo_number ? 'WO '.$tc->wo_number.' - ' : '' }}{{ $tc->company_name ?: 'Sin empresa' }}
+                                            </span>
+                                            <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name ?: $tc->trello_title }}</span>
+                                        </div>
+                                        <span class="font-mono text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
+                                            {{ substr($tc->trello_card_id, 0, 8) }}...
+                                        </span>
+                                    </div>
+                                @empty
+                                    <div class="p-3 text-center text-zinc-400 italic text-[11px]">No hay tarjetas disponibles.</div>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <!-- Responsible Person (Searchable Combobox) -->
+                        <div class="relative" 
+                             x-data="{ 
+                                 open: false,
+                                 selectResp(resp) {
+                                     $wire.set('responsiblePerson', resp);
+                                     this.open = false;
+                                 }
+                             }">
                             <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-user-check class="w-3 h-3 text-zinc-400" />
-                                <span>Persona Contacto / Responsable</span>
+                                <span>Responsable</span>
                             </label>
-                            <input type="text" wire:model="responsiblePerson" placeholder="Ej. AGUSTIN" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none">
+                            <div class="relative">
+                                <input 
+                                    type="text" 
+                                    wire:model.live="responsiblePerson" 
+                                    @focus="open = true"
+                                    @click.outside="open = false"
+                                    autocomplete="off"
+                                    placeholder="Ej. AGUSTIN o buscar..." 
+                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none pr-7">
+                                
+                                <button 
+                                    type="button" 
+                                    @click="open = !open" 
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5">
+                                    <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+
+                            <div 
+                                x-show="open" 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-40 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                @forelse($existingResponsibles as $resp)
+                                    <div 
+                                        x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                        @click="selectResp('{{ addslashes($resp) }}')" 
+                                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition">
+                                        {{ $resp }}
+                                    </div>
+                                @empty
+                                    <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo responsable...</div>
+                                @endforelse
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Row 2: Company Name (Required) -->
-                    <div>
+                    <!-- Row 2: Company Name (Required Searchable Combobox) -->
+                    <div class="relative" 
+                         x-data="{ 
+                             open: false,
+                             selectComp(comp) {
+                                 $wire.set('companyName', comp);
+                                 this.open = false;
+                             }
+                         }">
                         <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                             <x-lucide-building-2 class="w-3 h-3 text-zinc-400" />
                             <span>Nombre Empresa <span class="text-red-500">*</span></span>
                         </label>
-                        <input type="text" wire:model="companyName" placeholder="Ej. RESTAURANTE EL TACO LOCO" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-semibold">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                wire:model.live="companyName" 
+                                @focus="open = true"
+                                @click.outside="open = false"
+                                autocomplete="off"
+                                placeholder="Ej. RESTAURANTE EL TACO LOCO..." 
+                                class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-semibold pr-7">
+                            
+                            <button 
+                                type="button" 
+                                @click="open = !open" 
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5">
+                                <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        <div 
+                            x-show="open" 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-40 overflow-y-auto divide-y divide-stone-100 text-xs">
+                            @forelse($existingCompanies as $comp)
+                                <div 
+                                    x-show="!$wire.companyName || '{{ strtolower(addslashes($comp)) }}'.includes(($wire.companyName || '').toLowerCase())"
+                                    @click="selectComp('{{ addslashes($comp) }}')" 
+                                    class="p-2 hover:bg-stone-100 cursor-pointer font-bold text-zinc-900 transition">
+                                    {{ $comp }}
+                                </div>
+                            @empty
+                                <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo nombre de empresa...</div>
+                            @endforelse
+                        </div>
                         @error('companyName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
@@ -71,45 +228,123 @@
 
                     <!-- Row 4: Column / Status & Designer -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
+                        <div class="relative" 
+                             x-data="{ 
+                                 open: false,
+                                 selectStatus(val) {
+                                     $wire.set('coreStatus', val);
+                                     this.open = false;
+                                 }
+                             }">
                             <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-layers class="w-3 h-3 text-zinc-400" />
                                 <span>Lista / Estado Kanban</span>
                             </label>
-                            <select wire:model="coreStatus" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none">
+                            <div class="relative">
+                                <button 
+                                    type="button" 
+                                    @click="open = !open" 
+                                    @click.outside="open = false"
+                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] hover:border-stone-400 rounded-md px-3 py-1.5 text-zinc-800 focus:outline-none text-left flex items-center justify-between font-medium">
+                                    <span>{{ \App\Enums\CoreStatus::tryFrom($coreStatus)?->label() ?? 'Seleccionar estado...' }}</span>
+                                    <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
+                                </button>
+                            </div>
+
+                            <div 
+                                x-show="open" 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
                                 @foreach($coreStatuses as $status)
-                                    <option value="{{ $status->value }}">{{ $status->label() }}</option>
+                                    <div 
+                                        @click="selectStatus('{{ $status->value }}')" 
+                                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                                        <span>{{ $status->label() }}</span>
+                                        @if($coreStatus === $status->value)
+                                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                        @endif
+                                    </div>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
 
                         <div>
                             <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-user class="w-3 h-3 text-zinc-400" />
-                                <span>Diseñador Asignado</span>
+                                <span>Diseñadores Asignados</span>
                             </label>
-                            <select wire:model="designerId" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none">
-                                <option value="">Sin Asignar</option>
+                            <div class="flex flex-wrap items-center gap-1.5 p-2 bg-[#fbfbfa] border border-[#e9e9e7] rounded-md min-h-[38px]">
                                 @foreach($designers as $designer)
-                                    <option value="{{ $designer->id }}">{{ $designer->name }}</option>
+                                    @php $isAssigned = in_array((int)$designer->id, array_map('intval', $designerIds)); @endphp
+                                    <button 
+                                        type="button"
+                                        wire:click="toggleDesigner({{ $designer->id }})"
+                                        class="px-2 py-0.5 rounded text-[11px] font-semibold border transition flex items-center gap-1 cursor-pointer {{ $isAssigned ? $designer->badge_style : 'bg-white text-zinc-500 border-stone-200 hover:bg-stone-100' }}"
+                                    >
+                                        <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }}"></span>
+                                        <span>{{ $designer->name }}</span>
+                                        @if($isAssigned)
+                                            <x-lucide-check class="w-3 h-3 text-current stroke-[3]" />
+                                        @endif
+                                    </button>
                                 @endforeach
-                            </select>
+                            </div>
+                            <span class="text-[10px] text-zinc-400 block mt-1">* Si seleccionas Diseñador Externo, se agregará Euralíz automáticamente.</span>
                         </div>
                     </div>
 
                     <!-- Row 5: Substatus & Due Date -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
+                        <div class="relative" 
+                             x-data="{ 
+                                 open: false,
+                                 selectSub(val) {
+                                     $wire.set('substatus', val);
+                                     this.open = false;
+                                 }
+                             }">
                             <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-tag class="w-3 h-3 text-zinc-400" />
                                 <span>Condición / Subestado (Opcional)</span>
                             </label>
-                            <select wire:model="substatus" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none">
-                                <option value="">Ninguno</option>
+                            <div class="relative">
+                                <button 
+                                    type="button" 
+                                    @click="open = !open" 
+                                    @click.outside="open = false"
+                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] hover:border-stone-400 rounded-md px-3 py-1.5 text-zinc-800 focus:outline-none text-left flex items-center justify-between font-medium">
+                                    <span>{{ $substatus ? $substatus : 'Ninguno' }}</span>
+                                    <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
+                                </button>
+                            </div>
+
+                            <div 
+                                x-show="open" 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                <div 
+                                    @click="selectSub('')" 
+                                    class="p-2 hover:bg-stone-100 cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
+                                    <span>Ninguno</span>
+                                    @if(!$substatus)
+                                        <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                    @endif
+                                </div>
                                 @foreach($substatuses as $sub)
-                                    <option value="{{ $sub->value }}">{{ $sub->value }}</option>
+                                    <div 
+                                        @click="selectSub('{{ $sub->value }}')" 
+                                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                                        <span>{{ $sub->value }}</span>
+                                        @if($substatus === $sub->value)
+                                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                        @endif
+                                    </div>
                                 @endforeach
-                            </select>
+                            </div>
                         </div>
 
                         <div>
@@ -127,8 +362,13 @@
                             Cancelar
                         </button>
                         <button type="submit" class="px-4 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-medium shadow-2xs transition flex items-center gap-1.5">
-                            <x-lucide-plus class="w-3.5 h-3.5" />
-                            <span>Crear Orden</span>
+                            @if($isDuplicating)
+                                <x-lucide-copy class="w-3.5 h-3.5" />
+                                <span>Crear Copia</span>
+                            @else
+                                <x-lucide-plus class="w-3.5 h-3.5" />
+                                <span>Crear Orden</span>
+                            @endif
                         </button>
                     </div>
 

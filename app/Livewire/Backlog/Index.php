@@ -13,23 +13,62 @@ class Index extends Component
     use WithPagination;
 
     public $search = '';
+
     public $statusFilter = 'all';
+
     public $designerFilter = 'all';
+
+    public $companyFilter = 'all';
+
+    public $responsibleFilter = 'all';
+
     public $sortBy = 'trello_created_at_desc';
+
     public $perPage = 25;
+
     public $selectedOrders = [];
+
     public $selectAll = false;
 
-    public function updatingSearch() { $this->resetPage(); }
-    public function updatingStatusFilter() { $this->resetPage(); }
-    public function updatingDesignerFilter() { $this->resetPage(); }
-    public function updatingSortBy() { $this->resetPage(); }
-    public function updatingPerPage() { $this->resetPage(); }
+    public function updatingSearch()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingDesignerFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingCompanyFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingResponsibleFilter()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSortBy()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPerPage()
+    {
+        $this->resetPage();
+    }
 
     public function updatedSelectAll($value)
     {
         if ($value) {
-            $this->selectedOrders = $this->getFilteredQuery()->pluck('id')->map(fn($id) => (string)$id)->toArray();
+            $this->selectedOrders = $this->getFilteredQuery()->pluck('id')->map(fn ($id) => (string) $id)->toArray();
         } else {
             $this->selectedOrders = [];
         }
@@ -38,7 +77,10 @@ class Index extends Component
     public function addToWorkspace($orderId)
     {
         $order = Order::findOrFail($orderId);
-        $order->update(['in_workspace' => true]);
+        $order->update([
+            'in_workspace' => true,
+            'is_new_from_trello' => false,
+        ]);
 
         session()->flash('message', "Orden {$order->company_name} añadida al Workspace activo.");
     }
@@ -46,11 +88,15 @@ class Index extends Component
     public function addSelectedToWorkspace()
     {
         if (empty($this->selectedOrders)) {
-            session()->flash('warning', "Selecciona al menos una orden para añadir al Workspace.");
+            session()->flash('warning', 'Selecciona al menos una orden para añadir al Workspace.');
+
             return;
         }
 
-        $count = Order::whereIn('id', $this->selectedOrders)->update(['in_workspace' => true]);
+        $count = Order::whereIn('id', $this->selectedOrders)->update([
+            'in_workspace' => true,
+            'is_new_from_trello' => false,
+        ]);
         $this->selectedOrders = [];
         $this->selectAll = false;
 
@@ -59,7 +105,10 @@ class Index extends Component
 
     public function addAllFilteredToWorkspace()
     {
-        $count = $this->getFilteredQuery()->update(['in_workspace' => true]);
+        $count = $this->getFilteredQuery()->update([
+            'in_workspace' => true,
+            'is_new_from_trello' => false,
+        ]);
         $this->selectedOrders = [];
         $this->selectAll = false;
 
@@ -76,14 +125,14 @@ class Index extends Component
 
     protected function getFilteredQuery()
     {
-        $query = Order::inBacklog()->with(['designer']);
+        $query = Order::inBacklog()->prioritizeUrgente()->with(['designer', 'designers']);
 
-        if (!empty($this->search)) {
+        if (! empty($this->search)) {
             $query->where(function ($q) {
                 $q->where('company_name', 'like', "%{$this->search}%")
-                  ->orWhere('task_name', 'like', "%{$this->search}%")
-                  ->orWhere('wo_number', 'like', "%{$this->search}%")
-                  ->orWhere('responsible_person', 'like', "%{$this->search}%");
+                    ->orWhere('task_name', 'like', "%{$this->search}%")
+                    ->orWhere('wo_number', 'like', "%{$this->search}%")
+                    ->orWhere('responsible_person', 'like', "%{$this->search}%");
             });
         }
 
@@ -93,6 +142,14 @@ class Index extends Component
 
         if ($this->designerFilter !== 'all') {
             $query->where('designer_id', $this->designerFilter);
+        }
+
+        if ($this->companyFilter !== 'all') {
+            $query->where('company_name', $this->companyFilter);
+        }
+
+        if ($this->responsibleFilter !== 'all') {
+            $query->where('responsible_person', $this->responsibleFilter);
         }
 
         match ($this->sortBy) {
@@ -108,15 +165,29 @@ class Index extends Component
     public function render()
     {
         $orders = $this->getFilteredQuery()->paginate($this->perPage);
+        $newTrelloOrders = Order::inBacklog()->newFromTrello()->prioritizeUrgente()->with(['designer', 'designers'])->get();
         $backlogTotalCount = Order::inBacklog()->count();
         $activeWorkspaceCount = Order::inWorkspace()->count();
 
         return view('livewire.backlog.index', [
             'orders' => $orders,
+            'newTrelloOrders' => $newTrelloOrders,
             'backlogTotalCount' => $backlogTotalCount,
             'activeWorkspaceCount' => $activeWorkspaceCount,
             'designers' => Designer::where('active', true)->get(),
             'coreStatuses' => CoreStatus::cases(),
+            'existingCompanies' => Order::inBacklog()
+                ->whereNotNull('company_name')
+                ->where('company_name', '!=', '')
+                ->distinct()
+                ->orderBy('company_name')
+                ->pluck('company_name'),
+            'existingResponsibles' => Order::inBacklog()
+                ->whereNotNull('responsible_person')
+                ->where('responsible_person', '!=', '')
+                ->distinct()
+                ->orderBy('responsible_person')
+                ->pluck('responsible_person'),
         ])->layout('components.layouts.app', ['title' => 'Backlog de Órdenes - Kudos Design Ops']);
     }
 }

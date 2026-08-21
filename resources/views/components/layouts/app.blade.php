@@ -8,7 +8,7 @@
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -16,17 +16,21 @@
     
     <style>
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #fbfbfa;
             color: #252525;
         }
         code, pre, .font-mono {
-            font-family: 'JetBrains Mono', monospace;
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
     </style>
 </head>
 <body 
-    x-data="{ sidebarOpen: localStorage.getItem('sidebar_open') !== 'false' }"
+    x-data="{ 
+        sidebarOpen: localStorage.getItem('sidebar_open') !== 'false',
+        dashboardOpen: {{ (request()->is('/') || request()->is('analytics*')) ? 'true' : 'false' }},
+        configOpen: {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'true' : 'false' }} 
+    }"
     x-init="$watch('sidebarOpen', val => localStorage.setItem('sidebar_open', val))"
     class="h-full bg-[#fbfbfa] text-zinc-800 flex antialiased selection:bg-stone-200">
 
@@ -54,15 +58,74 @@
                 </button>
             </div>
 
-            <!-- Navigation Links (Notion Sidebar Item Style) -->
+            <!-- Operational Navigation Links (Notion Sidebar Item Style) -->
             <nav class="space-y-1 text-xs">
-                <a href="/" title="Dashboard Operativo" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('/') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-layout-dashboard class="w-4 h-4 text-zinc-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Dashboard</span>
-                </a>
+                <!-- Dashboard Item with Submenu Dropdown -->
+                <div class="relative" @click.outside="if (!sidebarOpen) dashboardOpen = false">
+                    <button 
+                        @click="dashboardOpen = !dashboardOpen" 
+                        title="Dashboard" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('/') || request()->is('analytics*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <x-lucide-layout-dashboard class="w-4 h-4 text-zinc-500 shrink-0" />
+                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">Dashboard</span>
+                        </div>
+                        <x-lucide-chevron-down 
+                            x-show="sidebarOpen" 
+                            class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
+                            x-bind:class="dashboardOpen ? 'rotate-180' : ''" />
+                    </button>
+
+                    <!-- Expanded Sub-menu when Sidebar is Open -->
+                    <div 
+                        x-show="dashboardOpen && sidebarOpen" 
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        class="mt-1 pl-6 space-y-1 text-xs">
+                        <a 
+                            href="/" 
+                            title="Centro de Control Operativo" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('/') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-activity class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Centro de Control</span>
+                        </a>
+                        <a 
+                            href="/analytics" 
+                            title="Analytics Dashboard" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('analytics*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-bar-chart-3 class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Analytics</span>
+                        </a>
+                    </div>
+
+                    <!-- Floating Popover Sub-menu when Sidebar is Collapsed -->
+                    <div 
+                        x-show="dashboardOpen && !sidebarOpen" 
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
+                        x-transition:enter-end="opacity-100 scale-100 translate-x-0"
+                        class="absolute left-14 top-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[180px] space-y-1 text-xs">
+                        <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">Dashboard</div>
+                        <a 
+                            href="/" 
+                            title="Centro de Control Operativo" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('/') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-activity class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Centro de Control</span>
+                        </a>
+                        <a 
+                            href="/analytics" 
+                            title="Analytics Dashboard" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('analytics*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-bar-chart-3 class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Analytics</span>
+                        </a>
+                    </div>
+                </div>
                 <a href="/backlog" title="Backlog de Órdenes" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Backlog (Órdenes)</span>
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Backlog</span>
                 </a>
                 <a href="/kanban" title="Kanban Board" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-kanban class="w-4 h-4 text-zinc-500 shrink-0" />
@@ -77,33 +140,102 @@
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">Tareas Vinculadas</span>
                 </a>
                 <a href="/resolver" title="Vista Resolver" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('resolver*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-alert-triangle class="w-4 h-4 text-rose-600 shrink-0" />
+                    <x-lucide-alert-triangle class="w-4 h-4 text-orange-600 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">Vista Resolver</span>
                 </a>
-                <a href="/trello-sync" title="Sincronización Trello" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('trello-sync*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-refresh-cw class="w-4 h-4 text-zinc-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Sincronización Trello</span>
+                <a href="/trash" title="Papelera de Reciclaje" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('trash*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-trash-2 class="w-4 h-4 text-red-500 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Papelera</span>
                 </a>
             </nav>
 
             <!-- Team Designers List -->
             <div class="pt-3 border-t border-[#e9e9e7] space-y-1.5">
                 <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2">Diseñadores</span>
-                <div class="space-y-1 text-[11px] text-zinc-600 font-medium px-2">
-                    <div class="flex items-center gap-2" title="Euralíz">
-                        <span class="w-2 h-2 rounded-full bg-indigo-400 shrink-0"></span>
+                <div class="space-y-1.5 text-[11px] text-zinc-600 font-medium px-2">
+                    <div class="flex items-center gap-2" title="Euralíz (Magenta)">
+                        <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100"></span>
                         <span x-show="sidebarOpen" x-transition.opacity class="truncate">Euralíz</span>
                     </div>
-                    <div class="flex items-center gap-2" title="Adrián">
-                        <span class="w-2 h-2 rounded-full bg-purple-400 shrink-0"></span>
+                    <div class="flex items-center gap-2" title="César (Cyan)">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100"></span>
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
+                    </div>
+                    <div class="flex items-center gap-2" title="Adrián (Verde)">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100"></span>
                         <span x-show="sidebarOpen" x-transition.opacity class="truncate">Adrián</span>
                     </div>
-                    <div class="flex items-center gap-2" title="César">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
+                    <div class="flex items-center gap-2" title="Diseñador Externo (Amarillo)">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100"></span>
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">Externo</span>
                     </div>
                 </div>
             </div>
+
+            <!-- Single Configuración Item with Context Dropdown Menu -->
+            <div class="pt-3 border-t border-[#e9e9e7] relative" @click.outside="if (!sidebarOpen) configOpen = false">
+                <button 
+                    @click="configOpen = !configOpen" 
+                    title="Configuración" 
+                    class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <x-lucide-settings class="w-4 h-4 text-zinc-500 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">Configuración</span>
+                    </div>
+                    <x-lucide-chevron-down 
+                        x-show="sidebarOpen" 
+                        class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
+                        x-bind:class="configOpen ? 'rotate-180' : ''" />
+                </button>
+
+                <!-- Expanded Sub-menu when Sidebar is Open -->
+                <div 
+                    x-show="configOpen && sidebarOpen" 
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    class="mt-1 pl-6 space-y-1 text-xs">
+                    <a 
+                        href="/settings/substatuses" 
+                        title="Configuración de Subestatus" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">Subestatus</span>
+                    </a>
+                    <a 
+                        href="/trello-sync" 
+                        title="Sincronización Trello" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">Sincronización Trello</span>
+                    </a>
+                </div>
+
+                <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
+                <div 
+                    x-show="configOpen && !sidebarOpen" 
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
+                    x-transition:enter-end="opacity-100 scale-100 translate-x-0"
+                    class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
+                    <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">Configuración</div>
+                    <a 
+                        href="/settings/substatuses" 
+                        title="Configuración de Subestatus" 
+                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                        <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">Subestatus</span>
+                    </a>
+                    <a 
+                        href="/trello-sync" 
+                        title="Sincronización Trello" 
+                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                        <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">Sincronización Trello</span>
+                    </a>
+                </div>
+            </div>
+        </div>
         </div>
 
         <!-- Sidebar Footer -->
@@ -133,11 +265,11 @@
             </div>
 
             @php
-                $totalOrdersCount = \App\Models\Order::count();
-                $overdueCount = \App\Models\Order::where('substatus', \App\Enums\Substatus::OVERDUE)->count();
+                $totalWorkspaceOrdersCount = \App\Models\Order::inWorkspace()->count();
+                $overdueCount = \App\Models\Order::inWorkspace()->where('substatus', \App\Enums\Substatus::OVERDUE)->count();
             @endphp
             <div class="flex items-center gap-3">
-                <span class="text-zinc-500 font-mono text-[11px]">Tarjetas: <strong>{{ $totalOrdersCount }}</strong></span>
+                <span class="text-zinc-500 font-mono text-[11px]">Órdenes Activas: <strong>{{ $totalWorkspaceOrdersCount }}</strong></span>
                 @if($overdueCount > 0)
                     <span class="px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 font-semibold text-[10px]">
                         {{ $overdueCount }} Atrasadas

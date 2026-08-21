@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Planner;
 
+use App\Enums\CoreStatus;
 use App\Models\Designer;
 use App\Models\Order;
 use Carbon\Carbon;
@@ -10,7 +11,9 @@ use Livewire\Component;
 class WeeklyPlanner extends Component
 {
     public $selectedWeekStart;
+
     public $selectedDesignerFilter = 'all';
+
     public $viewMonth;
 
     public function mount()
@@ -51,12 +54,12 @@ class WeeklyPlanner extends Component
 
     public function previousMonth()
     {
-        $this->viewMonth = Carbon::parse($this->viewMonth . '-01')->subMonth()->format('Y-m');
+        $this->viewMonth = Carbon::parse($this->viewMonth.'-01')->subMonth()->format('Y-m');
     }
 
     public function nextMonth()
     {
-        $this->viewMonth = Carbon::parse($this->viewMonth . '-01')->addMonth()->format('Y-m');
+        $this->viewMonth = Carbon::parse($this->viewMonth.'-01')->addMonth()->format('Y-m');
     }
 
     protected function syncViewMonth()
@@ -74,7 +77,7 @@ class WeeklyPlanner extends Component
 
     public function getMiniCalendarDaysProperty()
     {
-        $viewDate = Carbon::parse($this->viewMonth . '-01');
+        $viewDate = Carbon::parse($this->viewMonth.'-01');
         $startOfGrid = $viewDate->copy()->startOfMonth()->startOfWeek(Carbon::MONDAY);
         $endOfGrid = $viewDate->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);
 
@@ -111,7 +114,7 @@ class WeeklyPlanner extends Component
 
         $order->update([
             'scheduled_date' => $scheduledDate->toDateString(),
-            'core_status' => \App\Enums\CoreStatus::TO_DO_TODAY,
+            'core_status' => CoreStatus::TO_DO_TODAY,
         ]);
 
         if ($willBeOverdue) {
@@ -130,6 +133,13 @@ class WeeklyPlanner extends Component
         session()->flash('message', "Orden {$order->company_name} quitada de la agenda.");
     }
 
+    public function toggleDoneToday($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+        $order->update(['done_today' => ! $order->done_today]);
+        $this->dispatch('order-updated');
+    }
+
     public function render()
     {
         $startDate = Carbon::parse($this->selectedWeekStart);
@@ -138,7 +148,7 @@ class WeeklyPlanner extends Component
         for ($i = 0; $i < 5; $i++) {
             $dayDate = $startDate->copy()->addDays($i);
             $days[] = [
-                'day_name' => match($i) {
+                'day_name' => match ($i) {
                     0 => 'Lunes',
                     1 => 'Martes',
                     2 => 'Miércoles',
@@ -159,18 +169,19 @@ class WeeklyPlanner extends Component
             'is_next_week' => true,
             'date' => $nextWeekMonday,
             'date_string' => $nextWeekMonday->toDateString(),
-            'range_label' => $nextWeekMonday->format('d M') . ' - ' . $nextWeekFriday->format('d M'),
+            'range_label' => $nextWeekMonday->format('d M').' - '.$nextWeekFriday->format('d M'),
         ];
 
-        $designerQuery = Designer::where('active', true)->with(['orders' => fn($q) => $q->inWorkspace()]);
+        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['designers', 'designer'])]);
         if ($this->selectedDesignerFilter !== 'all') {
             $designerQuery->where('id', $this->selectedDesignerFilter);
         }
         $designers = $designerQuery->get();
 
         $unscheduledOrders = Order::inWorkspace()
+            ->prioritizeUrgente()
             ->whereNull('scheduled_date')
-            ->whereNotIn('core_status', [\App\Enums\CoreStatus::EN_PRODUCCION, \App\Enums\CoreStatus::ON_HOLD])
+            ->whereNotIn('core_status', [CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD])
             ->get();
 
         $daysWithNextWeek = array_merge($days, [$nextWeekItem]);

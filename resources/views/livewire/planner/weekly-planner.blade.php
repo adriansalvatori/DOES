@@ -3,23 +3,23 @@
     <!-- Top Notion/Linear Rich Header & Week Navigator -->
     <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-4">
         
-        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
             
             <!-- Left Info & Selected Week Badge -->
             <div class="flex items-center gap-3 min-w-0">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-stone-800 to-stone-950 flex items-center justify-center text-white shadow-xs shrink-0">
-                    <x-lucide-calendar-days class="w-5 h-5" />
+                <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <x-lucide-calendar-days class="w-4.5 h-4.5 text-stone-100" />
                 </div>
                 <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-sm font-bold text-zinc-900 tracking-tight">Planificador Semanal de Diseño</h2>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Planificador Semanal</h1>
                         @php
                             $startVal = Carbon\Carbon::parse($selectedWeekStart);
                             $endVal = $startVal->copy()->addDays(4);
                             $isThisWeek = $startVal->isCurrentWeek();
                         @endphp
                         @if($isThisWeek)
-                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-semibold border border-emerald-200 flex items-center gap-1">
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200 flex items-center gap-1">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 Semana Actual
                             </span>
@@ -35,26 +35,26 @@
             <div class="flex flex-wrap items-center gap-2 shrink-0">
                 
                 <!-- Quick Navigation Pills -->
-                <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-1 rounded-lg gap-1">
-                    <button wire:click="previousWeek" class="p-1.5 rounded-md hover:bg-white hover:shadow-2xs text-zinc-700 transition" title="Semana anterior">
+                <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-1 rounded-lg gap-1 h-8">
+                    <button wire:click="previousWeek" class="p-1 rounded-md hover:bg-white hover:shadow-2xs text-zinc-700 transition" title="Semana anterior">
                         <x-lucide-chevron-left class="w-4 h-4" />
                     </button>
 
-                    <button wire:click="thisWeek" class="px-2.5 py-1 rounded-md text-xs font-semibold {{ $isThisWeek ? 'bg-emerald-600 text-white shadow-2xs' : 'hover:bg-white text-zinc-700' }} transition">
+                    <button wire:click="thisWeek" class="px-2.5 py-0.5 rounded-md text-xs font-semibold {{ $isThisWeek ? 'bg-emerald-600 text-white shadow-2xs' : 'hover:bg-white text-zinc-700' }} transition">
                         Esta Semana
                     </button>
 
-                    <button wire:click="nextWeek" class="p-1.5 rounded-md hover:bg-white hover:shadow-2xs text-zinc-700 transition" title="Semana siguiente">
+                    <button wire:click="nextWeek" class="p-1 rounded-md hover:bg-white hover:shadow-2xs text-zinc-700 transition" title="Semana siguiente">
                         <x-lucide-chevron-right class="w-4 h-4" />
                     </button>
                 </div>
 
                 <!-- Jump Weeks Quick Dropdown -->
                 <div class="flex items-center gap-1 text-xs">
-                    <button wire:click="jumpWeeks(1)" class="px-2.5 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 font-medium transition flex items-center gap-1">
+                    <button wire:click="jumpWeeks(1)" class="px-2.5 py-1 h-8 rounded-lg border border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 font-medium transition flex items-center gap-1">
                         <span>+1 Sem</span>
                     </button>
-                    <button wire:click="jumpWeeks(2)" class="px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50/70 hover:bg-violet-100 text-violet-700 font-medium transition flex items-center gap-1">
+                    <button wire:click="jumpWeeks(2)" class="px-2.5 py-1 h-8 rounded-lg border border-violet-200 bg-violet-50/70 hover:bg-violet-100 text-violet-700 font-medium transition flex items-center gap-1">
                         <span>+2 Sem</span>
                     </button>
                 </div>
@@ -63,7 +63,7 @@
                 <div class="relative" @click.outside="calendarOpen = false">
                     <button 
                         @click="calendarOpen = !calendarOpen"
-                        class="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-2xs transition flex items-center gap-2">
+                        class="px-3 py-1.5 h-8 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-2xs transition flex items-center gap-2">
                         <x-lucide-calendar class="w-3.5 h-3.5 text-stone-200" />
                         <span>Abrir Calendario</span>
                         <x-lucide-chevron-down class="w-3.5 h-3.5 text-stone-400" />
@@ -137,7 +137,7 @@
 
         @foreach($allDesigners as $des)
             <button wire:click="$set('selectedDesignerFilter', '{{ $des->id }}')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter == $des->id ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-                <x-lucide-user class="w-3.5 h-3.5 text-zinc-500" />
+                <span class="w-2 h-2 rounded-full {{ $des->dot_color_class }}"></span>
                 <span>{{ $des->name }}</span>
             </button>
         @endforeach
@@ -185,11 +185,25 @@
                     <div 
                         draggable="true" 
                         @dragstart="e => e.dataTransfer.setData('text/plain', '{{ $unOrder->id }}')"
-                        class="bg-[#fbfbfa] hover:bg-stone-50 border border-[#e9e9e7] hover:border-stone-300 rounded-lg p-2.5 space-y-2 min-w-0 transition cursor-grab active:cursor-grabbing shadow-2xs group">
-                        <div class="flex items-start justify-between gap-1 min-w-0">
-                            <div class="min-w-0 flex-1">
-                                <span class="text-[10px] text-zinc-500 font-medium uppercase truncate block">{{ $unOrder->designer?->name }}</span>
-                                <h4 class="font-medium text-xs text-zinc-900 truncate" title="{{ $unOrder->company_name }}">{{ $unOrder->company_name }}</h4>
+                        class="rounded-lg p-2.5 space-y-2 min-w-0 transition cursor-grab active:cursor-grabbing shadow-2xs group {{ $unOrder->isUrgente() ? ($unOrder->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fbfbfa] hover:bg-stone-50 border border-[#e9e9e7] hover:border-stone-300' }}">
+                        <div class="flex items-start justify-between gap-1.5 min-w-0">
+                            <div class="flex items-start gap-1.5 min-w-0 flex-1">
+                                <button 
+                                    wire:click="toggleDoneToday({{ $unOrder->id }})" 
+                                    type="button"
+                                    class="w-4 h-4 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $unOrder->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                    title="{{ $unOrder->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
+                                    <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                </button>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-center gap-1 mb-0.5">
+                                        @foreach($unOrder->assigned_designers as $des)
+                                            <span class="text-[9px] font-semibold px-1 py-0.2 rounded border shrink-0 {{ $des->badge_style }}">{{ $des->name }}</span>
+                                        @endforeach
+                                    </div>
+                                    <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug {{ $unOrder->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $unOrder->company_name }}">{{ $unOrder->company_name }}</h4>
+                                    <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 {{ $unOrder->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $unOrder->task_name }}">{{ $unOrder->task_name }}</p>
+                                </div>
                             </div>
                             <x-lucide-grip-vertical class="w-3.5 h-3.5 text-zinc-300 group-hover:text-zinc-500 shrink-0" />
                         </div>
@@ -219,10 +233,11 @@
                 
                 <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-6 h-6 rounded bg-stone-100 border border-stone-200 flex items-center justify-center font-bold text-zinc-700 text-xs shrink-0">
+                        <div class="w-6 h-6 rounded flex items-center justify-center font-bold text-xs shrink-0 border {{ $designer->badge_style }}">
                             {{ substr($designer->name, 0, 1) }}
                         </div>
-                        <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full {{ $designer->dot_color_class }}"></span>
                             <h3 class="font-semibold text-xs text-zinc-900">Diseñador/a: {{ $designer->name }}</h3>
                         </div>
                     </div>
@@ -280,9 +295,21 @@
                                             <div 
                                                 draggable="true" 
                                                 @dragstart="e => e.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-                                                class="bg-white border border-[#e9e9e7] hover:border-stone-300 rounded p-2 space-y-1 min-w-0 shadow-2xs cursor-grab active:cursor-grabbing hover:shadow-xs transition group">
-                                                <div class="flex items-center justify-between gap-1 min-w-0">
-                                                    <span class="font-medium text-xs text-zinc-900 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
+                                                class="rounded p-2 space-y-1 min-w-0 shadow-2xs cursor-grab active:cursor-grabbing hover:shadow-xs transition group {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-white border border-[#e9e9e7] hover:border-stone-300' }}">
+                                                <div class="flex items-center justify-between gap-1.5 min-w-0">
+                                                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                                        <button 
+                                                            wire:click="toggleDoneToday({{ $order->id }})" 
+                                                            type="button"
+                                                            class="w-4 h-4 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                                            title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
+                                                            <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                                        </button>
+                                                        <div class="min-w-0 flex-1">
+                                                            <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                                        </div>
+                                                    </div>
                                                     <div class="flex items-center gap-1 shrink-0">
                                                         @if($order->isOverdue())
                                                             <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse" title="SLA Vencido"></span>

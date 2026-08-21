@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CoreStatus;
 use App\Models\Designer;
 use App\Models\Order;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -18,6 +19,7 @@ class TrelloSyncService
         if (preg_match('/trello\.com\/b\/([a-zA-Z0-9]+)/', $input, $matches)) {
             return $matches[1];
         }
+
         return $input;
     }
 
@@ -62,7 +64,8 @@ class TrelloSyncService
 
             return ['success' => false, 'status' => $response->status(), 'error' => $response->body()];
         } catch (\Exception $e) {
-            Log::error("Trello API error fetching board lists: " . $e->getMessage());
+            Log::error('Trello API error fetching board lists: '.$e->getMessage());
+
             return ['success' => false, 'status' => 500, 'error' => $e->getMessage()];
         }
     }
@@ -91,15 +94,16 @@ class TrelloSyncService
 
             return ['success' => false, 'status' => $response->status(), 'error' => $response->body()];
         } catch (\Exception $e) {
-            Log::error("Trello API error fetching board cards: " . $e->getMessage());
+            Log::error('Trello API error fetching board cards: '.$e->getMessage());
+
             return ['success' => false, 'status' => 500, 'error' => $e->getMessage()];
         }
     }
 
     /**
-     * Sync a single Trello card data array into an Order model.
+     * Sync a single Trello card data array into an Order model and return action metrics.
      */
-    public function syncCardToOrder(array $cardData, array $listsMap = []): ?Order
+    public function syncCardToOrder(array $cardData, array $listsMap = []): ?array
     {
         $listId = $cardData['idList'] ?? '';
         $listName = $listsMap[$listId] ?? 'ENTRANTE';
@@ -107,20 +111,26 @@ class TrelloSyncService
 
         // Strictly resolve designer from Trello card members array
         $designerId = null;
-        if (!empty($cardData['members'])) {
+        if (! empty($cardData['members'])) {
             foreach ($cardData['members'] as $member) {
                 $mId = $member['id'] ?? null;
                 $fullName = trim($member['fullName'] ?? '');
                 $username = trim($member['username'] ?? '');
 
                 if ($mId || $fullName || $username) {
-                    $designer = Designer::where(function($q) use ($mId, $fullName, $username) {
-                        if ($mId) $q->where('trello_member_id', $mId);
-                        if ($fullName) $q->orWhere('name', 'like', "%{$fullName}%");
-                        if ($username) $q->orWhere('name', 'like', "%{$username}%");
+                    $designer = Designer::where(function ($q) use ($mId, $fullName, $username) {
+                        if ($mId) {
+                            $q->where('trello_member_id', $mId);
+                        }
+                        if ($fullName) {
+                            $q->orWhere('name', 'like', "%{$fullName}%");
+                        }
+                        if ($username) {
+                            $q->orWhere('name', 'like', "%{$username}%");
+                        }
                     })->first();
 
-                    if (!$designer && !empty($fullName)) {
+                    if (! $designer && ! empty($fullName)) {
                         $designer = Designer::create([
                             'name' => ucwords(strtolower($fullName)),
                             'trello_member_id' => $mId,
@@ -136,7 +146,7 @@ class TrelloSyncService
             }
         }
 
-        if (!$designerId) {
+        if (! $designerId) {
             $designerName = match ($coreStatus) {
                 CoreStatus::EURALIZ_ORDERS_RECEIVED => 'Euralíz',
                 CoreStatus::CESAR_ORDERS_RECEIVED => 'César',
@@ -149,60 +159,115 @@ class TrelloSyncService
             }
         }
 
-        $dueDate = !empty($cardData['due']) ? substr($cardData['due'], 0, 10) : null;
+        $dueDate = ! empty($cardData['due']) ? substr($cardData['due'], 0, 10) : null;
         $rawCardName = $cardData['name'] ?? 'Tarea de diseño';
-        $parsed = \App\Services\OrderTitleParserService::parse($rawCardName);
+        $parsed = OrderTitleParserService::parse($rawCardName);
 
         if ($parsed['is_incompatible']) {
             Log::info("Skipped syncing incompatible Trello header card: '{$rawCardName}'");
+
             return null;
         }
 
         $trelloCreatedAt = null;
-        if (!empty($cardData['id']) && strlen($cardData['id']) >= 8) {
+        if (! empty($cardData['id']) && strlen($cardData['id']) >= 8) {
             try {
                 $hex = substr($cardData['id'], 0, 8);
-                $trelloCreatedAt = \Carbon\Carbon::createFromTimestamp(hexdec($hex));
-            } catch (\Exception $e) {}
+                $trelloCreatedAt = Carbon::createFromTimestamp(hexdec($hex));
+            } catch (\Exception $e) {
+            }
+        }
+
+        $existing = Order::where('trello_card_id', $cardData['id'])->first();
+        $isNew = ! $existing;
+
+        $action = 'created';
+        if ($existing) {
+            if ($existing->core_status !== $coreStatus) {
+                $action = 'moved';
+            } elseif ($existing->trello_title !== $parsed['trello_title'] || $existing->current_due_date?->toDateString() !== $dueDate || $existing->designer_id !== $designerId) {
+                $action = 'updated';
+            } else {
+                $action = 'unchanged';
+            }
+        }
+
+        $attributes = [
+            'trello_created_at' => $trelloCreatedAt ?: now(),
+            'wo_number' => $parsed['wo_number'],
+            'company_name' => $parsed['company_name'],
+            'responsible_person' => $parsed['responsible_person'],
+            'task_name' => $parsed['task_name'],
+            'trello_title' => $parsed['trello_title'],
+            'designer_id' => $designerId,
+            'core_status' => $coreStatus,
+            'current_due_date' => $dueDate,
+            'original_due_date' => $dueDate,
+            'start_date' => now()->toDateString(),
+        ];
+
+        if ($isNew) {
+            $attributes['is_new_from_trello'] = true;
+            $attributes['in_workspace'] = false; // New cards synced from Trello enter into Backlog inbox
         }
 
         $order = Order::updateOrCreate(
             ['trello_card_id' => $cardData['id']],
-            [
-                'trello_created_at' => $trelloCreatedAt ?: now(),
-                'wo_number' => $parsed['wo_number'],
-                'company_name' => $parsed['company_name'],
-                'responsible_person' => $parsed['responsible_person'],
-                'task_name' => $parsed['task_name'],
-                'trello_title' => $parsed['trello_title'],
-                'designer_id' => $designerId,
-                'core_status' => $coreStatus,
-                'current_due_date' => $dueDate,
-                'original_due_date' => $dueDate,
-                'start_date' => now()->toDateString(),
-            ]
+            $attributes
         );
 
-        if ($order->wasRecentlyCreated) {
+        if ($isNew) {
             app(AutomationEngine::class)->handleOrderCreated($order);
         }
 
-        return $order;
+        return [
+            'order' => $order,
+            'action' => $action,
+            'company_name' => $parsed['company_name'],
+            'task_name' => $parsed['task_name'],
+            'previous_status' => $existing?->core_status?->label(),
+            'new_status' => $coreStatus->label(),
+        ];
     }
 
     /**
-     * Safely update a single card on Trello (Push to Trello).
+     * Get Trello List ID corresponding to a CoreStatus.
+     */
+    public function getTrelloListIdForCoreStatus(CoreStatus $status, string $boardId = '5ca7ad6cdbbfef7a0c8fc028', string $apiKey = '0771bd12b868f2ee8e1a72f424085b5f', ?string $apiToken = null): ?string
+    {
+        $apiToken = $apiToken ?: config('services.trello.token');
+        $res = $this->getBoardLists($boardId, $apiKey, $apiToken);
+
+        if (! $res['success'] || empty($res['data'])) {
+            return null;
+        }
+
+        foreach ($res['data'] as $list) {
+            $listName = $list['name'] ?? '';
+            $mappedStatus = $this->mapListToCoreStatus($listName);
+            if ($mappedStatus === $status) {
+                return $list['id'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Safely update a single card on Trello (Push to Trello name, due date, and list position).
+     * Strictly targets Active Workspace Orders (Backlog cards are never pushed).
      */
     public function updateCardOnTrello(Order $order, string $apiKey = '0771bd12b868f2ee8e1a72f424085b5f', ?string $apiToken = null): bool
     {
-        if (!$order->trello_card_id) {
+        if (! $order->trello_card_id || ! $order->in_workspace) {
             return false;
         }
 
         $apiToken = $apiToken ?: config('services.trello.token');
 
-        if (!$apiToken) {
+        if (! $apiToken) {
             Log::info("Trello sync skipped for order {$order->id}: No API token set.");
+
             return false;
         }
 
@@ -210,17 +275,26 @@ class TrelloSyncService
             $params = [
                 'key' => $apiKey,
                 'token' => $apiToken,
-                'name' => \App\Services\OrderTitleParserService::buildTitle($order),
+                'name' => OrderTitleParserService::buildTitle($order),
             ];
 
             if ($order->current_due_date) {
                 $params['due'] = $order->current_due_date->toIso8601String();
             }
 
+            if ($order->core_status) {
+                $targetListId = $this->getTrelloListIdForCoreStatus($order->core_status, '5ca7ad6cdbbfef7a0c8fc028', $apiKey, $apiToken);
+                if ($targetListId) {
+                    $params['idList'] = $targetListId;
+                }
+            }
+
             $response = Http::put("{$this->baseUrl}/cards/{$order->trello_card_id}", $params);
+
             return $response->successful();
         } catch (\Exception $e) {
-            Log::warning("Failed to update Trello card {$order->trello_card_id}: " . $e->getMessage());
+            Log::warning("Failed to update Trello card {$order->trello_card_id}: ".$e->getMessage());
+
             return false;
         }
     }

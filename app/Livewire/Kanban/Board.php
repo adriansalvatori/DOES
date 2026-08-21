@@ -3,7 +3,10 @@
 namespace App\Livewire\Kanban;
 
 use App\Enums\CoreStatus;
+use App\Models\Designer;
 use App\Models\Order;
+use App\Models\OrderEvent;
+use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use App\Services\TrelloSyncService;
 use Livewire\Attributes\On;
@@ -12,12 +15,21 @@ use Livewire\Component;
 class Board extends Component
 {
     public $search = '';
+
     public $designerFilter = 'all';
+
     public $substatusFilter = 'all';
+
+    public $companyFilter = 'all';
+
+    public $responsibleFilter = 'all';
+
     public $columnGroup = 'all'; // all, incoming, in_progress, final
 
     public bool $showOnHoldModal = false;
+
     public ?int $pendingOnHoldOrderId = null;
+
     public string $onHoldReason = '';
 
     public function getSearchResultsProperty()
@@ -30,9 +42,9 @@ class Board extends Component
             ->with('designer')
             ->where(function ($q) {
                 $q->where('company_name', 'like', "%{$this->search}%")
-                  ->orWhere('task_name', 'like', "%{$this->search}%")
-                  ->orWhere('wo_number', 'like', "%{$this->search}%")
-                  ->orWhere('responsible_person', 'like', "%{$this->search}%");
+                    ->orWhere('task_name', 'like', "%{$this->search}%")
+                    ->orWhere('wo_number', 'like', "%{$this->search}%")
+                    ->orWhere('responsible_person', 'like', "%{$this->search}%");
             })
             ->take(8)
             ->get();
@@ -53,6 +65,7 @@ class Board extends Component
             $this->pendingOnHoldOrderId = $orderId;
             $this->onHoldReason = '';
             $this->showOnHoldModal = true;
+
             return;
         }
 
@@ -76,7 +89,9 @@ class Board extends Component
 
     public function confirmOnHold()
     {
-        if (!$this->pendingOnHoldOrderId) return;
+        if (! $this->pendingOnHoldOrderId) {
+            return;
+        }
 
         $this->validate([
             'onHoldReason' => 'required|string|min:3',
@@ -95,7 +110,7 @@ class Board extends Component
         app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
 
         // Log event in OrderEvent with reason
-        \App\Models\OrderEvent::create([
+        OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'MOVED_TO_ON_HOLD',
             'actor' => 'User',
@@ -110,7 +125,8 @@ class Board extends Component
         if ($order->trello_card_id) {
             try {
                 app(TrelloSyncService::class)->updateCardOnTrello($order);
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
 
         $this->showOnHoldModal = false;
@@ -128,6 +144,30 @@ class Board extends Component
         $this->onHoldReason = '';
     }
 
+    public function duplicateOrder($orderId)
+    {
+        // Dispatch to CreateOrderModal's open-duplicate-order so user can edit before saving
+        $this->dispatch('open-duplicate-order', orderId: $orderId);
+    }
+
+    public function trashOrder($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+        $order->delete(); // soft delete
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'ORDER_TRASHED',
+            'actor' => 'User',
+            'previous_value' => $order->core_status?->value,
+            'new_value' => 'TRASHED',
+            'metadata' => ['comment' => 'Orden movida a la papelera.'],
+        ]);
+
+        $this->dispatch('order-updated');
+        session()->flash('message', "Orden '{$order->company_name}' enviada a la papelera.");
+    }
+
     #[On('order-updated')]
     #[On('task-added')]
     public function refreshBoard()
@@ -137,7 +177,7 @@ class Board extends Component
 
     public function toggleTaskComplete($taskId)
     {
-        $task = \App\Models\RelatedTask::findOrFail($taskId);
+        $task = RelatedTask::findOrFail($taskId);
         if ($task->isDone()) {
             $task->update(['status' => 'todo', 'completed_at' => null]);
         } else {
@@ -147,25 +187,43 @@ class Board extends Component
         session()->flash('message', "Tarea '{$task->title}' actualizada.");
     }
 
+    public function toggleDoneToday($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+        $order->update(['done_today' => ! $order->done_today]);
+        $this->dispatch('order-updated');
+    }
+
     public function render()
     {
-        $query = Order::inWorkspace()->with(['designer', 'relatedTasks']);
+        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks']);
 
-        if (!empty($this->search)) {
+        if (! empty($this->search)) {
             $query->where(function ($q) {
                 $q->where('company_name', 'like', "%{$this->search}%")
-                  ->orWhere('task_name', 'like', "%{$this->search}%")
-                  ->orWhere('wo_number', 'like', "%{$this->search}%")
-                  ->orWhere('responsible_person', 'like', "%{$this->search}%");
+                    ->orWhere('task_name', 'like', "%{$this->search}%")
+                    ->orWhere('wo_number', 'like', "%{$this->search}%")
+                    ->orWhere('responsible_person', 'like', "%{$this->search}%");
             });
         }
 
         if ($this->designerFilter !== 'all') {
-            $query->where('designer_id', $this->designerFilter);
+            $query->where(function ($q) {
+                $q->where('designer_id', $this->designerFilter)
+                    ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $this->designerFilter));
+            });
         }
 
         if ($this->substatusFilter !== 'all') {
             $query->where('substatus', $this->substatusFilter);
+        }
+
+        if ($this->companyFilter !== 'all') {
+            $query->where('company_name', $this->companyFilter);
+        }
+
+        if ($this->responsibleFilter !== 'all') {
+            $query->where('responsible_person', $this->responsibleFilter);
         }
 
         $orders = $query->get();
@@ -176,9 +234,14 @@ class Board extends Component
             }
         }
 
-        // Load all related tasks belonging to workspace orders
-        $tasksQuery = \App\Models\RelatedTask::whereHas('order', fn($q) => $q->inWorkspace())->with(['order', 'assignee']);
-        if (!empty($this->search)) {
+        // Load all related tasks belonging to workspace orders, respecting designer filter
+        $tasksQuery = RelatedTask::whereHas('order', function ($q) {
+            $q->inWorkspace();
+            if ($this->designerFilter !== 'all') {
+                $q->where('designer_id', $this->designerFilter);
+            }
+        })->with(['order', 'assignee']);
+        if (! empty($this->search)) {
             $tasksQuery->where('title', 'like', "%{$this->search}%");
         }
         $relatedTasks = $tasksQuery->get();
@@ -195,7 +258,7 @@ class Board extends Component
             CoreStatus::EN_PRODUCCION,
         ];
 
-        $columns = match($this->columnGroup) {
+        $columns = match ($this->columnGroup) {
             'incoming' => [
                 CoreStatus::ENTRANTE,
                 CoreStatus::EURALIZ_ORDERS_RECEIVED,
@@ -219,7 +282,19 @@ class Board extends Component
             'allColumns' => $allColumns,
             'orders' => $orders,
             'relatedTasks' => $relatedTasks,
-            'designers' => \App\Models\Designer::where('active', true)->get(),
+            'designers' => Designer::where('active', true)->get(),
+            'existingCompanies' => Order::inWorkspace()
+                ->whereNotNull('company_name')
+                ->where('company_name', '!=', '')
+                ->distinct()
+                ->orderBy('company_name')
+                ->pluck('company_name'),
+            'existingResponsibles' => Order::inWorkspace()
+                ->whereNotNull('responsible_person')
+                ->where('responsible_person', '!=', '')
+                ->distinct()
+                ->orderBy('responsible_person')
+                ->pluck('responsible_person'),
         ])->layout('components.layouts.app', ['title' => 'Kanban Board - Kudos Design Ops']);
     }
 }

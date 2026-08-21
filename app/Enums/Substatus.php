@@ -16,6 +16,7 @@ enum Substatus: string
     case AJUSTES_PRODUCCION = 'AJUSTES DE PRODUCCIÓN';
     case WAITING_FOR_CLIENT = 'WAITING FOR CLIENT';
     case CUSTOMER_SERVICE_REQUIRED = 'CUSTOMER SERVICE REQUIRED';
+    case URGENTE = 'URGENTE';
 
     public function label(): string
     {
@@ -25,6 +26,7 @@ enum Substatus: string
     public function badgeStyle(): string
     {
         return match ($this) {
+            self::URGENTE => 'bg-red-600 text-white border-red-700 font-extrabold shadow-sm animate-pulse',
             self::BLOQUEADA => 'bg-rose-50 text-rose-700 border-rose-200 font-medium',
             self::OVERDUE => 'bg-red-50 text-red-700 border-red-200 font-semibold',
             self::ALMOST_OVERDUE => 'bg-amber-50 text-amber-700 border-amber-200 font-medium',

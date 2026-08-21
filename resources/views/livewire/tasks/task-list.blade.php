@@ -16,18 +16,119 @@
                 <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar tarea o empresa..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-8 pr-3 py-1 text-xs text-zinc-800 focus:outline-none w-full">
             </div>
 
-            <select wire:model.live="statusFilter" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-700 focus:outline-none">
-                <option value="todo">Pendientes (To Do)</option>
-                <option value="done">Completadas (Done)</option>
-                <option value="all">Todas las Tareas</option>
-            </select>
+            <!-- Status Filter (Searchable) -->
+            <div class="relative min-w-[150px]" 
+                 x-data="{ 
+                     open: false,
+                     search: '',
+                     selectStatus(val) {
+                         $wire.set('statusFilter', val);
+                         this.open = false;
+                     }
+                 }">
+                <button 
+                    type="button" 
+                    @click="open = !open" 
+                    @click.outside="open = false"
+                    class="w-full bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-2.5 py-1 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
+                    <span class="truncate">
+                        @if($statusFilter === 'todo')
+                            Pendientes (To Do)
+                        @elseif($statusFilter === 'done')
+                            Completadas (Done)
+                        @else
+                            Todas las Tareas
+                        @endif
+                    </span>
+                    <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
+                </button>
 
-            <select wire:model.live="typeFilter" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-700 focus:outline-none">
-                <option value="all">Todos los Tipos</option>
-                @foreach($taskTypes as $type)
-                    <option value="{{ $type->value }}">{{ $type->value }}</option>
-                @endforeach
-            </select>
+                <div 
+                    x-show="open" 
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    <div 
+                        @click="selectStatus('todo')" 
+                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>Pendientes (To Do)</span>
+                        @if($statusFilter === 'todo')
+                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        @endif
+                    </div>
+                    <div 
+                        @click="selectStatus('done')" 
+                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>Completadas (Done)</span>
+                        @if($statusFilter === 'done')
+                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        @endif
+                    </div>
+                    <div 
+                        @click="selectStatus('all')" 
+                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>Todas las Tareas</span>
+                        @if($statusFilter === 'all')
+                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Type Filter (Searchable) -->
+            <div class="relative min-w-[150px]" 
+                 x-data="{ 
+                     open: false,
+                     search: '',
+                     selectType(val) {
+                         $wire.set('typeFilter', val);
+                         this.open = false;
+                     }
+                 }">
+                <button 
+                    type="button" 
+                    @click="open = !open" 
+                    @click.outside="open = false"
+                    class="w-full bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-2.5 py-1 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
+                    <span class="truncate">{{ $typeFilter === 'all' ? 'Todos los Tipos' : $typeFilter }}</span>
+                    <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
+                </button>
+
+                <div 
+                    x-show="open" 
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
+                        <input 
+                            type="text" 
+                            x-model="search" 
+                            placeholder="Buscar tipo..." 
+                            class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
+                    </div>
+                    <div 
+                        @click="selectType('all')" 
+                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>Todos los Tipos</span>
+                        @if($typeFilter === 'all')
+                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                        @endif
+                    </div>
+                    @foreach($taskTypes as $type)
+                        <div 
+                            x-show="!search || '{{ strtolower(addslashes($type->value)) }}'.includes(search.toLowerCase())"
+                            @click="selectType('{{ $type->value }}')" 
+                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                            <span class="truncate">{{ $type->value }}</span>
+                            @if($typeFilter === $type->value)
+                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
 
