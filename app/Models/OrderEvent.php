@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoreStatus;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,6 +35,12 @@ class OrderEvent extends Model
         $type = strtoupper((string) $this->event_type);
         $newVal = strtoupper((string) $this->new_value);
 
+        if (str_contains($type, 'SUBTASK_COMPLETED')) {
+            return 'bg-emerald-500 ring-4 ring-emerald-100 text-white';
+        }
+        if (str_contains($type, 'SUBTASK')) {
+            return 'bg-purple-500 ring-4 ring-purple-100 text-white';
+        }
         if (str_contains($type, 'CREATED') || str_contains($type, 'TRELLO')) {
             return 'bg-blue-500 ring-4 ring-blue-100 text-white';
         }
@@ -58,6 +65,12 @@ class OrderEvent extends Model
         $type = strtoupper((string) $this->event_type);
         $newVal = strtoupper((string) $this->new_value);
 
+        if (str_contains($type, 'SUBTASK_COMPLETED')) {
+            return 'bg-emerald-400';
+        }
+        if (str_contains($type, 'SUBTASK')) {
+            return 'bg-purple-400';
+        }
         if (str_contains($type, 'CREATED') || str_contains($type, 'TRELLO')) {
             return 'bg-blue-400';
         }
@@ -81,6 +94,17 @@ class OrderEvent extends Model
     {
         $type = strtoupper((string) $this->event_type);
 
+        if (str_contains($type, 'SUBTASK_SCHEDULED')) {
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? 'Subtarea';
+            $dateStr = isset($this->metadata['date']) ? Carbon::parse($this->metadata['date'])->format('d M') : '';
+
+            return "Subtarea \"{$taskTitle}\" agendada".($dateStr ? " para el {$dateStr}" : '');
+        }
+        if (str_contains($type, 'SUBTASK_COMPLETED')) {
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? 'Subtarea';
+
+            return "Subtarea \"{$taskTitle}\" completada ✓";
+        }
         if (str_contains($type, 'ORDER_CREATED') || str_contains($type, 'CREATED')) {
             return 'Orden creada en flujo / Trello';
         }

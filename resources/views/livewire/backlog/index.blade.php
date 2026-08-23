@@ -1,7 +1,7 @@
-<div class="space-y-5 pb-20">
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-20">
     
     <!-- Unified Top Notion-Style Header Controls -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-3.5 shadow-2xs">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-3.5 shadow-2xs shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">

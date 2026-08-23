@@ -1,7 +1,7 @@
-<div class="space-y-6">
-
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
+    
     <!-- Header & Action Bar -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-[#e9e9e7] shadow-2xs">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-[#e9e9e7] shadow-2xs shrink-0">
         <div class="space-y-1">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200 text-zinc-700 flex items-center justify-center font-bold">

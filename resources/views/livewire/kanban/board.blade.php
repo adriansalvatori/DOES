@@ -1,7 +1,7 @@
-<div class="space-y-5">
+<div class="h-full flex flex-col space-y-3 min-h-0 overflow-hidden">
     
     <!-- Top Notion-Style Header Controls -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-3.5 shadow-2xs">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
@@ -300,7 +300,9 @@
                             x-show="!search || '{{ strtolower(addslashes($sub->value)) }}'.includes(search.toLowerCase())"
                             @click="selectSub('{{ $sub->value }}')" 
                             class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                            <span class="truncate">{{ $sub->value }}</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-medium border {{ $sub->badgeStyle() }}">
+                                {{ $sub->value }}
+                            </span>
                             @if($substatusFilter === $sub->value)
                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
                             @endif
@@ -312,7 +314,7 @@
     </div>
 
     <!-- Notion Column Group Filter Tabs Bar -->
-    <div class="flex items-center gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs">
+    <div class="flex items-center gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
         <button wire:click="$set('columnGroup', 'all')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
             <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500" />
             <span>Todas las Listas (9)</span>
@@ -336,14 +338,14 @@
 
     <!-- Alert Flash Message -->
     @if (session()->has('message'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2 shrink-0">
             <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
             <span class="truncate">{{ session('message') }}</span>
         </div>
     @endif
 
     <!-- Notion Light Kanban Columns Container (Full Width Drag & Drop Grid) -->
-    <div class="flex gap-3 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-stone-300 min-h-[78vh] w-full">
+    <div class="flex gap-3 overflow-x-auto pb-3 pt-1 custom-horizontal-scrollbar flex-1 min-h-0 w-full">
         @foreach($columns as $column)
             @php
                 $columnOrders = $orders->filter(fn($o) => $o->core_status === $column);
@@ -360,10 +362,10 @@
                     }
                 "
                 :class="{ 'border-stone-400 ring-2 ring-stone-300/60 bg-stone-100': isTarget }"
-                class="shrink-0 w-80 bg-[#f7f7f5] border border-[#e9e9e7] rounded-xl flex flex-col max-h-[80vh] transition duration-150 shadow-2xs">
+                class="shrink-0 w-80 bg-[#f7f7f5] border border-[#e9e9e7] rounded-xl flex flex-col h-full overflow-hidden transition duration-150 shadow-2xs">
                 
                 <!-- Column Header -->
-                <div class="p-3 border-b border-[#e9e9e7] bg-[#efefed] rounded-t-xl flex items-center justify-between sticky top-0 z-10">
+                <div class="p-3 border-b border-[#e9e9e7] bg-[#efefed] rounded-t-xl flex items-center justify-between sticky top-0 z-10 shrink-0">
                     <div class="flex items-center gap-2 min-w-0">
                         <span class="w-2 h-2 rounded-full shrink-0 bg-stone-600"></span>
                         <h3 class="font-semibold text-xs text-zinc-800 uppercase tracking-wider truncate">{{ $column->label() }}</h3>
@@ -388,7 +390,7 @@
                 </div>
 
                 <!-- Column Cards Container -->
-                <div class="p-2.5 overflow-y-auto flex-1 space-y-2.5 scrollbar-thin">
+                <div class="p-2.5 overflow-y-auto flex-1 space-y-2.5 custom-vertical-scrollbar min-h-0">
                     @php
                         $urgentColumnOrders = $columnOrders->filter(fn($o) => $o->isUrgente());
                         $regularColumnOrders = $columnOrders->filter(fn($o) => !$o->isUrgente());

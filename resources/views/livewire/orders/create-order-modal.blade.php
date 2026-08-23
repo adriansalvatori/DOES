@@ -4,10 +4,10 @@
             <div 
                 x-data 
                 @click.outside="$wire.closeModal()"
-                class="bg-white border border-[#e9e9e7] rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col transition duration-200">
+                class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-2xl w-full flex flex-col transition duration-200">
                 
                 <!-- Modal Header -->
-                <div class="px-5 py-4 border-b border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-between">
+                <div class="px-6 py-4 border-b border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
                         <div class="p-1.5 rounded-lg bg-stone-900 text-white shrink-0">
                             @if($isDuplicating)
@@ -32,10 +32,10 @@
                 </div>
 
                 <!-- Form Fields Container -->
-                <form wire:submit.prevent="save" class="p-5 space-y-4 text-xs">
+                <form wire:submit.prevent="save" class="p-6 space-y-4 text-xs">
                     
                     <!-- Row 1: WO Number, Trello ID & Responsible Person -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                         <div>
                             <label class="font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-hash class="w-3 h-3 text-zinc-400" />
@@ -87,9 +87,9 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-44 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-64 overflow-y-auto divide-y divide-stone-100 text-xs min-w-[260px]">
                                 
-                                <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
+                                <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400 sticky top-0 z-10">
                                     Tarjetas Disponibles ({{ count($availableTrelloCards) }})
                                 </div>
 
@@ -100,9 +100,11 @@
                                         class="p-2 hover:bg-blue-50/70 cursor-pointer flex items-center justify-between gap-2 transition">
                                         <div class="min-w-0">
                                             <span class="font-bold text-zinc-900 block truncate text-[11px]">
-                                                {{ $tc->wo_number ? 'WO '.$tc->wo_number.' - ' : '' }}{{ $tc->company_name ?: 'Sin empresa' }}
+                                                {{ $tc->trello_title ?: ($tc->company_name ?: 'Tarjeta Trello') }}
                                             </span>
-                                            <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name ?: $tc->trello_title }}</span>
+                                            @if($tc->task_name && $tc->task_name !== $tc->trello_title)
+                                                <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name }}</span>
+                                            @endif
                                         </div>
                                         <span class="font-mono text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
                                             {{ substr($tc->trello_card_id, 0, 8) }}...
@@ -150,7 +152,7 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-40 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs">
                                 @forelse($existingResponsibles as $resp)
                                     <div 
                                         x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
@@ -201,7 +203,7 @@
                             x-transition:enter="transition ease-out duration-100"
                             x-transition:enter-start="opacity-0 scale-95"
                             x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-40 overflow-y-auto divide-y divide-stone-100 text-xs">
+                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs">
                             @forelse($existingCompanies as $comp)
                                 <div 
                                     x-show="!$wire.companyName || '{{ strtolower(addslashes($comp)) }}'.includes(($wire.companyName || '').toLowerCase())"
@@ -227,7 +229,7 @@
                     </div>
 
                     <!-- Row 4: Column / Status & Designer -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                         <div class="relative" 
                              x-data="{ 
                                  open: false,
@@ -256,7 +258,7 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs">
                                 @foreach($coreStatuses as $status)
                                     <div 
                                         @click="selectStatus('{{ $status->value }}')" 
@@ -296,7 +298,8 @@
                     </div>
 
                     <!-- Row 5: Substatus & Due Date -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <!-- Substatus (Custom Searchable Combobox with Color Badges) -->
                         <div class="relative" 
                              x-data="{ 
                                  open: false,
@@ -315,7 +318,14 @@
                                     @click="open = !open" 
                                     @click.outside="open = false"
                                     class="w-full bg-[#fbfbfa] border border-[#e9e9e7] hover:border-stone-400 rounded-md px-3 py-1.5 text-zinc-800 focus:outline-none text-left flex items-center justify-between font-medium">
-                                    <span>{{ $substatus ? $substatus : 'Ninguno' }}</span>
+                                    @if($substatus)
+                                        @php $subEnum = \App\Enums\Substatus::tryFrom($substatus); @endphp
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $subEnum ? $subEnum->badgeStyle() : 'bg-stone-100 text-stone-700 border-stone-200' }}">
+                                            {{ $substatus }}
+                                        </span>
+                                    @else
+                                        <span class="text-zinc-500 italic">Ninguno</span>
+                                    @endif
                                     <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
                                 </button>
                             </div>
@@ -325,10 +335,10 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-64 overflow-y-auto divide-y divide-stone-100 text-xs">
                                 <div 
                                     @click="selectSub('')" 
-                                    class="p-2 hover:bg-stone-100 cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
+                                    class="p-2.5 hover:bg-stone-100 cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
                                     <span>Ninguno</span>
                                     @if(!$substatus)
                                         <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
@@ -337,8 +347,10 @@
                                 @foreach($substatuses as $sub)
                                     <div 
                                         @click="selectSub('{{ $sub->value }}')" 
-                                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                                        <span>{{ $sub->value }}</span>
+                                        class="p-2 hover:bg-stone-100 cursor-pointer transition flex items-center justify-between">
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $sub->badgeStyle() }}">
+                                            {{ $sub->value }}
+                                        </span>
                                         @if($substatus === $sub->value)
                                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                                         @endif

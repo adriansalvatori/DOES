@@ -3,8 +3,12 @@
 namespace App\Livewire\Planner;
 
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\OrderEvent;
+use App\Models\RelatedTask;
+use App\Models\SubtaskPreset;
 use Carbon\Carbon;
 use Livewire\Component;
 
@@ -124,6 +128,79 @@ class WeeklyPlanner extends Component
         }
     }
 
+    public function scheduleSubtask($orderId, $title, $dateString, $designerId = null)
+    {
+        $order = Order::findOrFail($orderId);
+        $scheduledDate = Carbon::parse($dateString);
+        $assigneeId = $designerId ?: ($order->designer_id ?? $order->designers->first()?->id);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => trim($title),
+            'type' => RelatedTaskType::SUBTASK->value,
+            'scheduled_date' => $scheduledDate->toDateString(),
+            'assignee_id' => $assigneeId,
+            'status' => 'todo',
+            'priority' => 'normal',
+        ]);
+
+        // Keep order scheduled_date synced to most recent scheduled date
+        $order->update([
+            'scheduled_date' => $scheduledDate->toDateString(),
+            'in_workspace' => true,
+        ]);
+
+        // Log OrderEvent for timeline
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'SUBTASK_SCHEDULED',
+            'actor' => auth()->user()?->name ?? 'Diseñador',
+            'new_value' => $title,
+            'metadata' => [
+                'task_id' => $subtask->id,
+                'task_title' => $title,
+                'date' => $scheduledDate->toDateString(),
+            ],
+        ]);
+
+        session()->flash('message', "Subtarea \"{$title}\" programada para {$order->company_name} el {$scheduledDate->format('d M')}.");
+        $this->dispatch('order-updated');
+    }
+
+    public function toggleSubtaskComplete($taskId)
+    {
+        $subtask = RelatedTask::with('order')->findOrFail($taskId);
+        $newStatus = $subtask->status === 'done' ? 'todo' : 'done';
+
+        $subtask->update([
+            'status' => $newStatus,
+            'completed_at' => $newStatus === 'done' ? now() : null,
+        ]);
+
+        if ($subtask->order && $newStatus === 'done') {
+            OrderEvent::create([
+                'order_id' => $subtask->order->id,
+                'event_type' => 'SUBTASK_COMPLETED',
+                'actor' => auth()->user()?->name ?? 'Diseñador',
+                'new_value' => $subtask->title,
+                'metadata' => [
+                    'task_id' => $subtask->id,
+                    'task_title' => $subtask->title,
+                ],
+            ]);
+        }
+
+        $this->dispatch('order-updated');
+    }
+
+    public function deleteSubtask($taskId)
+    {
+        $subtask = RelatedTask::findOrFail($taskId);
+        $subtask->delete();
+        session()->flash('message', 'Subtarea eliminada.');
+        $this->dispatch('order-updated');
+    }
+
     public function unscheduleOrder($orderId)
     {
         $order = Order::findOrFail($orderId);
@@ -172,7 +249,7 @@ class WeeklyPlanner extends Component
             'range_label' => $nextWeekMonday->format('d M').' - '.$nextWeekFriday->format('d M'),
         ];
 
-        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['designers', 'designer'])]);
+        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['designers', 'designer', 'relatedTasks'])]);
         if ($this->selectedDesignerFilter !== 'all') {
             $designerQuery->where('id', $this->selectedDesignerFilter);
         }
@@ -193,6 +270,7 @@ class WeeklyPlanner extends Component
             'designers' => $designers,
             'allDesigners' => Designer::where('active', true)->get(),
             'unscheduledOrders' => $unscheduledOrders,
+            'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
         ])->layout('components.layouts.app', ['title' => 'Planificador Semanal - Kudos Design Ops']);
     }
 }

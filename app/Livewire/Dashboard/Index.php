@@ -77,6 +77,15 @@ class Index extends Component
 
         $toDoTodayOrders = $allOrders->filter(fn ($o) => $o->core_status === CoreStatus::TO_DO_TODAY || $o->scheduled_date?->isToday());
 
+        $toDoTodayTasks = RelatedTask::with(['order', 'assignee'])
+            ->whereHas('order', fn ($q) => $q->inWorkspace())
+            ->where('status', 'todo')
+            ->where(function ($q) {
+                $q->whereDate('scheduled_date', today())
+                    ->orWhereDate('due_date', today());
+            })
+            ->get();
+
         $clientFollowUpTasks = RelatedTask::with(['order', 'assignee'])
             ->whereHas('order', fn ($q) => $q->inWorkspace())
             ->where('status', 'todo')
@@ -106,6 +115,7 @@ class Index extends Component
         return view('livewire.dashboard.index', [
             'overdueOrders' => $overdueOrders,
             'toDoTodayOrders' => $toDoTodayOrders,
+            'toDoTodayTasks' => $toDoTodayTasks,
             'clientFollowUpTasks' => $clientFollowUpTasks,
             'camilaFollowUpTasks' => $camilaFollowUpTasks,
             'resolverOrders' => $resolverOrders,

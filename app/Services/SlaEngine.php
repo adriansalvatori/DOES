@@ -12,9 +12,13 @@ use Carbon\Carbon;
 class SlaEngine
 {
     public const DESIGN_BASE_SLA_DAYS = 3;
+
     public const CLIENT_CHANGES_SLA_DAYS = 2;
+
     public const MISSING_MEASURES_SLA_DAYS = 2;
+
     public const CLIENT_FOLLOWUP_INTERVAL_DAYS = 3;
+
     public const ON_HOLD_NO_RESPONSE_DAYS = 9;
 
     /**
@@ -24,14 +28,21 @@ class SlaEngine
     {
         $startDate = $startDate ? $startDate->copy() : Carbon::now();
 
+        // Ensure start date is on a business day if created on a weekend
+        if ($startDate->isSaturday()) {
+            $startDate->addDays(2);
+        } elseif ($startDate->isSunday()) {
+            $startDate->addDays(1);
+        }
+
         return match ($status) {
             CoreStatus::EURALIZ_ORDERS_RECEIVED,
             CoreStatus::ADRIAN_ORDERS_RECEIVED,
-            CoreStatus::CESAR_ORDERS_RECEIVED => $startDate->addDays(self::DESIGN_BASE_SLA_DAYS),
+            CoreStatus::CESAR_ORDERS_RECEIVED => $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS),
 
-            CoreStatus::ENTRANTE => $startDate->addDays(self::MISSING_MEASURES_SLA_DAYS),
+            CoreStatus::ENTRANTE => $startDate->addWeekdays(self::MISSING_MEASURES_SLA_DAYS),
 
-            default => $startDate->addDays(self::DESIGN_BASE_SLA_DAYS),
+            default => $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS),
         };
     }
 
@@ -99,6 +110,7 @@ class SlaEngine
                     'metadata' => ['reason' => 'Current due date exceeded'],
                 ]);
             }
+
             return true;
         }
 

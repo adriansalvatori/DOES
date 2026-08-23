@@ -12,6 +12,7 @@ enum RelatedTaskType: string
     case RESOLVER = 'RESOLVER';
     case PONER_ALTA = 'PONER EN ALTA';
     case FOLLOW_UP_ALTA = 'FOLLOW UP ALTA';
+    case SUBTASK = 'SUBTAREA';
     case AJUSTES_PRODUCCION = 'AJUSTES DE PRODUCCIÓN';
 
     public function label(): string

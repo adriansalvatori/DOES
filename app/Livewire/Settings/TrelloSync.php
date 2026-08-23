@@ -157,8 +157,14 @@ class TrelloSync extends Component
                 'company' => $delOrder->company_name ?: 'Empresa',
                 'task' => $delOrder->task_name ?: 'Tarea',
                 'previous_status' => $delOrder->core_status?->label() ?: 'Tablero Trello',
-                'new_status' => 'Archivada en Trello',
+                'new_status' => 'Archivada / Eliminada de Trello',
             ];
+
+            $delOrder->designers()->detach();
+            $delOrder->relatedTasks()->delete();
+            $delOrder->events()->delete();
+            $delOrder->dueDateHistories()->delete();
+            $delOrder->forceDelete();
         }
 
         $totalSynced = count($cards);

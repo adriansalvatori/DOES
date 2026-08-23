@@ -233,9 +233,11 @@
                                             class="p-2 hover:bg-blue-50/70 cursor-pointer flex items-center justify-between gap-2 transition">
                                             <div class="min-w-0">
                                                 <span class="font-bold text-zinc-900 block truncate text-[11px]">
-                                                    {{ $tc->wo_number ? 'WO '.$tc->wo_number.' - ' : '' }}{{ $tc->company_name ?: 'Sin empresa' }}
+                                                    {{ $tc->trello_title ?: ($tc->company_name ?: 'Tarjeta Trello') }}
                                                 </span>
-                                                <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name ?: $tc->trello_title }}</span>
+                                                @if($tc->task_name && $tc->task_name !== $tc->trello_title)
+                                                    <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name }}</span>
+                                                @endif
                                             </div>
                                             <span class="font-mono text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
                                                 {{ substr($tc->trello_card_id, 0, 8) }}...
@@ -415,7 +417,7 @@
                                 </div>
                             </div>
 
-                            <!-- Substatus (Custom Searchable Combobox) -->
+                            <!-- Substatus (Custom Searchable Combobox with Color Badges) -->
                             <div class="space-y-1 relative" 
                                  x-data="{ 
                                      open: false,
@@ -431,7 +433,14 @@
                                         @click="open = !open" 
                                         @click.outside="open = false"
                                         class="bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-3 py-1.5 text-xs text-zinc-900 w-full text-left flex items-center justify-between font-medium">
-                                        <span>{{ $editSubstatus ? $editSubstatus : 'Sin Subestatus' }}</span>
+                                        @if($editSubstatus)
+                                            @php $subEnum = \App\Enums\Substatus::tryFrom($editSubstatus); @endphp
+                                            <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $subEnum ? $subEnum->badgeStyle() : 'bg-stone-100 text-stone-700 border-stone-200' }}">
+                                                {{ $editSubstatus }}
+                                            </span>
+                                        @else
+                                            <span class="text-zinc-500 italic">Sin Subestatus</span>
+                                        @endif
                                         <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
                                     </button>
                                 </div>
@@ -441,10 +450,10 @@
                                     x-transition:enter="transition ease-out duration-100"
                                     x-transition:enter-start="opacity-0 scale-95"
                                     x-transition:enter-end="opacity-100 scale-100"
-                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
                                     <div 
                                         @click="selectSub('')" 
-                                        class="p-2 hover:bg-stone-100 cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
+                                        class="p-2.5 hover:bg-stone-100 cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
                                         <span>Sin Subestatus</span>
                                         @if(!$editSubstatus)
                                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
@@ -453,8 +462,10 @@
                                     @foreach($substatuses as $sub)
                                         <div 
                                             @click="selectSub('{{ $sub->value }}')" 
-                                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                                            <span>{{ $sub->value }}</span>
+                                            class="p-2 hover:bg-stone-100 cursor-pointer transition flex items-center justify-between">
+                                            <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $sub->badgeStyle() }}">
+                                                {{ $sub->value }}
+                                            </span>
                                             @if($editSubstatus === $sub->value)
                                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                                             @endif
@@ -571,37 +582,75 @@
                     <!-- Related Tasks Section -->
                     <div class="space-y-2.5">
                         <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                            <h4 class="font-semibold text-xs text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
-                                <x-lucide-check-square class="w-3.5 h-3.5 text-zinc-600 shrink-0" /> Tareas Vinculadas
+                            <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <x-lucide-check-square class="w-4 h-4 text-zinc-700 shrink-0" /> 
+                                <span>Tareas Vinculadas / Gatilladas</span>
+                                <span class="text-zinc-400 font-mono text-[11px] font-normal">({{ $order->relatedTasks->count() }})</span>
                             </h4>
+                            <span class="text-[10px] text-zinc-400">Puedes completar o eliminar cualquier tarea gatillada</span>
                         </div>
 
                         <div class="space-y-1.5">
                             @forelse($order->relatedTasks as $task)
-                                <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 flex items-center justify-between text-xs gap-2">
-                                    <div class="min-w-0 flex-1">
-                                        <span class="font-medium text-zinc-900 block text-[11px] truncate">{{ $task->title }}</span>
-                                        <span class="text-zinc-400 text-[10px] font-mono block truncate">Trigger: {{ $task->trigger_type ?? 'Manual' }}</span>
+                                <div class="bg-[#fbfbfa] hover:bg-stone-50/80 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs">
+                                    <div class="min-w-0 flex-1 space-y-0.5">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="font-bold text-zinc-900 text-xs truncate {{ $task->isDone() ? 'line-through text-zinc-400' : '' }}" title="{{ $task->title }}">
+                                                {{ $task->title }}
+                                            </span>
+                                            @if($task->type)
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-stone-100 text-zinc-600 border border-stone-200 shrink-0 uppercase tracking-wider">
+                                                    {{ $task->type->value }}
+                                                </span>
+                                            @endif
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-3 text-[10px] text-zinc-400 font-mono">
+                                            <span>Origen: <strong class="text-zinc-600 font-sans">{{ $task->trigger_type ?? 'Gatillada' }}</strong></span>
+                                            @if($task->assignee)
+                                                <span>Asignado: <strong class="text-zinc-600 font-sans">{{ $task->assignee->name }}</strong></span>
+                                            @endif
+                                            @if($task->scheduled_date)
+                                                <span>Fecha: <strong class="text-zinc-600 font-sans">{{ $task->scheduled_date->format('d M') }}</strong></span>
+                                            @endif
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-1.5 shrink-0">
-                                        <button wire:click="toggleTaskStatus({{ $task->id }})" class="px-2 py-0.5 rounded text-[10px] font-medium transition {{ $task->isDone() ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100' }}">
-                                            {{ $task->isDone() ? 'Done ✓' : 'To Do' }}
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button 
+                                            wire:click="toggleTaskStatus({{ $task->id }})" 
+                                            class="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition flex items-center gap-1 cursor-pointer {{ $task->isDone() ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100' }}">
+                                            <x-lucide-check-circle-2 class="w-3 h-3 stroke-[2.5]" />
+                                            <span>{{ $task->isDone() ? 'Completada ✓' : 'Pendiente' }}</span>
                                         </button>
-                                        <button wire:click="deleteTask({{ $task->id }})" wire:confirm="¿Eliminar esta tarea vinculada?" class="p-1 rounded text-zinc-400 hover:text-red-600 hover:bg-red-50 transition" title="Eliminar tarea">
+
+                                        <button 
+                                            wire:click="deleteTask({{ $task->id }})" 
+                                            wire:confirm="¿Estás seguro de eliminar la tarea gatillada '{{ addslashes($task->title) }}'?" 
+                                            class="p-1.5 rounded-lg bg-white hover:bg-red-50 text-zinc-400 hover:text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
+                                            title="Eliminar tarea gatillada">
                                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                         </button>
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-xs text-zinc-400">Sin tareas vinculadas activas.</p>
+                                <div class="p-4 text-center text-xs text-zinc-400 bg-[#fbfbfa] rounded-xl border border-[#e9e9e7]">
+                                    Sin tareas vinculadas o gatilladas aún.
+                                </div>
                             @endforelse
                         </div>
 
-                        <!-- Add Task Input -->
+                        <!-- Add Manual Task Input -->
                         <div class="flex gap-2 pt-1">
-                            <input type="text" wire:model="newTaskTitle" wire:keydown.enter="addTask" placeholder="Añadir nueva tarea..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-800 focus:outline-none flex-1 font-normal">
-                            <button wire:click="addTask" class="px-3 py-1.5 rounded-md bg-stone-800 hover:bg-stone-700 text-white font-medium text-xs shrink-0">
-                                + Añadir Tarea
+                            <input 
+                                type="text" 
+                                wire:model="newTaskTitle" 
+                                wire:keydown.enter="addTask" 
+                                placeholder="Añadir nueva tarea manual a esta orden... (Enter para guardar)" 
+                                class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:bg-white focus:border-stone-400 flex-1 font-normal">
+                            <button wire:click="addTask" class="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                <x-lucide-plus class="w-3.5 h-3.5" />
+                                <span>Añadir Tarea</span>
                             </button>
                         </div>
                     </div>

@@ -68,7 +68,7 @@ class OrderDetailModal extends Component
     public function mount($orderId = null)
     {
         $this->orderId = $orderId;
-        $this->clientPromisedDate = now()->addDays(2)->toDateString();
+        $this->clientPromisedDate = now()->addWeekdays(2)->toDateString();
     }
 
     #[On('open-order-detail')]

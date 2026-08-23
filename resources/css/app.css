@@ -17,3 +17,46 @@ code, pre, .font-mono {
     font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif !important;
 }
 
+/* Custom Always-Visible Horizontal Scrollbar for Kanban Board */
+.custom-horizontal-scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: #71716a #e5e5e0;
+}
+
+.custom-horizontal-scrollbar::-webkit-scrollbar {
+    height: 14px;
+}
+
+.custom-horizontal-scrollbar::-webkit-scrollbar-track {
+    background: #e5e5e0;
+    border-radius: 8px;
+}
+
+.custom-horizontal-scrollbar::-webkit-scrollbar-thumb {
+    background: #71716a;
+    border-radius: 8px;
+    border: 3px solid #e5e5e0;
+}
+
+.custom-horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #3f3f3c;
+}
+
+/* Custom Vertical Scrollbar */
+.custom-vertical-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-vertical-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-vertical-scrollbar::-webkit-scrollbar-thumb {
+    background: #d4d4d0;
+    border-radius: 4px;
+}
+
+.custom-vertical-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #a1a19a;
+}
+

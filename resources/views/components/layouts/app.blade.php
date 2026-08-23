@@ -123,10 +123,7 @@
                         </a>
                     </div>
                 </div>
-                <a href="/backlog" title="Backlog de Órdenes" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Backlog</span>
-                </a>
+
                 <a href="/kanban" title="Kanban Board" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-kanban class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">Kanban Board</span>
@@ -147,95 +144,114 @@
                     <x-lucide-trash-2 class="w-4 h-4 text-red-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">Papelera</span>
                 </a>
+
+                <!-- Team Designers List -->
+                <div class="pt-3 border-t border-[#e9e9e7] space-y-1.5">
+                    <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2">Diseñadores</span>
+                    <div class="space-y-1.5 text-[11px] text-zinc-600 font-medium px-2">
+                        <div class="flex items-center gap-2" title="Euralíz (Magenta)">
+                            <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100"></span>
+                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">Euralíz</span>
+                        </div>
+                        <div class="flex items-center gap-2" title="César (Cyan)">
+                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100"></span>
+                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
+                        </div>
+                        <div class="flex items-center gap-2" title="Adrián (Verde)">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100"></span>
+                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">Adrián</span>
+                        </div>
+                        <div class="flex items-center gap-2" title="Diseñador Externo (Amarillo)">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100"></span>
+                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">Externo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Single Configuración Item with Context Dropdown Menu -->
+                <div class="pt-3 border-t border-[#e9e9e7] relative" @click.outside="if (!sidebarOpen) configOpen = false">
+                    <button 
+                        @click="configOpen = !configOpen" 
+                        title="Configuración" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <x-lucide-settings class="w-4 h-4 text-zinc-500 shrink-0" />
+                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">Configuración</span>
+                        </div>
+                        <x-lucide-chevron-down 
+                            x-show="sidebarOpen" 
+                            class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
+                            x-bind:class="configOpen ? 'rotate-180' : ''" />
+                    </button>
+
+                    <!-- Expanded Sub-menu when Sidebar is Open -->
+                    <div 
+                        x-show="configOpen && sidebarOpen" 
+                        x-transition:enter="transition ease-out duration-100"
+                        x-transition:enter-start="opacity-0 scale-95"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        class="mt-1 pl-6 space-y-1 text-xs">
+                        <a 
+                            href="/settings/substatuses" 
+                            title="Configuración de Subestatus" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Subestatus</span>
+                        </a>
+                        <a 
+                            href="/settings/subtasks" 
+                            title="Plantillas de Subtareas" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Plantillas Subtareas</span>
+                        </a>
+                        <a 
+                            href="/trello-sync" 
+                            title="Sincronización Trello" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Sincronización Trello</span>
+                        </a>
+                    </div>
+
+                    <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
+                    <div 
+                        x-show="configOpen && !sidebarOpen" 
+                        x-transition:enter="transition ease-out duration-150"
+                        x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
+                        x-transition:enter-end="opacity-100 scale-100 translate-x-0"
+                        class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
+                        <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">Configuración</div>
+                        <a 
+                            href="/settings/substatuses" 
+                            title="Configuración de Subestatus" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Subestatus</span>
+                        </a>
+                        <a 
+                            href="/settings/subtasks" 
+                            title="Plantillas de Subtareas" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Plantillas Subtareas</span>
+                        </a>
+                        <a 
+                            href="/trello-sync" 
+                            title="Sincronización Trello" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">Sincronización Trello</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Backlog Link Below Configuración -->
+                <a href="/backlog" title="Backlog de Órdenes" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">Backlog</span>
+                </a>
             </nav>
-
-            <!-- Team Designers List -->
-            <div class="pt-3 border-t border-[#e9e9e7] space-y-1.5">
-                <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2">Diseñadores</span>
-                <div class="space-y-1.5 text-[11px] text-zinc-600 font-medium px-2">
-                    <div class="flex items-center gap-2" title="Euralíz (Magenta)">
-                        <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100"></span>
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">Euralíz</span>
-                    </div>
-                    <div class="flex items-center gap-2" title="César (Cyan)">
-                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100"></span>
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
-                    </div>
-                    <div class="flex items-center gap-2" title="Adrián (Verde)">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100"></span>
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">Adrián</span>
-                    </div>
-                    <div class="flex items-center gap-2" title="Diseñador Externo (Amarillo)">
-                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100"></span>
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">Externo</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Single Configuración Item with Context Dropdown Menu -->
-            <div class="pt-3 border-t border-[#e9e9e7] relative" @click.outside="if (!sidebarOpen) configOpen = false">
-                <button 
-                    @click="configOpen = !configOpen" 
-                    title="Configuración" 
-                    class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <div class="flex items-center gap-2.5 min-w-0">
-                        <x-lucide-settings class="w-4 h-4 text-zinc-500 shrink-0" />
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">Configuración</span>
-                    </div>
-                    <x-lucide-chevron-down 
-                        x-show="sidebarOpen" 
-                        class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
-                        x-bind:class="configOpen ? 'rotate-180' : ''" />
-                </button>
-
-                <!-- Expanded Sub-menu when Sidebar is Open -->
-                <div 
-                    x-show="configOpen && sidebarOpen" 
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 scale-95"
-                    x-transition:enter-end="opacity-100 scale-100"
-                    class="mt-1 pl-6 space-y-1 text-xs">
-                    <a 
-                        href="/settings/substatuses" 
-                        title="Configuración de Subestatus" 
-                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                        <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        <span class="truncate">Subestatus</span>
-                    </a>
-                    <a 
-                        href="/trello-sync" 
-                        title="Sincronización Trello" 
-                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                        <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        <span class="truncate">Sincronización Trello</span>
-                    </a>
-                </div>
-
-                <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
-                <div 
-                    x-show="configOpen && !sidebarOpen" 
-                    x-transition:enter="transition ease-out duration-150"
-                    x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
-                    x-transition:enter-end="opacity-100 scale-100 translate-x-0"
-                    class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
-                    <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">Configuración</div>
-                    <a 
-                        href="/settings/substatuses" 
-                        title="Configuración de Subestatus" 
-                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                        <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        <span class="truncate">Subestatus</span>
-                    </a>
-                    <a 
-                        href="/trello-sync" 
-                        title="Sincronización Trello" 
-                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                        <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        <span class="truncate">Sincronización Trello</span>
-                    </a>
-                </div>
-            </div>
-        </div>
         </div>
 
         <!-- Sidebar Footer -->
@@ -251,10 +267,10 @@
     <!-- Main Content Container (Dynamic Padding for Collapsible Sidebar) -->
     <div 
         :class="sidebarOpen ? 'pl-64' : 'pl-16'"
-        class="flex-1 min-h-screen flex flex-col w-full bg-[#fbfbfa] transition-all duration-200 ease-in-out">
+        class="flex-1 h-screen max-h-screen flex flex-col w-full bg-[#fbfbfa] transition-all duration-200 ease-in-out overflow-hidden">
         
         <!-- Top Utility Bar -->
-        <header class="h-11 border-b border-[#e9e9e7] bg-[#fbfbfa] px-6 flex items-center justify-between text-xs text-zinc-500 sticky top-0 z-30 backdrop-blur-xs">
+        <header class="h-11 border-b border-[#e9e9e7] bg-[#fbfbfa] px-6 flex items-center justify-between text-xs text-zinc-500 sticky top-0 z-30 backdrop-blur-xs shrink-0">
             <div class="flex items-center gap-2.5">
                 <button @click="sidebarOpen = !sidebarOpen" class="p-1 rounded hover:bg-[#efefed] text-zinc-500 hover:text-zinc-900 transition" title="Toggle Sidebar">
                     <x-lucide-panel-left class="w-4 h-4" />
@@ -279,7 +295,7 @@
         </header>
 
         <!-- Main Slot -->
-        <main class="flex-1 w-full px-6 py-5">
+        <main class="flex-1 w-full px-6 py-4 flex flex-col min-h-0 overflow-hidden">
             {{ $slot }}
         </main>
     </div>

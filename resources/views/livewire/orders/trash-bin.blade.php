@@ -1,5 +1,5 @@
-<div>
-    <div class="min-h-screen bg-[#f7f7f5]">
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
+    <div class="bg-[#f7f7f5] pb-6 space-y-4">
         <!-- Page Header -->
         <div class="border-b border-[#e9e9e7] bg-white px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-3">

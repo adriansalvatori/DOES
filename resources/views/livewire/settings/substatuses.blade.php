@@ -1,6 +1,6 @@
-<div class="space-y-6 max-w-6xl mx-auto">
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto">
     <!-- Header Card -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 bg-stone-900 text-white rounded-xl flex items-center justify-center font-bold shadow-xs">
                 <x-lucide-settings-2 class="w-5 h-5" />

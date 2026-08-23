@@ -17,6 +17,7 @@ class RelatedTask extends Model
         'type',
         'status',
         'assignee_id',
+        'scheduled_date',
         'due_date',
         'completed_at',
         'trigger_type',
@@ -25,6 +26,7 @@ class RelatedTask extends Model
 
     protected $casts = [
         'type' => RelatedTaskType::class,
+        'scheduled_date' => 'date',
         'due_date' => 'date',
         'completed_at' => 'datetime',
     ];
@@ -42,7 +44,7 @@ class RelatedTask extends Model
     protected static function booted(): void
     {
         static::created(function (RelatedTask $task) {
-            if ($task->order && !$task->order->in_workspace) {
+            if ($task->order && ! $task->order->in_workspace) {
                 $task->order->update([
                     'in_workspace' => true,
                 ]);

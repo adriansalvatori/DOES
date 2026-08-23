@@ -67,7 +67,7 @@ class CreateOrderModal extends Component
         $this->designerIds = [];
         $this->coreStatus = $initialStatus ?: CoreStatus::ENTRANTE->value;
         $this->substatus = '';
-        $this->dueDate = now()->addDays(2)->toDateString();
+        $this->dueDate = now()->addWeekdays(2)->toDateString();
 
         $this->showModal = true;
     }
@@ -96,7 +96,7 @@ class CreateOrderModal extends Component
         }
         $this->coreStatus = $original->core_status ? $original->core_status->value : CoreStatus::ENTRANTE->value;
         $this->substatus = $original->substatus ? $original->substatus->value : '';
-        $this->dueDate = $original->current_due_date ? $original->current_due_date->toDateString() : now()->addDays(2)->toDateString();
+        $this->dueDate = $original->current_due_date ? $original->current_due_date->toDateString() : now()->addWeekdays(2)->toDateString();
 
         $this->showModal = true;
     }
@@ -141,7 +141,7 @@ class CreateOrderModal extends Component
             'designer_id' => ! empty($this->designerIds) ? reset($this->designerIds) : null,
             'core_status' => $statusEnum,
             'substatus' => $substatusEnum,
-            'current_due_date' => ! empty($this->dueDate) ? $this->dueDate : now()->addDays(2)->toDateString(),
+            'current_due_date' => ! empty($this->dueDate) ? $this->dueDate : now()->addWeekdays(2)->toDateString(),
             'in_workspace' => true,
         ]);
 

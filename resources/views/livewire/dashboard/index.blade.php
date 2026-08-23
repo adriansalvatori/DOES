@@ -1,7 +1,7 @@
-<div class="space-y-5">
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
     
     <!-- Top Header Bar (Sober Light Style) -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs shrink-0">
         <div class="flex items-center gap-3 min-w-0">
             <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
                 <x-lucide-layout-dashboard class="w-4.5 h-4.5 text-stone-100" />
@@ -191,15 +191,53 @@
                 <div class="space-y-3">
                     <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2.5">
                         <h3 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-pin class="w-4 h-4 text-amber-600" /> Trabajo Programado Para Hoy ({{ $toDoTodayOrders->count() }})
+                            <x-lucide-pin class="w-4 h-4 text-amber-600" /> Trabajo Programado Para Hoy ({{ $toDoTodayOrders->count() + $toDoTodayTasks->count() }})
                         </h3>
                         <span class="text-[10px] text-zinc-400 font-mono">Checkbox = Completar</span>
                     </div>
 
-                    @if($toDoTodayOrders->isEmpty())
-                        <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes programadas en 'TO DO TODAY' hoy.</p>
+                    @if($toDoTodayOrders->isEmpty() && $toDoTodayTasks->isEmpty())
+                        <p class="text-xs text-zinc-400 text-center py-12">No hay trabajo programado para hoy.</p>
                     @else
                         <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                            <!-- Today's Scheduled Subtasks -->
+                            @foreach($toDoTodayTasks as $tTask)
+                                <div class="bg-violet-50/70 border border-violet-200 hover:border-violet-300 rounded-xl p-3 flex items-center justify-between gap-3 transition min-w-0">
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <button 
+                                            wire:click="completeTask({{ $tTask->id }})" 
+                                            type="button"
+                                            class="w-4.5 h-4.5 rounded-full border border-violet-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40 transition flex items-center justify-center shrink-0 cursor-pointer"
+                                            title="Completar subtarea">
+                                            <x-lucide-check class="w-3 h-3 stroke-[3]" />
+                                        </button>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <span class="px-1.5 py-0.2 rounded bg-violet-700 text-white text-[9px] font-bold shrink-0">SUBTAREA</span>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate" title="{{ $tTask->title }}">{{ $tTask->title }}</h4>
+                                            </div>
+                                            @if($tTask->order)
+                                                <p class="text-[11px] text-violet-800 font-medium truncate mt-0.5" title="{{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}">
+                                                    {{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}
+                                                </p>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="px-2 py-0.5 rounded bg-white text-[10px] font-medium text-zinc-600 border border-stone-200 whitespace-nowrap">
+                                            {{ $tTask->assignee?->name ?? 'Sin Asignar' }}
+                                        </span>
+                                        @if($tTask->order)
+                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $tTask->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-violet-100 border border-violet-200 text-[10px] font-medium text-violet-800 transition flex items-center gap-1">
+                                                <x-lucide-panel-right class="w-3 h-3 text-violet-500" />
+                                                <span>Detalle</span>
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            <!-- Today's Scheduled Orders -->
                             @foreach($toDoTodayOrders as $order)
                                 <div class="rounded-xl p-3 flex items-center justify-between gap-3 transition min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-[#e9e9e7] hover:border-stone-400' }}">
                                     <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -212,14 +250,14 @@
                                         </button>
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2 min-w-0">
-                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
                                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
                                             </div>
-                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                            <p class="font-normal text-[11px] text-zinc-500 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                         </div>
                                     </div>
 

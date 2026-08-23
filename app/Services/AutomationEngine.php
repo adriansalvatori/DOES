@@ -48,7 +48,7 @@ class AutomationEngine
             'event_type' => 'ORDER_CREATED',
             'actor' => 'AutomationEngine',
             'previous_value' => null,
-            'new_value' => $order->company_name . ' - ' . $order->task_name,
+            'new_value' => $order->company_name.' - '.$order->task_name,
             'metadata' => ['status' => $order->core_status->value],
         ]);
     }
@@ -99,7 +99,7 @@ class AutomationEngine
                 'type' => RelatedTaskType::FOLLOW_UP_CAMILA,
                 'status' => 'todo',
                 'assignee_id' => $order->designer_id,
-                'due_date' => now()->addDay()->toDateString(),
+                'due_date' => now()->addWeekdays(1)->toDateString(),
                 'trigger_type' => 'CAMILA_TRANSITION',
                 'priority' => 'normal',
             ]);
@@ -146,7 +146,7 @@ class AutomationEngine
     public function handleClientResponse(Order $order): void
     {
         $order->increment('client_revision_count');
-        $newDueDate = now()->addDays(SlaEngine::CLIENT_CHANGES_SLA_DAYS);
+        $newDueDate = now()->addWeekdays(SlaEngine::CLIENT_CHANGES_SLA_DAYS);
 
         $this->slaEngine->updateDueDate(
             $order,
@@ -166,7 +166,7 @@ class AutomationEngine
      */
     public function processApproval(Order $order, bool $measuresConfirmed, bool $estimateApproved): void
     {
-        $tomorrow = now()->addDay();
+        $tomorrow = now()->addWeekdays(1);
 
         $order->update([
             'approved' => true,
@@ -187,7 +187,7 @@ class AutomationEngine
             'event_type' => 'ORDER_APPROVED',
             'actor' => 'User',
             'previous_value' => 'approved: false',
-            'new_value' => "measures: " . ($measuresConfirmed ? 'YES' : 'NO') . ", estimate: " . ($estimateApproved ? 'YES' : 'NO'),
+            'new_value' => 'measures: '.($measuresConfirmed ? 'YES' : 'NO').', estimate: '.($estimateApproved ? 'YES' : 'NO'),
             'metadata' => [
                 'measures_confirmed' => $measuresConfirmed,
                 'estimate_approved' => $estimateApproved,
@@ -207,7 +207,7 @@ class AutomationEngine
                 'core_status' => $targetStatus,
                 'substatus' => Substatus::PONER_EN_ALTA,
             ]);
-        } elseif (!$measuresConfirmed) {
+        } elseif (! $measuresConfirmed) {
             // Missing measures -> High priority RESOLVER in ENTRANTE
             $order->update([
                 'core_status' => CoreStatus::ENTRANTE,
@@ -226,7 +226,7 @@ class AutomationEngine
                 'trigger_type' => 'MISSING_MEASURES_APPROVED',
                 'priority' => 'high',
             ]);
-        } elseif ($measuresConfirmed && !$estimateApproved) {
+        } elseif ($measuresConfirmed && ! $estimateApproved) {
             // Approved but estimate missing -> Move to Orders Received with warning condition
             $targetStatus = match ($order->designer?->name) {
                 'Euralíz' => CoreStatus::EURALIZ_ORDERS_RECEIVED,
@@ -264,7 +264,7 @@ class AutomationEngine
             'event_type' => 'DELAY_RESOLVED',
             'actor' => 'User',
             'previous_value' => 'OVERDUE',
-            'new_value' => 'Promised Date: ' . $clientPromisedDate->toDateString(),
+            'new_value' => 'Promised Date: '.$clientPromisedDate->toDateString(),
             'metadata' => ['reason' => $reason],
         ]);
     }
@@ -277,7 +277,7 @@ class AutomationEngine
         $clientOrders = Order::where('core_status', CoreStatus::ENVIADO_AL_CLIENTE)->get();
 
         foreach ($clientOrders as $order) {
-            $daysInClient = $order->updated_at ? $order->updated_at->diffInDays(now()) : 0;
+            $daysInClient = $order->updated_at ? $order->updated_at->diffInWeekdays(now()) : 0;
 
             if ($daysInClient >= 9) {
                 $order->update([
@@ -325,7 +325,7 @@ class AutomationEngine
         }
 
         // Check for overdue orders and auto-create preventative delay tasks
-        $overdueOrders = Order::inWorkspace()->get()->filter(fn($o) => $o->isOverdue());
+        $overdueOrders = Order::inWorkspace()->get()->filter(fn ($o) => $o->isOverdue());
         foreach ($overdueOrders as $order) {
             $this->checkAndCreateOverdueTask($order);
         }
@@ -344,7 +344,7 @@ class AutomationEngine
                 ->whereNull('completed_at')
                 ->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 RelatedTask::create([
                     'order_id' => $order->id,
                     'title' => $taskTitle,
@@ -365,7 +365,7 @@ class AutomationEngine
             ->where('title', $title)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             RelatedTask::create([
                 'order_id' => $order->id,
                 'title' => $title,

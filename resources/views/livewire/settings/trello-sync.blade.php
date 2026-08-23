@@ -1,7 +1,7 @@
-<div class="space-y-5">
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
     
     <!-- Top Notion Header -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
         <div class="flex items-center gap-3">
             <x-lucide-refresh-cw class="w-5 h-5 text-zinc-700" />
             <div>

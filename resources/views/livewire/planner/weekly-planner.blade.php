@@ -1,7 +1,7 @@
-<div class="space-y-5" x-data="{ calendarOpen: false }">
+<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1" x-data="{ calendarOpen: false }">
     
     <!-- Top Notion/Linear Rich Header & Week Navigator -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-4">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-4 shrink-0">
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
             
@@ -248,6 +248,7 @@
                     @foreach($days as $day)
                         @php
                             $isNextWeek = $day['is_next_week'] ?? false;
+                            $isToday = !$isNextWeek && $day['date']->isToday();
                             $dayOrders = $isNextWeek
                                 ? $designer->orders->filter(fn($o) => $o->scheduled_date && $o->scheduled_date->gte(Carbon\Carbon::parse($day['date_string'])))
                                 : $designer->orders->filter(fn($o) => $o->scheduled_date?->toDateString() === $day['date_string']);
@@ -261,6 +262,10 @@
                                 'Next Week' => 'bg-violet-50 text-violet-900 border-violet-300 border-dashed',
                                 default => 'bg-stone-50 text-stone-700 border-stone-200',
                             };
+
+                            if ($isToday) {
+                                $dayColorClass = 'bg-amber-500 text-white font-black shadow-2xs ring-2 ring-amber-300';
+                            }
                         @endphp
                         <div 
                             x-data="{ draggingOver: false }"
@@ -274,45 +279,62 @@
                                     $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
                                 }
                             "
-                            :class="{ 'border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-300': draggingOver, '{{ $isNextWeek ? 'bg-[#f4f4f2] border-dashed border-stone-300' : 'bg-[#fbfbfa] border-[#e9e9e7]' }}': !draggingOver }"
-                            class="border rounded-lg p-2.5 space-y-2 min-h-[140px] flex flex-col justify-between min-w-0 transition-all">
+                            :class="{ 
+                                'border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-300': draggingOver, 
+                                '{{ $isToday ? 'bg-amber-50/40 border-amber-300 ring-2 ring-amber-400/40 shadow-xs' : ($isNextWeek ? 'bg-[#f4f4f2] border-dashed border-stone-300' : 'bg-[#fbfbfa] border-[#e9e9e7]') }}': !draggingOver 
+                            }"
+                            class="border rounded-lg p-2 space-y-1.5 min-h-[120px] flex flex-col justify-between min-w-0 transition-all">
                             
                             <div class="min-w-0">
-                                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-1.5 mb-2">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider {{ $dayColorClass }}">
-                                        {{ $day['day_name'] }}
-                                    </span>
-                                    <span class="text-[10px] font-mono font-medium text-zinc-500">
+                                <!-- Day Header with HOY highlight -->
+                                <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-1 mb-1.5">
+                                    <div class="flex items-center gap-1">
+                                        <span class="px-1.5 py-0.2 rounded text-[9px] font-bold border uppercase tracking-wider {{ $dayColorClass }}">
+                                            {{ $day['day_name'] }}
+                                        </span>
+                                        @if($isToday)
+                                            <span class="px-1 py-0.2 rounded bg-amber-600 text-white text-[8px] font-bold animate-pulse">
+                                                HOY
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <span class="text-[9px] font-mono font-medium {{ $isToday ? 'text-amber-800 font-bold' : 'text-zinc-500' }}">
                                         {{ $isNextWeek ? $day['range_label'] : $day['date']->format('d M') }}
                                     </span>
                                 </div>
 
                                 @if($dayOrders->isEmpty())
-                                    <p class="text-[11px] text-zinc-400 text-center py-4 select-none">Sin trabajo agendado</p>
+                                    <p class="text-[10px] text-zinc-400 text-center py-3 select-none">Sin trabajo agendado</p>
                                 @else
                                     <div class="space-y-1.5">
                                         @foreach($dayOrders as $order)
+                                            @php
+                                                $daySubtasks = $order->relatedTasks->filter(fn($t) => $t->scheduled_date?->toDateString() === $day['date_string']);
+                                            @endphp
                                             <div 
                                                 draggable="true" 
                                                 @dragstart="e => e.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-                                                class="rounded p-2 space-y-1 min-w-0 shadow-2xs cursor-grab active:cursor-grabbing hover:shadow-xs transition group {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-white border border-[#e9e9e7] hover:border-stone-300' }}">
-                                                <div class="flex items-center justify-between gap-1.5 min-w-0">
-                                                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                                x-data="{ openSub: false, customTitle: '' }"
+                                                class="rounded-md p-1.5 space-y-1 min-w-0 shadow-2xs cursor-grab active:cursor-grabbing hover:shadow-xs transition group relative {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-white border border-[#e9e9e7] hover:border-stone-300' }}">
+                                                
+                                                <!-- Card Header: Company Name & Order Title -->
+                                                <div class="flex items-start justify-between gap-1 min-w-0">
+                                                    <div class="flex items-start gap-1.5 min-w-0 flex-1">
                                                         <button 
                                                             wire:click="toggleDoneToday({{ $order->id }})" 
                                                             type="button"
-                                                            class="w-4 h-4 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                                            class="w-3.5 h-3.5 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
                                                             title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
                                                             <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                         </button>
                                                         <div class="min-w-0 flex-1">
-                                                            <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                                            <h4 class="font-bold text-[11px] text-zinc-900 truncate leading-tight {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                            <p class="font-normal text-[10px] text-zinc-500 truncate leading-tight mt-0.2 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                                         </div>
                                                     </div>
-                                                    <div class="flex items-center gap-1 shrink-0">
+                                                    <div class="flex items-center gap-0.5 shrink-0">
                                                         @if($order->isOverdue())
-                                                            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse" title="SLA Vencido"></span>
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" title="SLA Vencido"></span>
                                                         @endif
                                                         <button wire:click="unscheduleOrder({{ $order->id }})" class="p-0.5 text-zinc-400 hover:text-red-600 transition" title="Desprogramar / Quitar de agenda">
                                                             <x-lucide-x-circle class="w-3 h-3" />
@@ -322,20 +344,82 @@
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <p class="text-[10px] text-zinc-500 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
 
-                                                @if($order->current_due_date && Carbon\Carbon::parse($day['date_string'])->isAfter($order->current_due_date))
-                                                    <div class="mt-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[9px] font-medium border border-amber-200 truncate">
-                                                        ⚠️ Supera SLA
+                                                <!-- Scheduled Subtasks List for this Day -->
+                                                @if($daySubtasks->isNotEmpty())
+                                                    <div class="space-y-0.5 pt-1 border-t border-stone-100">
+                                                        @foreach($daySubtasks as $stask)
+                                                            <div class="bg-violet-50/80 border border-violet-200/80 rounded px-1 py-0.5 flex items-center justify-between gap-1 text-[9px]">
+                                                                <div class="flex items-center gap-1 min-w-0 flex-1">
+                                                                    <button 
+                                                                        wire:click="toggleSubtaskComplete({{ $stask->id }})"
+                                                                        class="w-2.5 h-2.5 rounded-full border border-violet-400 flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white' }}">
+                                                                        <x-lucide-check class="w-1.5 h-1.5 stroke-[3]" />
+                                                                    </button>
+                                                                    <span class="font-medium text-violet-950 truncate {{ $stask->isDone() ? 'line-through text-zinc-400' : '' }}" title="{{ $stask->title }}">
+                                                                        {{ $stask->title }}
+                                                                    </span>
+                                                                </div>
+                                                                <button wire:click="deleteSubtask({{ $stask->id }})" class="text-zinc-300 hover:text-red-600 p-0.5 transition shrink-0" title="Eliminar subtarea">
+                                                                    <x-lucide-x class="w-2.5 h-2.5" />
+                                                                </button>
+                                                            </div>
+                                                        @endforeach
                                                     </div>
                                                 @endif
+
+                                                <!-- Subtask Quick Add Launcher Button & Popover -->
+                                                <div class="pt-0.5 flex items-center justify-between text-[9px]">
+                                                    <button 
+                                                        @click="openSub = !openSub"
+                                                        type="button" 
+                                                        class="text-violet-700 hover:text-violet-900 font-semibold flex items-center gap-0.5 bg-violet-50 hover:bg-violet-100 px-1 py-0.2 rounded border border-violet-200/80 transition">
+                                                        <x-lucide-plus-circle class="w-2.5 h-2.5" />
+                                                        <span>+ Subtarea</span>
+                                                    </button>
+                                                </div>
+
+                                                <!-- Subtask Selection Popover Dropdown -->
+                                                <div 
+                                                    x-show="openSub" 
+                                                    @click.outside="openSub = false"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="opacity-0 scale-95"
+                                                    x-transition:enter-end="opacity-100 scale-100"
+                                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl p-2 text-xs space-y-1.5">
+                                                    
+                                                    <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Subtarea para {{ $day['day_name'] }}:</span>
+                                                    
+                                                    <!-- Preset Subtask Chips -->
+                                                    <div class="flex flex-wrap gap-1">
+                                                        @foreach($subtaskPresets as $preset)
+                                                            <button 
+                                                                type="button"
+                                                                @click="$wire.scheduleSubtask({{ $order->id }}, '{{ addslashes($preset->title) }}', '{{ $day['date_string'] }}', {{ $designer->id }}); openSub = false"
+                                                                class="px-1.5 py-0.5 rounded font-medium text-[10px] border transition shadow-2xs {{ $preset->badgeStyle() }}">
+                                                                {{ $preset->emoji }} {{ $preset->title }}
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+
+                                                    <!-- Custom Subtask Input -->
+                                                    <div class="pt-1 border-t border-stone-100">
+                                                        <input 
+                                                            type="text" 
+                                                            x-model="customTitle"
+                                                            @keyup.enter="if(customTitle.trim()) { $wire.scheduleSubtask({{ $order->id }}, customTitle, '{{ $day['date_string'] }}', {{ $designer->id }}); customTitle = ''; openSub = false; }"
+                                                            placeholder="Escribe subtarea custom... (Enter)" 
+                                                            class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
+                                                    </div>
+                                                </div>
+
                                             </div>
                                         @endforeach
                                     </div>
                                 @endif
                             </div>
 
-                            <span class="text-[10px] text-zinc-400 font-mono text-right block pt-1.5 border-t border-[#e9e9e7] shrink-0 select-none">
+                            <span class="text-[9px] text-zinc-400 font-mono text-right block pt-1 border-t border-[#e9e9e7] shrink-0 select-none">
                                 {{ $dayOrders->count() }} órdenes
                             </span>
 
