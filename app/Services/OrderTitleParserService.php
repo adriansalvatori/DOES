@@ -27,10 +27,11 @@ class OrderTitleParserService
     {
         $rawTitleClean = trim($rawTitle);
         foreach (self::$incompatibleHeaderKeywords as $kw) {
-            if (strcasecmp($rawTitleClean, $kw) === 0 || (stripos($rawTitleClean, $kw) === 0 && strlen($rawTitleClean) < 30 && !preg_match('/^wo\s*\d+/i', $rawTitleClean))) {
+            if (strcasecmp($rawTitleClean, $kw) === 0 || (stripos($rawTitleClean, $kw) === 0 && strlen($rawTitleClean) < 30 && ! preg_match('/^wo\s*\d+/i', $rawTitleClean))) {
                 return true;
             }
         }
+
         return false;
     }
 
@@ -53,7 +54,7 @@ class OrderTitleParserService
 
         // Take only the first non-empty line if title has multiline description text
         $lines = array_filter(array_map('trim', explode("\n", $title)));
-        $title = !empty($lines) ? reset($lines) : $rawTitle;
+        $title = ! empty($lines) ? reset($lines) : $rawTitle;
 
         $woNumber = null;
         $responsiblePerson = null;
@@ -80,16 +81,16 @@ class OrderTitleParserService
         // 2. Extract Responsible Person from parentheses e.g. "( MARCELA )"
         if (preg_match('/\(\s*([^)]+)\s*\)/', $title, $matches)) {
             $responsiblePerson = strtoupper(trim($matches[1]));
-            
+
             // Split title around the parenthesis
             $parts = explode($matches[0], $title, 2);
             $beforeParen = trim($parts[0], " \t\n\r\0\x0B-:");
             $afterParen = isset($parts[1]) ? trim($parts[1], " \t\n\r\0\x0B-:") : '';
 
-            if (!empty($beforeParen)) {
+            if (! empty($beforeParen)) {
                 $companyName = $beforeParen;
             }
-            if (!empty($afterParen)) {
+            if (! empty($afterParen)) {
                 $taskName = $afterParen;
             }
         }
@@ -97,7 +98,7 @@ class OrderTitleParserService
         // 3. If no parenthesis was found, check for hyphens e.g. "LA CHAPINA BAKERY- VARIOS ITEMS"
         if (empty($companyName) && empty($taskName)) {
             $titleClean = trim($title, " \t\n\r\0\x0B-:");
-            
+
             if (str_contains($titleClean, ' - ')) {
                 $parts = explode(' - ', $titleClean, 2);
                 $companyName = trim($parts[0]);
@@ -145,16 +146,16 @@ class OrderTitleParserService
         $task = is_array($data) ? ($data['task_name'] ?? '') : ($data->task_name ?? '');
 
         $parts = [];
-        if (!empty($wo)) {
+        if (! empty($wo)) {
             $parts[] = trim($wo);
         }
-        if (!empty($company)) {
+        if (! empty($company)) {
             $parts[] = trim($company);
         }
-        if (!empty($responsible)) {
-            $parts[] = '(' . trim($responsible) . ')';
+        if (! empty($responsible)) {
+            $parts[] = '('.trim($responsible).')';
         }
-        if (!empty($task) && strtolower(trim($task)) !== strtolower(trim($company))) {
+        if (! empty($task) && strtolower(trim($task)) !== strtolower(trim($company))) {
             $parts[] = trim($task);
         }
 

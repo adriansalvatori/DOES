@@ -374,7 +374,19 @@
                             <!-- Fecha Límite -->
                             <div class="space-y-1">
                                 <label class="font-medium text-zinc-700 block">Fecha Límite (Due Date):</label>
-                                <input type="date" wire:model="editDueDate" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono">
+                                <div class="flex items-center gap-1.5">
+                                    <input type="date" wire:model="editDueDate" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono">
+                                    @if($editDueDate)
+                                        <button 
+                                            type="button" 
+                                            wire:click="$set('editDueDate', '')" 
+                                            class="px-2.5 py-1.5 rounded-md bg-stone-100 hover:bg-rose-50 text-stone-600 hover:text-rose-700 border border-stone-200 hover:border-rose-200 text-xs font-medium transition shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1.5" 
+                                            title="Establecer fecha límite a Ninguna">
+                                            <x-lucide-calendar-off class="w-3.5 h-3.5" />
+                                            <span>Sin Fecha</span>
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
 
                             <!-- Core Status (Custom Searchable Combobox) -->
@@ -549,10 +561,23 @@
 
                         <div class="min-w-0">
                             <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Fecha Límite:</span>
-                            <span class="font-mono font-semibold text-xs mt-1 flex items-center gap-1 truncate {{ $order->isOverdue() ? 'text-red-600' : 'text-zinc-800' }}">
-                                <x-lucide-calendar class="w-3 h-3 shrink-0" />
-                                <span class="truncate">{{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : 'N/A' }}</span>
-                            </span>
+                            <div class="flex items-center gap-1.5 mt-1 min-w-0">
+                                <span class="font-mono font-semibold text-xs flex items-center gap-1 truncate {{ $order->isOverdue() ? 'text-red-600' : 'text-zinc-800' }}">
+                                    <x-lucide-calendar class="w-3 h-3 shrink-0" />
+                                    <span class="truncate">{{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : 'Sin Fecha' }}</span>
+                                </span>
+                                @if($order->current_due_date)
+                                    <button 
+                                        wire:click="clearDueDate" 
+                                        wire:confirm="¿Estás seguro de establecer la fecha límite como Ninguna (Sin Fecha)?"
+                                        type="button"
+                                        class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 hover:bg-rose-50 text-zinc-500 hover:text-rose-700 border border-stone-200 hover:border-rose-200 transition flex items-center gap-0.5 shrink-0 cursor-pointer"
+                                        title="Establecer fecha límite a Ninguna">
+                                        <x-lucide-calendar-off class="w-3 h-3" />
+                                        <span>Sin Fecha</span>
+                                    </button>
+                                @endif
+                            </div>
                         </div>
 
                         <div class="min-w-0">
@@ -695,13 +720,14 @@
                                             </h5>
 
                                             @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])))
-                                                <div class="mt-1 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium">
-                                                    💬 <strong>Motivo:</strong> {{ $event->metadata['reason'] ?? $event->metadata['comment'] }}
+                                                <div class="mt-1 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium flex items-start gap-1.5">
+                                                    <x-lucide-message-square class="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                                    <div><strong>Motivo:</strong> {{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</div>
                                                 </div>
                                             @elseif($event->previous_value && $event->new_value && !str_contains($event->event_type, 'CREATED'))
                                                 <p class="text-[11px] text-zinc-500 mt-0.5">
-                                                    {{ \App\Enums\CoreStatus::tryFrom($event->previous_value)?->label() ?? $event->previous_value }} &rarr; 
-                                                    <strong class="text-zinc-800">{{ \App\Enums\CoreStatus::tryFrom($event->new_value)?->label() ?? $event->new_value }}</strong>
+                                                    {{ $event->formatValueIfDate($event->previous_value) }} &rarr; 
+                                                    <strong class="text-zinc-800">{{ $event->formatValueIfDate($event->new_value) }}</strong>
                                                 </p>
                                             @endif
                                         </div>
@@ -718,7 +744,7 @@
                                     <div class="relative group pt-1">
                                         @if($order->isOverdue())
                                             <span class="absolute left-[-24px] top-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center ring-4 ring-red-100 font-bold text-[10px]" title="SLA Vencido">
-                                                ⚠️
+                                                <x-lucide-alert-triangle class="w-2.5 h-2.5 text-white" />
                                             </span>
                                         @else
                                             <span class="absolute left-[-23px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100" aria-hidden="true"></span>
@@ -746,7 +772,13 @@
 
                                 @if($order->current_due_date)
                                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold {{ $order->isOverdue() ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
-                                        <span>{{ $order->isOverdue() ? '⚠️ SLA Vencido' : '✅ En plazo límite' }}</span>
+                                        @if($order->isOverdue())
+                                            <x-lucide-alert-triangle class="w-3.5 h-3.5 text-red-600 shrink-0" />
+                                            <span>SLA Vencido</span>
+                                        @else
+                                            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                            <span>En plazo límite</span>
+                                        @endif
                                     </div>
                                 @endif
                             </div>
@@ -801,6 +833,31 @@
                             @endif
                         </div>
                     </label>
+
+                    <!-- Live Dynamic Outcome Preview Banner -->
+                    <div class="p-3 rounded-xl border text-xs leading-relaxed transition-all {{ !$measuresConfirmed ? 'bg-amber-50 border-amber-200 text-amber-900' : (!$estimateApproved ? 'bg-orange-50 border-orange-200 text-orange-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900') }}">
+                        <div class="flex items-start gap-2">
+                            @if(!$measuresConfirmed)
+                                <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-amber-800">Resultado: Resolver (Bloqueada)</strong>
+                                    La orden se moverá a <span class="font-semibold">ENTRANTE</span> con subestado <span class="font-semibold">BLOQUEADA</span> y se creará una tarea de resolución de medidas de alta prioridad (SLA 24h).
+                                </div>
+                            @elseif(!$estimateApproved)
+                                <x-lucide-info class="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-orange-800">Resultado: Pendiente de Estimado</strong>
+                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">FALTA APROBACIÓN DE ESTIMADO</span> (SLA 24h).
+                                </div>
+                            @else
+                                <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-emerald-800">Resultado: Lista para Alta</strong>
+                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">PONER EN ALTA</span> (SLA 24h para preprensa de alta resolución).
+                                </div>
+                            @endif
+                        </div>
+                    </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2.5 pt-2">

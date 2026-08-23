@@ -250,7 +250,8 @@
                         <div class="flex items-center justify-between">
                             <span class="font-medium text-zinc-800">¿No tienes un Token de Usuario?</span>
                             <a href="https://trello.com/1/authorize?expiration=never&name=KudosDesignOps&scope=read,write,account&response_type=token&key={{ $apiKey }}" target="_blank" class="px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-white font-medium text-[11px] flex items-center gap-1 transition">
-                                <span>🔑 Generar Token</span>
+                                <x-lucide-key class="w-3 h-3 text-white shrink-0" />
+                                <span>Generar Token</span>
                                 <x-lucide-external-link class="w-3 h-3" />
                             </a>
                         </div>
@@ -270,7 +271,7 @@
                 <div class="mt-3 bg-[#fbfbfa] p-3 rounded-lg border border-[#e9e9e7] font-mono text-[11px] space-y-1.5 min-h-[220px] max-h-[300px] overflow-y-auto scrollbar-thin">
                     <div class="text-zinc-400 font-medium">--- Log de Ejecución Trello REST API ---</div>
                     @forelse($syncLog as $log)
-                        <div class="leading-relaxed {{ str_contains($log, '❌') ? 'text-red-600 font-semibold' : (str_contains($log, '🎉') || str_contains($log, '✓') ? 'text-emerald-700 font-medium' : 'text-zinc-700') }}">
+                        <div class="leading-relaxed {{ str_contains(strtolower($log), 'error') || str_contains(strtolower($log), 'fallo') ? 'text-red-600 font-semibold' : (str_contains(strtolower($log), 'exito') || str_contains(strtolower($log), 'completad') ? 'text-emerald-700 font-medium' : 'text-zinc-700') }}">
                             {{ $log }}
                         </div>
                     @empty

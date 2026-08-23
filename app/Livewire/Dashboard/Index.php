@@ -15,13 +15,31 @@ class Index extends Component
 {
     public $selectedDesigner = 'all';
 
-    public $activeTab = 'today'; // today, overdue, camila, client, resolver, alta
+    public $activeTab = 'all'; // 'all' (default overview), today, overdue, camila, client, resolver, alta, pronostico, new_orders
+
+    public $userRole = 'all'; // 'all', 'designer', 'manager'
 
     public $search = '';
 
+    public function setUserRole($role)
+    {
+        $this->userRole = $role;
+        if ($role === 'designer') {
+            $this->activeTab = 'today';
+        } elseif ($role === 'manager') {
+            $this->activeTab = 'client';
+        } else {
+            $this->activeTab = 'all';
+        }
+    }
+
     public function setActiveTab($tab)
     {
-        $this->activeTab = $tab;
+        if ($this->activeTab === $tab) {
+            $this->activeTab = 'all';
+        } else {
+            $this->activeTab = $tab;
+        }
     }
 
     public function markDoneToday($orderId)

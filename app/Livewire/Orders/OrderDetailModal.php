@@ -228,6 +228,18 @@ class OrderDetailModal extends Component
         $this->dispatch('order-updated');
     }
 
+    public function clearDueDate()
+    {
+        if (! $this->orderId) {
+            return;
+        }
+        $order = Order::findOrFail($this->orderId);
+        $order->update(['current_due_date' => null]);
+        $this->editDueDate = '';
+        $this->dispatch('order-updated');
+        session()->flash('message', "Fecha límite de {$order->company_name} establecida a Ninguna (Sin Fecha).");
+    }
+
     public function closeModal()
     {
         $this->showModal = false;

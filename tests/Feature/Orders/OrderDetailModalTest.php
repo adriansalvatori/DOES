@@ -29,4 +29,24 @@ class OrderDetailModalTest extends TestCase
             'id' => $order->id,
         ]);
     }
+
+    public function test_can_clear_due_date_to_none_from_flyout(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CON FECHA',
+            'task_name' => 'DISENO BANNER',
+            'current_due_date' => now()->addDays(3)->toDateString(),
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('clearDueDate')
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'current_due_date' => null,
+        ]);
+    }
 }

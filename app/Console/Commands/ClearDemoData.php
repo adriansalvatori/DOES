@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 class ClearDemoData extends Command
 {
     protected $signature = 'orders:clear';
+
     protected $description = 'Clear all demo orders, related tasks, due date histories, and events';
 
     public function handle(): int

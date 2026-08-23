@@ -117,6 +117,7 @@ class AutomationEngine
             $order->update([
                 'substatus' => Substatus::WAITING_FOR_CLIENT,
                 'client_last_response' => null,
+                'last_meaningful_update' => now(),
                 'approved' => false,
                 'measures_confirmed' => false,
                 'estimate_approved' => false,
@@ -135,7 +136,7 @@ class AutomationEngine
         }
 
         // Handle entering ON HOLD manually
-        if ($newStatus === CoreStatus::ON_HOLD && $order->substatus !== Substatus::NO_RESPUESTA) {
+        if ($newStatus === CoreStatus::ON_HOLD && $order->substatus !== Substatus::NO_RESPUESTA && $order->substatus !== Substatus::CUSTOMER_SERVICE_REQUIRED) {
             $order->update(['substatus' => Substatus::PAUSADO]);
         }
     }
@@ -282,7 +283,7 @@ class AutomationEngine
             if ($daysInClient >= 9) {
                 $order->update([
                     'core_status' => CoreStatus::ON_HOLD,
-                    'substatus' => Substatus::NO_RESPUESTA,
+                    'substatus' => Substatus::CUSTOMER_SERVICE_REQUIRED,
                     'customer_service_required' => true,
                 ]);
 

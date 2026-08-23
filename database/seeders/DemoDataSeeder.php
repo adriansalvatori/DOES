@@ -11,7 +11,6 @@ use App\Models\DueDateHistory;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
-use App\Services\AutomationEngine;
 use Illuminate\Database\Seeder;
 
 class DemoDataSeeder extends Seeder

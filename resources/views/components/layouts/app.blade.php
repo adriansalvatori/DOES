@@ -5,6 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Kudos Design Ops - Trello Workflow Manager' }}</title>
     
+    <!-- PWA & Favicon / App Icon -->
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Kudos DOES">
+    <meta name="theme-color" content="#fbfbfa">
+    
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}?v=3">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}?v=3">
+    <link rel="shortcut icon" href="{{ asset('favicon.ico') }}?v=3">
+    
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,9 +57,7 @@
             <!-- Workspace / Brand Header & Collapse Toggle -->
             <div class="flex items-center justify-between pb-3 border-b border-[#e9e9e7]">
                 <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-7 h-7 rounded-md bg-stone-200 border border-stone-300 flex items-center justify-center text-zinc-700 font-bold text-xs shrink-0 shadow-xs">
-                        <x-lucide-layers class="w-4 h-4 text-zinc-700" />
-                    </div>
+                    <img src="{{ asset('favicon.png') }}" alt="Kudos Icon" class="w-7 h-7 rounded-md object-contain shrink-0 shadow-xs">
                     <div x-show="sidebarOpen" x-transition.opacity class="min-w-0">
                         <h1 class="font-semibold text-xs text-zinc-900 tracking-tight truncate">Kudos Design Ops</h1>
                         <span class="text-[10px] text-zinc-500 font-normal block truncate">Trello Workflow Layer</span>
@@ -192,25 +204,32 @@
                         x-transition:enter-end="opacity-100 scale-100"
                         class="mt-1 pl-6 space-y-1 text-xs">
                         <a 
+                            href="/settings/language" 
+                            title="Idioma / Language" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Idioma') }}</span>
+                        </a>
+                        <a 
                             href="/settings/substatuses" 
                             title="Configuración de Subestatus" 
                             class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                             <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">Subestatus</span>
+                            <span class="truncate">{{ __('Subestatus') }}</span>
                         </a>
                         <a 
                             href="/settings/subtasks" 
                             title="Plantillas de Subtareas" 
                             class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                             <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">Plantillas Subtareas</span>
+                            <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
                         </a>
                         <a 
                             href="/trello-sync" 
                             title="Sincronización Trello" 
                             class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                             <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">Sincronización Trello</span>
+                            <span class="truncate">{{ __('Sincronización Trello') }}</span>
                         </a>
                     </div>
 
@@ -221,13 +240,20 @@
                         x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
                         x-transition:enter-end="opacity-100 scale-100 translate-x-0"
                         class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
-                        <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">Configuración</div>
+                        <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">{{ __('Configuración') }}</div>
+                        <a 
+                            href="/settings/language" 
+                            title="Idioma / Language" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Idioma') }}</span>
+                        </a>
                         <a 
                             href="/settings/substatuses" 
                             title="Configuración de Subestatus" 
                             class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
                             <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">Subestatus</span>
+                            <span class="truncate">{{ __('Subestatus') }}</span>
                         </a>
                         <a 
                             href="/settings/subtasks" 
@@ -275,7 +301,10 @@
                 <button @click="sidebarOpen = !sidebarOpen" class="p-1 rounded hover:bg-[#efefed] text-zinc-500 hover:text-zinc-900 transition" title="Toggle Sidebar">
                     <x-lucide-panel-left class="w-4 h-4" />
                 </button>
-                <span class="font-medium text-zinc-700">Kudos Design Ops</span>
+                <span class="font-medium text-zinc-700 flex items-center gap-1.5">
+                    <img src="{{ asset('favicon.png') }}" alt="Kudos" class="w-4 h-4 rounded-xs shrink-0">
+                    Kudos Design Ops
+                </span>
                 <span>/</span>
                 <span class="text-zinc-500 font-normal">{{ $title ?? 'Dashboard' }}</span>
             </div>

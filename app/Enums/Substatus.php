@@ -20,7 +20,21 @@ enum Substatus: string
 
     public function label(): string
     {
-        return $this->value;
+        return match ($this) {
+            self::URGENTE => __('Urgente'),
+            self::BLOQUEADA => __('Bloqueada'),
+            self::OVERDUE => __('Overdue'),
+            self::ALMOST_OVERDUE => __('Casi Vencida'),
+            self::CAMBIOS_CAMILA => __('Cambios Camila'),
+            self::CAMBIOS_CLIENTE => __('Cambios Cliente'),
+            self::PONER_EN_ALTA => __('Poner en Alta'),
+            self::FALTA_APROBACION_ESTIMADO => __('Falta Aprobación Estimado'),
+            self::NO_RESPUESTA => __('No Respuesta'),
+            self::PAUSADO => __('Pausado'),
+            self::AJUSTES_PRODUCCION => __('Ajustes Producción'),
+            self::WAITING_FOR_CLIENT => __('Esperando Cliente'),
+            self::CUSTOMER_SERVICE_REQUIRED => __('Atención al Cliente Requerida'),
+        };
     }
 
     public function badgeStyle(): string

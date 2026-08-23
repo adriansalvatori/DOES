@@ -22,7 +22,7 @@ class SubtaskPresets extends Component
 
     public string $title = '';
 
-    public string $emoji = '💬';
+    public string $emoji = 'sparkles';
 
     public string $color_theme = 'sky';
 
@@ -32,7 +32,7 @@ class SubtaskPresets extends Component
     {
         return [
             'title' => 'required|string|max:100|unique:subtask_presets,title,'.$this->editingId,
-            'emoji' => 'nullable|string|max:10',
+            'emoji' => 'nullable|string|max:50',
             'color_theme' => 'required|string|in:sky,purple,emerald,amber,rose,violet,indigo,stone',
             'is_active' => 'boolean',
         ];
@@ -53,7 +53,7 @@ class SubtaskPresets extends Component
     public function openCreateModal(): void
     {
         $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'is_active']);
-        $this->emoji = '✨';
+        $this->emoji = 'sparkles';
         $this->color_theme = 'sky';
         $this->is_active = true;
         $this->showModal = true;

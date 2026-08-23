@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-20">
+<div class="h-full flex flex-col space-y-3 min-h-0">
     
     <!-- Unified Top Notion-Style Header Controls -->
     <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-3.5 shadow-2xs shrink-0">
@@ -187,7 +187,7 @@
                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                             @endif
                         </div>
-                        @foreach($coreStatuses as $st)
+                        @foreach(\App\Enums\CoreStatus::cases() as $st)
                             <div 
                                 x-show="!search || '{{ strtolower(addslashes($st->label())) }}'.includes(search.toLowerCase())"
                                 @click="selectStatus('{{ $st->value }}')" 
@@ -262,10 +262,10 @@
                 </div>
 
                 <select wire:model.live="sortBy" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-2.5 h-8 text-xs text-zinc-700 font-medium focus:border-stone-400 focus:outline-none flex-1 min-w-[170px] sm:flex-none">
-                    <option value="trello_created_at_desc">🗓️ Creación (Más Recientes)</option>
-                    <option value="trello_created_at_asc">🗓️ Creación (Más Antiguas)</option>
-                    <option value="due_date_asc">⏰ Fecha Límite Próxima</option>
-                    <option value="company_asc">🔤 Empresa (A-Z)</option>
+                    <option value="trello_created_at_desc">Creación (Más Recientes)</option>
+                    <option value="trello_created_at_asc">Creación (Más Antiguas)</option>
+                    <option value="due_date_asc">Fecha Límite Próxima</option>
+                    <option value="company_asc">Empresa (A-Z)</option>
                 </select>
             </div>
 
@@ -287,13 +287,13 @@
 
     <!-- Flash & Warning Messages -->
     @if (session()->has('message'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2 shrink-0">
             <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
             <span class="truncate">{{ session('message') }}</span>
         </div>
     @endif
     @if (session()->has('warning'))
-        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
+        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2 shrink-0">
             <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0" />
             <span class="truncate">{{ session('warning') }}</span>
         </div>
@@ -301,7 +301,7 @@
 
     <!-- Highlighted Section: New Orders from Trello Sync -->
     @if($newTrelloOrders->isNotEmpty())
-        <div class="bg-gradient-to-r from-sky-50 via-cyan-50/60 to-white border-2 border-sky-400 rounded-xl p-4 space-y-3 shadow-sm ring-2 ring-sky-200/50">
+        <div class="bg-gradient-to-r from-sky-50 via-cyan-50/60 to-white border-2 border-sky-400 rounded-xl p-4 space-y-3 shadow-sm ring-2 ring-sky-200/50 shrink-0">
             <div class="flex items-center justify-between border-b border-sky-200 pb-2">
                 <div class="flex items-center gap-2">
                     <div class="p-1.5 rounded-lg bg-sky-500 text-white shrink-0 shadow-2xs">
@@ -353,16 +353,17 @@
         </div>
     @endif
 
-    <!-- Backlog Notion Database Table -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl overflow-hidden shadow-2xs">
-        <div class="overflow-x-auto">
+    <!-- Backlog Notion Database Table Card Container -->
+    <div class="flex-1 min-h-0 bg-white border border-[#e9e9e7] rounded-xl shadow-2xs flex flex-col overflow-hidden">
+        <!-- Internal Scrollable Table Area -->
+        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-vertical-scrollbar">
             <table class="w-full text-left text-xs text-zinc-700">
-                <thead class="bg-[#f7f7f5] text-zinc-600 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider">
+                <thead class="bg-[#f7f7f5] text-zinc-600 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-20 shadow-2xs">
                     <tr>
-                        <th class="sticky left-0 z-20 bg-[#f7f7f5] p-3 w-10 text-center border-r border-[#e9e9e7]">
+                        <th class="sticky left-0 z-30 bg-[#f7f7f5] p-3 w-10 text-center border-r border-[#e9e9e7]">
                             <input type="checkbox" wire:model.live="selectAll" class="rounded border-stone-300 text-stone-800 focus:ring-stone-400">
                         </th>
-                        <th class="sticky left-10 z-20 bg-[#f7f7f5] p-3 whitespace-nowrap border-r border-[#e9e9e7] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.05)]">WO #</th>
+                        <th class="sticky left-10 z-30 bg-[#f7f7f5] p-3 whitespace-nowrap border-r border-[#e9e9e7] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.05)]">WO #</th>
                         <th class="p-3">Empresa</th>
                         <th class="p-3">Responsable</th>
                         <th class="p-3">Tarea / Trabajo</th>
@@ -370,13 +371,14 @@
                         <th class="p-3">Fecha Límite</th>
                         <th class="p-3">Lista / Estado</th>
                         <th class="p-3">Diseñador</th>
-                        <th class="sticky right-0 z-20 bg-[#f7f7f5] p-3 text-right whitespace-nowrap border-l border-[#e9e9e7] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.05)]">Acción</th>
+                        <th class="sticky right-0 z-30 bg-[#f7f7f5] p-3 text-right whitespace-nowrap border-l border-[#e9e9e7] shadow-[-2px_0_4px_-2px_rgba(0,0,0,0.05)]">Acción</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#e9e9e7]">
                     @forelse($orders as $order)
                         @php $isSelected = in_array((string)$order->id, $selectedOrders); @endphp
-                        <tr class="group transition {{ $order->isUrgente() ? 'bg-red-500 text-white font-bold shadow-md' : ($isSelected ? 'bg-stone-50' : 'hover:bg-[#fcfcfb]') }}">
+                        <tr class="group transition {{ $order->isUrgente() ? 'bg-red-500 text-white font-bold shadow-md' : ($order->isOverdue() ? 'bg-rose-50 border border-red-400' : ($order->isDueToday() ? 'bg-amber-50 border border-amber-300' : ($isSelected ? 'bg-stone-50' : 'hover:bg-[#fcfcfb]'))) }}"
+                            @if($order->isOverdue() && !$order->isUrgente()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" @elseif($order->isDueToday() && !$order->isUrgente()) style="border: 1px solid #f59e0b !important; background-color: #fffbeb !important;" @endif>
                             <td class="sticky left-0 z-10 p-3 text-center border-r border-[#e9e9e7] transition-colors {{ $isSelected ? 'bg-stone-50' : 'bg-white group-hover:bg-[#fcfcfb]' }}">
                                 <input type="checkbox" wire:model.live="selectedOrders" value="{{ $order->id }}" class="rounded border-stone-300 text-stone-800 focus:ring-stone-400">
                             </td>
@@ -449,7 +451,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="p-12 text-center text-zinc-400 italic">
+                            <td colspan="10" class="p-12 text-center text-zinc-400 italic">
                                 <x-lucide-check-circle-2 class="w-6 h-6 text-emerald-600 mx-auto mb-2" />
                                 <span>No hay tarjetas pendientes en el Backlog. ¡Todas están procesadas o en Workspace!</span>
                             </td>
@@ -459,59 +461,58 @@
             </table>
         </div>
 
-    <!-- Permanent Fixed Viewport Bottom Pagination Bar -->
-    <div 
-        :class="sidebarOpen ? 'left-72' : 'left-24'"
-        class="fixed bottom-4 right-8 z-40 bg-white/95 backdrop-blur-md border border-[#e9e9e7] rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-[0_4px_24px_rgba(0,0,0,0.12)] transition-all duration-200 ease-in-out">
-        <div class="flex items-center gap-3 text-xs text-zinc-600 font-medium">
-            <span>
-                Mostrando <strong class="text-zinc-900 font-semibold">{{ $orders->firstItem() ?? 0 }}</strong> – <strong class="text-zinc-900 font-semibold">{{ $orders->lastItem() ?? 0 }}</strong> de <strong class="text-zinc-900 font-semibold">{{ $orders->total() }}</strong> tarjetas
-            </span>
-            <div class="h-3 w-px bg-zinc-300"></div>
-            <div class="flex items-center gap-1.5">
-                <span class="text-zinc-400 text-[11px]">Ver:</span>
-                <select wire:model.live="perPage" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded px-2 py-0.5 text-xs text-zinc-800 font-medium focus:outline-none">
-                    <option value="25">25 / pág</option>
-                    <option value="50">50 / pág</option>
-                    <option value="100">100 / pág</option>
-                </select>
-            </div>
-        </div>
-
-        @if($orders->hasPages())
-            <div class="flex items-center gap-1.5 shrink-0">
-                <!-- Previous Button -->
-                @if($orders->onFirstPage())
-                    <span class="px-2.5 py-1 rounded-md bg-stone-100 text-zinc-400 border border-stone-200 text-xs font-medium cursor-not-allowed flex items-center gap-1">
-                        <x-lucide-chevron-left class="w-3.5 h-3.5" />
-                        <span>Anterior</span>
-                    </span>
-                @else
-                    <button wire:click="previousPage" class="px-2.5 py-1 rounded-md bg-white hover:bg-stone-100 text-zinc-800 border border-stone-200 text-xs font-medium transition shadow-2xs flex items-center gap-1">
-                        <x-lucide-chevron-left class="w-3.5 h-3.5 text-zinc-600" />
-                        <span>Anterior</span>
-                    </button>
-                @endif
-
-                <!-- Page Indicator -->
-                <span class="px-3 py-1 rounded-md bg-stone-100 border border-stone-200 text-xs font-semibold font-mono text-zinc-800">
-                    {{ $orders->currentPage() }} / {{ $orders->lastPage() }}
+        <!-- Integrated Bottom Pagination Footer -->
+        <div class="shrink-0 bg-white border-t border-[#e9e9e7] p-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-600 font-medium">
+            <div class="flex items-center gap-3">
+                <span>
+                    Mostrando <strong class="text-zinc-900 font-semibold">{{ $orders->firstItem() ?? 0 }}</strong> – <strong class="text-zinc-900 font-semibold">{{ $orders->lastItem() ?? 0 }}</strong> de <strong class="text-zinc-900 font-semibold">{{ $orders->total() }}</strong> tarjetas
                 </span>
-
-                <!-- Next Button -->
-                @if($orders->hasMorePages())
-                    <button wire:click="nextPage" class="px-2.5 py-1 rounded-md bg-white hover:bg-stone-100 text-zinc-800 border border-stone-200 text-xs font-medium transition shadow-2xs flex items-center gap-1">
-                        <span>Siguiente</span>
-                        <x-lucide-chevron-right class="w-3.5 h-3.5 text-zinc-600" />
-                    </button>
-                @else
-                    <span class="px-2.5 py-1 rounded-md bg-stone-100 text-zinc-400 border border-stone-200 text-xs font-medium cursor-not-allowed flex items-center gap-1">
-                        <span>Siguiente</span>
-                        <x-lucide-chevron-right class="w-3.5 h-3.5" />
-                    </span>
-                @endif
+                <div class="h-3 w-px bg-zinc-300"></div>
+                <div class="flex items-center gap-1.5">
+                    <span class="text-zinc-400 text-[11px]">Ver:</span>
+                    <select wire:model.live="perPage" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded px-2 py-0.5 text-xs text-zinc-800 font-medium focus:outline-none">
+                        <option value="25">25 / pág</option>
+                        <option value="50">50 / pág</option>
+                        <option value="100">100 / pág</option>
+                    </select>
+                </div>
             </div>
-        @endif
+
+            @if($orders->hasPages())
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <!-- Previous Button -->
+                    @if($orders->onFirstPage())
+                        <span class="px-2.5 py-1 rounded-md bg-stone-100 text-zinc-400 border border-stone-200 text-xs font-medium cursor-not-allowed flex items-center gap-1">
+                            <x-lucide-chevron-left class="w-3.5 h-3.5" />
+                            <span>Anterior</span>
+                        </span>
+                    @else
+                        <button wire:click="previousPage" class="px-2.5 py-1 rounded-md bg-white hover:bg-stone-100 text-zinc-800 border border-stone-200 text-xs font-medium transition shadow-2xs flex items-center gap-1">
+                            <x-lucide-chevron-left class="w-3.5 h-3.5 text-zinc-600" />
+                            <span>Anterior</span>
+                        </button>
+                    @endif
+
+                    <!-- Page Indicator -->
+                    <span class="px-3 py-1 rounded-md bg-stone-100 border border-stone-200 text-xs font-semibold font-mono text-zinc-800">
+                        {{ $orders->currentPage() }} / {{ $orders->lastPage() }}
+                    </span>
+
+                    <!-- Next Button -->
+                    @if($orders->hasMorePages())
+                        <button wire:click="nextPage" class="px-2.5 py-1 rounded-md bg-white hover:bg-stone-100 text-zinc-800 border border-stone-200 text-xs font-medium transition shadow-2xs flex items-center gap-1">
+                            <span>Siguiente</span>
+                            <x-lucide-chevron-right class="w-3.5 h-3.5 text-zinc-600" />
+                        </button>
+                    @else
+                        <span class="px-2.5 py-1 rounded-md bg-stone-100 text-zinc-400 border border-stone-200 text-xs font-medium cursor-not-allowed flex items-center gap-1">
+                            <span>Siguiente</span>
+                            <x-lucide-chevron-right class="w-3.5 h-3.5" />
+                        </span>
+                    @endif
+                </div>
+            @endif
+        </div>
     </div>
 
 </div>

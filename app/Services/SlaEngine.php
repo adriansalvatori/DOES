@@ -93,7 +93,7 @@ class SlaEngine
      */
     public function checkOverdue(Order $order): bool
     {
-        if ($order->isPaused() || $order->core_status === CoreStatus::EN_PRODUCCION) {
+        if ($order->isPaused() || $order->core_status === CoreStatus::EN_PRODUCCION || $order->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
             return false;
         }
 

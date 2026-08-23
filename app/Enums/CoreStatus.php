@@ -17,15 +17,15 @@ enum CoreStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::ENTRANTE => 'Bloqueadas',
-            self::EURALIZ_ORDERS_RECEIVED => 'Euralíz Orders Received',
-            self::ADRIAN_ORDERS_RECEIVED => 'Adrián Orders Received',
-            self::CESAR_ORDERS_RECEIVED => 'César Orders Received',
-            self::TO_DO_TODAY => 'Working Today',
-            self::ENVIADO_A_CAMILA => 'Enviado a Camila',
-            self::ENVIADO_AL_CLIENTE => 'Enviado al Cliente',
-            self::ON_HOLD => 'On Hold',
-            self::EN_PRODUCCION => 'En Producción',
+            self::ENTRANTE => __('BLOCKED'),
+            self::EURALIZ_ORDERS_RECEIVED => __('Euralíz Orders Received'),
+            self::ADRIAN_ORDERS_RECEIVED => __('Adrián Orders Received'),
+            self::CESAR_ORDERS_RECEIVED => __('César Orders Received'),
+            self::TO_DO_TODAY => __('Trabajando Hoy'),
+            self::ENVIADO_A_CAMILA => __('Enviado a Camila'),
+            self::ENVIADO_AL_CLIENTE => __('Enviado al Cliente'),
+            self::ON_HOLD => __('En Pausa'),
+            self::EN_PRODUCCION => __('En Producción'),
         };
     }
 

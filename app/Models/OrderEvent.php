@@ -90,13 +90,37 @@ class OrderEvent extends Model
         return 'bg-stone-300';
     }
 
+    public function formatValueIfDate(?string $val): string
+    {
+        if (empty($val)) {
+            return '';
+        }
+
+        $statusLabel = CoreStatus::tryFrom($val)?->label();
+        if ($statusLabel) {
+            return $statusLabel;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $val)) {
+            try {
+                $date = Carbon::parse($val);
+
+                return strtolower($date->format('l j')); // e.g. "monday 24"
+            } catch (\Throwable $e) {
+                return $val;
+            }
+        }
+
+        return $val;
+    }
+
     public function getFormattedTitle(): string
     {
         $type = strtoupper((string) $this->event_type);
 
         if (str_contains($type, 'SUBTASK_SCHEDULED')) {
             $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? 'Subtarea';
-            $dateStr = isset($this->metadata['date']) ? Carbon::parse($this->metadata['date'])->format('d M') : '';
+            $dateStr = isset($this->metadata['date']) ? $this->formatValueIfDate($this->metadata['date']) : '';
 
             return "Subtarea \"{$taskTitle}\" agendada".($dateStr ? " para el {$dateStr}" : '');
         }
@@ -118,7 +142,7 @@ class OrderEvent extends Model
             return 'Atraso resuelto y nueva fecha acordada';
         }
         if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
-            $statusLabel = CoreStatus::tryFrom($this->new_value)?->label() ?? $this->new_value;
+            $statusLabel = $this->formatValueIfDate($this->new_value);
 
             return "Movido a {$statusLabel}";
         }

@@ -100,9 +100,12 @@
                                 </div>
 
                                 <!-- Badge Chip Preview -->
+                                @php
+                                    $safePresetIcon = (preg_match('/^[a-z0-9\-]+$/i', $preset->emoji ?? '')) ? $preset->emoji : 'tag';
+                                @endphp
                                 <span 
-                                    class="px-2.5 py-1 rounded-md text-xs font-semibold border shrink-0 shadow-2xs flex items-center gap-1.5 {{ $preset->badgeStyle() }}">
-                                    <span>{{ $preset->emoji }}</span>
+                                    class="px-2.5 py-1 rounded-md text-xs font-semibold border shrink-0 shadow-2xs inline-flex items-center gap-1.5 {{ $preset->badgeStyle() }}">
+                                    <x-dynamic-component :component="'lucide-' . $safePresetIcon" class="w-3.5 h-3.5" />
                                     <span>{{ $preset->title }}</span>
                                 </span>
 
@@ -234,29 +237,37 @@
                         @error('title') <span class="text-[11px] text-red-600 mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
-                    <!-- Emoji Selector Presets & Custom -->
+                    <!-- Lucide Icon Library Grid Picker -->
                     <div class="space-y-1.5">
-                        <label class="block text-xs font-medium text-zinc-700">Emoji / Icono Visual</label>
-                        <div class="flex items-center gap-2">
-                            <input 
-                                wire:model.live="emoji" 
-                                type="text" 
-                                placeholder="💬" 
-                                class="w-16 text-center text-sm px-2 py-1.5 border border-stone-200 rounded-lg font-semibold" />
-                            
-                            <div class="flex flex-wrap gap-1 flex-1">
-                                @php
-                                    $emojiOptions = ['💬', '💜', '✨', '📐', '🛠️', '🎨', '📝', '🔍', '📌', '🚀', '📦', '⚡', '🤝', '🎯'];
-                                @endphp
-                                @foreach($emojiOptions as $em)
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('emoji', '{{ $em }}')"
-                                        class="w-7 h-7 rounded-lg border border-stone-200 text-xs hover:bg-stone-100 transition flex items-center justify-center cursor-pointer {{ $emoji === $em ? 'bg-stone-200 border-stone-400 font-bold' : 'bg-stone-50' }}">
-                                        {{ $em }}
-                                    </button>
-                                @endforeach
-                            </div>
+                        <label class="block font-semibold text-zinc-700 text-xs mb-1">Ícono de la Subtarea (Icon Library)</label>
+                        @php
+                            $iconLibrary = [
+                                'sparkles' => 'Propuesta',
+                                'user-check' => 'Camila',
+                                'message-square' => 'Cliente',
+                                'ruler' => 'Medidas',
+                                'wrench' => 'Ajustes',
+                                'palette' => 'Diseño',
+                                'file-text' => 'Documento',
+                                'check-circle-2' => 'Check',
+                                'tag' => 'Etiqueta',
+                                'clock' => 'Tiempo',
+                                'send' => 'Envío',
+                                'alert-triangle' => 'Alerta',
+                                'box' => 'Caja / POP',
+                                'zap' => 'Urgente',
+                            ];
+                        @endphp
+                        <div class="grid grid-cols-7 gap-1.5 p-2 bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl">
+                            @foreach($iconLibrary as $iconKey => $iconLabel)
+                                <button 
+                                    type="button" 
+                                    wire:click="$set('emoji', '{{ $iconKey }}')"
+                                    title="{{ $iconLabel }}"
+                                    class="w-8 h-8 rounded-lg border transition flex items-center justify-center cursor-pointer {{ $emoji === $iconKey ? 'bg-stone-900 text-white border-stone-900 shadow-2xs' : 'bg-white text-zinc-700 border-stone-200 hover:bg-stone-100' }}">
+                                    <x-dynamic-component :component="'lucide-' . $iconKey" class="w-4 h-4" />
+                                </button>
+                            @endforeach
                         </div>
                     </div>
 
@@ -303,9 +314,10 @@
                         <div class="pt-0.5">
                             @php
                                 $previewPreset = new \App\Models\SubtaskPreset(['color_theme' => $color_theme]);
+                                $safePreviewIcon = (preg_match('/^[a-z0-9\-]+$/i', $emoji ?? '')) ? $emoji : 'tag';
                             @endphp
                             <span class="px-2.5 py-1 rounded-md text-xs font-semibold border inline-flex items-center gap-1.5 shadow-2xs {{ $previewPreset->badgeStyle() }}">
-                                <span>{{ $emoji }}</span>
+                                <x-dynamic-component :component="'lucide-' . $safePreviewIcon" class="w-3.5 h-3.5" />
                                 <span>{{ $title ? $title : 'Ejemplo Subtarea' }}</span>
                             </span>
                         </div>

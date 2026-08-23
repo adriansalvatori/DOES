@@ -2,13 +2,16 @@
 
 namespace App\Livewire\Tasks;
 
+use App\Enums\RelatedTaskType;
 use App\Models\RelatedTask;
 use Livewire\Component;
 
 class TaskList extends Component
 {
     public $search = '';
+
     public $statusFilter = 'todo';
+
     public $typeFilter = 'all';
 
     public function toggleTaskStatus($taskId)
@@ -26,12 +29,12 @@ class TaskList extends Component
 
     public function render()
     {
-        $query = RelatedTask::whereHas('order', fn($q) => $q->inWorkspace())->with(['order', 'assignee']);
+        $query = RelatedTask::whereHas('order', fn ($q) => $q->inWorkspace())->with(['order', 'assignee']);
 
-        if (!empty($this->search)) {
+        if (! empty($this->search)) {
             $query->where(function ($q) {
                 $q->where('title', 'like', "%{$this->search}%")
-                  ->orWhereHas('order', fn($oq) => $oq->where('company_name', 'like', "%{$this->search}%"));
+                    ->orWhereHas('order', fn ($oq) => $oq->where('company_name', 'like', "%{$this->search}%"));
             });
         }
 
@@ -47,7 +50,7 @@ class TaskList extends Component
 
         return view('livewire.tasks.task-list', [
             'tasks' => $tasks,
-            'taskTypes' => \App\Enums\RelatedTaskType::cases(),
+            'taskTypes' => RelatedTaskType::cases(),
         ])->layout('components.layouts.app', ['title' => 'Tareas Vinculadas - Kudos Design Ops']);
     }
 }

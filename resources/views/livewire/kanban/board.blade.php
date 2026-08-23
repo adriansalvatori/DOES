@@ -1,4 +1,20 @@
-<div class="h-full flex flex-col space-y-3 min-h-0 overflow-hidden">
+<div wire:poll.3s class="h-full flex flex-col space-y-3 min-h-0 overflow-hidden">
+    
+    @if(isset($newOrdersCount) && $newOrdersCount > 0)
+        <div class="bg-amber-50/90 border border-amber-200 rounded-xl px-3.5 py-2 flex items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
+            <div class="flex items-center gap-2 text-amber-900 font-medium truncate">
+                <span class="flex h-2 w-2 relative shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                </span>
+                <span>Hay <strong>{{ $newOrdersCount }}</strong> {{ $newOrdersCount === 1 ? 'nueva orden' : 'nuevas órdenes' }} de Trello sin revisar en el Backlog.</span>
+            </div>
+            <a href="{{ route('backlog') }}" class="px-2.5 py-1 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-bold transition shrink-0 flex items-center gap-1">
+                <span>Ver Nuevas Órdenes</span>
+                <x-lucide-arrow-right class="w-3 h-3 text-amber-800" />
+            </a>
+        </div>
+    @endif
     
     <!-- Top Notion-Style Header Controls -->
     <div class="bg-white border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs shrink-0">
@@ -344,8 +360,57 @@
         </div>
     @endif
 
-    <!-- Notion Light Kanban Columns Container (Full Width Drag & Drop Grid) -->
-    <div class="flex gap-3 overflow-x-auto pb-3 pt-1 custom-horizontal-scrollbar flex-1 min-h-0 w-full">
+    <!-- Notion Light Kanban Columns Container (Full Width Drag & Drop Grid with Edge Auto-Scroll) -->
+    <div 
+        x-data="{
+            scrollSpeed: 0,
+            scrollInterval: null,
+            handleDragOver(e) {
+                const container = $el;
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX;
+                const threshold = 100;
+                const maxSpeed = 24;
+
+                let speed = 0;
+                if (mouseX - rect.left < threshold && mouseX - rect.left > 0) {
+                    const intensity = (threshold - (mouseX - rect.left)) / threshold;
+                    speed = -Math.max(6, Math.round(intensity * maxSpeed));
+                } else if (rect.right - mouseX < threshold && rect.right - mouseX > 0) {
+                    const intensity = (threshold - (rect.right - mouseX)) / threshold;
+                    speed = Math.max(6, Math.round(intensity * maxSpeed));
+                }
+
+                this.scrollSpeed = speed;
+
+                if (speed !== 0 && !this.scrollInterval) {
+                    const step = () => {
+                        if (this.scrollSpeed !== 0) {
+                            container.scrollLeft += this.scrollSpeed;
+                            this.scrollInterval = requestAnimationFrame(step);
+                        } else {
+                            this.scrollInterval = null;
+                        }
+                    };
+                    this.scrollInterval = requestAnimationFrame(step);
+                } else if (speed === 0 && this.scrollInterval) {
+                    cancelAnimationFrame(this.scrollInterval);
+                    this.scrollInterval = null;
+                }
+            },
+            stopAutoScroll() {
+                this.scrollSpeed = 0;
+                if (this.scrollInterval) {
+                    cancelAnimationFrame(this.scrollInterval);
+                    this.scrollInterval = null;
+                }
+            }
+        }"
+        @dragover="handleDragOver($event)"
+        @dragend="stopAutoScroll()"
+        @drop="stopAutoScroll()"
+        @dragleave.self="stopAutoScroll()"
+        class="flex gap-3 overflow-x-auto pb-3 pt-1 custom-horizontal-scrollbar flex-1 min-h-0 w-full">
         @foreach($columns as $column)
             @php
                 $columnOrders = $orders->filter(fn($o) => $o->core_status === $column);
@@ -406,9 +471,10 @@
                         @foreach($urgentColumnOrders as $order)
                             <div 
                                 wire:key="order-card-{{ $order->id }}"
+                                @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-                                class="rounded-xl p-3 space-y-2 transition cursor-grab active:cursor-grabbing group relative select-none {{ $order->done_today ? 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40' }}">
+                                class="rounded-xl p-3 space-y-2 transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-lg {{ $order->done_today ? 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40' }}">
                                 
                                 <!-- Card Header: Badges & Designer -->
                                 <div class="flex items-start justify-between gap-1.5 min-w-0">
@@ -451,7 +517,7 @@
                                     </div>
                                     <div class="flex items-center gap-1 shrink-0 ml-1">
                                         @if($order->trello_url)
-                                            <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
+                                            <a href="{{ $order->trello_url }}" @click.stop target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
                                                 <x-lucide-external-link class="w-3.5 h-3.5" />
                                             </a>
                                         @endif
@@ -473,6 +539,7 @@
                                 <div class="min-w-0 flex items-start gap-2">
                                     <button 
                                         wire:click="toggleDoneToday({{ $order->id }})" 
+                                        @click.stop
                                         type="button"
                                         class="w-4 h-4 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
                                         title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
@@ -503,7 +570,7 @@
 
                                 <!-- Quick Move Select & Modal Trigger -->
                                 <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t min-w-0 {{ $order->done_today ? 'border-stone-200' : 'border-red-200/60' }}">
-                                    <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" class="rounded px-1.5 py-0.5 text-[10px] focus:outline-none w-full min-w-0 truncate font-medium {{ $order->done_today ? 'bg-stone-50 border-stone-200 text-zinc-600' : 'bg-white border-red-200 hover:border-red-300 text-zinc-800' }}">
+                                    <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" @click.stop class="rounded px-1.5 py-0.5 text-[10px] focus:outline-none w-full min-w-0 truncate font-medium {{ $order->done_today ? 'bg-stone-50 border-stone-200 text-zinc-600' : 'bg-white border-red-200 hover:border-red-300 text-zinc-800' }}">
                                         <option value="">Mover a...</option>
                                         @foreach($allColumns as $colOption)
                                             @if($colOption !== $order->core_status)
@@ -513,16 +580,16 @@
                                     </select>
 
                                     <div class="shrink-0 flex items-center gap-1">
-                                        <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' }}" title="Duplicar Orden">
+                                        <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" @click.stop class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' }}" title="Duplicar Orden">
                                             <x-lucide-copy class="w-3 h-3 text-zinc-500" />
                                             <span>Duplicar</span>
                                         </button>
-                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' }}">
-                                            <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                            <span>Detalle</span>
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" @click.stop class="p-1 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' }}" title="Ver detalle de la orden">
+                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-600" />
                                         </button>
                                         <button
                                             wire:click="trashOrder({{ $order->id }})"
+                                            @click.stop
                                             wire:confirm="¿Mover esta orden a la papelera?"
                                             class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-red-50 border-stone-200 text-zinc-500 hover:text-red-600' : 'bg-white hover:bg-red-100 border-red-200 text-red-600 hover:text-red-800' }}"
                                             title="Mover a la papelera"
@@ -587,8 +654,6 @@
                                     @if($task->order)
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-stone-100 border border-stone-200 text-[10px] font-medium text-zinc-700 transition flex items-center gap-1">
                                             <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                            <span>Ver Orden</span>
-                                        </button>
                                     @endif
                                 </div>
                             </div>
@@ -598,9 +663,11 @@
                         @foreach($regularColumnOrders as $order)
                             <div 
                                 wire:key="order-card-{{ $order->id }}"
+                                @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-                                class="bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-lg p-3 space-y-2 shadow-2xs transition cursor-grab active:cursor-grabbing group relative select-none">
+                                class="rounded-lg p-3 space-y-2 shadow-2xs transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-md {{ $order->isOverdue() ? 'bg-rose-50 border border-red-400 hover:border-red-500' : ($order->isDueToday() ? 'bg-amber-50 border border-amber-300 hover:border-amber-400' : 'bg-white border border-[#e9e9e7] hover:border-stone-300') }}"
+                                @if($order->isOverdue()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" @elseif($order->isDueToday()) style="border: 1px solid #f59e0b !important; background-color: #fffbeb !important;" @endif>
                                 
                                 <!-- Card Header: Badges & Designer -->
                                 <div class="flex items-start justify-between gap-1.5 min-w-0">
@@ -629,7 +696,7 @@
                                     </div>
                                     <div class="flex items-center gap-1 shrink-0 ml-1">
                                         @if($order->trello_url)
-                                            <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
+                                            <a href="{{ $order->trello_url }}" @click.stop target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
                                                 <x-lucide-external-link class="w-3.5 h-3.5" />
                                             </a>
                                         @endif
@@ -651,6 +718,7 @@
                                 <div class="min-w-0 flex items-start gap-2">
                                     <button 
                                         wire:click="toggleDoneToday({{ $order->id }})" 
+                                        @click.stop
                                         type="button"
                                         class="w-4 h-4 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
                                         title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
@@ -665,10 +733,22 @@
                                 <!-- Metadata & Due Date -->
                                 <div class="flex items-center justify-between text-[10px] text-zinc-500 pt-1.5 border-t border-[#f0f0ee] gap-1">
                                     <div class="flex items-center gap-1 min-w-0">
-                                        <x-lucide-calendar class="w-3 h-3 text-zinc-400 shrink-0" />
-                                        <span class="font-mono font-medium truncate {{ $order->isOverdue() ? 'text-red-600 font-bold' : 'text-zinc-700' }}">
-                                            {{ $order->current_due_date ? $order->current_due_date->format('d M') : 'N/A' }}
-                                        </span>
+                                        @if($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE)
+                                            @php
+                                                $sentDate = $order->last_meaningful_update ?? $order->updated_at ?? now();
+                                                $daysElapsed = $sentDate ? $sentDate->diffInWeekdays(now()) : 0;
+                                                $daysRemaining = max(0, 9 - $daysElapsed);
+                                            @endphp
+                                            <x-lucide-send class="w-3 h-3 text-sky-500 shrink-0" />
+                                            <span class="font-mono font-medium truncate text-sky-800" title="Enviado el {{ $sentDate->format('d M, Y') }} ({{ $daysElapsed }}d transcurridos)">
+                                                Enviado hace {{ $daysElapsed }}d <span class="text-sky-600 font-normal">({{ $daysRemaining }}d a Hold)</span>
+                                            </span>
+                                        @else
+                                            <x-lucide-calendar class="w-3 h-3 text-zinc-400 shrink-0" />
+                                            <span class="font-mono font-medium truncate {{ $order->isOverdue() ? 'text-red-600 font-bold' : ($order->isDueToday() ? 'text-amber-800 font-bold' : 'text-zinc-700') }}">
+                                                {{ $order->current_due_date ? ($order->current_due_date->isToday() ? 'Hoy (' . $order->current_due_date->format('d M') . ')' : $order->current_due_date->format('d M')) : 'N/A' }}
+                                            </span>
+                                        @endif
                                     </div>
 
                                     @if($order->relatedTasks->where('status', 'todo')->count() > 0)
@@ -681,7 +761,7 @@
 
                                 <!-- Quick Move Select & Modal Trigger -->
                                 <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t border-[#f0f0ee] min-w-0">
-                                    <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded px-1.5 py-0.5 text-[10px] text-zinc-700 focus:outline-none w-full min-w-0 truncate">
+                                    <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" @click.stop class="bg-[#fbfbfa] border border-[#e9e9e7] rounded px-1.5 py-0.5 text-[10px] text-zinc-700 focus:outline-none w-full min-w-0 truncate">
                                         <option value="">Mover a...</option>
                                         @foreach($allColumns as $colOption)
                                             @if($colOption !== $order->core_status)
@@ -691,16 +771,16 @@
                                     </select>
 
                                     <div class="shrink-0 flex items-center gap-1">
-                                        <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" class="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1" title="Duplicar Orden">
+                                        <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" @click.stop class="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1" title="Duplicar Orden">
                                             <x-lucide-copy class="w-3 h-3 text-zinc-500" />
                                             <span>Duplicar</span>
                                         </button>
-                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
-                                            <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                            <span>Detalle</span>
+                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" @click.stop class="p-1 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1" title="Ver detalle de la orden">
+                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-600" />
                                         </button>
                                         <button
                                             wire:click="trashOrder({{ $order->id }})"
+                                            @click.stop
                                             wire:confirm="¿Mover esta orden a la papelera?"
                                             class="px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 border border-red-200 text-[10px] font-medium text-red-600 hover:text-red-800 transition flex items-center gap-1"
                                             title="Mover a la papelera"
@@ -709,7 +789,6 @@
                                         </button>
                                     </div>
                                 </div>
-
                             </div>
                         @endforeach
                     @endif

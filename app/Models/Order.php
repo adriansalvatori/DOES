@@ -157,13 +157,31 @@ class Order extends Model
         return $this->hasMany(DueDateHistory::class)->orderBy('created_at', 'desc');
     }
 
+    public function isDueToday(): bool
+    {
+        if (! $this->in_workspace || $this->isPaused() || $this->core_status === CoreStatus::EN_PRODUCCION || $this->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
+            return false;
+        }
+
+        return (bool) ($this->current_due_date && $this->current_due_date->isToday());
+    }
+
     public function isOverdue(): bool
     {
+        if (! $this->in_workspace) {
+            return false;
+        }
+
         if ($this->substatus === Substatus::OVERDUE) {
             return true;
         }
 
-        if ($this->current_due_date && ($this->current_due_date->isToday() || $this->current_due_date->isPast()) && ! $this->isPaused() && $this->core_status !== CoreStatus::EN_PRODUCCION) {
+        if ($this->current_due_date
+            && $this->current_due_date->isPast()
+            && ! $this->current_due_date->isToday()
+            && ! $this->isPaused()
+            && $this->core_status !== CoreStatus::EN_PRODUCCION
+            && $this->core_status !== CoreStatus::ENVIADO_AL_CLIENTE) {
             return true;
         }
 

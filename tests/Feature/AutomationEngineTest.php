@@ -4,10 +4,11 @@ namespace Tests\Feature;
 
 use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
 use App\Models\Designer;
+use App\Models\DueDateHistory;
 use App\Models\Order;
-use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -19,7 +20,7 @@ class AutomationEngineTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         Designer::create(['name' => 'Adrián', 'active' => true]);
         Designer::create(['name' => 'Euralíz', 'active' => true]);
         Designer::create(['name' => 'César', 'active' => true]);
@@ -66,7 +67,7 @@ class AutomationEngineTest extends TestCase
 
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
-            'type' => \App\Enums\RelatedTaskType::RESOLVER->value,
+            'type' => RelatedTaskType::RESOLVER->value,
         ]);
     }
 
@@ -108,7 +109,7 @@ class AutomationEngineTest extends TestCase
         $this->assertNull($freshOrder->substatus);
         $this->assertEquals($promisedDate->toDateString(), $freshOrder->current_due_date->toDateString());
 
-        $this->assertEquals($promisedDate->toDateString(), \App\Models\DueDateHistory::first()->new_due_date->toDateString());
+        $this->assertEquals($promisedDate->toDateString(), DueDateHistory::first()->new_due_date->toDateString());
     }
 
     public function test_moving_approved_order_back_to_enviado_al_cliente_resets_approval_state()

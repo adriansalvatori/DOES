@@ -20,6 +20,8 @@ class WeeklyPlanner extends Component
 
     public $viewMonth;
 
+    public string $unscheduledSearch = '';
+
     public function mount()
     {
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
@@ -144,9 +146,7 @@ class WeeklyPlanner extends Component
             'priority' => 'normal',
         ]);
 
-        // Keep order scheduled_date synced to most recent scheduled date
         $order->update([
-            'scheduled_date' => $scheduledDate->toDateString(),
             'in_workspace' => true,
         ]);
 
@@ -164,6 +164,19 @@ class WeeklyPlanner extends Component
         ]);
 
         session()->flash('message', "Subtarea \"{$title}\" programada para {$order->company_name} el {$scheduledDate->format('d M')}.");
+        $this->dispatch('order-updated');
+    }
+
+    public function rescheduleSubtask($taskId, $dateString)
+    {
+        $subtask = RelatedTask::findOrFail($taskId);
+        $scheduledDate = Carbon::parse($dateString);
+
+        $subtask->update([
+            'scheduled_date' => $scheduledDate->toDateString(),
+        ]);
+
+        session()->flash('message', "Subtarea \"{$subtask->title}\" reprogramada para el {$scheduledDate->format('d M')}.");
         $this->dispatch('order-updated');
     }
 
@@ -249,16 +262,28 @@ class WeeklyPlanner extends Component
             'range_label' => $nextWeekMonday->format('d M').' - '.$nextWeekFriday->format('d M'),
         ];
 
-        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['designers', 'designer', 'relatedTasks'])]);
+        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['designers', 'designer'])]);
         if ($this->selectedDesignerFilter !== 'all') {
             $designerQuery->where('id', $this->selectedDesignerFilter);
         }
         $designers = $designerQuery->get();
 
+        $subtasks = RelatedTask::with(['order.designer', 'order.designers'])
+            ->whereHas('order', fn ($q) => $q->inWorkspace())
+            ->whereNotNull('scheduled_date')
+            ->get();
+
         $unscheduledOrders = Order::inWorkspace()
             ->prioritizeUrgente()
-            ->whereNull('scheduled_date')
             ->whereNotIn('core_status', [CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD])
+            ->when(! $this->unscheduledSearch, fn ($q) => $q->whereNull('scheduled_date'))
+            ->when($this->unscheduledSearch, function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('company_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('task_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
+                });
+            })
             ->get();
 
         $daysWithNextWeek = array_merge($days, [$nextWeekItem]);
@@ -269,6 +294,7 @@ class WeeklyPlanner extends Component
             'nextWeekItem' => $nextWeekItem,
             'designers' => $designers,
             'allDesigners' => Designer::where('active', true)->get(),
+            'subtasks' => $subtasks,
             'unscheduledOrders' => $unscheduledOrders,
             'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
         ])->layout('components.layouts.app', ['title' => 'Planificador Semanal - Kudos Design Ops']);

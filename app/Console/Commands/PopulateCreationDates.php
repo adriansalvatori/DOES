@@ -50,7 +50,7 @@ class PopulateCreationDates extends Command
                 }
             }
 
-            if (!$trelloCreatedAt) {
+            if (! $trelloCreatedAt) {
                 $trelloCreatedAt = $order->created_at;
             }
 

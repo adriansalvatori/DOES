@@ -29,7 +29,8 @@
         @else
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 @foreach($blockedOrders as $order)
-                    <div class="bg-[#fcfcfb] border border-rose-200 rounded-lg p-3.5 space-y-2.5 shadow-2xs">
+                    <div class="rounded-lg p-3.5 space-y-2.5 shadow-2xs {{ $order->isOverdue() ? 'bg-rose-50 border border-red-400' : ($order->isDueToday() ? 'bg-amber-50 border border-amber-300' : 'bg-[#fcfcfb] border border-rose-200') }}"
+                         @if($order->isOverdue()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" @elseif($order->isDueToday()) style="border: 1px solid #f59e0b !important; background-color: #fffbeb !important;" @endif>
                         <div class="flex items-start justify-between min-w-0 gap-2">
                             <div class="min-w-0 flex-1">
                                 <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">

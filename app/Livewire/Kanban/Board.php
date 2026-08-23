@@ -282,6 +282,7 @@ class Board extends Component
             'allColumns' => $allColumns,
             'orders' => $orders,
             'relatedTasks' => $relatedTasks,
+            'newOrdersCount' => Order::inBacklog()->newFromTrello()->count(),
             'designers' => Designer::where('active', true)->get(),
             'existingCompanies' => Order::inWorkspace()
                 ->whereNotNull('company_name')
