@@ -34,16 +34,16 @@ class ClientLocation extends Model
 
     public function orders(): HasMany
     {
-        return $this->hasMany(Order::class);
+        return $this->hasMany(Order::class)->where('in_workspace', true);
     }
 
     public function activeOrders(): HasMany
     {
-        return $this->hasMany(Order::class)->where('core_status', '!=', CoreStatus::ARCHIVED);
+        return $this->hasMany(Order::class)->where('in_workspace', true)->where('core_status', '!=', CoreStatus::ARCHIVED);
     }
 
     public function archivedOrders(): HasMany
     {
-        return $this->hasMany(Order::class)->where('core_status', CoreStatus::ARCHIVED);
+        return $this->hasMany(Order::class)->where('in_workspace', true)->where('core_status', CoreStatus::ARCHIVED);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Livewire\Clients;
 
 use App\Models\Client;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -15,6 +16,12 @@ class ClientIndex extends Component
         'search' => ['except' => ''],
     ];
 
+    #[On('client-updated')]
+    public function refreshClients(): void
+    {
+        // Triggers re-render when client is saved or updated
+    }
+
     public function openClientDetail(?int $clientId = null): void
     {
         $this->dispatch('open-client-flyout', clientId: $clientId);
@@ -24,7 +31,7 @@ class ClientIndex extends Component
     {
         $query = Client::query()
             ->withCount(['activeOrders', 'archivedOrders'])
-            ->with(['locations', 'contacts']);
+            ->with(['locations', 'contacts', 'primaryContact']);
 
         if (! empty(trim($this->search))) {
             $term = mb_strtoupper(trim($this->search), 'UTF-8');

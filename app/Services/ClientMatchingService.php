@@ -56,9 +56,9 @@ class ClientMatchingService
     /**
      * Parse raw company string, find or create Client and ClientLocation from Workspace Order.
      *
-     * @return array{client: Client, location: ?ClientLocation}
+     * @return array{client: ?Client, location: ?ClientLocation}
      */
-    public function matchOrCreate(string $rawCompany, ?string $responsiblePerson = null): array
+    public function matchOrCreate(string $rawCompany, ?string $responsiblePerson = null, bool $createIfMissing = true): array
     {
         $parsed = $this->cleanCompanyName($rawCompany);
         $baseClientName = $parsed['client_name'];
@@ -67,6 +67,13 @@ class ClientMatchingService
         $client = Client::where('name', $baseClientName)->first();
 
         if (! $client) {
+            if (! $createIfMissing) {
+                return [
+                    'client' => null,
+                    'location' => null,
+                ];
+            }
+
             $client = Client::create([
                 'name' => $baseClientName,
             ]);
@@ -90,7 +97,7 @@ class ClientMatchingService
                 ->where('name', $locationName)
                 ->first();
 
-            if (! $location) {
+            if (! $location && $createIfMissing) {
                 $location = ClientLocation::create([
                     'client_id' => $client->id,
                     'name' => $locationName,

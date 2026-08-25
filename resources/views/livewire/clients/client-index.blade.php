@@ -69,9 +69,36 @@
                             class="hover:bg-[#f7f7f5] transition cursor-pointer"
                         >
                             <td class="py-2.5 px-3.5">
-                                <span class="font-bold text-zinc-900 text-xs tracking-tight uppercase">
-                                    {{ $client->name }}
-                                </span>
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-zinc-900 text-xs tracking-tight uppercase">
+                                        {{ $client->name }}
+                                    </span>
+                                    @php
+                                        $primaryContact = $client->primaryContact ?: $client->contacts->first();
+                                    @endphp
+                                    @if($primaryContact && ($primaryContact->name || $primaryContact->phone || $primaryContact->email))
+                                        <div class="flex items-center gap-2.5 text-[11px] text-zinc-500 font-normal mt-0.5 flex-wrap">
+                                            @if($primaryContact->name)
+                                                <span class="font-medium text-zinc-700 flex items-center gap-1">
+                                                    <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
+                                                    <span>{{ $primaryContact->name }}</span>
+                                                </span>
+                                            @endif
+                                            @if($primaryContact->phone)
+                                                <span class="flex items-center gap-1 text-zinc-600 font-mono text-[10px]">
+                                                    <x-lucide-phone class="w-3 h-3 text-zinc-400 shrink-0" />
+                                                    <span>{{ $primaryContact->phone }}</span>
+                                                </span>
+                                            @endif
+                                            @if($primaryContact->email)
+                                                <span class="flex items-center gap-1 text-zinc-600 truncate text-[10px]">
+                                                    <x-lucide-mail class="w-3 h-3 text-zinc-400 shrink-0" />
+                                                    <span>{{ $primaryContact->email }}</span>
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endif
+                                </div>
                             </td>
                             <td class="py-2.5 px-3.5 text-right">
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 inline-flex items-center gap-1">

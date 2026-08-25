@@ -566,7 +566,21 @@ class OrderDetailModal extends Component
         }
 
         $order = Order::findOrFail($this->orderId);
-        $order->update(['in_workspace' => true]);
+        $updateData = ['in_workspace' => true];
+
+        if ($order->company_name) {
+            $rawMatch = $order->company_name.($order->location_name ? ' REF '.$order->location_name : '');
+            $match = app(ClientMatchingService::class)->matchOrCreate($rawMatch, $order->responsible_person, createIfMissing: true);
+            if ($match['client']) {
+                $updateData['client_id'] = $match['client']->id;
+                $updateData['company_name'] = $match['client']->name;
+            }
+            if ($match['location']) {
+                $updateData['client_location_id'] = $match['location']->id;
+            }
+        }
+
+        $order->update($updateData);
         $this->dispatch('order-updated');
         session()->flash('message', "Orden {$order->company_name} añadida al Workspace activo.");
     }
@@ -666,7 +680,7 @@ class OrderDetailModal extends Component
         $task = RelatedTask::find($taskId);
         if ($task) {
             $taskName = $task->title;
-            $task->delete();
+            $task->forceDelete();
             $this->dispatch('order-updated');
             session()->flash('message', "Subtarea '{$taskName}' descartada.");
         }

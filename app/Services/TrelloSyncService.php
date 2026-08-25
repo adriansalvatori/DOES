@@ -328,12 +328,25 @@ class TrelloSyncService
             $attributes
         );
 
-        $match = app(ClientMatchingService::class)->matchOrCreate($parsed['company_name'], $parsed['responsible_person']);
-        $order->updateQuietly([
-            'client_id' => $match['client']->id,
-            'client_location_id' => $match['location']?->id,
-            'company_name' => $match['client']->name,
-        ]);
+        $createIfMissing = (bool) $order->in_workspace;
+        $match = app(ClientMatchingService::class)->matchOrCreate(
+            $parsed['company_name'],
+            $parsed['responsible_person'],
+            createIfMissing: $createIfMissing
+        );
+
+        $updateQuietlyData = [];
+        if ($match['client']) {
+            $updateQuietlyData['client_id'] = $match['client']->id;
+            $updateQuietlyData['company_name'] = $match['client']->name;
+        }
+        if ($match['location']) {
+            $updateQuietlyData['client_location_id'] = $match['location']->id;
+        }
+
+        if (! empty($updateQuietlyData)) {
+            $order->updateQuietly($updateQuietlyData);
+        }
 
         if ($designerId) {
             $order->syncDesigners([$designerId]);

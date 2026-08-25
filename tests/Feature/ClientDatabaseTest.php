@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\Backlog\Index;
+use App\Livewire\Clients\ClientFlyoutPanel;
 use App\Livewire\Clients\ClientIndex;
 use App\Models\Client;
 use App\Models\ClientLocation;
@@ -111,5 +113,88 @@ class ClientDatabaseTest extends TestCase
         ]);
 
         $this->assertEquals('WO 15940 FUERZA LATINA REF TALPA 8 - PROPUESTA DE SIGN', $title);
+    }
+
+    public function test_client_relationships_only_include_workspace_orders(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE SCOPE TEST']);
+
+        $workspaceOrder = Order::create([
+            'company_name' => 'CLIENTE SCOPE TEST',
+            'task_name' => 'Workspace Task',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+        ]);
+
+        $backlogOrder = Order::create([
+            'company_name' => 'CLIENTE SCOPE TEST',
+            'task_name' => 'Backlog Task',
+            'client_id' => $client->id,
+            'in_workspace' => false,
+        ]);
+
+        $this->assertCount(1, $client->orders);
+        $this->assertEquals($workspaceOrder->id, $client->orders->first()->id);
+        $this->assertCount(2, $client->allOrders);
+    }
+
+    public function test_match_or_create_respects_create_if_missing_flag(): void
+    {
+        $service = app(ClientMatchingService::class);
+
+        $resultNoCreate = $service->matchOrCreate('EMPRESA INEXISTENTE', createIfMissing: false);
+        $this->assertNull($resultNoCreate['client']);
+
+        $resultCreate = $service->matchOrCreate('EMPRESA INEXISTENTE', createIfMissing: true);
+        $this->assertInstanceOf(Client::class, $resultCreate['client']);
+        $this->assertEquals('EMPRESA INEXISTENTE', $resultCreate['client']->name);
+    }
+
+    public function test_promoting_backlog_order_links_client(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA PROMOVIDA',
+            'task_name' => 'Tarea Backlog',
+            'in_workspace' => false,
+        ]);
+
+        $this->assertNull($order->client_id);
+
+        Livewire::test(Index::class)
+            ->call('addToWorkspace', $order->id);
+
+        $order->refresh();
+
+        $this->assertTrue($order->in_workspace);
+        $this->assertNotNull($order->client_id);
+        $this->assertEquals('EMPRESA PROMOVIDA', $order->client->name);
+    }
+
+    public function test_can_save_client_detail_with_website_and_main_responsible(): void
+    {
+        $client = Client::create([
+            'name' => 'EMPRESA CON WEBSITE',
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->set('website', 'https://www.empresaconwebsite.com')
+            ->set('contacts.0.name', 'Carlos Gómez')
+            ->set('contacts.0.email', 'carlos@empresa.com')
+            ->set('contacts.0.phone', '+57 311 0000000')
+            ->set('notes', 'Notas especiales')
+            ->call('save')
+            ->assertDispatched('client-updated');
+
+        $client->refresh();
+        $this->assertEquals('https://www.empresaconwebsite.com', $client->website);
+        $this->assertEquals('Notas especiales', $client->notes);
+
+        $this->assertDatabaseHas('client_contacts', [
+            'client_id' => $client->id,
+            'name' => 'Carlos Gómez',
+            'email' => 'carlos@empresa.com',
+            'phone' => '+57 311 0000000',
+        ]);
     }
 }

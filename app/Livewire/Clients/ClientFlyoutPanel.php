@@ -19,6 +19,8 @@ class ClientFlyoutPanel extends Component
 
     public string $name = '';
 
+    public string $website = '';
+
     public string $notes = '';
 
     public array $contacts = [];
@@ -42,6 +44,7 @@ class ClientFlyoutPanel extends Component
             $client = Client::with(['locations', 'contacts', 'links', 'orders'])->find($clientId);
             if ($client) {
                 $this->name = $client->name;
+                $this->website = $client->website ?? '';
                 $this->notes = $client->notes ?? '';
                 $this->contacts = $client->contacts->map(fn ($c) => [
                     'id' => $c->id,
@@ -51,6 +54,12 @@ class ClientFlyoutPanel extends Component
                     'department' => $c->department ?? '',
                     'is_primary' => (bool) $c->is_primary,
                 ])->toArray();
+
+                if (empty($this->contacts)) {
+                    $this->contacts = [
+                        ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
+                    ];
+                }
 
                 $this->links = $client->links->map(fn ($l) => [
                     'id' => $l->id,
@@ -72,6 +81,7 @@ class ClientFlyoutPanel extends Component
             }
         } else {
             $this->name = '';
+            $this->website = '';
             $this->notes = '';
             $this->contacts = [
                 ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
@@ -164,16 +174,19 @@ class ClientFlyoutPanel extends Component
         ]);
 
         $cleanName = mb_strtoupper(trim($this->name), 'UTF-8');
+        $cleanWebsite = trim($this->website);
 
         if ($this->clientId) {
             $client = Client::findOrFail($this->clientId);
             $client->update([
                 'name' => $cleanName,
+                'website' => $cleanWebsite,
                 'notes' => $this->notes,
             ]);
         } else {
             $client = Client::create([
                 'name' => $cleanName,
+                'website' => $cleanWebsite,
                 'notes' => $this->notes,
             ]);
             $this->clientId = $client->id;

@@ -5,6 +5,7 @@ namespace App\Livewire\Backlog;
 use App\Enums\CoreStatus;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Services\ClientMatchingService;
 use App\Services\TrelloSyncService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -93,10 +94,24 @@ class Index extends Component
     public function addToWorkspace($orderId)
     {
         $order = Order::findOrFail($orderId);
-        $order->update([
+        $updateData = [
             'in_workspace' => true,
             'is_new_from_trello' => false,
-        ]);
+        ];
+
+        if ($order->company_name) {
+            $rawMatch = $order->company_name.($order->location_name ? ' REF '.$order->location_name : '');
+            $match = app(ClientMatchingService::class)->matchOrCreate($rawMatch, $order->responsible_person, createIfMissing: true);
+            if ($match['client']) {
+                $updateData['client_id'] = $match['client']->id;
+                $updateData['company_name'] = $match['client']->name;
+            }
+            if ($match['location']) {
+                $updateData['client_location_id'] = $match['location']->id;
+            }
+        }
+
+        $order->update($updateData);
 
         session()->flash('message', "Orden {$order->company_name} añadida al Workspace activo.");
     }
@@ -109,10 +124,28 @@ class Index extends Component
             return;
         }
 
-        $count = Order::whereIn('id', $this->selectedOrders)->update([
-            'in_workspace' => true,
-            'is_new_from_trello' => false,
-        ]);
+        $orders = Order::whereIn('id', $this->selectedOrders)->get();
+        foreach ($orders as $order) {
+            $updateData = [
+                'in_workspace' => true,
+                'is_new_from_trello' => false,
+            ];
+
+            if ($order->company_name) {
+                $rawMatch = $order->company_name.($order->location_name ? ' REF '.$order->location_name : '');
+                $match = app(ClientMatchingService::class)->matchOrCreate($rawMatch, $order->responsible_person, createIfMissing: true);
+                if ($match['client']) {
+                    $updateData['client_id'] = $match['client']->id;
+                    $updateData['company_name'] = $match['client']->name;
+                }
+                if ($match['location']) {
+                    $updateData['client_location_id'] = $match['location']->id;
+                }
+            }
+
+            $order->update($updateData);
+        }
+        $count = $orders->count();
         $this->selectedOrders = [];
         $this->selectAll = false;
 
@@ -121,10 +154,28 @@ class Index extends Component
 
     public function addAllFilteredToWorkspace()
     {
-        $count = $this->getFilteredQuery()->update([
-            'in_workspace' => true,
-            'is_new_from_trello' => false,
-        ]);
+        $orders = $this->getFilteredQuery()->get();
+        foreach ($orders as $order) {
+            $updateData = [
+                'in_workspace' => true,
+                'is_new_from_trello' => false,
+            ];
+
+            if ($order->company_name) {
+                $rawMatch = $order->company_name.($order->location_name ? ' REF '.$order->location_name : '');
+                $match = app(ClientMatchingService::class)->matchOrCreate($rawMatch, $order->responsible_person, createIfMissing: true);
+                if ($match['client']) {
+                    $updateData['client_id'] = $match['client']->id;
+                    $updateData['company_name'] = $match['client']->name;
+                }
+                if ($match['location']) {
+                    $updateData['client_location_id'] = $match['location']->id;
+                }
+            }
+
+            $order->update($updateData);
+        }
+        $count = $orders->count();
         $this->selectedOrders = [];
         $this->selectAll = false;
 

@@ -11,17 +11,49 @@
             
             {{-- Panel Header --}}
             <div class="px-6 py-4 border-b border-zinc-100 bg-white flex items-center justify-between shrink-0">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-700 flex items-center justify-center shrink-0">
-                        <x-lucide-building-2 class="w-4 h-4 text-zinc-700" />
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-9 h-9 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <x-lucide-building-2 class="w-4 h-4 text-white" />
                     </div>
-                    <div>
+                    <div class="min-w-0">
                         <h2 class="text-sm font-bold text-zinc-900 uppercase tracking-tight">
                             {{ $clientId ? ($name ?: __('Detalle del Cliente')) : __('Nuevo Cliente') }}
                         </h2>
-                        <p class="text-xs text-zinc-500">
-                            {{ $clientId ? __('Gestión de información, locaciones, contactos y recursos.') : __('Complete la información para registrar el nuevo cliente.') }}
-                        </p>
+                        @php
+                            $primaryContact = $currentClient?->primaryContact ?: $currentClient?->contacts->first();
+                        @endphp
+                        @if($currentClient)
+                            <div class="flex items-center gap-2.5 text-xs text-zinc-600 mt-0.5 flex-wrap">
+                                @if($primaryContact && $primaryContact->name)
+                                    <span class="font-semibold text-zinc-800 flex items-center gap-1">
+                                        <x-lucide-user class="w-3 h-3 text-emerald-600 shrink-0" />
+                                        <span>{{ $primaryContact->name }}</span>
+                                    </span>
+                                @endif
+                                @if($primaryContact && $primaryContact->phone)
+                                    <a href="tel:{{ $primaryContact->phone }}" class="flex items-center gap-1 text-zinc-500 hover:text-emerald-700 font-mono text-[11px] transition">
+                                        <x-lucide-phone class="w-3 h-3 text-zinc-400 shrink-0" />
+                                        <span>{{ $primaryContact->phone }}</span>
+                                    </a>
+                                @endif
+                                @if($primaryContact && $primaryContact->email)
+                                    <a href="mailto:{{ $primaryContact->email }}" class="flex items-center gap-1 text-zinc-500 hover:text-emerald-700 text-[11px] transition truncate">
+                                        <x-lucide-mail class="w-3 h-3 text-zinc-400 shrink-0" />
+                                        <span>{{ $primaryContact->email }}</span>
+                                    </a>
+                                @endif
+                                @if($website)
+                                    <a href="{{ Str::startsWith($website, ['http://', 'https://']) ? $website : 'https://'.$website }}" target="_blank" class="flex items-center gap-1 text-emerald-600 hover:underline text-[11px] transition">
+                                        <x-lucide-globe class="w-3 h-3 shrink-0" />
+                                        <span>{{ preg_replace('/^https?:\/\//i', '', $website) }}</span>
+                                    </a>
+                                @endif
+                            </div>
+                        @else
+                            <p class="text-xs text-zinc-500">
+                                {{ __('Complete la información para registrar el nuevo cliente.') }}
+                            </p>
+                        @endif
                     </div>
                 </div>
                 <button 
@@ -107,11 +139,12 @@
                 {{-- TAB 1: Client Info (General, Locaciones & Contactos) --}}
                 @if($activeTab === 'general')
                     <div class="space-y-6">
-                        {{-- Section 1: Información General --}}
+                        {{-- Section 1: Información Principal del Cliente --}}
                         <div class="space-y-4">
+                            {{-- 1. Company (client) name --}}
                             <div>
                                 <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                                    {{ __('Nombre del Cliente') }} <span class="text-rose-500">*</span>
+                                    {{ __('Nombre del Cliente / Empresa') }} <span class="text-rose-500">*</span>
                                 </label>
                                 <input 
                                     type="text" 
@@ -122,70 +155,110 @@
                                 @error('name') <span class="text-[11px] text-rose-500 mt-1 block font-medium">{{ $message }}</span> @enderror
                             </div>
 
+                            {{-- 2. Main Responsible --}}
+                            @if(isset($contacts[0]))
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 pt-1">
+                                    <div class="sm:col-span-2">
+                                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
+                                            <x-lucide-user class="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>{{ __('Responsable Principal') }}</span>
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            wire:model="contacts.0.name"
+                                            placeholder="Nombre del responsable principal"
+                                            class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 font-semibold focus:outline-none transition"
+                                        />
+                                    </div>
+
+                                    {{-- 3. Email & Phone Number --}}
+                                    <div>
+                                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
+                                            <x-lucide-mail class="w-3 h-3 text-zinc-400" />
+                                            <span>{{ __('Correo Electrónico') }}</span>
+                                        </label>
+                                        <input 
+                                            type="email" 
+                                            wire:model="contacts.0.email"
+                                            placeholder="correo@cliente.com"
+                                            class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
+                                            <x-lucide-phone class="w-3 h-3 text-zinc-400" />
+                                            <span>{{ __('Teléfono / WhatsApp') }}</span>
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            wire:model="contacts.0.phone"
+                                            placeholder="+57 300 0000000"
+                                            class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
+                                        />
+                                    </div>
+                                </div>
+                            @endif
+
+                            {{-- 4. Client Website --}}
                             <div>
-                                <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                                    {{ __('Notas Generales u Observaciones') }}
+                                <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
+                                    <x-lucide-globe class="w-3.5 h-3.5 text-zinc-400" />
+                                    <span>{{ __('Sitio Web del Cliente') }}</span>
+                                </label>
+                                <input 
+                                    type="url" 
+                                    wire:model="website"
+                                    placeholder="https://www.cliente.com"
+                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
+                                />
+                            </div>
+
+                            {{-- 5. Notes / Observaciones --}}
+                            <div>
+                                <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
+                                    <x-lucide-file-text class="w-3.5 h-3.5 text-zinc-400" />
+                                    <span>{{ __('Notas Generales u Observaciones') }}</span>
                                 </label>
                                 <textarea 
                                     wire:model="notes" 
                                     rows="2" 
-                                    placeholder="{{ __('Notas internas sobre el cliente...') }}"
-                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1.5 text-xs text-zinc-800 focus:outline-none transition"
+                                    placeholder="{{ __('Notas internas, observaciones o especificaciones sobre el cliente...') }}"
+                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
                                 ></textarea>
                             </div>
                         </div>
 
                         {{-- Section 2: Locaciones & Direcciones --}}
                         <div class="pt-6 border-t border-zinc-200/70 space-y-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                        <x-lucide-map-pin class="w-4 h-4 text-emerald-600" />
-                                        <span>{{ __('Locaciones & Direcciones') }}</span>
-                                    </h3>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Dirección física de cada sede del cliente.') }}</p>
-                                </div>
-                                <button 
-                                    type="button" 
-                                    wire:click="addLocation"
-                                    class="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition cursor-pointer"
-                                >
-                                    <x-lucide-plus class="w-3.5 h-3.5" />
-                                    <span>{{ __('Agregar Locación') }}</span>
-                                </button>
-                            </div>
-
                             <div class="space-y-6">
                                 @foreach($locations as $index => $location)
                                     <div class="{{ $index > 0 ? 'pt-6 border-t border-zinc-200/60' : '' }} space-y-3">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-xs font-bold text-zinc-800 uppercase flex items-center gap-1.5">
-                                                <x-lucide-map-pin class="w-3.5 h-3.5 text-emerald-600" />
-                                                <span>{{ __('Locación #') . ($index + 1) }}</span>
-                                            </span>
+                                        {{-- Inline Editable Title Header --}}
+                                        <div class="flex items-center justify-between gap-3">
+                                            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                                                <x-lucide-map-pin class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                <input 
+                                                    type="text" 
+                                                    wire:model.live.debounce.150ms="locations.{{ $index }}.name" 
+                                                    placeholder="{{ __('NOMBRE LOCACIÓN (EJ. GRAYSON)') }}"
+                                                    :size="Math.max(14, ({{ json_encode($location['name'] ?? '') }} || 'NOMBRE LOCACIÓN (EJ. GRAYSON)').length + 1)"
+                                                    class="bg-transparent hover:bg-zinc-100/70 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs font-bold text-zinc-900 uppercase tracking-tight focus:outline-none transition shrink-0 max-w-full"
+                                                />
+                                            </div>
                                             <button 
                                                 type="button" 
                                                 wire:click="removeLocation({{ $index }})"
-                                                class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1"
+                                                class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1 shrink-0"
                                             >
                                                 <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                                <span>{{ __('Eliminar Locación') }}</span>
+                                                <span>{{ __('Eliminar') }}</span>
                                             </button>
                                         </div>
 
+                                        {{-- Location Fields Grid --}}
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
-                                            <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">
-                                                    {{ __('Nombre Locación') }} <span class="text-rose-500">*</span>
-                                                </label>
-                                                <input 
-                                                    type="text" 
-                                                    wire:model="locations.{{ $index }}.name" 
-                                                    placeholder="EJ. LOCACION 1"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 uppercase font-semibold focus:outline-none transition"
-                                                />
-                                            </div>
-                                            <div>
+                                            <div class="sm:col-span-2">
                                                 <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">
                                                     {{ __('Dirección Física (Visible)') }} <span class="text-rose-500">*</span>
                                                 </label>
@@ -193,7 +266,7 @@
                                                     type="text" 
                                                     wire:model="locations.{{ $index }}.address" 
                                                     placeholder="Dirección completa"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 font-bold focus:outline-none transition"
                                                 />
                                             </div>
                                             <div>
@@ -230,97 +303,113 @@
                                         </div>
                                     </div>
                                 @endforeach
+
+                                {{-- Green Style Add Location Button Below --}}
+                                <div class="pt-1">
+                                    <button 
+                                        type="button" 
+                                        wire:click="addLocation"
+                                        class="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition cursor-pointer"
+                                    >
+                                        <x-lucide-plus class="w-3.5 h-3.5" />
+                                        <span>{{ __('Agregar locación') }}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        {{-- Section 3: Contactos Múltiples --}}
-                        <div class="pt-6 border-t border-zinc-200/70 space-y-4">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                        <x-lucide-users class="w-4 h-4 text-zinc-600" />
-                                        <span>{{ __('Contactos por Departamento') }}</span>
-                                    </h3>
-                                    <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Responsables de compras, diseño, facturación, etc.') }}</p>
-                                </div>
-                                <button 
-                                    type="button" 
-                                    wire:click="addContact"
-                                    class="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition cursor-pointer"
+                        {{-- Section 3: Contacts (Subtle Box with Click Toggle to Show More/Less) --}}
+                        <div 
+                            x-data="{ openContacts: false }" 
+                            x-effect="if (openContacts) setTimeout(() => $refs.contactsBox.scrollIntoView({ behavior: 'smooth', block: 'end' }), 220)"
+                            class="pt-4 border-t border-zinc-200/60"
+                        >
+                            <div x-ref="contactsBox" class="p-3.5 bg-zinc-50/60 border border-zinc-200/60 rounded-xl transition-all">
+                                <div 
+                                    class="flex items-center justify-between cursor-pointer select-none" 
+                                    @click="openContacts = !openContacts"
                                 >
-                                    <x-lucide-plus class="w-3.5 h-3.5" />
-                                    <span>{{ __('Agregar Contacto') }}</span>
-                                </button>
-                            </div>
+                                    <div class="flex items-center gap-2">
+                                        <x-lucide-users class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                        <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider">
+                                            {{ __('Contacts') }} ({{ count($contacts) }})
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button 
+                                            type="button" 
+                                            wire:click.stop="addContact; openContacts = true"
+                                            class="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition cursor-pointer"
+                                        >
+                                            <x-lucide-plus class="w-3.5 h-3.5" />
+                                            <span>{{ __('Agregar Contacto') }}</span>
+                                        </button>
+                                        <button type="button" class="text-zinc-400 hover:text-zinc-700 p-0.5 flex items-center gap-1 text-[11px] font-medium">
+                                            <span x-text="openContacts ? '{{ __('Ver menos') }}' : '{{ __('Ver más') }}'"></span>
+                                            <x-lucide-chevron-down class="w-3.5 h-3.5 transform transition-transform duration-200" ::class="{ 'rotate-180': openContacts }" />
+                                        </button>
+                                    </div>
+                                </div>
 
-                            <div class="space-y-6">
-                                @foreach($contacts as $index => $contact)
-                                    <div class="{{ $index > 0 ? 'pt-6 border-t border-zinc-200/60' : '' }} space-y-3">
-                                        <div class="flex items-center justify-between">
-                                            <span class="text-xs font-bold text-zinc-800 uppercase flex items-center gap-1.5">
-                                                <x-lucide-user class="w-3.5 h-3.5 text-zinc-500" />
-                                                <span>{{ __('Contacto #') . ($index + 1) }}</span>
-                                            </span>
-                                            <button 
-                                                type="button" 
-                                                wire:click="removeContact({{ $index }})"
-                                                class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1"
-                                            >
-                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                                <span>{{ __('Eliminar Contacto') }}</span>
-                                            </button>
-                                        </div>
-
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
-                                            <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Nombre Contacto') }}</label>
-                                                <input 
-                                                    type="text" 
-                                                    wire:model="contacts.{{ $index }}.name" 
-                                                    placeholder="Nombre y Apellido"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
-                                                />
+                                <div x-show="openContacts" x-collapse class="mt-3 pt-3 border-t border-zinc-200/50 space-y-4">
+                                    @foreach($contacts as $index => $contact)
+                                        <div class="{{ $index > 0 ? 'pt-3.5 border-t border-zinc-200/50' : '' }} space-y-2">
+                                            {{-- Inline Editable Title Header with Contact Name & Subtle Principal Toggle --}}
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
+                                                    <x-lucide-user class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                                    <input 
+                                                        type="text" 
+                                                        wire:model.live.debounce.150ms="contacts.{{ $index }}.name" 
+                                                        placeholder="{{ __('NOMBRE DEL CONTACTO') }}"
+                                                        :size="Math.max(12, ({{ json_encode($contact['name'] ?? '') }} || 'NOMBRE DEL CONTACTO').length + 1)"
+                                                        class="bg-transparent hover:bg-zinc-100/70 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs font-bold text-zinc-900 uppercase tracking-tight focus:outline-none transition shrink-0 max-w-full"
+                                                    />
+                                                    <label class="inline-flex items-center gap-1 text-[10px] text-zinc-400 hover:text-zinc-600 cursor-pointer select-none shrink-0" title="{{ __('Marcar como contacto principal') }}">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            wire:model="contacts.{{ $index }}.is_primary"
+                                                            class="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 w-3 h-3 opacity-70 transition cursor-pointer"
+                                                        />
+                                                        <span class="font-normal">{{ __('Principal') }}</span>
+                                                    </label>
+                                                </div>
+                                                @if($index > 0)
+                                                    <button 
+                                                        type="button" 
+                                                        wire:click="removeContact({{ $index }})"
+                                                        class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1 shrink-0"
+                                                    >
+                                                        <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                                        <span>{{ __('Eliminar') }}</span>
+                                                    </button>
+                                                @endif
                                             </div>
-                                            <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Departamento / Rol') }}</label>
+
+                                            {{-- Compact Notion-Style Fields Grid (Department, Phone, Email) --}}
+                                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                                 <input 
                                                     type="text" 
                                                     wire:model="contacts.{{ $index }}.department" 
-                                                    placeholder="Ej. Compras, Diseño, Gerencia"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                                    placeholder="{{ __('Departamento / Rol (ej. Compras)') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md px-2 py-1 text-xs text-zinc-700 focus:outline-none transition"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Teléfono') }}</label>
                                                 <input 
                                                     type="text" 
                                                     wire:model="contacts.{{ $index }}.phone" 
-                                                    placeholder="+57 300 0000000"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-mono"
+                                                    placeholder="{{ __('Teléfono / WhatsApp') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md px-2 py-1 text-xs text-zinc-700 font-mono focus:outline-none transition"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Correo Electrónico') }}</label>
                                                 <input 
                                                     type="email" 
                                                     wire:model="contacts.{{ $index }}.email" 
-                                                    placeholder="correo@cliente.com"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                                    placeholder="{{ __('Correo electrónico') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md px-2 py-1 text-xs text-zinc-700 focus:outline-none transition"
                                                 />
                                             </div>
                                         </div>
-                                        <div class="pt-0.5 flex items-center">
-                                            <label class="inline-flex items-center gap-2 text-xs text-zinc-700 cursor-pointer select-none">
-                                                <input 
-                                                    type="checkbox" 
-                                                    wire:model="contacts.{{ $index }}.is_primary"
-                                                    class="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
-                                                />
-                                                <span class="font-medium">{{ __('Contacto Principal') }}</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                @endforeach
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
                     </div>

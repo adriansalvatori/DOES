@@ -456,21 +456,23 @@ class AutomationEngine
      */
     public function dismissTriggeredSubtasks(Order $order, array $exceptTypes = []): void
     {
+        $exceptValues = array_map(fn ($t) => $t instanceof \BackedEnum ? $t->value : $t, $exceptTypes);
+
         RelatedTask::where('order_id', $order->id)
             ->where('status', '!=', 'done')
             ->whereNull('completed_at')
-            ->where('type', '!=', RelatedTaskType::SUBTASK)
+            ->where('type', '!=', RelatedTaskType::SUBTASK->value)
             ->where(function ($q) {
                 $q->whereNotNull('trigger_type')
                     ->orWhereIn('type', [
-                        RelatedTaskType::CORREO_ATRASO,
-                        RelatedTaskType::FOLLOW_UP_CLIENTE,
-                        RelatedTaskType::FOLLOW_UP_CAMILA,
-                        RelatedTaskType::RESOLVER,
+                        RelatedTaskType::CORREO_ATRASO->value,
+                        RelatedTaskType::FOLLOW_UP_CLIENTE->value,
+                        RelatedTaskType::FOLLOW_UP_CAMILA->value,
+                        RelatedTaskType::RESOLVER->value,
                     ]);
             })
-            ->when(! empty($exceptTypes), fn ($q) => $q->whereNotIn('type', $exceptTypes))
-            ->delete();
+            ->when(! empty($exceptValues), fn ($q) => $q->whereNotIn('type', $exceptValues))
+            ->forceDelete();
     }
 
     /**
