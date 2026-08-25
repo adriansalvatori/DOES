@@ -113,6 +113,13 @@ class OrderTitleParserService
             }
         }
 
+        // 4. Extract location_name if companyName contains REF / SEDE / SUCURSAL / LOCAL
+        $locationName = null;
+        if (preg_match('/\b(?:REF\.?|SEDE|SUCURSAL|LOCAL)\s+([^-(]+)/i', $companyName, $locMatches)) {
+            $locationName = mb_strtoupper(trim($locMatches[1]), 'UTF-8');
+            $companyName = trim(preg_replace('/\b(?:REF\.?|SEDE|SUCURSAL|LOCAL)\s+[^-(]+/i', '', $companyName), " \t\n\r\0\x0B-:");
+        }
+
         // Final sanitation of company and task name
         $companyName = trim(preg_replace('/[*_#]+/', '', $companyName), " \t\n\r\0\x0B-:");
         $taskName = trim(preg_replace('/[*_#]+/', '', $taskName), " \t\n\r\0\x0B-:");
@@ -128,6 +135,7 @@ class OrderTitleParserService
         return [
             'wo_number' => $woNumber,
             'company_name' => $companyName,
+            'location_name' => $locationName,
             'responsible_person' => $responsiblePerson,
             'task_name' => $taskName,
             'trello_title' => $rawTitle,
@@ -142,6 +150,7 @@ class OrderTitleParserService
     {
         $wo = is_array($data) ? ($data['wo_number'] ?? '') : ($data->wo_number ?? '');
         $company = is_array($data) ? ($data['company_name'] ?? '') : ($data->company_name ?? '');
+        $location = is_array($data) ? ($data['location_name'] ?? '') : ($data->location_name ?? '');
         $responsible = is_array($data) ? ($data['responsible_person'] ?? '') : ($data->responsible_person ?? '');
         $task = is_array($data) ? ($data['task_name'] ?? '') : ($data->task_name ?? '');
 
@@ -150,13 +159,17 @@ class OrderTitleParserService
             $parts[] = trim($wo);
         }
         if (! empty($company)) {
-            $parts[] = trim($company);
+            $compStr = trim($company);
+            if (! empty($location)) {
+                $compStr .= ' REF '.trim($location);
+            }
+            $parts[] = $compStr;
         }
         if (! empty($responsible)) {
             $parts[] = '('.trim($responsible).')';
         }
         if (! empty($task) && strtolower(trim($task)) !== strtolower(trim($company))) {
-            $parts[] = trim($task);
+            $parts[] = '- '.trim($task);
         }
 
         return implode(' ', $parts);

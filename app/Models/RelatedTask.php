@@ -22,6 +22,7 @@ class RelatedTask extends Model
         'completed_at',
         'trigger_type',
         'priority',
+        'is_work_task',
     ];
 
     protected $casts = [
@@ -29,6 +30,7 @@ class RelatedTask extends Model
         'scheduled_date' => 'date',
         'due_date' => 'date',
         'completed_at' => 'datetime',
+        'is_work_task' => 'boolean',
     ];
 
     public function order(): BelongsTo
@@ -48,6 +50,32 @@ class RelatedTask extends Model
                 $task->order->update([
                     'in_workspace' => true,
                 ]);
+            }
+
+            if ($task->order_id) {
+                $alreadyLogged = OrderEvent::where('order_id', $task->order_id)
+                    ->where('created_at', '>=', now()->subSeconds(2))
+                    ->where('metadata->task_id', $task->id)
+                    ->exists();
+
+                if (! $alreadyLogged) {
+                    $actor = $task->trigger_type ? 'AutomationEngine' : (auth()->user()?->name ?? 'Sistema');
+                    $taskTypeStr = is_string($task->type) ? $task->type : $task->type?->value;
+
+                    OrderEvent::create([
+                        'order_id' => $task->order_id,
+                        'event_type' => 'AUTOMATIC_TASK_TRIGGERED',
+                        'actor' => $actor,
+                        'new_value' => $task->title,
+                        'metadata' => [
+                            'task_id' => $task->id,
+                            'task_title' => $task->title,
+                            'task_type' => $taskTypeStr,
+                            'trigger_type' => $task->trigger_type ?? 'SYSTEM_AUTOMATION',
+                            'priority' => $task->priority ?? 'normal',
+                        ],
+                    ]);
+                }
             }
         });
     }

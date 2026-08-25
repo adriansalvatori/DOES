@@ -22,17 +22,22 @@ class AutomationEngine
      */
     public function handleOrderCreated(Order $order): void
     {
-        // 1. Mandatory Welcome Email task
-        RelatedTask::create([
-            'order_id' => $order->id,
-            'title' => 'Enviar correo de bienvenida',
-            'type' => RelatedTaskType::BIENVENIDA,
-            'status' => 'todo',
-            'assignee_id' => $order->designer_id,
-            'due_date' => now()->toDateString(),
-            'trigger_type' => 'NEW_ORDER_CREATED',
-            'priority' => 'high',
-        ]);
+        // 1. Mandatory Welcome Email task (only if card creation date is no older than a week / 7 days)
+        $trelloCreatedAt = $order->trello_created_at ?? $order->created_at;
+        $isOlderThanWeek = $trelloCreatedAt && $trelloCreatedAt->lt(now()->subDays(7));
+
+        if (! $isOlderThanWeek) {
+            RelatedTask::create([
+                'order_id' => $order->id,
+                'title' => 'Enviar correo de bienvenida',
+                'type' => RelatedTaskType::BIENVENIDA,
+                'status' => 'todo',
+                'assignee_id' => $order->getPrimaryDesignerId(),
+                'due_date' => now()->toDateString(),
+                'trigger_type' => 'NEW_ORDER_CREATED',
+                'priority' => 'high',
+            ]);
+        }
 
         // 2. Initial due date
         $dueDate = $this->slaEngine->calculateDueDate($order->core_status, now());
@@ -67,6 +72,31 @@ class AutomationEngine
             'metadata' => ['timestamp' => now()->toIso8601String()],
         ]);
 
+        // Reset done_today when status changes or is re-asserted
+        $order->update(['done_today' => false]);
+
+        // Set scheduled_date to today when entering TO_DO_TODAY if not already set or in past
+        if ($newStatus === CoreStatus::TO_DO_TODAY && (! $order->scheduled_date || $order->scheduled_date->isPast())) {
+            $order->update(['scheduled_date' => now()->toDateString()]);
+        }
+
+        // Handle transitions to completion / client / camila / production / on hold / archived states
+        if (in_array($newStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD, CoreStatus::ARCHIVED], true)) {
+            $this->dismissTriggeredSubtasks($order);
+        }
+
+        // Handle transitions to ARCHIVED
+        if ($newStatus === CoreStatus::ARCHIVED) {
+            $order->update([
+                'archived_at' => $order->archived_at ?? now(),
+            ]);
+        }
+
+        // Handle transitions to EN_PRODUCCION
+        if ($newStatus === CoreStatus::EN_PRODUCCION) {
+            $order->update(['substatus' => Substatus::ENVIADO_EN_ALTA, 'done_today' => false]);
+        }
+
         // Handle transitions from ENVIADO A CAMILA -> TO DO TODAY
         if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA && $newStatus === CoreStatus::TO_DO_TODAY) {
             $order->update(['substatus' => Substatus::CAMBIOS_CAMILA]);
@@ -93,15 +123,19 @@ class AutomationEngine
                 ]);
             }
 
+            $isDueTodayOrOverdue = $order->isDueToday() || $order->isOverdue();
+            $taskTitle = $isDueTodayOrOverdue ? 'Llamar a Camila' : 'Follow Up Camila';
+            $taskPriority = $isDueTodayOrOverdue ? 'urgent' : 'normal';
+
             RelatedTask::create([
                 'order_id' => $order->id,
-                'title' => 'Follow Up Camila',
+                'title' => $taskTitle,
                 'type' => RelatedTaskType::FOLLOW_UP_CAMILA,
                 'status' => 'todo',
-                'assignee_id' => $order->designer_id,
+                'assignee_id' => $order->getPrimaryDesignerId(),
                 'due_date' => now()->addWeekdays(1)->toDateString(),
                 'trigger_type' => 'CAMILA_TRANSITION',
-                'priority' => 'normal',
+                'priority' => $taskPriority,
             ]);
         }
 
@@ -199,9 +233,9 @@ class AutomationEngine
         if ($measuresConfirmed && $estimateApproved) {
             // Fully Approved -> Move to designer Orders Received + PONER EN ALTA
             $targetStatus = match ($order->designer?->name) {
-                'Euralíz' => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+                'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
                 'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-                default => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+                default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
             };
 
             $order->update([
@@ -222,7 +256,7 @@ class AutomationEngine
                 'title' => 'RESOLVER: Medidas pendientes para orden aprobada',
                 'type' => RelatedTaskType::RESOLVER,
                 'status' => 'todo',
-                'assignee_id' => $order->designer_id,
+                'assignee_id' => $order->getPrimaryDesignerId(),
                 'due_date' => $tomorrow->toDateString(),
                 'trigger_type' => 'MISSING_MEASURES_APPROVED',
                 'priority' => 'high',
@@ -230,9 +264,9 @@ class AutomationEngine
         } elseif ($measuresConfirmed && ! $estimateApproved) {
             // Approved but estimate missing -> Move to Orders Received with warning condition
             $targetStatus = match ($order->designer?->name) {
-                'Euralíz' => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+                'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
                 'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-                default => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+                default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
             };
 
             $order->update([
@@ -280,7 +314,7 @@ class AutomationEngine
         foreach ($clientOrders as $order) {
             $daysInClient = $order->updated_at ? $order->updated_at->diffInWeekdays(now()) : 0;
 
-            if ($daysInClient >= 9) {
+            if ($daysInClient > 9) {
                 $order->update([
                     'core_status' => CoreStatus::ON_HOLD,
                     'substatus' => Substatus::CUSTOMER_SERVICE_REQUIRED,
@@ -293,13 +327,65 @@ class AutomationEngine
                     'actor' => 'AutomationEngine',
                     'previous_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
                     'new_value' => CoreStatus::ON_HOLD->value,
-                    'metadata' => ['reason' => '9 days without client response'],
+                    'metadata' => ['reason' => 'More than 9 days without client response'],
                 ]);
             } elseif ($daysInClient >= 3 && $daysInClient < 6) {
                 $this->ensureTaskExists($order, 'Follow Up Cliente #1', RelatedTaskType::FOLLOW_UP_CLIENTE);
             } elseif ($daysInClient >= 6 && $daysInClient < 9) {
                 $this->ensureTaskExists($order, 'Follow Up Cliente #2', RelatedTaskType::FOLLOW_UP_CLIENTE);
+            } elseif ($daysInClient === 9) {
+                $this->ensureTaskExists($order, 'Follow Up Cliente #3', RelatedTaskType::FOLLOW_UP_CLIENTE);
             }
+        }
+
+        // Auto-revert orders in TO DO TODAY that were NOT marked done today back to designer status
+        $uncompletedTodayOrders = Order::where('core_status', CoreStatus::TO_DO_TODAY)
+            ->where('done_today', false)
+            ->get();
+
+        foreach ($uncompletedTodayOrders as $order) {
+            $targetStatus = $order->getDesignerOrdersReceivedStatus();
+            $order->update([
+                'core_status' => $targetStatus,
+            ]);
+
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'AUTO_REVERTED_TO_DESIGNER_LIST',
+                'actor' => 'AutomationEngine',
+                'previous_value' => CoreStatus::TO_DO_TODAY->value,
+                'new_value' => $targetStatus->value,
+                'metadata' => ['reason' => 'End of day automatic reversion for uncompleted order'],
+            ]);
+
+            if ($order->trello_card_id) {
+                try {
+                    app(TrelloSyncService::class)->updateCardOnTrello($order);
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
+        // Auto-promote orders scheduled for today into TO DO TODAY
+        $scheduledForToday = Order::inWorkspace()
+            ->whereDate('scheduled_date', '<=', today())
+            ->whereIn('core_status', [
+                CoreStatus::EURALIZ_ORDERS_RECEIVED,
+                CoreStatus::ADRIAN_ORDERS_RECEIVED,
+                CoreStatus::CESAR_ORDERS_RECEIVED,
+                CoreStatus::ENTRANTE,
+            ])->get();
+
+        foreach ($scheduledForToday as $order) {
+            $order->update(['core_status' => CoreStatus::TO_DO_TODAY]);
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'SCHEDULED_TODAY_PROMOTED',
+                'actor' => 'AutomationEngine',
+                'previous_value' => $order->core_status?->value,
+                'new_value' => CoreStatus::TO_DO_TODAY->value,
+                'metadata' => ['reason' => 'Scheduled date reached'],
+            ]);
         }
 
         // Production auto-transition for orders in TO DO TODAY marked Done with PONER EN ALTA
@@ -333,31 +419,66 @@ class AutomationEngine
     }
 
     /**
-     * Automatically create a delay task when an order is overdue.
+     * Automatically create a delay task when an order is overdue or due today past 2:30 PM.
      */
     public function checkAndCreateOverdueTask(Order $order): void
     {
-        if ($order->isOverdue()) {
+        $now = now();
+        $isPastTwoThirty = ($now->hour > 14 || ($now->hour === 14 && $now->minute >= 30));
+
+        if ($order->isOverdue() || ($order->isDueToday() && $isPastTwoThirty)) {
             $taskTitle = 'Enviar correo de atraso preventivo';
-            $exists = RelatedTask::where('order_id', $order->id)
-                ->where('title', $taskTitle)
+            $existingTask = RelatedTask::where('order_id', $order->id)
+                ->where('type', RelatedTaskType::CORREO_ATRASO)
                 ->where('status', '!=', 'done')
                 ->whereNull('completed_at')
-                ->exists();
+                ->first();
 
-            if (! $exists) {
+            if (! $existingTask) {
                 RelatedTask::create([
                     'order_id' => $order->id,
                     'title' => $taskTitle,
                     'type' => RelatedTaskType::CORREO_ATRASO,
                     'status' => 'todo',
-                    'assignee_id' => $order->designer_id,
+                    'assignee_id' => $order->getPrimaryDesignerId(),
                     'due_date' => now()->toDateString(),
                     'trigger_type' => 'AUTOMATIC_OVERDUE_DETECTION',
-                    'priority' => 'high',
+                    'priority' => 'urgent',
                 ]);
+            } else {
+                $existingTask->update(['priority' => 'urgent']);
             }
         }
+    }
+
+    /**
+     * Dismiss / cancel unfulfilled system-triggered tasks when order is completed or transitioned.
+     */
+    public function dismissTriggeredSubtasks(Order $order, array $exceptTypes = []): void
+    {
+        RelatedTask::where('order_id', $order->id)
+            ->where('status', '!=', 'done')
+            ->whereNull('completed_at')
+            ->where('type', '!=', RelatedTaskType::SUBTASK)
+            ->where(function ($q) {
+                $q->whereNotNull('trigger_type')
+                    ->orWhereIn('type', [
+                        RelatedTaskType::CORREO_ATRASO,
+                        RelatedTaskType::FOLLOW_UP_CLIENTE,
+                        RelatedTaskType::FOLLOW_UP_CAMILA,
+                        RelatedTaskType::RESOLVER,
+                    ]);
+            })
+            ->when(! empty($exceptTypes), fn ($q) => $q->whereNotIn('type', $exceptTypes))
+            ->delete();
+    }
+
+    /**
+     * Dismiss / cancel unfulfilled delay email tasks when order is completed or transitioned.
+     */
+    public function dismissPendingOverdueTasks(Order $order): void
+    {
+        $this->dismissTriggeredSubtasks($order);
     }
 
     protected function ensureTaskExists(Order $order, string $title, RelatedTaskType $type): void
@@ -372,7 +493,7 @@ class AutomationEngine
                 'title' => $title,
                 'type' => $type,
                 'status' => 'todo',
-                'assignee_id' => $order->designer_id,
+                'assignee_id' => $order->getPrimaryDesignerId(),
                 'due_date' => now()->toDateString(),
                 'trigger_type' => 'CLIENT_FOLLOW_UP_CYCLE',
                 'priority' => 'normal',

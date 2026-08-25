@@ -4,6 +4,7 @@ namespace App\Livewire\Planner;
 
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
+use App\Enums\Substatus;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -18,14 +19,44 @@ class WeeklyPlanner extends Component
 
     public $selectedDesignerFilter = 'all';
 
+    public string $viewMode = 'by_day';
+
     public $viewMonth;
 
     public string $unscheduledSearch = '';
+
+    public string $backlogSearch = '';
+
+    public bool $showSlaWarningModal = false;
+
+    public array $slaWarningDetails = [];
+
+    public function closeSlaWarningModal()
+    {
+        $this->showSlaWarningModal = false;
+        $this->slaWarningDetails = [];
+    }
 
     public function mount()
     {
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->viewMonth = now()->format('Y-m');
+        $this->viewMode = session('weekly_planner_view_mode', 'by_day');
+    }
+
+    public function updatedViewMode($value)
+    {
+        if (in_array($value, ['by_day', 'by_designer'])) {
+            session(['weekly_planner_view_mode' => $value]);
+        }
+    }
+
+    public function changeViewMode(string $mode)
+    {
+        if (in_array($mode, ['by_day', 'by_designer'])) {
+            $this->viewMode = $mode;
+            session(['weekly_planner_view_mode' => $mode]);
+        }
     }
 
     public function previousWeek()
@@ -88,6 +119,7 @@ class WeeklyPlanner extends Component
         $endOfGrid = $viewDate->copy()->endOfMonth()->endOfWeek(Carbon::SUNDAY);
 
         $selectedMonday = Carbon::parse($this->selectedWeekStart)->startOfWeek(Carbon::MONDAY)->toDateString();
+        $currentMonday = now()->startOfWeek(Carbon::MONDAY)->toDateString();
 
         $grid = [];
         $current = $startOfGrid->copy();
@@ -100,6 +132,7 @@ class WeeklyPlanner extends Component
                 'is_current_month' => $current->month === $viewDate->month,
                 'is_today' => $current->isToday(),
                 'is_selected_week' => $weekMonday === $selectedMonday,
+                'is_current_week' => $weekMonday === $currentMonday,
                 'week_monday' => $weekMonday,
             ];
             $current->addDay();
@@ -111,72 +144,143 @@ class WeeklyPlanner extends Component
     public function scheduleOrder($orderId, $dateString)
     {
         $order = Order::findOrFail($orderId);
-        $scheduledDate = Carbon::parse($dateString);
-
-        $willBeOverdue = false;
-        if ($order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
-            $willBeOverdue = true;
-        }
-
-        $order->update([
-            'scheduled_date' => $scheduledDate->toDateString(),
-            'core_status' => CoreStatus::TO_DO_TODAY,
-        ]);
-
-        if ($willBeOverdue) {
-            session()->flash('warning', "Atención: Programar la orden {$order->company_name} para el {$scheduledDate->format('d M')} supera la fecha límite ({$order->current_due_date->format('d M')}).");
-        } else {
-            session()->flash('message', "Orden {$order->company_name} programada para el {$scheduledDate->format('d M')}.");
-        }
+        $this->scheduleSubtask($orderId, $order->task_name ?: __('Trabajo programado'), $dateString);
     }
 
-    public function scheduleSubtask($orderId, $title, $dateString, $designerId = null)
+    public function scheduleSubtask($orderId, $title = '', $dateString = '', $designerId = null)
     {
         $order = Order::findOrFail($orderId);
         $scheduledDate = Carbon::parse($dateString);
         $assigneeId = $designerId ?: ($order->designer_id ?? $order->designers->first()?->id);
 
+        $taskTitle = trim($title) ?: ($order->task_name ?: __('Trabajo programado'));
+
+        $preset = SubtaskPreset::where('title', $taskTitle)->first();
+        $isWorkTask = $preset ? (bool) $preset->is_work_task : true;
+
         $subtask = RelatedTask::create([
             'order_id' => $order->id,
-            'title' => trim($title),
+            'title' => $taskTitle,
             'type' => RelatedTaskType::SUBTASK->value,
             'scheduled_date' => $scheduledDate->toDateString(),
             'assignee_id' => $assigneeId,
             'status' => 'todo',
             'priority' => 'normal',
+            'is_work_task' => $isWorkTask,
         ]);
 
-        $order->update([
-            'in_workspace' => true,
-        ]);
+        $updateData = ['in_workspace' => true];
+
+        if ($isWorkTask && $scheduledDate->isToday()) {
+            $updateData['scheduled_date'] = $scheduledDate->toDateString();
+
+            if ($order->core_status === CoreStatus::ARCHIVED) {
+                $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+                $updateData['substatus'] = Substatus::TICKET;
+                $updateData['archived_at'] = null;
+            } elseif ($order->core_status === CoreStatus::EN_PRODUCCION) {
+                // Keep EN PRODUCCIÓN core status, subtask appears in Working Today
+            } else {
+                $previousStatus = $order->core_status;
+                $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+                if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                    $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
+                } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                    $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
+                }
+            }
+        }
+
+        if (! $order->designer_id && $order->designers->isEmpty() && $assigneeId) {
+            $updateData['designer_id'] = $assigneeId;
+        }
+
+        $order->update($updateData);
 
         // Log OrderEvent for timeline
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'SUBTASK_SCHEDULED',
-            'actor' => auth()->user()?->name ?? 'Diseñador',
-            'new_value' => $title,
+            'actor' => auth()->user()?->name ?? __('Diseñador'),
+            'new_value' => $taskTitle,
             'metadata' => [
                 'task_id' => $subtask->id,
-                'task_title' => $title,
+                'task_title' => $taskTitle,
                 'date' => $scheduledDate->toDateString(),
+                'is_work_task' => $isWorkTask,
             ],
         ]);
 
-        session()->flash('message', "Subtarea \"{$title}\" programada para {$order->company_name} el {$scheduledDate->format('d M')}.");
+        if ($order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
+            $daysOverdue = (int) $order->current_due_date->diffInDays($scheduledDate);
+            $this->slaWarningDetails = [
+                'company_name' => $order->company_name,
+                'task_name' => $taskTitle,
+                'scheduled_date' => $scheduledDate->format('d M, Y'),
+                'current_due_date' => $order->current_due_date->format('d M, Y'),
+                'days_overdue' => max(1, $daysOverdue),
+            ];
+            $this->showSlaWarningModal = true;
+            session()->flash('warning', __('Atención: Subtarea ":title" programada para :company el :date supera la fecha límite del SLA (:due).', [
+                'title' => $taskTitle,
+                'company' => $order->company_name,
+                'date' => $scheduledDate->format('d M'),
+                'due' => $order->current_due_date->format('d M'),
+            ]));
+        } else {
+            session()->flash('message', __('Subtarea ":title" programada para :company el :date.', [
+                'title' => $taskTitle,
+                'company' => $order->company_name,
+                'date' => $scheduledDate->format('d M'),
+            ]));
+        }
+
         $this->dispatch('order-updated');
     }
 
     public function rescheduleSubtask($taskId, $dateString)
     {
-        $subtask = RelatedTask::findOrFail($taskId);
+        $subtask = RelatedTask::with('order')->findOrFail($taskId);
         $scheduledDate = Carbon::parse($dateString);
 
         $subtask->update([
             'scheduled_date' => $scheduledDate->toDateString(),
         ]);
 
-        session()->flash('message', "Subtarea \"{$subtask->title}\" reprogramada para el {$scheduledDate->format('d M')}.");
+        if ($subtask->is_work_task && $scheduledDate->isToday() && $subtask->order) {
+            $order = $subtask->order;
+            $updateData = ['in_workspace' => true, 'scheduled_date' => $scheduledDate->toDateString()];
+
+            if ($order->core_status === CoreStatus::ARCHIVED) {
+                $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+                $updateData['substatus'] = Substatus::TICKET;
+                $updateData['archived_at'] = null;
+            } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+            }
+
+            $order->update($updateData);
+        }
+
+        if ($subtask->order && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
+            $daysOverdue = (int) $subtask->order->current_due_date->diffInDays($scheduledDate);
+            $this->slaWarningDetails = [
+                'company_name' => $subtask->order->company_name,
+                'task_name' => $subtask->title,
+                'scheduled_date' => $scheduledDate->format('d M, Y'),
+                'current_due_date' => $subtask->order->current_due_date->format('d M, Y'),
+                'days_overdue' => max(1, $daysOverdue),
+            ];
+            $this->showSlaWarningModal = true;
+            session()->flash('warning', __('Atención: Subtarea ":title" reprogramada para el :date supera la fecha límite del SLA (:due).', [
+                'title' => $subtask->title,
+                'date' => $scheduledDate->format('d M'),
+                'due' => $subtask->order->current_due_date->format('d M'),
+            ]));
+        } else {
+            session()->flash('message', __('Subtarea ":title" reprogramada para el :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]));
+        }
+
         $this->dispatch('order-updated');
     }
 
@@ -194,11 +298,12 @@ class WeeklyPlanner extends Component
             OrderEvent::create([
                 'order_id' => $subtask->order->id,
                 'event_type' => 'SUBTASK_COMPLETED',
-                'actor' => auth()->user()?->name ?? 'Diseñador',
+                'actor' => auth()->user()?->name ?? __('Diseñador'),
                 'new_value' => $subtask->title,
                 'metadata' => [
                     'task_id' => $subtask->id,
                     'task_title' => $subtask->title,
+                    'date' => $subtask->scheduled_date?->toDateString(),
                 ],
             ]);
         }
@@ -210,17 +315,23 @@ class WeeklyPlanner extends Component
     {
         $subtask = RelatedTask::findOrFail($taskId);
         $subtask->delete();
-        session()->flash('message', 'Subtarea eliminada.');
+        session()->flash('message', __('Subtarea eliminada.'));
         $this->dispatch('order-updated');
     }
 
     public function unscheduleOrder($orderId)
     {
         $order = Order::findOrFail($orderId);
-        $order->update([
+        $updateData = [
             'scheduled_date' => null,
-        ]);
-        session()->flash('message', "Orden {$order->company_name} quitada de la agenda.");
+        ];
+
+        if ($order->core_status === CoreStatus::TO_DO_TODAY) {
+            $updateData['core_status'] = $order->getDesignerOrdersReceivedStatus();
+        }
+
+        $order->update($updateData);
+        session()->flash('message', __('Orden :company quitada de la agenda.', ['company' => $order->company_name]));
     }
 
     public function toggleDoneToday($orderId)
@@ -239,11 +350,11 @@ class WeeklyPlanner extends Component
             $dayDate = $startDate->copy()->addDays($i);
             $days[] = [
                 'day_name' => match ($i) {
-                    0 => 'Lunes',
-                    1 => 'Martes',
-                    2 => 'Miércoles',
-                    3 => 'Jueves',
-                    4 => 'Viernes',
+                    0 => __('Lunes'),
+                    1 => __('Martes'),
+                    2 => __('Miércoles'),
+                    3 => __('Jueves'),
+                    4 => __('Viernes'),
                 },
                 'is_next_week' => false,
                 'date' => $dayDate,
@@ -255,7 +366,7 @@ class WeeklyPlanner extends Component
         $nextWeekFriday = $nextWeekMonday->copy()->addDays(4);
 
         $nextWeekItem = [
-            'day_name' => 'Next Week',
+            'day_name' => __('Próxima Semana'),
             'is_next_week' => true,
             'date' => $nextWeekMonday,
             'date_string' => $nextWeekMonday->toDateString(),
@@ -276,6 +387,12 @@ class WeeklyPlanner extends Component
         $unscheduledOrders = Order::inWorkspace()
             ->prioritizeUrgente()
             ->whereNotIn('core_status', [CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD])
+            ->when($this->selectedDesignerFilter !== 'all', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('designer_id', $this->selectedDesignerFilter)
+                        ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $this->selectedDesignerFilter));
+                });
+            })
             ->when(! $this->unscheduledSearch, fn ($q) => $q->whereNull('scheduled_date'))
             ->when($this->unscheduledSearch, function ($q) {
                 $q->where(function ($sub) {
@@ -284,7 +401,100 @@ class WeeklyPlanner extends Component
                         ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
                 });
             })
+            ->orderByRaw('current_due_date IS NULL, current_due_date ASC')
             ->get();
+
+        $workspaceOrders = Order::inWorkspace()
+            ->prioritizeUrgente()
+            ->when($this->selectedDesignerFilter !== 'all', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->where('designer_id', $this->selectedDesignerFilter)
+                        ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $this->selectedDesignerFilter));
+                });
+            })
+            ->orderBy('company_name')
+            ->get();
+
+        $allWorkspaceOrders = Order::inWorkspace()
+            ->prioritizeUrgente()
+            ->orderBy('company_name')
+            ->get();
+
+        $workspaceOrdersList = $allWorkspaceOrders->map(fn ($o) => [
+            'id' => (string) $o->id,
+            'company' => $o->company_name,
+            'task' => $o->task_name ?? '',
+            'text' => $o->company_name.($o->task_name ? ' - '.$o->task_name : ''),
+            'designer_id' => (string) ($o->designer_id ?? $o->designers->first()?->id ?? ''),
+        ])->values();
+
+        $backlogOrders = collect();
+        if (! empty($this->backlogSearch)) {
+            $backlogOrders = Order::inBacklog()
+                ->prioritizeUrgente()
+                ->where(function ($sub) {
+                    $sub->where('company_name', 'like', '%'.$this->backlogSearch.'%')
+                        ->orWhere('task_name', 'like', '%'.$this->backlogSearch.'%')
+                        ->orWhere('wo_number', 'like', '%'.$this->backlogSearch.'%')
+                        ->orWhere('trello_card_title', 'like', '%'.$this->backlogSearch.'%');
+                })
+                ->with(['designer', 'designers'])
+                ->limit(15)
+                ->get();
+        }
+
+        $workspaceSearchResults = collect();
+        if (! empty($this->unscheduledSearch)) {
+            $workspaceSearchResults = Order::inWorkspace()
+                ->prioritizeUrgente()
+                ->where(function ($sub) {
+                    $sub->where('company_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('task_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('wo_number', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
+                })
+                ->with(['designer', 'designers'])
+                ->limit(15)
+                ->get();
+        }
+
+        $slaBreachedList = collect();
+        foreach ($subtasks as $st) {
+            if ($st->order && $st->order->current_due_date && $st->scheduled_date) {
+                if ($st->scheduled_date->gt($st->order->current_due_date) || $st->order->isOverdue()) {
+                    $daysOverdue = (int) max(1, $st->order->current_due_date->diffInDays($st->scheduled_date));
+                    $slaBreachedList->push([
+                        'type' => 'subtask',
+                        'company_name' => $st->order->company_name,
+                        'task_name' => $st->title,
+                        'scheduled_date' => $st->scheduled_date->format('d M, Y'),
+                        'current_due_date' => $st->order->current_due_date->format('d M, Y'),
+                        'days_overdue' => $daysOverdue,
+                    ]);
+                }
+            }
+        }
+
+        foreach ($designers as $des) {
+            foreach ($des->orders as $ord) {
+                if ($ord->current_due_date && $ord->scheduled_date) {
+                    if ($ord->scheduled_date->gt($ord->current_due_date) || $ord->isOverdue()) {
+                        $alreadyAdded = $slaBreachedList->contains(fn ($item) => $item['company_name'] === $ord->company_name && $item['task_name'] === ($ord->task_name ?? 'Orden Principal'));
+                        if (! $alreadyAdded) {
+                            $daysOverdue = (int) max(1, $ord->current_due_date->diffInDays($ord->scheduled_date));
+                            $slaBreachedList->push([
+                                'type' => 'order',
+                                'company_name' => $ord->company_name,
+                                'task_name' => $ord->task_name ?? __('Orden Principal'),
+                                'scheduled_date' => $ord->scheduled_date->format('d M, Y'),
+                                'current_due_date' => $ord->current_due_date->format('d M, Y'),
+                                'days_overdue' => $daysOverdue,
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
 
         $daysWithNextWeek = array_merge($days, [$nextWeekItem]);
 
@@ -296,7 +506,17 @@ class WeeklyPlanner extends Component
             'allDesigners' => Designer::where('active', true)->get(),
             'subtasks' => $subtasks,
             'unscheduledOrders' => $unscheduledOrders,
+            'workspaceOrders' => $workspaceOrders,
+            'workspaceOrdersList' => $workspaceOrdersList,
+            'workspaceSearchResults' => $workspaceSearchResults,
+            'backlogOrders' => $backlogOrders,
+            'slaBreachedList' => $slaBreachedList,
             'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
         ])->layout('components.layouts.app', ['title' => 'Planificador Semanal - Kudos Design Ops']);
+    }
+
+    public function openAllSlaWarningsModal()
+    {
+        $this->showSlaWarningModal = true;
     }
 }

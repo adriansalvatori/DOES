@@ -89,15 +89,38 @@ class SlaEngine
     }
 
     /**
-     * Check and evaluate overdue state for an order.
+     * Check and evaluate overdue / almost overdue state for an order.
      */
     public function checkOverdue(Order $order): bool
     {
-        if ($order->isPaused() || $order->core_status === CoreStatus::EN_PRODUCCION || $order->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
+        if ($order->isPaused() || $order->core_status === CoreStatus::EN_PRODUCCION || $order->core_status === CoreStatus::ENVIADO_AL_CLIENTE || $order->done_today) {
             return false;
         }
 
-        if ($order->current_due_date && $order->current_due_date->isPast()) {
+        if (! $order->current_due_date) {
+            if ($order->substatus === Substatus::OVERDUE || $order->substatus === Substatus::ALMOST_OVERDUE) {
+                $previousSubstatus = $order->substatus ? $order->substatus->value : null;
+                $order->update(['substatus' => null]);
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'SUBSTATUS_CHANGED',
+                    'actor' => 'SlaEngine',
+                    'previous_value' => $previousSubstatus,
+                    'new_value' => null,
+                    'metadata' => ['reason' => 'Due date removed/cleared'],
+                ]);
+            }
+
+            app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
+
+            return false;
+        }
+
+        $now = now();
+        $isPastTwoThirty = ($now->hour > 14 || ($now->hour === 14 && $now->minute >= 30));
+
+        if ($order->isOverdue()) {
             if ($order->substatus !== Substatus::OVERDUE) {
                 $order->update(['substatus' => Substatus::OVERDUE]);
 
@@ -107,11 +130,34 @@ class SlaEngine
                     'actor' => 'SlaEngine',
                     'previous_value' => $order->substatus ? $order->substatus->value : null,
                     'new_value' => Substatus::OVERDUE->value,
-                    'metadata' => ['reason' => 'Current due date exceeded'],
+                    'metadata' => ['reason' => 'Current due date exceeded or past 4:00 PM on due date'],
                 ]);
             }
 
+            if ($isPastTwoThirty) {
+                app(AutomationEngine::class)->checkAndCreateOverdueTask($order);
+            }
+
             return true;
+        }
+
+        if ($order->isDueToday()) {
+            if ($order->substatus !== Substatus::ALMOST_OVERDUE) {
+                $order->update(['substatus' => Substatus::ALMOST_OVERDUE]);
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'SUBSTATUS_CHANGED',
+                    'actor' => 'SlaEngine',
+                    'previous_value' => $order->substatus ? $order->substatus->value : null,
+                    'new_value' => Substatus::ALMOST_OVERDUE->value,
+                    'metadata' => ['reason' => 'Order is due today'],
+                ]);
+            }
+
+            if ($isPastTwoThirty) {
+                app(AutomationEngine::class)->checkAndCreateOverdueTask($order);
+            }
         }
 
         return false;

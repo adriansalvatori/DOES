@@ -7,13 +7,13 @@
                     <x-lucide-trash-2 class="w-5 h-5" />
                 </div>
                 <div>
-                    <h1 class="text-base font-bold text-zinc-900 tracking-tight">Papelera</h1>
-                    <p class="text-xs text-zinc-500">Órdenes eliminadas — Restaura o borra permanentemente</p>
+                    <h1 class="text-base font-bold text-zinc-900 tracking-tight">{{ __('Papelera') }}</h1>
+                    <p class="text-xs text-zinc-500">{{ __('Órdenes eliminadas — Restaura o borra permanentemente') }}</p>
                 </div>
             </div>
             <a href="{{ route('kanban') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition">
                 <x-lucide-arrow-left class="w-3.5 h-3.5" />
-                Volver al Kanban
+                {{ __('Volver al Kanban') }}
             </a>
         </div>
 
@@ -24,7 +24,7 @@
                 <input
                     type="text"
                     wire:model.live.debounce.300ms="search"
-                    placeholder="Buscar en la papelera..."
+                    placeholder="{{ __('Buscar en la papelera...') }}"
                     class="w-full pl-8 pr-3 py-1.5 text-xs bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg text-zinc-700 focus:outline-none focus:border-stone-400"
                 />
             </div>
@@ -44,12 +44,12 @@
                     <div class="p-4 rounded-full bg-stone-100 mb-4">
                         <x-lucide-trash-2 class="w-8 h-8 text-zinc-400" />
                     </div>
-                    <h3 class="text-sm font-semibold text-zinc-700 mb-1">La papelera está vacía</h3>
-                    <p class="text-xs text-zinc-400">Las órdenes eliminadas aparecerán aquí antes de ser borradas permanentemente.</p>
+                    <h3 class="text-sm font-semibold text-zinc-700 mb-1">{{ __('La papelera está vacía') }}</h3>
+                    <p class="text-xs text-zinc-400">{{ __('Las órdenes eliminadas aparecerán aquí antes de ser borradas permanentemente.') }}</p>
                 </div>
             @else
                 <div class="mb-3 flex items-center justify-between">
-                    <span class="text-xs text-zinc-500 font-medium">{{ $trashedOrders->count() }} orden(es) en la papelera</span>
+                    <span class="text-xs text-zinc-500 font-medium">{{ $trashedOrders->count() }} {{ __('orden(es) en la papelera') }}</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -63,7 +63,7 @@
                                         {{ $order->wo_number }}
                                     </span>
                                 @else
-                                    <span class="font-mono text-[10px] text-zinc-400">SIN WO</span>
+                                    <span class="font-mono text-[10px] text-zinc-400">{{ __('SIN WO') }}</span>
                                 @endif
                                 <span class="text-[9px] text-red-500 font-medium flex items-center gap-1">
                                     <x-lucide-clock class="w-3 h-3" />
@@ -98,19 +98,19 @@
                                 <button
                                     wire:click="restoreOrder({{ $order->id }})"
                                     class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 hover:text-emerald-900 text-[10px] font-semibold transition"
-                                    title="Restaurar orden"
+                                    title="{{ __('Restaurar orden') }}"
                                 >
                                     <x-lucide-undo-2 class="w-3 h-3" />
-                                    Restaurar
+                                    {{ __('Restaurar') }}
                                 </button>
                                 <button
                                     wire:click="forceDeleteOrder({{ $order->id }})"
-                                    wire:confirm="¿Eliminar permanentemente? Esta acción no se puede deshacer."
+                                    wire:confirm="{{ __('¿Eliminar permanentemente? Esta acción no se puede deshacer.') }}"
                                     class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 hover:text-red-800 text-[10px] font-semibold transition"
-                                    title="Eliminar permanentemente"
+                                    title="{{ __('Eliminar permanentemente') }}"
                                 >
                                     <x-lucide-trash class="w-3 h-3" />
-                                    Eliminar
+                                    {{ __('Eliminar') }}
                                 </button>
                             </div>
 

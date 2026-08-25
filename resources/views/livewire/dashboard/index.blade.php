@@ -7,9 +7,9 @@
                 <x-lucide-layout-dashboard class="w-4.5 h-4.5 text-stone-100" />
             </div>
             <div class="min-w-0">
-                <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Centro de Control Operativo</h1>
+                <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">{{ __('Centro de Control Operativo') }}</h1>
                 <p class="text-xs text-zinc-500 truncate mt-0.5">
-                    Respondiendo la pregunta clave: <span class="text-zinc-700 font-medium italic">¿Qué necesita atención hoy, por qué y quién es responsable?</span>
+                    {{ __('Respondiendo la pregunta clave:') }} <span class="text-zinc-700 font-medium italic">{{ __('¿Qué necesita atención hoy, por qué y quién es responsable?') }}</span>
                 </p>
             </div>
         </div>
@@ -21,26 +21,26 @@
                     wire:click="setUserRole('all')" 
                     class="px-2.5 py-1 rounded-md transition flex items-center gap-1 {{ $userRole === 'all' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}">
                     <x-lucide-layout-grid class="w-3 h-3 text-zinc-400" />
-                    <span>Vista General</span>
+                    <span>{{ __('Vista General') }}</span>
                 </button>
                 <button 
                     wire:click="setUserRole('designer')" 
                     class="px-2.5 py-1 rounded-md transition flex items-center gap-1 {{ $userRole === 'designer' ? 'bg-amber-500 text-white shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-800' }}">
                     <x-lucide-palette class="w-3 h-3" />
-                    <span>Diseñador</span>
+                    <span>{{ __('Diseñador') }}</span>
                 </button>
                 <button 
                     wire:click="setUserRole('manager')" 
                     class="px-2.5 py-1 rounded-md transition flex items-center gap-1 {{ $userRole === 'manager' ? 'bg-sky-600 text-white shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-800' }}">
                     <x-lucide-briefcase class="w-3 h-3" />
-                    <span>Gestión / Account</span>
+                    <span>{{ __('Gestión / Account') }}</span>
                 </button>
             </div>
 
             <!-- Search -->
             <div class="relative flex-1 sm:flex-none w-full sm:w-60">
                 <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5 shrink-0" />
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar por empresa o tarea..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg pl-8 pr-3 py-1.5 h-8 text-xs text-zinc-800 focus:border-stone-400 focus:outline-none w-full">
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Buscar por empresa o tarea...') }}" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg pl-8 pr-3 py-1.5 h-8 text-xs text-zinc-800 focus:border-stone-400 focus:outline-none w-full">
             </div>
 
             <!-- Designer Filter Dropdown (Searchable) -->
@@ -52,7 +52,8 @@
                          $wire.set('selectedDesigner', val);
                          this.open = false;
                      }
-                 }">
+                 }"
+                 x-dropdown-nav>
                 <button 
                     type="button" 
                     @click="open = !open" 
@@ -60,9 +61,9 @@
                     class="w-full sm:w-48 bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-lg px-2.5 h-8 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
                     <span class="truncate">
                         @if($selectedDesigner === 'all')
-                            Diseñadores (Todos)
+                            {{ __('Diseñadores (Todos)') }}
                         @else
-                            {{ $designers->firstWhere('id', $selectedDesigner)?->name ?? 'Diseñadores (Todos)' }}
+                            {{ $designers->firstWhere('id', $selectedDesigner)?->name ?? __('Diseñadores (Todos)') }}
                         @endif
                     </span>
                     <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
@@ -78,27 +79,29 @@
                         <input 
                             type="text" 
                             x-model="search" 
-                            placeholder="Buscar diseñador..." 
+                            placeholder="{{ __('Buscar diseñador...') }}" 
                             class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
                     </div>
-                    <div 
+                    <button 
+                        type="button"
                         @click="selectDesigner('all')" 
-                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>Diseñadores (Todos)</span>
+                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>{{ __('Diseñadores (Todos)') }}</span>
                         @if($selectedDesigner === 'all')
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
-                    </div>
+                    </button>
                     @foreach($designers as $designer)
-                        <div 
+                        <button 
+                            type="button"
                             x-show="!search || '{{ strtolower(addslashes($designer->name)) }}'.includes(search.toLowerCase())"
                             @click="selectDesigner('{{ $designer->id }}')" 
-                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
                             <span class="truncate">{{ $designer->name }}</span>
                             @if((string)$selectedDesigner === (string)$designer->id)
                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
                             @endif
-                        </div>
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -120,7 +123,7 @@
             wire:click="setActiveTab('today')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'today' ? 'bg-amber-50/70 border-2 border-amber-400 ring-4 ring-amber-300/40 shadow-xs' : 'bg-white border-amber-200/60 hover:border-amber-300 hover:bg-amber-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-amber-900 truncate">Para Hoy</span>
+                <span class="font-bold text-xs text-amber-900 truncate">{{ __('Para Hoy') }}</span>
                 <x-lucide-pin class="w-3.5 h-3.5 text-amber-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-amber-950 font-mono leading-none">{{ $toDoTodayOrders->count() + $toDoTodayTasks->count() }}</span>
@@ -131,7 +134,7 @@
             wire:click="setActiveTab('overdue')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'overdue' ? 'bg-red-50/70 border-2 border-red-500 ring-4 ring-red-300/40 shadow-xs' : 'bg-white border-red-200/80 hover:border-red-300 hover:bg-red-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-red-700 truncate">Atrasadas</span>
+                <span class="font-bold text-xs text-red-700 truncate">{{ __('Atrasadas') }}</span>
                 <x-lucide-alert-circle class="w-3.5 h-3.5 text-red-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-red-700 font-mono leading-none">{{ $overdueOrders->count() }}</span>
@@ -142,7 +145,7 @@
             wire:click="setActiveTab('camila')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'camila' ? 'bg-purple-50/70 border-2 border-purple-500 ring-4 ring-purple-300/40 shadow-xs' : 'bg-white border-purple-200/80 hover:border-purple-300 hover:bg-purple-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-purple-900 truncate">Camila</span>
+                <span class="font-bold text-xs text-purple-900 truncate">{{ __('Camila') }}</span>
                 <x-lucide-user-check class="w-3.5 h-3.5 text-purple-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-purple-900 font-mono leading-none">{{ $camilaFollowUpTasks->count() }}</span>
@@ -153,7 +156,7 @@
             wire:click="setActiveTab('resolver')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'resolver' ? 'bg-orange-50/70 border-2 border-orange-500 ring-4 ring-orange-300/40 shadow-xs' : 'bg-white border-orange-200/80 hover:border-orange-300 hover:bg-orange-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-orange-900 truncate">Resolver</span>
+                <span class="font-bold text-xs text-orange-900 truncate">{{ __('Action Required') }}</span>
                 <x-lucide-shield-alert class="w-3.5 h-3.5 text-orange-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-orange-700 font-mono leading-none">{{ $resolverOrders->count() }}</span>
@@ -164,7 +167,7 @@
             wire:click="setActiveTab('alta')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'alta' ? 'bg-emerald-50/70 border-2 border-emerald-500 ring-4 ring-emerald-300/40 shadow-xs' : 'bg-white border-emerald-200/80 hover:border-emerald-300 hover:bg-emerald-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-emerald-800 truncate">Listo ALTA</span>
+                <span class="font-bold text-xs text-emerald-800 truncate">{{ __('Listo ALTA') }}</span>
                 <x-lucide-rocket class="w-3.5 h-3.5 text-emerald-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-emerald-800 font-mono leading-none">{{ $readyForAltaOrders->count() }}</span>
@@ -175,7 +178,7 @@
             wire:click="setActiveTab('pronostico')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'pronostico' ? 'bg-indigo-50/70 border-2 border-indigo-500 ring-4 ring-indigo-300/40 shadow-xs' : 'bg-white border-indigo-200/80 hover:border-indigo-300 hover:bg-indigo-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-indigo-900 truncate">Pronóstico</span>
+                <span class="font-bold text-xs text-indigo-900 truncate">{{ __('Pronóstico') }}</span>
                 <x-lucide-trending-up class="w-3.5 h-3.5 text-indigo-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-indigo-900 font-mono leading-none">{{ $pronosticoAltaOrders->count() }}</span>
@@ -186,7 +189,7 @@
             wire:click="setActiveTab('new_orders')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'new_orders' ? 'bg-sky-50/70 border-2 border-sky-500 ring-4 ring-sky-300/40 shadow-xs' : 'bg-white border-sky-200/80 hover:border-sky-300 hover:bg-sky-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-sky-900 truncate">Nuevas</span>
+                <span class="font-bold text-xs text-sky-900 truncate">{{ __('Nuevas') }}</span>
                 <x-lucide-sparkles class="w-3.5 h-3.5 text-sky-600 animate-pulse shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-sky-900 font-mono leading-none">{{ $newTrelloOrders->count() }}</span>
@@ -197,7 +200,7 @@
             wire:click="setActiveTab('client')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'client' ? 'bg-sky-50/70 border-2 border-sky-400 ring-4 ring-sky-300/40 shadow-xs' : 'bg-white border-stone-200 hover:border-sky-300 hover:bg-stone-50' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-sky-900 truncate">Cliente</span>
+                <span class="font-bold text-xs text-sky-900 truncate">{{ __('Cliente') }}</span>
                 <x-lucide-mail class="w-3.5 h-3.5 text-sky-600 shrink-0 ml-1" />
             </div>
             <span class="text-xl font-bold text-sky-900 font-mono leading-none">{{ $clientFollowUpTasks->count() }}</span>
@@ -214,9 +217,9 @@
                 <div class="space-y-3">
                     <div class="h-8 flex items-center justify-between border-b border-[#e9e9e7]">
                         <h3 class="h-8 font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-pin class="w-4 h-4 text-amber-600" /> Trabajo Programado Para Hoy ({{ $toDoTodayOrders->count() + $toDoTodayTasks->count() }})
+                            <x-lucide-pin class="w-4 h-4 text-amber-600" /> {{ __('Trabajo Programado Para Hoy') }} ({{ $toDoTodayOrders->count() + $toDoTodayTasks->count() }})
                         </h3>
-                        <span class="text-[10px] text-zinc-400 font-mono">Checkbox = Completar</span>
+                        <span class="text-[10px] text-zinc-400 font-mono">{{ __('Checkbox = Completar') }}</span>
                     </div>
 
                     @if($toDoTodayOrders->isEmpty() && $toDoTodayTasks->isEmpty())
@@ -383,13 +386,13 @@
                 <div class="space-y-3">
                     <div class="h-8 flex items-center justify-between border-b border-orange-100">
                         <h3 class="h-8 font-bold text-xs text-orange-800 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> Vista Resolver ({{ $resolverOrders->count() }})
+                            <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> {{ __('Action Required') }} ({{ $resolverOrders->count() }})
                         </h3>
                         <span class="text-[10px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Bloqueos</span>
                     </div>
 
                     @if($resolverOrders->isEmpty())
-                        <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes bloqueadas o pendientes de resolución.</p>
+                        <p class="text-xs text-zinc-400 text-center py-12">{{ __('Nothing here to be done') }}</p>
                     @else
                         <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
                             @foreach($resolverOrders as $order)
@@ -596,13 +599,13 @@
                 <div class="space-y-3">
                     <div class="h-8 flex items-center justify-between border-b border-orange-100">
                         <h3 class="h-8 font-bold text-xs text-orange-800 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> Vista Resolver ({{ $resolverOrders->count() }})
+                            <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> {{ __('Action Required') }} ({{ $resolverOrders->count() }})
                         </h3>
                         <span class="text-[10px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Bloqueos</span>
                     </div>
 
                     @if($resolverOrders->isEmpty())
-                        <p class="text-xs text-zinc-400 text-center py-12">No hay órdenes bloqueadas o pendientes de resolución.</p>
+                        <p class="text-xs text-zinc-400 text-center py-12">{{ __('Nothing here to be done') }}</p>
                     @else
                         <div class="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin">
                             @foreach($resolverOrders as $order)

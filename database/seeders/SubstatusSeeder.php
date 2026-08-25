@@ -60,9 +60,9 @@ class SubstatusSeeder extends Seeder
             ],
             [
                 'name' => 'PONER EN ALTA',
-                'bg_color' => '#ECFDF5',
-                'text_color' => '#047857',
-                'border_color' => '#A7F3D0',
+                'bg_color' => '#FDF2F8',
+                'text_color' => '#BE185D',
+                'border_color' => '#FBCFE8',
                 'is_system' => false,
                 'sort_order' => 7,
             ],
@@ -92,9 +92,9 @@ class SubstatusSeeder extends Seeder
             ],
             [
                 'name' => 'AJUSTES DE PRODUCCIÓN',
-                'bg_color' => '#F0FDFA',
-                'text_color' => '#0F766E',
-                'border_color' => '#99F6E4',
+                'bg_color' => '#FDF2F8',
+                'text_color' => '#BE185D',
+                'border_color' => '#FBCFE8',
                 'is_system' => false,
                 'sort_order' => 11,
             ],
@@ -113,6 +113,14 @@ class SubstatusSeeder extends Seeder
                 'border_color' => '#FBCFE8',
                 'is_system' => false,
                 'sort_order' => 13,
+            ],
+            [
+                'name' => 'ENVIADO EN ALTA',
+                'bg_color' => '#FDF2F8',
+                'text_color' => '#BE185D',
+                'border_color' => '#FBCFE8',
+                'is_system' => false,
+                'sort_order' => 14,
             ],
         ];
 

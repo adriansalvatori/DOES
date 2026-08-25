@@ -28,6 +28,8 @@ class SubtaskPresets extends Component
 
     public bool $is_active = true;
 
+    public bool $is_work_task = true;
+
     protected function rules(): array
     {
         return [
@@ -35,6 +37,7 @@ class SubtaskPresets extends Component
             'emoji' => 'nullable|string|max:50',
             'color_theme' => 'required|string|in:sky,purple,emerald,amber,rose,violet,indigo,stone',
             'is_active' => 'boolean',
+            'is_work_task' => 'boolean',
         ];
     }
 
@@ -52,10 +55,11 @@ class SubtaskPresets extends Component
 
     public function openCreateModal(): void
     {
-        $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'is_active']);
+        $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'is_active', 'is_work_task']);
         $this->emoji = 'sparkles';
         $this->color_theme = 'sky';
         $this->is_active = true;
+        $this->is_work_task = true;
         $this->showModal = true;
     }
 
@@ -67,6 +71,7 @@ class SubtaskPresets extends Component
         $this->emoji = $preset->emoji ?? '';
         $this->color_theme = $preset->color_theme ?? 'sky';
         $this->is_active = (bool) $preset->is_active;
+        $this->is_work_task = (bool) $preset->is_work_task;
         $this->showModal = true;
     }
 
@@ -86,7 +91,7 @@ class SubtaskPresets extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'is_active']);
+        $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'is_active', 'is_work_task']);
     }
 
     public function toggleActive(int $id): void
@@ -94,6 +99,14 @@ class SubtaskPresets extends Component
         $preset = SubtaskPreset::findOrFail($id);
         $preset->update(['is_active' => ! $preset->is_active]);
         session()->flash('message', 'Estado de la subtarea actualizado.');
+    }
+
+    public function updateOrder(array $orderedIds): void
+    {
+        foreach ($orderedIds as $index => $id) {
+            SubtaskPreset::where('id', $id)->update(['sort_order' => $index + 1]);
+        }
+        session()->flash('message', 'Orden de las subtareas actualizado.');
     }
 
     public function moveUp(int $id): void

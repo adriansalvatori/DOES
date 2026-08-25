@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
+use App\Services\ClientMatchingService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
@@ -25,6 +26,10 @@ class OrderDetailModal extends Component
 
     public $showDelayModal = false;
 
+    public $showUnblockModal = false;
+
+    public $unblockReason = '';
+
     // Edit Mode state
     public $isEditing = false;
 
@@ -33,6 +38,8 @@ class OrderDetailModal extends Component
     public $editTrelloCardId = '';
 
     public $editCompanyName = '';
+
+    public $editLocationName = '';
 
     public $editResponsiblePerson = '';
 
@@ -62,13 +69,27 @@ class OrderDetailModal extends Component
 
     public $delayReason = 'Correo de atraso enviado y nueva fecha acordada con cliente';
 
-    // New task field
+    // New task fields
     public $newTaskTitle = '';
+
+    public $newTaskDate = '';
+
+    public $newTaskIsWork = true;
+
+    // Trello comments state
+    public $trelloComments = [];
+
+    public $newTrelloComment = '';
+
+    public $isLoadingTrelloComments = false;
+
+    public $trelloCommentError = null;
 
     public function mount($orderId = null)
     {
         $this->orderId = $orderId;
         $this->clientPromisedDate = now()->addWeekdays(2)->toDateString();
+        $this->newTaskDate = now()->toDateString();
     }
 
     #[On('open-order-detail')]
@@ -78,11 +99,110 @@ class OrderDetailModal extends Component
             $this->orderId = $orderId;
         }
         $this->showModal = true;
+        $this->newTaskDate = now()->toDateString();
+        $this->newTaskIsWork = true;
 
         if ($startEdit) {
             $this->startEditing();
         } else {
             $this->isEditing = false;
+        }
+
+        $this->loadTrelloComments();
+    }
+
+    public function loadTrelloComments()
+    {
+        if (! $this->orderId) {
+            $this->trelloComments = [];
+
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || ! $order->trello_card_id) {
+            $this->trelloComments = [];
+            $this->trelloCommentError = null;
+
+            return;
+        }
+
+        $this->isLoadingTrelloComments = true;
+        $this->trelloCommentError = null;
+
+        $res = app(TrelloSyncService::class)->getCardComments($order->trello_card_id);
+
+        $this->isLoadingTrelloComments = false;
+        if ($res['success']) {
+            $this->trelloComments = $res['comments'];
+        } else {
+            $this->trelloCommentError = $res['error'] ?? 'Error al obtener comentarios de Trello.';
+        }
+    }
+
+    public function createCardOnTrello()
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+
+        if ($order->trello_card_id) {
+            session()->flash('error', 'La orden ya está vinculada a una tarjeta de Trello.');
+
+            return;
+        }
+
+        $res = app(TrelloSyncService::class)->createCardOnTrello($order);
+
+        if ($res['success']) {
+            $order->refresh();
+            $this->editTrelloCardId = $order->trello_card_id;
+            session()->flash('message', 'Tarjeta de Trello creada y vinculada exitosamente.');
+            $this->dispatch('order-updated');
+            $this->loadTrelloComments();
+        } else {
+            session()->flash('error', 'Error al crear la tarjeta en Trello: '.($res['error'] ?? 'Error desconocido'));
+        }
+    }
+
+    public function addTrelloComment()
+    {
+        if (! $this->orderId || empty(trim($this->newTrelloComment))) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        if (! $order->trello_card_id) {
+            session()->flash('error', 'La orden no tiene una tarjeta de Trello vinculada.');
+
+            return;
+        }
+
+        $commentText = trim($this->newTrelloComment);
+        $res = app(TrelloSyncService::class)->addCardComment($order->trello_card_id, $commentText);
+
+        if ($res['success']) {
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'TRELLO_COMMENT_ADDED',
+                'actor' => 'Usuario',
+                'previous_value' => null,
+                'new_value' => null,
+                'metadata' => [
+                    'comment' => $commentText,
+                    'trello_card_id' => $order->trello_card_id,
+                ],
+            ]);
+
+            $this->newTrelloComment = '';
+            $this->loadTrelloComments();
+            session()->flash('message', 'Comentario publicado en Trello correctamente.');
+            $this->dispatch('order-updated');
+        } else {
+            $this->trelloCommentError = $res['error'] ?? 'No se pudo publicar el comentario en Trello.';
+            session()->flash('error', 'Error al publicar comentario en Trello: '.($res['error'] ?? 'Desconocido'));
         }
     }
 
@@ -96,6 +216,7 @@ class OrderDetailModal extends Component
         $this->editWoNumber = preg_replace('/^WO\s*/i', '', $order->wo_number ?? '');
         $this->editTrelloCardId = $order->trello_card_id ?? '';
         $this->editCompanyName = $order->company_name ?? '';
+        $this->editLocationName = $order->location_name ?? '';
         $this->editResponsiblePerson = $order->responsible_person ?? '';
         $this->editTaskName = $order->task_name ?? '';
         $this->editDesignerId = $order->designer_id;
@@ -127,6 +248,114 @@ class OrderDetailModal extends Component
         $this->isEditing = false;
     }
 
+    public function updatedEditSubstatus($value)
+    {
+        if ($value === Substatus::ENVIADO_EN_ALTA->value || $value === 'ENVIADO EN ALTA') {
+            $this->editCoreStatus = CoreStatus::EN_PRODUCCION->value;
+        }
+    }
+
+    public function updatedEditCoreStatus($value)
+    {
+        if ($value === CoreStatus::EN_PRODUCCION->value || $value === 'EN PRODUCCIÓN') {
+            $this->editSubstatus = Substatus::ENVIADO_EN_ALTA->value;
+        }
+    }
+
+    public function acceptPendingWo()
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        if (! $order->pending_wo_number) {
+            return;
+        }
+
+        $oldWo = $order->wo_number ?: 'Sin WO / WO 0000';
+        $newWo = $order->pending_wo_number;
+
+        $order->update([
+            'wo_number' => $newWo,
+            'pending_wo_number' => null,
+        ]);
+
+        if ($this->isEditing) {
+            $this->editWoNumber = preg_replace('/^WO\s*/i', '', $newWo);
+        }
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'WO_UPDATED_FROM_TRELLO',
+            'actor' => 'Usuario',
+            'previous_value' => $oldWo,
+            'new_value' => $newWo,
+            'metadata' => [
+                'source' => 'Aceptado por usuario en Detalle de Tarjeta',
+            ],
+        ]);
+
+        session()->flash('message', "Número de WO actualizado a {$newWo} (Trello) correctamente.");
+        $this->dispatch('order-updated');
+    }
+
+    public function dismissPendingWo()
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+
+        $order->update([
+            'pending_wo_number' => null,
+        ]);
+
+        $currentWoLabel = $order->wo_number ?: 'actual';
+        session()->flash('message', "Sugerencia de WO descartada. Se conserva el WO {$currentWoLabel} (DOES).");
+        $this->dispatch('order-updated');
+    }
+
+    public function openUnblockModal()
+    {
+        $this->unblockReason = '';
+        $this->showUnblockModal = true;
+    }
+
+    public function closeUnblockModal()
+    {
+        $this->showUnblockModal = false;
+        $this->unblockReason = '';
+    }
+
+    public function selectPresetReason($preset)
+    {
+        $this->unblockReason = $preset;
+    }
+
+    public function confirmUnblock()
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $this->validate([
+            'unblockReason' => 'required|string|min:3',
+        ], [
+            'unblockReason.required' => __('Ingresa el motivo o forma en que se resolvió el bloqueo.'),
+            'unblockReason.min' => __('El motivo debe contener al menos 3 caracteres.'),
+        ]);
+
+        $order = Order::findOrFail($this->orderId);
+        $order->unblock($this->unblockReason);
+
+        session()->flash('message', __('Orden :company desbloqueada y devuelta a la lista del diseñador.', ['company' => $order->company_name]));
+
+        $this->closeUnblockModal();
+        $this->dispatch('order-updated');
+    }
+
     public function saveOrder($addToWorkspace = false)
     {
         if (! $this->orderId) {
@@ -142,19 +371,58 @@ class OrderDetailModal extends Component
             $cleanTrelloId = $matches[1];
         }
 
+        if ($this->editSubstatus === Substatus::ENVIADO_EN_ALTA->value || $this->editSubstatus === 'ENVIADO EN ALTA') {
+            $this->editCoreStatus = CoreStatus::EN_PRODUCCION->value;
+        } elseif ($this->editCoreStatus === CoreStatus::EN_PRODUCCION->value || $this->editCoreStatus === 'EN PRODUCCIÓN') {
+            if (empty($this->editSubstatus)) {
+                $this->editSubstatus = Substatus::ENVIADO_EN_ALTA->value;
+            }
+        }
+
+        $previousStatus = $order->core_status;
+        $newCoreStatus = ! empty($this->editCoreStatus) ? CoreStatus::tryFrom($this->editCoreStatus) : $order->core_status;
+
+        $cleanLocationName = ! empty($this->editLocationName) ? mb_strtoupper(trim($this->editLocationName), 'UTF-8') : null;
+
+        $newDueDate = ! empty($this->editDueDate) ? $this->editDueDate : null;
+        $newSubstatus = ! empty($this->editSubstatus) ? $this->editSubstatus : null;
+
+        if (empty($newDueDate)) {
+            if ($newSubstatus === Substatus::OVERDUE->value || $newSubstatus === Substatus::ALMOST_OVERDUE->value) {
+                $newSubstatus = null;
+                $this->editSubstatus = '';
+            }
+            app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
+        }
+
         $updateData = [
             'wo_number' => ! empty($cleanWo) ? "WO {$cleanWo}" : null,
+            'pending_wo_number' => null,
             'trello_card_id' => ! empty($cleanTrelloId) ? $cleanTrelloId : null,
             'company_name' => $this->editCompanyName,
+            'location_name' => $cleanLocationName,
             'responsible_person' => ! empty($this->editResponsiblePerson) ? $this->editResponsiblePerson : null,
             'task_name' => $this->editTaskName,
             'designer_id' => ! empty($this->editDesignerIds) ? reset($this->editDesignerIds) : null,
-            'core_status' => $this->editCoreStatus ?: $order->core_status,
-            'substatus' => ! empty($this->editSubstatus) ? $this->editSubstatus : null,
-            'current_due_date' => ! empty($this->editDueDate) ? $this->editDueDate : null,
+            'core_status' => $newCoreStatus ?: $order->core_status,
+            'substatus' => $newSubstatus,
+            'current_due_date' => $newDueDate,
             'client_revision_count' => (int) $this->editClientRevisionCount,
             'internal_revision_count' => (int) $this->editInternalRevisionCount,
+            'done_today' => false,
         ];
+
+        if (! empty($this->editCompanyName)) {
+            $rawMatchString = $this->editCompanyName.($cleanLocationName ? ' REF '.$cleanLocationName : '');
+            $matched = app(ClientMatchingService::class)->matchOrCreate($rawMatchString, $this->editResponsiblePerson);
+            if ($matched['client']) {
+                $updateData['client_id'] = $matched['client']->id;
+                $updateData['company_name'] = $matched['client']->name;
+            }
+            if ($matched['location']) {
+                $updateData['client_location_id'] = $matched['location']->id;
+            }
+        }
 
         if ($addToWorkspace) {
             $updateData['in_workspace'] = true;
@@ -162,6 +430,10 @@ class OrderDetailModal extends Component
 
         $order->update($updateData);
         $order->syncDesigners($this->editDesignerIds);
+
+        if ($newCoreStatus && $previousStatus !== $newCoreStatus) {
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+        }
 
         // Trigger overdue task creation immediately if updated date is today or overdue
         app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
@@ -224,7 +496,11 @@ class OrderDetailModal extends Component
             return;
         }
         $order = Order::findOrFail($this->orderId);
-        $order->update(['done_today' => ! $order->done_today]);
+        $newDoneToday = ! $order->done_today;
+        $order->update(['done_today' => $newDoneToday]);
+        if ($newDoneToday) {
+            app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
+        }
         $this->dispatch('order-updated');
     }
 
@@ -234,8 +510,14 @@ class OrderDetailModal extends Component
             return;
         }
         $order = Order::findOrFail($this->orderId);
-        $order->update(['current_due_date' => null]);
+        $updateData = ['current_due_date' => null];
+        if ($order->substatus === Substatus::OVERDUE || $order->substatus === Substatus::ALMOST_OVERDUE) {
+            $updateData['substatus'] = null;
+            $this->editSubstatus = '';
+        }
+        $order->update($updateData);
         $this->editDueDate = '';
+        app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
         $this->dispatch('order-updated');
         session()->flash('message', "Fecha límite de {$order->company_name} establecida a Ninguna (Sin Fecha).");
     }
@@ -334,15 +616,35 @@ class OrderDetailModal extends Component
         }
 
         $order = Order::findOrFail($this->orderId);
+        $taskDate = ! empty($this->newTaskDate) ? Carbon::parse($this->newTaskDate) : now();
+        $isWork = (bool) $this->newTaskIsWork;
 
-        $order->relatedTasks()->create([
-            'title' => $this->newTaskTitle,
+        $subtask = $order->relatedTasks()->create([
+            'title' => trim($this->newTaskTitle),
             'type' => RelatedTaskType::RESOLVER,
             'status' => 'todo',
-            'assignee_id' => $order->designer_id,
-            'due_date' => now()->toDateString(),
+            'assignee_id' => $order->getPrimaryDesignerId(),
+            'scheduled_date' => $taskDate->toDateString(),
+            'due_date' => $taskDate->toDateString(),
             'priority' => 'normal',
+            'is_work_task' => $isWork,
         ]);
+
+        if ($isWork && $taskDate->isToday()) {
+            if ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ARCHIVED) {
+                $previousStatus = $order->core_status;
+                $updateData = [
+                    'scheduled_date' => $taskDate->toDateString(),
+                    'core_status' => CoreStatus::TO_DO_TODAY,
+                ];
+                if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                    $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
+                } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                    $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
+                }
+                $order->update($updateData);
+            }
+        }
 
         $this->newTaskTitle = '';
         $this->dispatch('order-updated');
@@ -356,6 +658,17 @@ class OrderDetailModal extends Component
             $task->delete();
             $this->dispatch('order-updated');
             session()->flash('message', "Tarea '{$taskName}' eliminada.");
+        }
+    }
+
+    public function dismissTask($taskId)
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $taskName = $task->title;
+            $task->delete();
+            $this->dispatch('order-updated');
+            session()->flash('message', "Subtarea '{$taskName}' descartada.");
         }
     }
 

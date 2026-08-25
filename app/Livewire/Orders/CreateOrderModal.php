@@ -8,6 +8,8 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Services\AutomationEngine;
+use App\Services\ClientMatchingService;
+use App\Services\TrelloSyncService;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -23,7 +25,11 @@ class CreateOrderModal extends Component
 
     public $trelloCardId = '';
 
+    public $createOnTrello = false;
+
     public $companyName = '';
+
+    public $locationName = '';
 
     public $taskName = '';
 
@@ -60,7 +66,9 @@ class CreateOrderModal extends Component
 
         $this->woNumber = '';
         $this->trelloCardId = '';
+        $this->createOnTrello = false;
         $this->companyName = '';
+        $this->locationName = '';
         $this->taskName = '';
         $this->responsiblePerson = '';
         $this->designerId = null;
@@ -87,6 +95,7 @@ class CreateOrderModal extends Component
         $this->woNumber = preg_replace('/^WO\s*/i', '', $original->wo_number ?? '');
         $this->trelloCardId = $original->trello_card_id ?? '';
         $this->companyName = $original->company_name ?? '';
+        $this->locationName = $original->location_name ?? '';
         $this->taskName = ($original->task_name ?? '').' (Copia)';
         $this->responsiblePerson = $original->responsible_person ?? '';
         $this->designerId = $original->designer_id;
@@ -119,9 +128,31 @@ class CreateOrderModal extends Component
         $this->designerIds = [];
     }
 
+    public function updatedSubstatus($value)
+    {
+        if ($value === Substatus::ENVIADO_EN_ALTA->value || $value === 'ENVIADO EN ALTA') {
+            $this->coreStatus = CoreStatus::EN_PRODUCCION->value;
+        }
+    }
+
+    public function updatedCoreStatus($value)
+    {
+        if ($value === CoreStatus::EN_PRODUCCION->value || $value === 'EN PRODUCCIÓN') {
+            $this->substatus = Substatus::ENVIADO_EN_ALTA->value;
+        }
+    }
+
     public function save()
     {
         $this->validate();
+
+        if ($this->substatus === Substatus::ENVIADO_EN_ALTA->value || $this->substatus === 'ENVIADO EN ALTA') {
+            $this->coreStatus = CoreStatus::EN_PRODUCCION->value;
+        } elseif ($this->coreStatus === CoreStatus::EN_PRODUCCION->value || $this->coreStatus === 'EN PRODUCCIÓN') {
+            if (empty($this->substatus)) {
+                $this->substatus = Substatus::ENVIADO_EN_ALTA->value;
+            }
+        }
 
         $statusEnum = CoreStatus::tryFrom($this->coreStatus) ?: CoreStatus::ENTRANTE;
         $substatusEnum = ! empty($this->substatus) ? Substatus::tryFrom($this->substatus) : null;
@@ -132,10 +163,21 @@ class CreateOrderModal extends Component
             $cleanTrelloId = $matches[1];
         }
 
+        $cleanLocation = ! empty($this->locationName) ? mb_strtoupper(trim($this->locationName), 'UTF-8') : null;
+        $cleanCompany = trim($this->companyName);
+
+        $matched = app(ClientMatchingService::class)->matchOrCreate(
+            $cleanCompany.($cleanLocation ? ' REF '.$cleanLocation : ''),
+            ! empty($this->responsiblePerson) ? trim($this->responsiblePerson) : null
+        );
+
         $order = Order::create([
             'wo_number' => ! empty($cleanWo) ? "WO {$cleanWo}" : null,
             'trello_card_id' => ! empty($cleanTrelloId) ? $cleanTrelloId : null,
-            'company_name' => trim($this->companyName),
+            'company_name' => $matched['client'] ? $matched['client']->name : $cleanCompany,
+            'location_name' => $cleanLocation,
+            'client_id' => $matched['client']?->id,
+            'client_location_id' => $matched['location']?->id,
             'task_name' => trim($this->taskName),
             'responsible_person' => ! empty($this->responsiblePerson) ? trim($this->responsiblePerson) : null,
             'designer_id' => ! empty($this->designerIds) ? reset($this->designerIds) : null,
@@ -163,6 +205,10 @@ class CreateOrderModal extends Component
 
         // Run automation hooks for new order
         app(AutomationEngine::class)->handleOrderCreated($order);
+
+        if ($this->createOnTrello && empty($cleanTrelloId)) {
+            app(TrelloSyncService::class)->createCardOnTrello($order);
+        }
 
         $this->closeModal();
         $this->dispatch('order-updated');

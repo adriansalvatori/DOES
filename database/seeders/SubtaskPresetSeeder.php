@@ -19,6 +19,7 @@ class SubtaskPresetSeeder extends Seeder
                 'color_theme' => 'sky',
                 'sort_order' => 1,
                 'is_active' => true,
+                'is_work_task' => true,
             ],
             [
                 'title' => 'Ajustes Camila',
@@ -26,6 +27,7 @@ class SubtaskPresetSeeder extends Seeder
                 'color_theme' => 'purple',
                 'sort_order' => 2,
                 'is_active' => true,
+                'is_work_task' => true,
             ],
             [
                 'title' => 'Nueva propuesta',
@@ -33,6 +35,7 @@ class SubtaskPresetSeeder extends Seeder
                 'color_theme' => 'emerald',
                 'sort_order' => 3,
                 'is_active' => true,
+                'is_work_task' => true,
             ],
             [
                 'title' => 'Confirmar medidas',
@@ -40,6 +43,7 @@ class SubtaskPresetSeeder extends Seeder
                 'color_theme' => 'amber',
                 'sort_order' => 4,
                 'is_active' => true,
+                'is_work_task' => false,
             ],
         ];
 

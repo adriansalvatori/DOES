@@ -7,21 +7,21 @@
                 <div class="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200 text-zinc-700 flex items-center justify-center font-bold">
                     <x-lucide-bar-chart-3 class="w-4 h-4 text-stone-700" />
                 </div>
-                <h2 class="text-lg font-bold text-zinc-900 tracking-tight">Analytics Dashboard</h2>
+                <h2 class="text-lg font-bold text-zinc-900 tracking-tight">{{ __('Analytics Dashboard') }}</h2>
             </div>
             <p class="text-xs text-zinc-500 font-normal">
-                Métricas operativas en tiempo real, análisis de equipo y rendimiento de entregas.
+                {{ __('Métricas operativas en tiempo real, análisis de equipo y rendimiento de entregas.') }}
             </p>
         </div>
 
         <div class="flex items-center gap-2 text-xs">
             <span class="px-3 py-1.5 rounded-xl bg-stone-100 border border-stone-200 text-zinc-700 font-mono text-[11px] font-medium flex items-center gap-1.5">
                 <x-lucide-clock class="w-3.5 h-3.5 text-zinc-400" />
-                <span>Actualizado: {{ now()->format('d M, Y - H:i') }}</span>
+                <span>{{ __('Actualizado:') }} {{ now()->format('d M, Y - H:i') }}</span>
             </span>
             <a href="/" class="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium transition flex items-center gap-1.5 shadow-2xs">
                 <x-lucide-layout-dashboard class="w-3.5 h-3.5" />
-                <span>Centro de Control</span>
+                <span>{{ __('Centro de Control') }}</span>
             </a>
         </div>
     </div>
@@ -32,32 +32,32 @@
         <!-- KPI 1: Carga Operativa Activa (Active Design Workload) -->
         <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 space-y-3 shadow-2xs">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Carga Operativa Activa</span>
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">{{ __('Carga Operativa Activa') }}</span>
                 <div class="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center">
                     <x-lucide-layers class="w-3.5 h-3.5" />
                 </div>
             </div>
             <div>
                 <span class="text-2xl sm:text-3xl font-bold font-mono text-zinc-900">{{ $totalOrders }}</span>
-                <span class="text-xs text-zinc-500 font-normal ml-1">órdenes en diseño</span>
+                <span class="text-xs text-zinc-500 font-normal ml-1">{{ __('órdenes en diseño') }}</span>
             </div>
             <div class="pt-2 border-t border-[#e9e9e7] flex items-center justify-between text-[11px] text-zinc-600 font-medium">
-                <span class="text-zinc-400">Excluye Backlog y En Producción</span>
-                <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]">{{ $inProductionCount }} completadas</span>
+                <span class="text-zinc-400">{{ __('Excluye Backlog y En Producción') }}</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]">{{ $inProductionCount }} {{ __('completadas') }}</span>
             </div>
         </div>
 
         <!-- KPI 2: Cumplimiento de SLA -->
         <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 space-y-3 shadow-2xs">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Cumplimiento SLA</span>
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">{{ __('Cumplimiento SLA') }}</span>
                 <div class="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center">
                     <x-lucide-shield-check class="w-3.5 h-3.5" />
                 </div>
             </div>
             <div class="flex items-baseline gap-2">
                 <span class="text-2xl sm:text-3xl font-bold font-mono text-emerald-900">{{ $slaComplianceRate }}%</span>
-                <span class="text-xs text-emerald-700 font-semibold">entregas a tiempo</span>
+                <span class="text-xs text-emerald-700 font-semibold">{{ __('entregas a tiempo') }}</span>
             </div>
             <!-- Progress Bar -->
             <div class="w-full bg-stone-100 rounded-full h-2 overflow-hidden border border-stone-200">
@@ -68,36 +68,36 @@
         <!-- KPI 3: Índice de Revisiones -->
         <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 space-y-3 shadow-2xs">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Índice de Revisiones</span>
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">{{ __('Índice de Revisiones') }}</span>
                 <div class="w-7 h-7 rounded-lg bg-sky-50 border border-sky-200 text-sky-700 flex items-center justify-center">
                     <x-lucide-history class="w-3.5 h-3.5" />
                 </div>
             </div>
             <div>
                 <span class="text-2xl sm:text-3xl font-bold font-mono text-zinc-900">{{ $totalClientRevisions }}</span>
-                <span class="text-xs text-zinc-500 font-normal ml-1">revisiones cliente</span>
+                <span class="text-xs text-zinc-500 font-normal ml-1">{{ __('revisiones cliente') }}</span>
             </div>
             <div class="pt-2 border-t border-[#e9e9e7] flex items-center justify-between text-[11px] text-zinc-600 font-medium">
-                <span>Promedio/orden: <strong>{{ $avgClientRevisions }}</strong></span>
-                <span>Internas: <strong>{{ $totalInternalRevisions }}</strong></span>
+                <span>{{ __('Promedio/orden:') }} <strong>{{ $avgClientRevisions }}</strong></span>
+                <span>{{ __('Internas:') }} <strong>{{ $totalInternalRevisions }}</strong></span>
             </div>
         </div>
 
         <!-- KPI 4: Atrasos & Riesgo Operativo -->
         <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 space-y-3 shadow-2xs">
             <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">Órdenes en Atraso</span>
+                <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">{{ __('Órdenes en Atraso') }}</span>
                 <div class="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 flex items-center justify-center">
                     <x-lucide-alert-octagon class="w-3.5 h-3.5" />
                 </div>
             </div>
             <div class="flex items-baseline gap-2">
                 <span class="text-2xl sm:text-3xl font-bold font-mono {{ $overdueCount > 0 ? 'text-rose-600' : 'text-zinc-900' }}">{{ $overdueCount }}</span>
-                <span class="text-xs font-semibold {{ $overdueCount > 0 ? 'text-rose-600' : 'text-zinc-400' }}">({{ $overdueRate }}% del total)</span>
+                <span class="text-xs font-semibold {{ $overdueCount > 0 ? 'text-rose-600' : 'text-zinc-400' }}">({{ $overdueRate }}% {{ __('del total') }})</span>
             </div>
             <div class="pt-2 border-t border-[#e9e9e7] flex items-center justify-between text-[11px] text-zinc-600 font-medium">
-                <span>Completadas Hoy: <strong>{{ $doneTodayCount }}</strong></span>
-                <span>Aprobadas: <strong>{{ $approvedCount }}</strong></span>
+                <span>{{ __('Completadas Hoy:') }} <strong>{{ $doneTodayCount }}</strong></span>
+                <span>{{ __('Aprobadas:') }} <strong>{{ $approvedCount }}</strong></span>
             </div>
         </div>
 
@@ -110,20 +110,20 @@
                 <x-lucide-check-square class="w-4 h-4 text-zinc-600" />
             </div>
             <div>
-                <h4 class="font-bold text-zinc-900 text-xs">Tareas Vinculadas (Sub-tareas Operativas)</h4>
-                <p class="text-[11px] text-zinc-500">Acciones de seguimiento y resolver asociadas. No forman parte del conteo de órdenes principales.</p>
+                <h4 class="font-bold text-zinc-900 text-xs">{{ __('Tareas Vinculadas (Sub-tareas Operativas)') }}</h4>
+                <p class="text-[11px] text-zinc-500">{{ __('Acciones de seguimiento y resolver asociadas. No forman parte del conteo de órdenes principales.') }}</p>
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 shrink-0 text-[11px] font-medium">
             <span class="px-3 py-1 rounded-lg bg-white border border-stone-200 text-zinc-800 font-mono">
-                Total Sub-tareas: <strong>{{ $totalRelatedTasks }}</strong>
+                {{ __('Total Sub-tareas:') }} <strong>{{ $totalRelatedTasks }}</strong>
             </span>
             <span class="px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 font-mono">
-                Pendientes: <strong>{{ $pendingRelatedTasks }}</strong>
+                {{ __('Pendientes:') }} <strong>{{ $pendingRelatedTasks }}</strong>
             </span>
             <span class="px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-mono">
-                Completadas: <strong>{{ $completedRelatedTasks }}</strong>
+                {{ __('Completadas:') }} <strong>{{ $completedRelatedTasks }}</strong>
             </span>
         </div>
     </div>

@@ -35,6 +35,9 @@ class OrderEvent extends Model
         $type = strtoupper((string) $this->event_type);
         $newVal = strtoupper((string) $this->new_value);
 
+        if (str_contains($type, 'UNBLOCKED') || str_contains($type, 'DESBLOQUEA')) {
+            return 'bg-emerald-500 ring-4 ring-emerald-100 text-white';
+        }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
             return 'bg-emerald-500 ring-4 ring-emerald-100 text-white';
         }
@@ -65,6 +68,9 @@ class OrderEvent extends Model
         $type = strtoupper((string) $this->event_type);
         $newVal = strtoupper((string) $this->new_value);
 
+        if (str_contains($type, 'UNBLOCKED') || str_contains($type, 'DESBLOQUEA')) {
+            return 'bg-emerald-400';
+        }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
             return 'bg-emerald-400';
         }
@@ -103,9 +109,9 @@ class OrderEvent extends Model
 
         if (preg_match('/^\d{4}-\d{2}-\d{2}/', $val)) {
             try {
-                $date = Carbon::parse($val);
+                $date = Carbon::parse($val)->locale(app()->getLocale());
 
-                return strtolower($date->format('l j')); // e.g. "monday 24"
+                return strtolower($date->translatedFormat('l j'));
             } catch (\Throwable $e) {
                 return $val;
             }
@@ -118,35 +124,71 @@ class OrderEvent extends Model
     {
         $type = strtoupper((string) $this->event_type);
 
+        if (str_contains($type, 'ORDER_UNBLOCKED') || str_contains($type, 'UNBLOCKED')) {
+            return __('Orden desbloqueada');
+        }
+        if (str_contains($type, 'AUTOMATIC_TASK') || str_contains($type, 'TASK_TRIGGERED')) {
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
+
+            return __('Tarea automática ":title" gatillada', ['title' => $taskTitle]);
+        }
         if (str_contains($type, 'SUBTASK_SCHEDULED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? 'Subtarea';
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Subtarea');
             $dateStr = isset($this->metadata['date']) ? $this->formatValueIfDate($this->metadata['date']) : '';
 
-            return "Subtarea \"{$taskTitle}\" agendada".($dateStr ? " para el {$dateStr}" : '');
+            return __('Subtarea ":title" agendada', ['title' => $taskTitle]).($dateStr ? ' '.__('para el').' '.$dateStr : '');
         }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? 'Subtarea';
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Subtarea');
 
-            return "Subtarea \"{$taskTitle}\" completada ✓";
+            return __('Subtarea ":title" completada ✓', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'ORDER_CREATED') || str_contains($type, 'CREATED')) {
-            return 'Orden creada en flujo / Trello';
+            return __('Orden creada en flujo / Trello');
         }
         if (str_contains($type, 'MOVED_TO_ON_HOLD')) {
-            return 'Movido a ON HOLD';
+            return __('Movido a ON HOLD');
         }
         if (str_contains($type, 'APPROVAL_SUBMITTED')) {
-            return 'Diseño aprobado por cliente';
+            return __('Diseño aprobado por cliente');
         }
         if (str_contains($type, 'DELAY_RESOLVED')) {
-            return 'Atraso resuelto y nueva fecha acordada';
+            return __('Atraso resuelto y nueva fecha acordada');
         }
         if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
             $statusLabel = $this->formatValueIfDate($this->new_value);
 
-            return "Movido a {$statusLabel}";
+            return __('Movido a :status', ['status' => $statusLabel]);
         }
 
-        return $this->event_type;
+        return __($this->event_type);
+    }
+
+    public function getDisplayDate(): string
+    {
+        $type = strtoupper((string) $this->event_type);
+
+        if (str_contains($type, 'SUBTASK')) {
+            $dateStr = $this->metadata['date'] ?? null;
+
+            if (! $dateStr && isset($this->metadata['task_id'])) {
+                $subtask = RelatedTask::find($this->metadata['task_id']);
+                if ($subtask && $subtask->scheduled_date) {
+                    $dateStr = $subtask->scheduled_date->toDateString();
+                }
+            }
+
+            if ($dateStr) {
+                try {
+                    $date = Carbon::parse($dateStr)->locale(app()->getLocale());
+
+                    return $date->translatedFormat('d M');
+                } catch (\Throwable $e) {
+                    // fallback
+                }
+            }
+        }
+
+        return $this->created_at->format('d M, g:i A');
     }
 }

@@ -115,12 +115,13 @@ class TrelloSync extends Component
 
         $addedCount = 0;
         $movedCount = 0;
+        $pushedCount = 0;
         $updatedCount = 0;
         $unchangedCount = 0;
         $changesList = [];
 
         foreach ($cards as $card) {
-            $res = $syncService->syncCardToOrder($card, $listsMap);
+            $res = $syncService->syncCardToOrder($card, $listsMap, $extractedBoardId, $this->apiKey, $this->userToken);
             if (! $res) {
                 continue;
             }
@@ -128,8 +129,10 @@ class TrelloSync extends Component
             match ($res['action']) {
                 'created' => $addedCount++,
                 'moved' => $movedCount++,
+                'pushed_to_trello' => $pushedCount++,
                 'updated' => $updatedCount++,
                 'unchanged' => $unchangedCount++,
+                default => null,
             };
 
             if ($res['action'] !== 'unchanged') {
@@ -140,11 +143,12 @@ class TrelloSync extends Component
                     'task' => $res['task_name'] ?? 'Tarea',
                     'previous_status' => $res['previous_status'] ?? '',
                     'new_status' => $res['new_status'] ?? '',
+                    'details' => $res['details'] ?? [],
                 ];
             }
         }
 
-        // Calculate deleted/archived on Trello
+        // Calculate deleted/archived on Trello (Mark as missing instead of deleting)
         $deletedOrders = Order::whereNotNull('trello_card_id')
             ->whereNotIn('trello_card_id', $incomingCardIds)
             ->get();
@@ -157,14 +161,10 @@ class TrelloSync extends Component
                 'company' => $delOrder->company_name ?: 'Empresa',
                 'task' => $delOrder->task_name ?: 'Tarea',
                 'previous_status' => $delOrder->core_status?->label() ?: 'Tablero Trello',
-                'new_status' => 'Archivada / Eliminada de Trello',
+                'new_status' => 'Falta en Trello (Marcada como faltante)',
             ];
 
-            $delOrder->designers()->detach();
-            $delOrder->relatedTasks()->delete();
-            $delOrder->events()->delete();
-            $delOrder->dueDateHistories()->delete();
-            $delOrder->forceDelete();
+            $delOrder->update(['is_missing_from_trello' => true]);
         }
 
         $totalSynced = count($cards);
@@ -174,6 +174,7 @@ class TrelloSync extends Component
             'total' => $totalSynced,
             'added' => $addedCount,
             'moved' => $movedCount,
+            'pushed' => $pushedCount,
             'updated' => $updatedCount,
             'deleted' => $deletedCount,
             'unchanged' => $unchangedCount,
@@ -181,7 +182,7 @@ class TrelloSync extends Component
             'changes' => $changesList,
         ];
 
-        $this->syncLog[] = "[$timestamp] 🎉 Sincronización exitosa: {$totalSynced} tarjetas procesadas ({$addedCount} nuevas, {$movedCount} movidas, {$updatedCount} actualizadas, {$deletedCount} archivadas).";
+        $this->syncLog[] = "[$timestamp] 🎉 Sincronización exitosa: {$totalSynced} tarjetas procesadas ({$addedCount} nuevas, {$pushedCount} enviadas a Trello, {$movedCount} movidas, {$updatedCount} actualizadas, {$deletedCount} faltantes en Trello).";
         session()->flash('message', "Sincronización con Trello completada exitosamente ({$totalSynced} tarjetas procesadas).");
     }
 

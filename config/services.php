@@ -38,6 +38,8 @@ return [
     'trello' => [
         'api_key' => env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'),
         'api_secret' => env('TRELLO_API_SECRET', '07fd0e83be132ae2e0c4285fb5e6e8a054dd562a169071fc0a968528ff03c4fb'),
+        'token' => env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')),
+        'board_id' => env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'),
     ],
 
 ];

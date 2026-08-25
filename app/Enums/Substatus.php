@@ -17,6 +17,8 @@ enum Substatus: string
     case WAITING_FOR_CLIENT = 'WAITING FOR CLIENT';
     case CUSTOMER_SERVICE_REQUIRED = 'CUSTOMER SERVICE REQUIRED';
     case URGENTE = 'URGENTE';
+    case ENVIADO_EN_ALTA = 'ENVIADO EN ALTA';
+    case TICKET = 'TICKET';
 
     public function label(): string
     {
@@ -34,6 +36,8 @@ enum Substatus: string
             self::AJUSTES_PRODUCCION => __('Ajustes Producción'),
             self::WAITING_FOR_CLIENT => __('Esperando Cliente'),
             self::CUSTOMER_SERVICE_REQUIRED => __('Atención al Cliente Requerida'),
+            self::ENVIADO_EN_ALTA => __('Enviado en Alta'),
+            self::TICKET => __('Ticket'),
         };
     }
 
@@ -41,18 +45,20 @@ enum Substatus: string
     {
         return match ($this) {
             self::URGENTE => 'bg-red-600 text-white border-red-700 font-extrabold shadow-sm animate-pulse',
-            self::BLOQUEADA => 'bg-rose-50 text-rose-700 border-rose-200 font-medium',
+            self::BLOQUEADA => 'bg-orange-50 text-orange-700 border-orange-200 font-medium',
             self::OVERDUE => 'bg-red-50 text-red-700 border-red-200 font-semibold',
             self::ALMOST_OVERDUE => 'bg-amber-50 text-amber-700 border-amber-200 font-medium',
             self::CAMBIOS_CAMILA => 'bg-purple-50 text-purple-700 border-purple-200 font-medium',
             self::CAMBIOS_CLIENTE => 'bg-sky-50 text-sky-700 border-sky-200 font-medium',
-            self::PONER_EN_ALTA => 'bg-emerald-50 text-emerald-700 border-emerald-200 font-medium',
+            self::PONER_EN_ALTA => 'bg-pink-50 text-pink-700 border-pink-200 font-medium',
             self::FALTA_APROBACION_ESTIMADO => 'bg-orange-50 text-orange-700 border-orange-200 font-medium',
-            self::NO_RESPUESTA => 'bg-stone-100 text-stone-600 border-stone-200 font-medium',
+            self::NO_RESPUESTA => 'bg-orange-50 text-orange-700 border-orange-200 font-medium',
             self::PAUSADO => 'bg-stone-100 text-stone-600 border-stone-200 font-medium',
-            self::AJUSTES_PRODUCCION => 'bg-teal-50 text-teal-700 border-teal-200 font-medium',
-            self::WAITING_FOR_CLIENT => 'bg-blue-50 text-blue-700 border-blue-200 font-medium',
-            self::CUSTOMER_SERVICE_REQUIRED => 'bg-pink-50 text-pink-700 border-pink-200 font-bold',
+            self::AJUSTES_PRODUCCION => 'bg-pink-50 text-pink-700 border-pink-200 font-medium',
+            self::WAITING_FOR_CLIENT => 'bg-sky-50 text-sky-700 border-sky-200 font-medium',
+            self::CUSTOMER_SERVICE_REQUIRED => 'bg-orange-50 text-orange-700 border-orange-200 font-bold',
+            self::ENVIADO_EN_ALTA => 'bg-pink-50 text-pink-700 border-pink-200 font-medium',
+            self::TICKET => 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
         };
     }
 }

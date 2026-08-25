@@ -3,11 +3,14 @@
 namespace App\Livewire\Kanban;
 
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
+use App\Enums\Substatus;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
+use App\Services\SlaEngine;
 use App\Services\TrelloSyncService;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -69,8 +72,55 @@ class Board extends Component
             return;
         }
 
+        if ($newStatus === CoreStatus::ENTRANTE) {
+            $designerStatus = match ($order->designer?->name) {
+                'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+                'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
+                default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+            };
+
+            $order->update([
+                'core_status' => $designerStatus,
+                'substatus' => Substatus::BLOQUEADA,
+            ]);
+
+            RelatedTask::create([
+                'order_id' => $order->id,
+                'title' => "Bloqueado: {$order->company_name} - {$order->task_name}",
+                'type' => RelatedTaskType::BLOCKED,
+                'status' => 'todo',
+                'assignee_id' => $order->designer_id,
+                'due_date' => now()->toDateString(),
+                'priority' => 'high',
+            ]);
+
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'ORDER_BLOCKED',
+                'actor' => 'User',
+                'previous_value' => $previousStatus->value,
+                'new_value' => $designerStatus->value,
+                'metadata' => [
+                    'substatus' => Substatus::BLOQUEADA->value,
+                    'comment' => 'Orden asignada a la lista del diseñador con etiqueta BLOQUEADA y subtarea creada en BLOCKED.',
+                ],
+            ]);
+
+            $this->dispatch('order-updated');
+            session()->flash('message', "Orden {$order->company_name} marcada como Bloqueada en la lista del diseñador y subtarea agregada a BLOCKED.");
+
+            return;
+        }
+
         // Update local state instantly
-        $order->update(['core_status' => $newStatus]);
+        if ($newStatus === CoreStatus::EN_PRODUCCION) {
+            $order->update([
+                'core_status' => $newStatus,
+                'substatus' => Substatus::ENVIADO_EN_ALTA,
+            ]);
+        } else {
+            $order->update(['core_status' => $newStatus]);
+        }
 
         // Run local workflow automations
         app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
@@ -190,7 +240,11 @@ class Board extends Component
     public function toggleDoneToday($orderId)
     {
         $order = Order::findOrFail($orderId);
-        $order->update(['done_today' => ! $order->done_today]);
+        $newDoneToday = ! $order->done_today;
+        $order->update(['done_today' => $newDoneToday]);
+        if ($newDoneToday) {
+            app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
+        }
         $this->dispatch('order-updated');
     }
 
@@ -210,7 +264,7 @@ class Board extends Component
         if ($this->designerFilter !== 'all') {
             $query->where(function ($q) {
                 $q->where('designer_id', $this->designerFilter)
-                    ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $this->designerFilter));
+                    ->orWhereHas('designers', fn ($dq) => $dq->where('designers.id', $this->designerFilter));
             });
         }
 
@@ -229,9 +283,7 @@ class Board extends Component
         $orders = $query->get();
 
         foreach ($orders as $order) {
-            if ($order->isOverdue()) {
-                app(AutomationEngine::class)->checkAndCreateOverdueTask($order);
-            }
+            app(SlaEngine::class)->checkOverdue($order);
         }
 
         // Load all related tasks belonging to workspace orders, respecting designer filter
@@ -256,6 +308,7 @@ class Board extends Component
             CoreStatus::ENVIADO_AL_CLIENTE,
             CoreStatus::ON_HOLD,
             CoreStatus::EN_PRODUCCION,
+            CoreStatus::ARCHIVED,
         ];
 
         $columns = match ($this->columnGroup) {
@@ -273,6 +326,7 @@ class Board extends Component
             'final' => [
                 CoreStatus::ON_HOLD,
                 CoreStatus::EN_PRODUCCION,
+                CoreStatus::ARCHIVED,
             ],
             default => $allColumns,
         };

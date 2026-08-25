@@ -69,4 +69,26 @@ class Designer extends Model
             default => 'bg-amber-100 text-amber-800 border-amber-300 font-semibold',
         };
     }
+
+    public function isSamePersonAs(Designer|int|null $other): bool
+    {
+        if (! $other) {
+            return false;
+        }
+
+        $otherId = $other instanceof Designer ? $other->id : (int) $other;
+        if ($this->id === $otherId) {
+            return true;
+        }
+
+        $otherDesigner = $other instanceof Designer ? $other : self::find($otherId);
+        if (! $otherDesigner) {
+            return false;
+        }
+
+        $myColor = $this->color_type;
+        $otherColor = $otherDesigner->color_type;
+
+        return $myColor === $otherColor && in_array($myColor, ['magenta', 'cyan', 'green'], true);
+    }
 }

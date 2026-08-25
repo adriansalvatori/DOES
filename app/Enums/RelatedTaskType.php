@@ -14,9 +14,10 @@ enum RelatedTaskType: string
     case FOLLOW_UP_ALTA = 'FOLLOW UP ALTA';
     case SUBTASK = 'SUBTAREA';
     case AJUSTES_PRODUCCION = 'AJUSTES DE PRODUCCIÓN';
+    case BLOCKED = 'BLOQUEADO';
 
     public function label(): string
     {
-        return $this->value;
+        return __($this->value);
     }
 }

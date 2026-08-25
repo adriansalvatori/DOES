@@ -49,4 +49,27 @@ class OrderDetailModalTest extends TestCase
             'current_due_date' => null,
         ]);
     }
+
+    public function test_can_dismiss_subtask_from_modal(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CON SUBTAREA',
+            'task_name' => 'DISENO LOGO',
+            'in_workspace' => true,
+        ]);
+
+        $subtask = $order->relatedTasks()->create([
+            'title' => 'Subtarea a descartar por el usuario',
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('dismissTask', $subtask->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseMissing('related_tasks', [
+            'id' => $subtask->id,
+        ]);
+    }
 }

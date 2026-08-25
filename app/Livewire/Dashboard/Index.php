@@ -9,6 +9,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class Index extends Component
@@ -20,6 +21,12 @@ class Index extends Component
     public $userRole = 'all'; // 'all', 'designer', 'manager'
 
     public $search = '';
+
+    #[On('order-updated')]
+    public function refreshDashboard(): void
+    {
+        // Re-renders the dashboard view automatically when orders or tasks are updated in card flyout
+    }
 
     public function setUserRole($role)
     {

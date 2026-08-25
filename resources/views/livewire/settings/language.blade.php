@@ -25,7 +25,7 @@
         <!-- Spanish Card -->
         <div 
             wire:click="setLocale('es')"
-            @click="localStorage.setItem('app_locale', 'es'); window.location.reload();"
+            @click="localStorage.setItem('app_locale', 'es')"
             class="bg-white border-2 rounded-2xl p-5 cursor-pointer transition-all duration-200 select-none relative shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 {{ $currentLocale === 'es' ? 'border-stone-900 bg-stone-50/50 ring-2 ring-stone-900/10' : 'border-[#e9e9e7] hover:border-stone-400' }}"
         >
             <div class="flex items-start justify-between">
@@ -54,7 +54,7 @@
         <!-- English Card -->
         <div 
             wire:click="setLocale('en')"
-            @click="localStorage.setItem('app_locale', 'en'); window.location.reload();"
+            @click="localStorage.setItem('app_locale', 'en')"
             class="bg-white border-2 rounded-2xl p-5 cursor-pointer transition-all duration-200 select-none relative shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 {{ $currentLocale === 'en' ? 'border-stone-900 bg-stone-50/50 ring-2 ring-stone-900/10' : 'border-[#e9e9e7] hover:border-stone-400' }}"
         >
             <div class="flex items-start justify-between">

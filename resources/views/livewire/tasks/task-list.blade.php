@@ -5,15 +5,15 @@
         <div class="flex items-center gap-3">
             <x-lucide-check-square class="w-5 h-5 text-zinc-700" />
             <div>
-                <h2 class="text-sm font-semibold text-zinc-900 tracking-tight">Tareas Vinculadas (Related Tasks)</h2>
-                <p class="text-xs text-zinc-500">Gestión de acciones independientes asociadas a las órdenes de diseño.</p>
+                <h2 class="text-sm font-semibold text-zinc-900 tracking-tight">{{ __('Tareas Vinculadas (Related Tasks)') }}</h2>
+                <p class="text-xs text-zinc-500">{{ __('Gestión de acciones independientes asociadas a las órdenes de diseño.') }}</p>
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
             <div class="relative w-full sm:w-60">
                 <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar tarea o empresa..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-8 pr-3 py-1 text-xs text-zinc-800 focus:outline-none w-full">
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Buscar tarea o empresa...') }}" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-8 pr-3 py-1 text-xs text-zinc-800 focus:outline-none w-full">
             </div>
 
             <!-- Status Filter (Searchable) -->
@@ -25,7 +25,8 @@
                          $wire.set('statusFilter', val);
                          this.open = false;
                      }
-                 }">
+                 }"
+                 x-dropdown-nav>
                 <button 
                     type="button" 
                     @click="open = !open" 
@@ -33,11 +34,11 @@
                     class="w-full bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-2.5 py-1 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
                     <span class="truncate">
                         @if($statusFilter === 'todo')
-                            Pendientes (To Do)
+                            {{ __('Pendientes (To Do)') }}
                         @elseif($statusFilter === 'done')
-                            Completadas (Done)
+                            {{ __('Completadas (Done)') }}
                         @else
-                            Todas las Tareas
+                            {{ __('Todas las Tareas') }}
                         @endif
                     </span>
                     <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
@@ -49,30 +50,33 @@
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
                     class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 overflow-y-auto divide-y divide-stone-100 text-xs">
-                    <div 
+                    <button 
+                        type="button"
                         @click="selectStatus('todo')" 
-                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>Pendientes (To Do)</span>
+                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>{{ __('Pendientes (To Do)') }}</span>
                         @if($statusFilter === 'todo')
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
-                    </div>
-                    <div 
+                    </button>
+                    <button 
+                        type="button"
                         @click="selectStatus('done')" 
-                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>Completadas (Done)</span>
+                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>{{ __('Completadas (Done)') }}</span>
                         @if($statusFilter === 'done')
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
-                    </div>
-                    <div 
+                    </button>
+                    <button 
+                        type="button"
                         @click="selectStatus('all')" 
-                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>Todas las Tareas</span>
+                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>{{ __('Todas las Tareas') }}</span>
                         @if($statusFilter === 'all')
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
-                    </div>
+                    </button>
                 </div>
             </div>
 
@@ -85,13 +89,14 @@
                          $wire.set('typeFilter', val);
                          this.open = false;
                      }
-                 }">
+                 }"
+                 x-dropdown-nav>
                 <button 
                     type="button" 
                     @click="open = !open" 
                     @click.outside="open = false"
                     class="w-full bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-2.5 py-1 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
-                    <span class="truncate">{{ $typeFilter === 'all' ? 'Todos los Tipos' : $typeFilter }}</span>
+                    <span class="truncate">{{ $typeFilter === 'all' ? __('Todos los Tipos') : $typeFilter }}</span>
                     <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
                 </button>
 
@@ -105,27 +110,29 @@
                         <input 
                             type="text" 
                             x-model="search" 
-                            placeholder="Buscar tipo..." 
+                            placeholder="{{ __('Buscar tipo...') }}" 
                             class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
                     </div>
-                    <div 
+                    <button 
+                        type="button"
                         @click="selectType('all')" 
-                        class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>Todos los Tipos</span>
+                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                        <span>{{ __('Todos los Tipos') }}</span>
                         @if($typeFilter === 'all')
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
-                    </div>
+                    </button>
                     @foreach($taskTypes as $type)
-                        <div 
+                        <button 
+                            type="button"
                             x-show="!search || '{{ strtolower(addslashes($type->value)) }}'.includes(search.toLowerCase())"
                             @click="selectType('{{ $type->value }}')" 
-                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                            <span class="truncate">{{ $type->value }}</span>
+                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                            <span class="truncate">{{ $type->label() }}</span>
                             @if($typeFilter === $type->value)
                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
                             @endif
-                        </div>
+                        </button>
                     @endforeach
                 </div>
             </div>
@@ -145,12 +152,12 @@
             <table class="w-full text-left text-xs text-zinc-700">
                 <thead class="bg-[#f7f7f5] text-zinc-600 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
                     <tr>
-                        <th class="p-3">Estado</th>
-                        <th class="p-3">Título de la Tarea</th>
-                        <th class="p-3">Orden / Empresa</th>
-                        <th class="p-3">Asignado</th>
-                        <th class="p-3">Fecha Límite</th>
-                        <th class="p-3 text-right">Detalles</th>
+                        <th class="p-3">{{ __('Estado') }}</th>
+                        <th class="p-3">{{ __('Título de la Tarea') }}</th>
+                        <th class="p-3">{{ __('Orden / Empresa') }}</th>
+                        <th class="p-3">{{ __('Asignado') }}</th>
+                        <th class="p-3">{{ __('Fecha Límite') }}</th>
+                        <th class="p-3 text-right">{{ __('Detalles') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#e9e9e7]">
@@ -163,14 +170,14 @@
                                 </button>
                             </td>
                             <td class="p-3 font-medium text-zinc-900">
-                                {{ $task->title }}
+                                {{ __($task->title) }}
                             </td>
                             <td class="p-3 font-normal text-zinc-600">
                                 {{ $task->order?->company_name }}
                             </td>
                             <td class="p-3">
                                 <span class="px-2 py-0.5 rounded bg-stone-100 border border-stone-200 text-[10px] text-zinc-700 font-medium">
-                                    {{ $task->assignee?->name ?? 'Sin Asignar' }}
+                                    {{ $task->assignee?->name ?? __('Sin Asignar') }}
                                 </span>
                             </td>
                             <td class="p-3 font-mono text-zinc-500">
@@ -179,14 +186,14 @@
                             <td class="p-3 text-right">
                                 <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order_id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1 inline-flex">
                                     <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                    <span>Detalle</span>
+                                    <span>{{ __('Detalle') }}</span>
                                 </button>
                             </td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="6" class="p-8 text-center text-zinc-400 italic">
-                                No se encontraron tareas vinculadas con los filtros seleccionados.
+                                {{ __('No se encontraron tareas vinculadas con los filtros seleccionados.') }}
                             </td>
                         </tr>
                     @endforelse

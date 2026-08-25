@@ -23,12 +23,12 @@ class AnalyticsTest extends TestCase
 
         $this->get('/analytics')
             ->assertStatus(200)
-            ->assertSee('Analytics Dashboard')
-            ->assertSee('Centro de Control');
+            ->assertSee(__('Analytics Dashboard'))
+            ->assertSee(__('Centro de Control'));
 
         Livewire::test(Analytics::class)
             ->assertSee('EMPRESA ANALYTICS TEST')
-            ->assertSee('Carga Operativa Activa');
+            ->assertSee(__('Carga Operativa Activa'));
     }
 
     public function test_analytics_dashboard_excludes_backlog_orders(): void

@@ -15,10 +15,12 @@ class SubtaskPreset extends Model
         'color_theme',
         'sort_order',
         'is_active',
+        'is_work_task',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_work_task' => 'boolean',
         'sort_order' => 'integer',
     ];
 

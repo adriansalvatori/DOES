@@ -1,11 +1,97 @@
 <div>
     <!-- Notion Side Flyout Drawer (Light Mode Panel) -->
     @if($showModal && $order)
-        <!-- Backdrop Overlay -->
-        <div wire:click="closeModal" class="fixed inset-0 z-50 bg-black/30 backdrop-blur-xs transition-opacity"></div>
+        <div 
+            x-data="{
+                initialForm: null,
+                init() {
+                    this.snapshot();
+                    this.$watch('$wire.isEditing', (val) => {
+                        if (val) this.snapshot();
+                    });
+                    window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty());
+                },
+                snapshot() {
+                    this.initialForm = JSON.stringify({
+                        wo: $wire.editWoNumber || '',
+                        trelloId: $wire.editTrelloCardId || '',
+                        company: $wire.editCompanyName || '',
+                        resp: $wire.editResponsiblePerson || '',
+                        task: $wire.editTaskName || '',
+                        designers: Array.from($wire.editDesignerIds || []).sort(),
+                        status: $wire.editCoreStatus || '',
+                        substatus: $wire.editSubstatus || '',
+                        due: $wire.editDueDate || '',
+                        clientRev: $wire.editClientRevisionCount || 0,
+                        internalRev: $wire.editInternalRevisionCount || 0
+                    });
+                },
+                isEditDirty() {
+                    if (!$wire.isEditing || !this.initialForm) return false;
+                    const current = JSON.stringify({
+                        wo: $wire.editWoNumber || '',
+                        trelloId: $wire.editTrelloCardId || '',
+                        company: $wire.editCompanyName || '',
+                        resp: $wire.editResponsiblePerson || '',
+                        task: $wire.editTaskName || '',
+                        designers: Array.from($wire.editDesignerIds || []).sort(),
+                        status: $wire.editCoreStatus || '',
+                        substatus: $wire.editSubstatus || '',
+                        due: $wire.editDueDate || '',
+                        clientRev: $wire.editClientRevisionCount || 0,
+                        internalRev: $wire.editInternalRevisionCount || 0
+                    });
+                    return current !== this.initialForm;
+                },
+                isCommentDirty() {
+                    const c = ($wire.newTrelloComment || '').trim();
+                    return c.length > 0;
+                },
+                isDirty() {
+                    return this.isEditDirty() || this.isCommentDirty();
+                },
+                confirmClose(action) {
+                    if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
+                        return;
+                    }
+                    let title = '¿Descartar cambios sin guardar?';
+                    let description = 'Tienes información editada que no ha sido guardada. Si sales ahora, estos cambios se perderán.';
 
-        <!-- Slide-over Right Panel (Fully Responsive Width) -->
-        <div class="fixed inset-y-0 right-0 z-50 w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
+                    if (this.isEditDirty() && this.isCommentDirty()) {
+                        title = '¿Descartar cambios y borrador de comentario?';
+                        description = 'Tienes información editada en los campos de la orden y un comentario sin publicar. Si sales ahora, se perderán ambos.';
+                    } else if (this.isEditDirty()) {
+                        title = '¿Descartar edición de la orden?';
+                        description = 'Tienes cambios realizados en la información de la orden sin guardar. Si sales ahora, la orden conservará sus datos anteriores.';
+                    } else if (this.isCommentDirty()) {
+                        title = '¿Salir sin publicar el comentario?';
+                        description = 'Tienes un borrador de comentario escrito en la tarjeta. Si sales ahora, el texto de tu comentario se borrará.';
+                    }
+
+                    if (this.isDirty()) {
+                        window.KudosDirtyGuard.openConfirmModal({
+                            title: title,
+                            description: description,
+                            confirmText: 'Sí, descartar y salir',
+                            cancelText: 'Continuar editando',
+                            onConfirm: () => {
+                                window.KudosDirtyGuard.unregister('order-detail-modal');
+                                action();
+                            }
+                        });
+                    } else {
+                        action();
+                    }
+                }
+            }"
+            @keydown.window.escape="confirmClose(() => $wire.closeModal())"
+            class="fixed inset-0 z-[100] flex"
+        >
+            <!-- Backdrop Overlay -->
+            <div @click="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[100] bg-black/30 backdrop-blur-xs transition-opacity"></div>
+
+            <!-- Slide-over Right Panel (Fully Responsive Width) -->
+            <div class="fixed inset-y-0 right-0 z-[100] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
             
             <!-- Flyout Header (Notion Page Header) -->
             <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white sticky top-0 z-20 space-y-3">
@@ -21,6 +107,13 @@
                         @else
                             <span class="px-2 py-0.5 rounded font-mono text-[11px] font-semibold bg-stone-100 text-zinc-500 border border-stone-200">
                                 SIN WO
+                            </span>
+                        @endif
+
+                        @if($order->is_missing_from_trello)
+                            <span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-stone-200 text-stone-700 border border-stone-300 flex items-center gap-1 shadow-2xs">
+                                <x-lucide-alert-triangle class="w-3 h-3 text-stone-600" />
+                                <span>FALTA EN TRELLO</span>
                             </span>
                         @endif
 
@@ -66,6 +159,13 @@
                             </button>
                         @endif
 
+                        @if($order->isBlocked())
+                            <button wire:click="openUnblockModal" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer">
+                                <x-lucide-unlock class="w-3.5 h-3.5 shrink-0" />
+                                <span>Desbloquear</span>
+                            </button>
+                        @endif
+
                         @if(!$order->approved || in_array($order->core_status, [\App\Enums\CoreStatus::ENVIADO_AL_CLIENTE, \App\Enums\CoreStatus::ENVIADO_A_CAMILA]))
                             <button wire:click="$set('showApprovalModal', true)" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0">
                                 <x-lucide-check-circle-2 class="w-3.5 h-3.5 shrink-0" />
@@ -86,7 +186,7 @@
 
                         <div class="h-4 w-px bg-stone-200 mx-0.5 hidden sm:block"></div>
 
-                        <button wire:click="closeModal" class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition shrink-0" title="Cerrar panel">
+                        <button @click="confirmClose(() => $wire.closeModal())" class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition shrink-0 cursor-pointer" title="Cerrar panel">
                             <x-lucide-x class="w-4 h-4" />
                         </button>
                     </div>
@@ -102,9 +202,18 @@
                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
                     </button>
                     <div class="space-y-1 min-w-0 flex-1">
-                        <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
-                            {{ $order->company_name }}
-                        </h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
+                                {{ $order->company_name }}
+                            </h2>
+
+                            @if($order->location_name || $order->clientLocation)
+                                <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] text-zinc-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0" title="Locación del Cliente">
+                                    <x-lucide-map-pin class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <span>{{ $order->location_name ?: $order->clientLocation?->name }}</span>
+                                </span>
+                            @endif
+                        </div>
 
                         @if($order->task_name)
                             <p class="text-xs text-zinc-500 font-normal leading-relaxed break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
@@ -158,6 +267,51 @@
 
             <!-- Flyout Body (Scrollable Notion Page Content) -->
             <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-5 scrollbar-thin">
+
+                <!-- Pending WO Update Alert Banner -->
+                @if($order->pending_wo_number)
+                    <div class="bg-amber-50/90 border-2 border-amber-400 rounded-xl p-4 shadow-sm space-y-3 shrink-0 ring-2 ring-amber-200/50 animate-in fade-in zoom-in duration-150">
+                        <div class="flex items-start gap-3">
+                            <div class="p-2 rounded-xl bg-amber-500 text-white shrink-0 shadow-2xs">
+                                <x-lucide-alert-triangle class="w-5 h-5 stroke-[2.5]" />
+                            </div>
+                            <div class="min-w-0 flex-1 space-y-1">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <h4 class="font-bold text-xs text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                                        {{ __('Actualización de WO desde Trello disponible') }}
+                                    </h4>
+                                    <span class="px-2 py-0.5 rounded-full bg-amber-200/70 border border-amber-300 text-[10px] font-bold text-amber-900">
+                                        {{ __('Requiere decisión') }}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-amber-900 leading-relaxed">
+                                    Se detectó un nuevo número de WO en Trello: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">{{ $order->pending_wo_number }}</strong> <span class="text-[11px] text-amber-800">(Trello card title)</span>.
+                                </p>
+                                <p class="text-xs text-amber-900 leading-relaxed">
+                                    El número registrado actualmente en DOES es: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">{{ $order->wo_number ?: 'Sin WO / WO 0000' }}</strong> <span class="text-[11px] text-amber-800">(DOES)</span>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-amber-200">
+                            <button 
+                                type="button" 
+                                wire:click="dismissPendingWo" 
+                                class="px-3 py-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100/70 text-amber-900 font-semibold text-xs transition cursor-pointer shadow-2xs flex items-center gap-1">
+                                <x-lucide-x class="w-3.5 h-3.5 text-amber-700" />
+                                <span>{{ __('Conservar') }} {{ $order->wo_number ?: 'actual' }} (DOES)</span>
+                            </button>
+
+                            <button 
+                                type="button" 
+                                wire:click="acceptPendingWo" 
+                                class="px-3.5 py-1.5 rounded-lg bg-amber-900 hover:bg-amber-800 active:bg-amber-950 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                                <x-lucide-check class="w-4 h-4 text-emerald-400 stroke-[3]" />
+                                <span>{{ __('Actualizar a') }} {{ $order->pending_wo_number }} (Trello)</span>
+                            </button>
+                        </div>
+                    </div>
+                @endif
                 
                 @if($isEditing)
                     <!-- EDIT FORM MODE -->
@@ -189,7 +343,8 @@
                                          $wire.set('editTrelloCardId', id);
                                          this.open = false;
                                      }
-                                 }">
+                                 }"
+                                 x-dropdown-nav>
                                 <label class="font-medium text-zinc-700 block flex items-center gap-1">
                                     <x-lucide-external-link class="w-3.5 h-3.5 text-blue-600" />
                                     <span>ID / Link Tarjeta Trello:</span>
@@ -227,10 +382,11 @@
                                     </div>
 
                                     @forelse($availableTrelloCards as $tc)
-                                        <div 
+                                        <button 
+                                            type="button"
                                             x-show="!$wire.editTrelloCardId || '{{ strtolower(addslashes($tc->trello_card_id . ' ' . $tc->wo_number . ' ' . $tc->company_name . ' ' . $tc->task_name . ' ' . $tc->trello_title)) }}'.includes(($wire.editTrelloCardId || '').toLowerCase())"
                                             @click="selectCard('{{ $tc->trello_card_id }}')" 
-                                            class="p-2 hover:bg-blue-50/70 cursor-pointer flex items-center justify-between gap-2 transition">
+                                            class="w-full text-left p-2 hover:bg-blue-50/70 focus:bg-blue-50 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
                                             <div class="min-w-0">
                                                 <span class="font-bold text-zinc-900 block truncate text-[11px]">
                                                     {{ $tc->trello_title ?: ($tc->company_name ?: 'Tarjeta Trello') }}
@@ -242,7 +398,7 @@
                                             <span class="font-mono text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
                                                 {{ substr($tc->trello_card_id, 0, 8) }}...
                                             </span>
-                                        </div>
+                                        </button>
                                     @empty
                                         <div class="p-3 text-center text-zinc-400 italic text-[11px]">No hay tarjetas registradas aún.</div>
                                     @endforelse
@@ -257,7 +413,8 @@
                                          $wire.set('editResponsiblePerson', resp);
                                          this.open = false;
                                      }
-                                 }">
+                                 }"
+                                 x-dropdown-nav>
                                 <label class="font-medium text-zinc-700 block">Persona Responsable / Cliente:</label>
                                 <div class="relative">
                                     <input 
@@ -284,12 +441,13 @@
                                     x-transition:enter-end="opacity-100 scale-100"
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-40 overflow-y-auto divide-y divide-stone-100 text-xs">
                                     @forelse($existingResponsibles as $resp)
-                                        <div 
+                                        <button 
+                                            type="button"
                                             x-show="!$wire.editResponsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.editResponsiblePerson || '').toLowerCase())"
                                             @click="selectResp('{{ addslashes($resp) }}')" 
-                                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition">
+                                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition">
                                             {{ $resp }}
-                                        </div>
+                                        </button>
                                     @empty
                                         <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo nombre...</div>
                                     @endforelse
@@ -304,7 +462,8 @@
                                          $wire.set('editCompanyName', comp);
                                          this.open = false;
                                      }
-                                 }">
+                                 }"
+                                 x-dropdown-nav>
                                 <label class="font-medium text-zinc-700 block">Nombre de Empresa:</label>
                                 <div class="relative">
                                     <input 
@@ -331,16 +490,27 @@
                                     x-transition:enter-end="opacity-100 scale-100"
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-40 overflow-y-auto divide-y divide-stone-100 text-xs">
                                     @forelse($existingCompanies as $comp)
-                                        <div 
+                                        <button 
+                                            type="button"
                                             x-show="!$wire.editCompanyName || '{{ strtolower(addslashes($comp)) }}'.includes(($wire.editCompanyName || '').toLowerCase())"
                                             @click="selectComp('{{ addslashes($comp) }}')" 
-                                            class="p-2 hover:bg-stone-100 cursor-pointer font-bold text-zinc-900 transition">
+                                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-bold text-zinc-900 transition">
                                             {{ $comp }}
-                                        </div>
+                                        </button>
                                     @empty
                                         <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo nombre de empresa...</div>
                                     @endforelse
                                 </div>
+                            </div>
+
+                            <!-- Locación / Sede -->
+                            <div class="space-y-1">
+                                <label class="font-medium text-zinc-700 block">Locación / Sede (Opcional):</label>
+                                <input 
+                                    type="text" 
+                                    wire:model="editLocationName" 
+                                    placeholder="Ej: TALPA 8, SEDE NORTE..." 
+                                    class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full uppercase font-semibold text-emerald-700">
                             </div>
 
                             <!-- Tarea -->
@@ -397,7 +567,8 @@
                                          $wire.set('editCoreStatus', val);
                                          this.open = false;
                                      }
-                                 }">
+                                 }"
+                                 x-dropdown-nav>
                                 <label class="font-medium text-zinc-700 block">Lista Trello / Estado Principal:</label>
                                 <div class="relative">
                                     <button 
@@ -417,14 +588,15 @@
                                     x-transition:enter-end="opacity-100 scale-100"
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
                                     @foreach($coreStatuses as $st)
-                                        <div 
+                                        <button 
+                                            type="button"
                                             @click="selectStatus('{{ $st->value }}')" 
-                                            class="p-2 hover:bg-stone-100 cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
                                             <span>{{ $st->label() }}</span>
                                             @if($editCoreStatus === $st->value)
                                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                                             @endif
-                                        </div>
+                                        </button>
                                     @endforeach
                                 </div>
                             </div>
@@ -437,7 +609,8 @@
                                          $wire.set('editSubstatus', val);
                                          this.open = false;
                                      }
-                                 }">
+                                 }"
+                                 x-dropdown-nav>
                                 <label class="font-medium text-zinc-700 block">Subestatus Operativo:</label>
                                 <div class="relative">
                                     <button 
@@ -463,25 +636,27 @@
                                     x-transition:enter-start="opacity-0 scale-95"
                                     x-transition:enter-end="opacity-100 scale-100"
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
-                                    <div 
+                                    <button 
+                                        type="button"
                                         @click="selectSub('')" 
-                                        class="p-2.5 hover:bg-stone-100 cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
+                                        class="w-full text-left p-2.5 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
                                         <span>Sin Subestatus</span>
                                         @if(!$editSubstatus)
                                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                                         @endif
-                                    </div>
+                                    </button>
                                     @foreach($substatuses as $sub)
-                                        <div 
+                                        <button 
+                                            type="button"
                                             @click="selectSub('{{ $sub->value }}')" 
-                                            class="p-2 hover:bg-stone-100 cursor-pointer transition flex items-center justify-between">
+                                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer transition flex items-center justify-between">
                                             <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $sub->badgeStyle() }}">
                                                 {{ $sub->value }}
                                             </span>
                                             @if($editSubstatus === $sub->value)
                                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                                             @endif
-                                        </div>
+                                        </button>
                                     @endforeach
                                 </div>
                             </div>
@@ -501,7 +676,7 @@
 
                         <!-- Form Save Buttons -->
                         <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e9e9e7]">
-                            <button wire:click="cancelEditing" class="px-3 py-1.5 rounded-md bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium transition">
+                            <button type="button" @click.prevent="confirmClose(() => $wire.cancelEditing())" class="px-3 py-1.5 rounded-md bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium transition cursor-pointer">
                                 Cancelar
                             </button>
                             
@@ -544,18 +719,34 @@
                             </span>
                         </div>
 
-                        <div class="min-w-0">
+                        <div class="min-w-0 {{ !$order->trello_card_id ? 'col-span-1 sm:col-span-2 lg:col-span-1' : '' }}">
                             <span class="text-zinc-500 block text-[10px] uppercase font-semibold">ID Tarjeta Trello:</span>
                             @if($order->trello_card_id)
-                                <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition max-w-full min-w-0" title="{{ $order->trello_card_id }}">
+                                <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition max-w-full min-w-0 whitespace-nowrap" title="{{ $order->trello_card_id }}">
                                     <x-lucide-external-link class="w-3 h-3 text-blue-500 shrink-0" />
                                     <span class="truncate">{{ $order->trello_card_id }}</span>
                                 </a>
                             @else
-                                <button wire:click="startEditing" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[11px] font-medium bg-stone-100 text-zinc-500 hover:text-zinc-800 border border-stone-200 transition" title="Haz clic para vincular id de Trello">
-                                    <x-lucide-plus class="w-3 h-3 shrink-0" />
-                                    <span>Vincular</span>
-                                </button>
+                                <div class="flex items-center gap-1 mt-1 flex-wrap sm:flex-nowrap">
+                                    <button 
+                                        wire:click="createCardOnTrello" 
+                                        wire:loading.attr="disabled"
+                                        type="button"
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50" 
+                                        title="Crear nueva tarjeta en Trello para esta orden">
+                                        <x-lucide-plus-circle wire:loading.class="hidden" wire:target="createCardOnTrello" class="w-3 h-3 text-blue-600 shrink-0" />
+                                        <x-lucide-loader-2 wire:loading wire:target="createCardOnTrello" class="w-3 h-3 text-blue-600 animate-spin shrink-0" />
+                                        <span class="whitespace-nowrap">Crear en Trello</span>
+                                    </button>
+                                    <button 
+                                        wire:click="startEditing" 
+                                        type="button"
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-stone-100 text-zinc-600 hover:text-zinc-900 border border-stone-200 transition cursor-pointer whitespace-nowrap shrink-0" 
+                                        title="Vincular ID existente de Trello">
+                                        <x-lucide-link class="w-3 h-3 shrink-0" />
+                                        <span class="whitespace-nowrap">Vincular</span>
+                                    </button>
+                                </div>
                             @endif
                         </div>
 
@@ -623,6 +814,17 @@
                                             <span class="font-bold text-zinc-900 text-xs truncate {{ $task->isDone() ? 'line-through text-zinc-400' : '' }}" title="{{ $task->title }}">
                                                 {{ $task->title }}
                                             </span>
+                                            @if($task->is_work_task !== false)
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0 flex items-center gap-1">
+                                                    <x-lucide-wrench class="w-2.5 h-2.5 text-blue-600" />
+                                                    <span>Trabajo</span>
+                                                </span>
+                                            @else
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0 flex items-center gap-1">
+                                                    <x-lucide-clipboard-list class="w-2.5 h-2.5 text-amber-600" />
+                                                    <span>Gestión</span>
+                                                </span>
+                                            @endif
                                             @if($task->type)
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-stone-100 text-zinc-600 border border-stone-200 shrink-0 uppercase tracking-wider">
                                                     {{ $task->type->value }}
@@ -650,6 +852,15 @@
                                         </button>
 
                                         <button 
+                                            wire:click="dismissTask({{ $task->id }})" 
+                                            wire:confirm="¿Descartar la subtarea '{{ addslashes($task->title) }}'?" 
+                                            class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-stone-100 hover:bg-rose-50 text-zinc-600 hover:text-rose-700 border border-stone-200 hover:border-rose-200 transition flex items-center gap-1 cursor-pointer"
+                                            title="Descartar subtarea">
+                                            <x-lucide-x-circle class="w-3 h-3 text-zinc-500 hover:text-rose-600 stroke-[2.5]" />
+                                            <span>Descartar</span>
+                                        </button>
+
+                                        <button 
                                             wire:click="deleteTask({{ $task->id }})" 
                                             wire:confirm="¿Estás seguro de eliminar la tarea gatillada '{{ addslashes($task->title) }}'?" 
                                             class="p-1.5 rounded-lg bg-white hover:bg-red-50 text-zinc-400 hover:text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
@@ -665,18 +876,52 @@
                             @endforelse
                         </div>
 
-                        <!-- Add Manual Task Input -->
-                        <div class="flex gap-2 pt-1">
-                            <input 
-                                type="text" 
-                                wire:model="newTaskTitle" 
-                                wire:keydown.enter="addTask" 
-                                placeholder="Añadir nueva tarea manual a esta orden... (Enter para guardar)" 
-                                class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:bg-white focus:border-stone-400 flex-1 font-normal">
-                            <button wire:click="addTask" class="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
-                                <x-lucide-plus class="w-3.5 h-3.5" />
-                                <span>Añadir Tarea</span>
-                            </button>
+                        <!-- Add Manual Task Form with Calendar Date & Working/Managing Toggle -->
+                        <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
+                                    <x-lucide-plus-circle class="w-3.5 h-3.5 text-zinc-500" />
+                                    <span>Añadir Nueva Subtarea</span>
+                                </span>
+                                <div class="flex items-center gap-1.5 text-xs">
+                                    <button 
+                                        type="button" 
+                                        wire:click="$set('newTaskIsWork', true)" 
+                                        class="px-2 py-1 rounded-md border text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer {{ $newTaskIsWork ? 'bg-blue-50 text-blue-800 border-blue-300 font-bold shadow-2xs' : 'bg-white text-zinc-600 border-stone-200 hover:bg-stone-100' }}"
+                                        title="Trabajo de diseño/producción (mueve a Trabajando Hoy si se agenda para hoy)">
+                                        <x-lucide-wrench class="w-3 h-3 text-blue-600" />
+                                        <span>Trabajo</span>
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        wire:click="$set('newTaskIsWork', false)" 
+                                        class="px-2 py-1 rounded-md border text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer {{ !$newTaskIsWork ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold shadow-2xs' : 'bg-white text-zinc-600 border-stone-200 hover:bg-stone-100' }}"
+                                        title="Gestión/Seguimiento administrativo (mantiene el estatus actual de la orden)">
+                                        <x-lucide-clipboard-list class="w-3 h-3 text-amber-600" />
+                                        <span>Gestión</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col sm:flex-row items-center gap-2">
+                                <input 
+                                    type="text" 
+                                    wire:model="newTaskTitle" 
+                                    wire:keydown.enter="addTask" 
+                                    placeholder="Nombre de la subtarea (ej: Ajustes Camila, Confirmar medidas...)" 
+                                    class="bg-white border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 flex-1 font-normal w-full">
+
+                                <div class="flex items-center gap-1.5 w-full sm:w-auto shrink-0">
+                                    <input 
+                                        type="date" 
+                                        wire:model="newTaskDate" 
+                                        class="bg-white border border-[#e9e9e7] rounded-lg px-2 py-1.5 text-xs text-zinc-700 font-medium focus:outline-none focus:border-stone-400 shrink-0">
+                                    <button wire:click="addTask" class="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                        <x-lucide-plus class="w-3.5 h-3.5" />
+                                        <span>Añadir</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -706,7 +951,7 @@
                                         <div class="min-w-0">
                                             <div class="flex items-center justify-between gap-2">
                                                 <span class="text-[11px] font-semibold text-zinc-500 tracking-tight">
-                                                    {{ $event->created_at->format('d M, g:i A') }}
+                                                    {{ $event->getDisplayDate() }}
                                                 </span>
                                                 @if($event->actor)
                                                     <span class="text-[9px] px-1.5 py-0.2 rounded bg-stone-200 text-zinc-600 font-medium">
@@ -720,9 +965,33 @@
                                             </h5>
 
                                             @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])))
-                                                <div class="mt-1 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium flex items-start gap-1.5">
-                                                    <x-lucide-message-square class="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                                                    <div><strong>Motivo:</strong> {{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</div>
+                                                <div class="mt-1 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium space-y-1">
+                                                    <div class="flex items-start gap-1.5">
+                                                        <x-lucide-message-square class="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                                        <div><strong>Motivo:</strong> {{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</div>
+                                                    </div>
+                                                    @if(isset($event->metadata['blocked_duration']))
+                                                        <div class="flex items-center gap-1.5 text-emerald-800 font-semibold pt-1 border-t border-amber-200/60">
+                                                            <x-lucide-clock class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                            <span>{{ __('Tiempo bloqueada: :duration', ['duration' => $event->metadata['blocked_duration']]) }}</span>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endif
+
+                                            @if(is_array($event->metadata) && isset($event->metadata['trigger_type']))
+                                                <div class="mt-1 p-2 rounded-md bg-purple-50 border border-purple-200 text-[11px] text-purple-900 font-medium space-y-0.5">
+                                                    <div class="flex items-center justify-between gap-1.5 font-bold text-purple-800">
+                                                        <span class="flex items-center gap-1">
+                                                            <x-lucide-zap class="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                                            <span>Origen: {{ $event->metadata['trigger_type'] }}</span>
+                                                        </span>
+                                                        @if(isset($event->metadata['priority']))
+                                                            <span class="px-1.5 py-0.2 rounded text-[9px] uppercase font-extrabold {{ $event->metadata['priority'] === 'urgent' ? 'bg-rose-100 text-rose-700 border border-rose-300' : 'bg-purple-100 text-purple-700' }}">
+                                                                {{ $event->metadata['priority'] }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
                                                 </div>
                                             @elseif($event->previous_value && $event->new_value && !str_contains($event->event_type, 'CREATED'))
                                                 <p class="text-[11px] text-zinc-500 mt-0.5">
@@ -786,7 +1055,297 @@
                     </div>
                 @endif
 
+                <!-- TRELLO COMMENTS SECTION -->
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-5 h-5 rounded bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] shadow-2xs">T</span>
+                            <span>Comentarios en Trello</span>
+                            @if(!empty($trelloComments))
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+                                    {{ count($trelloComments) }}
+                                </span>
+                            @endif
+                        </h4>
+                        @if($order->trello_card_id)
+                            <button wire:click="loadTrelloComments" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer">
+                                <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="loadTrelloComments" class="w-3.5 h-3.5" />
+                                <span>Actualizar</span>
+                            </button>
+                        @endif
+                    </div>
+
+                    @if(!$order->trello_card_id)
+                        <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs text-blue-900 flex items-center justify-between gap-3 shadow-2xs">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <x-lucide-info class="w-4 h-4 text-blue-500 shrink-0" />
+                                <span class="truncate">Esta orden no tiene tarjeta vinculada en Trello.</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button 
+                                    wire:click="createCardOnTrello" 
+                                    wire:loading.attr="disabled"
+                                    type="button"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition cursor-pointer disabled:opacity-50">
+                                    <x-lucide-plus-circle wire:loading.class="hidden" wire:target="createCardOnTrello" class="w-3.5 h-3.5 shrink-0" />
+                                    <x-lucide-loader-2 wire:loading wire:target="createCardOnTrello" class="w-3.5 h-3.5 animate-spin shrink-0" />
+                                    <span>Crear Tarjeta en Trello</span>
+                                </button>
+                            </div>
+                        </div>
+                    @else
+                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-4 shadow-2xs">
+                            <!-- Add Comment Form with Live Inline Preview Inside Typing Box -->
+                            <div class="space-y-2" x-data="{
+                                init() {
+                                    this.syncFromLivewire();
+                                    this.$watch('$wire.newTrelloComment', (val) => {
+                                        if (!val || val.trim() === '') {
+                                            if (this.$refs.editor) this.$refs.editor.innerHTML = '';
+                                        }
+                                    });
+                                },
+                                syncFromLivewire() {
+                                    if (!this.$refs.editor) return;
+                                    if (! $wire.newTrelloComment) {
+                                        this.$refs.editor.innerHTML = '';
+                                    }
+                                },
+                                syncToLivewire() {
+                                    const editor = this.$refs.editor;
+                                    if (!editor) return;
+                                    $wire.newTrelloComment = this.getMarkdownFromDOM(editor);
+                                },
+                                getMarkdownFromDOM(node) {
+                                    let text = '';
+                                    for (let child of node.childNodes) {
+                                        if (child.nodeType === Node.TEXT_NODE) {
+                                            text += child.nodeValue;
+                                        } else if (child.nodeType === Node.ELEMENT_NODE) {
+                                            const tag = child.tagName.toLowerCase();
+                                            const childContent = this.getMarkdownFromDOM(child);
+
+                                            if (tag === 'b' || tag === 'strong') {
+                                                text += '**' + childContent + '**';
+                                            } else if (tag === 'i' || tag === 'em') {
+                                                text += '*' + childContent + '*';
+                                            } else if (tag === 'code') {
+                                                text += '`' + childContent + '`';
+                                            } else if (tag === 'a') {
+                                                const href = child.getAttribute('href') || childContent;
+                                                text += '[' + childContent + '](' + href + ')';
+                                            } else if (tag === 'li') {
+                                                const parentTag = child.parentElement ? child.parentElement.tagName.toLowerCase() : '';
+                                                if (parentTag === 'ol') {
+                                                    const siblings = Array.from(child.parentElement.children).filter(c => c.tagName.toLowerCase() === 'li');
+                                                    const idx = siblings.indexOf(child) + 1;
+                                                    text += idx + '. ' + childContent.trim() + '\n';
+                                                } else {
+                                                    text += '- ' + childContent.trim() + '\n';
+                                                }
+                                            } else if (tag === 'ul' || tag === 'ol') {
+                                                text += (text && !text.endsWith('\n') ? '\n' : '') + childContent;
+                                            } else if (tag === 'div' || tag === 'p') {
+                                                text += (text && !text.endsWith('\n') ? '\n' : '') + childContent;
+                                            } else if (tag === 'br') {
+                                                text += '\n';
+                                            } else {
+                                                text += childContent;
+                                            }
+                                        }
+                                    }
+                                    return text;
+                                },
+                                handleInput() {
+                                    const sel = window.getSelection();
+                                    if (sel && sel.rangeCount > 0) {
+                                        const node = sel.anchorNode;
+                                        if (node && node.nodeType === Node.TEXT_NODE) {
+                                            const text = node.nodeValue || '';
+                                            if (/^[\-\*]\s/.test(text) && !this.isInList(node)) {
+                                                node.nodeValue = text.replace(/^[\-\*]\s/, '');
+                                                document.execCommand('insertUnorderedList', false, null);
+                                            } else if (/^\d+[\.\)]\s/.test(text) && !this.isInList(node)) {
+                                                node.nodeValue = text.replace(/^\d+[\.\)]\s/, '');
+                                                document.execCommand('insertOrderedList', false, null);
+                                            }
+                                        }
+                                    }
+                                    this.syncToLivewire();
+                                },
+                                isInList(node) {
+                                    let curr = node;
+                                    while (curr && curr !== this.$refs.editor) {
+                                        if (curr.nodeName === 'UL' || curr.nodeName === 'OL' || curr.nodeName === 'LI') {
+                                            return true;
+                                        }
+                                        curr = curr.parentNode;
+                                    }
+                                    return false;
+                                },
+                                handleKeydown(e) {
+                                    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+                                    // Cmd+Enter / Ctrl+Enter: Submit
+                                    if (isCmdOrCtrl && e.key === 'Enter') {
+                                        e.preventDefault();
+                                        this.syncToLivewire();
+                                        $wire.addTrelloComment();
+                                        return;
+                                    }
+
+                                    // Cmd+B / Ctrl+B: Bold
+                                    if (isCmdOrCtrl && (e.key === 'b' || e.key === 'B')) {
+                                        e.preventDefault();
+                                        document.execCommand('bold', false, null);
+                                        this.syncToLivewire();
+                                        return;
+                                    }
+
+                                    // Cmd+I / Ctrl+I: Italic
+                                    if (isCmdOrCtrl && (e.key === 'i' || e.key === 'I')) {
+                                        e.preventDefault();
+                                        document.execCommand('italic', false, null);
+                                        this.syncToLivewire();
+                                        return;
+                                    }
+
+                                    // Cmd+K / Ctrl+K: Link
+                                    if (isCmdOrCtrl && (e.key === 'k' || e.key === 'K')) {
+                                        e.preventDefault();
+                                        const url = prompt('Ingrese URL del enlace:', 'https://');
+                                        if (url) {
+                                            document.execCommand('createLink', false, url);
+                                            this.syncToLivewire();
+                                        }
+                                        return;
+                                    }
+                                },
+                                format(cmd, arg = null) {
+                                    this.$refs.editor.focus();
+                                    document.execCommand(cmd, false, arg);
+                                    this.syncToLivewire();
+                                }
+                            }">
+                                <style>
+                                    .comment-editor-box ul {
+                                        list-style-type: disc !important;
+                                        padding-left: 1.25rem !important;
+                                        margin-top: 0.25rem !important;
+                                        margin-bottom: 0.25rem !important;
+                                    }
+                                    .comment-editor-box ol {
+                                        list-style-type: decimal !important;
+                                        padding-left: 1.25rem !important;
+                                        margin-top: 0.25rem !important;
+                                        margin-bottom: 0.25rem !important;
+                                    }
+                                    .comment-editor-box li {
+                                        display: list-item !important;
+                                        margin-top: 0.125rem !important;
+                                        margin-bottom: 0.125rem !important;
+                                    }
+                                    .comment-editor-box a {
+                                        color: #0284c7 !important;
+                                        text-decoration: underline !important;
+                                        font-weight: 500 !important;
+                                    }
+                                    .comment-editor-box a:hover {
+                                        color: #0369a1 !important;
+                                    }
+                                </style>
+
+                                <!-- Unified Typing Box (Live Inline Preview) -->
+                                <div 
+                                    x-ref="editor"
+                                    contenteditable="true"
+                                    @input="handleInput()"
+                                    @keydown="handleKeydown($event)"
+                                    data-placeholder="Escribe un comentario..."
+                                    class="comment-editor-box w-full bg-white border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition min-h-[84px] max-h-[220px] overflow-y-auto font-sans leading-relaxed outline-none prose prose-xs max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-400 empty:before:pointer-events-none"></div>
+
+                                <div class="flex items-center justify-between pt-1">
+                                    <!-- Quick Formatting Buttons -->
+                                    <div class="flex items-center gap-1 text-[11px]">
+                                        <button type="button" @click="format('bold')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 font-bold text-zinc-700 transition" title="Negrita">B</button>
+                                        <button type="button" @click="format('italic')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 italic text-zinc-700 transition" title="Cursiva">I</button>
+                                        <button type="button" @click="const url = prompt('URL del enlace:', 'https://'); if(url) format('createLink', url);" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition underline" title="Enlace">Link</button>
+                                        <button type="button" @click="format('insertUnorderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="Lista con viñetas">• Viñetas</button>
+                                        <button type="button" @click="format('insertOrderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="Lista numerada">1. Lista</button>
+                                    </div>
+
+                                    <button 
+                                        wire:click="addTrelloComment" 
+                                        wire:loading.attr="disabled"
+                                        type="button" 
+                                        class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0">
+                                        <x-lucide-send wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
+                                        <x-lucide-loader-2 wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
+                                        <span>Publicar en Trello</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Comments List -->
+                            @if($isLoadingTrelloComments)
+                                <div class="py-4 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
+                                    <x-lucide-loader-2 class="w-4 h-4 animate-spin text-sky-600" />
+                                    <span>Cargando comentarios desde Trello...</span>
+                                </div>
+                            @elseif($trelloCommentError)
+                                <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+                                    <x-lucide-alert-circle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <strong>Nota de comentarios:</strong> {{ $trelloCommentError }}
+                                    </div>
+                                </div>
+                            @elseif(empty($trelloComments))
+                                <div class="py-3 text-center text-xs text-zinc-400">
+                                    No hay comentarios registrados en la tarjeta de Trello aún.
+                                </div>
+                            @else
+                                <div class="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin divide-y divide-[#e9e9e7]">
+                                    @foreach($trelloComments as $comment)
+                                        <div class="pt-3 first:pt-0 space-y-1.5">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    @if(!empty($comment['author_avatar']))
+                                                        <img src="{{ $comment['author_avatar'] }}" alt="{{ $comment['author_name'] }}" class="w-5 h-5 rounded-full object-cover shrink-0">
+                                                    @else
+                                                        <div class="w-5 h-5 rounded-full bg-sky-100 text-sky-700 font-bold text-[9px] flex items-center justify-center shrink-0">
+                                                            {{ strtoupper(substr($comment['author_name'] ?? 'T', 0, 1)) }}
+                                                        </div>
+                                                    @endif
+                                                    <span class="text-xs font-semibold text-zinc-900 truncate">
+                                                        {{ $comment['author_name'] }}
+                                                    </span>
+                                                    @if(!empty($comment['author_username']))
+                                                        <span class="text-[10px] text-zinc-400 truncate">
+                                                            @({{ $comment['author_username'] }})
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                @if(!empty($comment['date']))
+                                                    <span class="text-[10px] text-zinc-400 shrink-0 font-mono">
+                                                        {{ \Carbon\Carbon::parse($comment['date'])->diffForHumans() }}
+                                                    </span>
+                                                @endif
+                                            </div>
+
+                                            <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5">
+                                                {!! \Illuminate\Support\Str::markdown($comment['text'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                    @endif
+                </div>
+
             </div>
+
 
             <!-- Flyout Footer -->
             <div class="p-4 border-t border-[#e9e9e7] bg-[#f7f7f5] flex justify-end">
@@ -800,7 +1359,7 @@
 
     <!-- APPROVAL ACTION MODAL -->
     @if($showApprovalModal)
-        <div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
                 <div>
                     <h3 class="text-base font-semibold text-zinc-900">Confirmación de Aprobación</h3>
@@ -874,7 +1433,7 @@
 
     <!-- DELAY RESOLUTION MODAL -->
     @if($showDelayModal)
-        <div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
                 <div>
                     <h3 class="text-base font-semibold text-zinc-900">Resolver Atraso</h3>
@@ -899,6 +1458,65 @@
                     </button>
                     <button wire:click="submitDelayResolution" class="px-3.5 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium text-xs shadow-2xs">
                         Guardar & Resolver Atraso
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- UNBLOCK MODAL -->
+    @if($showUnblockModal)
+        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" wire:keydown.escape="closeUnblockModal">
+            <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                            <x-lucide-unlock class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Desbloquear Orden') }}</h3>
+                            <p class="text-xs text-zinc-500">{{ $order->company_name }} &mdash; {{ $order->task_name }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeUnblockModal" class="text-zinc-400 hover:text-zinc-600 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="block text-xs font-medium text-zinc-700">
+                        {{ __('¿Cómo se resolvió el bloqueo o qué acción se tomó?') }} <span class="text-rose-500">*</span>
+                    </label>
+
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" wire:click="selectPresetReason('Medidas confirmadas y recibidas')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
+                            ✓ {{ __('Medidas confirmadas') }}
+                        </button>
+                        <button type="button" wire:click="selectPresetReason('Cliente aprobó información')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
+                            ✓ {{ __('Cliente aprobó información') }}
+                        </button>
+                        <button type="button" wire:click="selectPresetReason('Estimado aprobado')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
+                            ✓ {{ __('Estimado aprobado') }}
+                        </button>
+                        <button type="button" wire:click="selectPresetReason('Resuelto por Atención a Clientes')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
+                            ✓ {{ __('Resuelto por Atención a Clientes') }}
+                        </button>
+                    </div>
+
+                    <textarea wire:model="unblockReason" rows="3" class="w-full rounded-lg border border-stone-300 p-2.5 text-xs text-zinc-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-zinc-400" placeholder="{{ __('Describe el motivo o detalles de la resolución...') }}"></textarea>
+
+                    @error('unblockReason')
+                        <p class="text-xs text-rose-600 font-medium">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e9e9e7]">
+                    <button wire:click="closeUnblockModal" type="button" class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmUnblock" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
+                        <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
+                        <span>{{ __('Confirmar Desbloqueo') }}</span>
                     </button>
                 </div>
             </div>

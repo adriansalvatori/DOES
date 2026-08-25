@@ -4,7 +4,10 @@ namespace App\Models;
 
 use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Services\AutomationEngine;
+use App\Services\TrelloSyncService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Order extends Model
 {
@@ -22,6 +26,9 @@ class Order extends Model
         'trello_created_at',
         'wo_number',
         'company_name',
+        'location_name',
+        'client_id',
+        'client_location_id',
         'responsible_person',
         'task_name',
         'trello_title',
@@ -46,6 +53,9 @@ class Order extends Model
         'customer_service_required',
         'in_workspace',
         'is_new_from_trello',
+        'is_missing_from_trello',
+        'pending_wo_number',
+        'archived_at',
     ];
 
     protected $casts = [
@@ -66,29 +76,71 @@ class Order extends Model
         'customer_service_required' => 'boolean',
         'in_workspace' => 'boolean',
         'is_new_from_trello' => 'boolean',
+        'is_missing_from_trello' => 'boolean',
         'client_revision_count' => 'integer',
         'internal_revision_count' => 'integer',
+        'archived_at' => 'datetime',
     ];
 
     public function scopeInWorkspace(Builder $query): Builder
     {
-        return $query->where('in_workspace', true);
+        return $query->where('in_workspace', true)
+            ->where('core_status', '!=', CoreStatus::ARCHIVED);
     }
 
     public function scopeActiveInWorkspace(Builder $query): Builder
     {
         return $query->where('in_workspace', true)
-            ->where('core_status', '!=', CoreStatus::EN_PRODUCCION);
+            ->whereNotIn('core_status', [CoreStatus::EN_PRODUCCION, CoreStatus::ARCHIVED]);
     }
 
     public function scopeInBacklog(Builder $query): Builder
     {
-        return $query->where('in_workspace', false);
+        return $query->where('in_workspace', false)
+            ->where('core_status', '!=', CoreStatus::ARCHIVED);
+    }
+
+    public function scopeArchived(Builder $query): Builder
+    {
+        return $query->where('core_status', CoreStatus::ARCHIVED);
+    }
+
+    public function getDaysToCloseAttribute(): ?int
+    {
+        if (! $this->archived_at) {
+            return null;
+        }
+
+        $start = $this->start_date ? Carbon::parse($this->start_date)->startOfDay() : $this->created_at->startOfDay();
+        $closed = $this->archived_at->startOfDay();
+
+        return (int) max(0, $start->diffInDays($closed));
     }
 
     public function scopeNewFromTrello(Builder $query): Builder
     {
         return $query->where('is_new_from_trello', true);
+    }
+
+    public function hasNoWo(): bool
+    {
+        if (empty($this->wo_number)) {
+            return true;
+        }
+
+        $clean = trim(preg_replace('/^WO\s*/i', '', $this->wo_number));
+
+        return empty($clean) || (bool) preg_match('/^0+$/', $clean);
+    }
+
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class);
+    }
+
+    public function clientLocation(): BelongsTo
+    {
+        return $this->belongsTo(ClientLocation::class, 'client_location_id');
     }
 
     public function designer(): BelongsTo
@@ -159,16 +211,29 @@ class Order extends Model
 
     public function isDueToday(): bool
     {
-        if (! $this->in_workspace || $this->isPaused() || $this->core_status === CoreStatus::EN_PRODUCCION || $this->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
+        if ($this->done_today || ! $this->in_workspace || $this->isPaused() || $this->core_status === CoreStatus::EN_PRODUCCION || $this->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
             return false;
         }
 
         return (bool) ($this->current_due_date && $this->current_due_date->isToday());
     }
 
+    public function isAlmostOverdue(): bool
+    {
+        if (! $this->isDueToday()) {
+            return false;
+        }
+
+        return now()->hour < 16;
+    }
+
     public function isOverdue(): bool
     {
-        if (! $this->in_workspace) {
+        if ($this->done_today || ! $this->in_workspace) {
+            return false;
+        }
+
+        if (! $this->current_due_date) {
             return false;
         }
 
@@ -176,16 +241,51 @@ class Order extends Model
             return true;
         }
 
-        if ($this->current_due_date
-            && $this->current_due_date->isPast()
-            && ! $this->current_due_date->isToday()
-            && ! $this->isPaused()
-            && $this->core_status !== CoreStatus::EN_PRODUCCION
-            && $this->core_status !== CoreStatus::ENVIADO_AL_CLIENTE) {
+        if ($this->isPaused() || $this->core_status === CoreStatus::EN_PRODUCCION || $this->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
+            return false;
+        }
+
+        if ($this->current_due_date->isPast() && ! $this->current_due_date->isToday()) {
+            return true;
+        }
+
+        if ($this->current_due_date->isToday() && now()->hour >= 16) {
             return true;
         }
 
         return false;
+    }
+
+    public function getDesignerOrdersReceivedStatus(): CoreStatus
+    {
+        $designerName = $this->designer?->name ?? $this->designers->first()?->name;
+
+        return match ($designerName) {
+            'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+        };
+    }
+
+    public function getPrimaryDesignerId(): ?int
+    {
+        if ($this->designer_id) {
+            $designer = Designer::find($this->designer_id);
+            if ($designer && $designer->active) {
+                return $designer->id;
+            }
+        }
+
+        $firstPivot = $this->designers->first(fn ($d) => $d->active);
+        if ($firstPivot) {
+            return $firstPivot->id;
+        }
+
+        if ($this->designer_id) {
+            return $this->designer_id;
+        }
+
+        return Designer::where('active', true)->first()?->id ?? Designer::first()?->id;
     }
 
     public function isPaused(): bool
@@ -205,7 +305,82 @@ class Order extends Model
 
     public function isBlocked(): bool
     {
-        return $this->substatus === Substatus::BLOQUEADA;
+        return $this->substatus === Substatus::BLOQUEADA
+            || $this->substatus === Substatus::FALTA_APROBACION_ESTIMADO
+            || (bool) $this->customer_service_required
+            || $this->blocking_reason !== null;
+    }
+
+    public function unblock(string $reason, ?string $actor = null): void
+    {
+        $previousStatus = $this->core_status;
+
+        $lastBlockedEvent = $this->events()
+            ->where(function ($q) {
+                $q->where('event_type', 'ORDER_BLOCKED')
+                    ->orWhere('new_value', CoreStatus::ENTRANTE->value)
+                    ->orWhere('metadata->substatus', Substatus::BLOQUEADA->value);
+            })
+            ->latest()
+            ->first();
+
+        $blockedAt = $lastBlockedEvent ? $lastBlockedEvent->created_at : ($this->updated_at ?? now());
+        $now = now();
+        $diffInHours = max(1, (int) ceil($blockedAt->diffInHours($now)));
+        $diffInDays = max(1, (int) ceil($blockedAt->diffInDays($now)));
+
+        if ($diffInHours < 24) {
+            $durationText = $diffInHours <= 1 ? __('menos de 1 hora') : __(':hours horas', ['hours' => $diffInHours]);
+        } else {
+            $durationText = $diffInDays === 1 ? __('1 día') : __(':days días', ['days' => $diffInDays]);
+        }
+
+        $designerStatus = match ($this->designer?->name) {
+            'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+        };
+
+        $targetStatus = ($this->core_status === CoreStatus::ENTRANTE) ? $designerStatus : ($this->core_status ?? $designerStatus);
+
+        $newSubstatus = ($this->substatus === Substatus::BLOQUEADA || $this->substatus === Substatus::FALTA_APROBACION_ESTIMADO) ? null : $this->substatus;
+
+        $this->update([
+            'core_status' => $targetStatus,
+            'substatus' => $newSubstatus,
+            'blocking_reason' => null,
+            'blocking_reason_other' => null,
+            'customer_service_required' => false,
+        ]);
+
+        $this->relatedTasks()
+            ->where('status', 'todo')
+            ->whereIn('type', [RelatedTaskType::BLOCKED, RelatedTaskType::RESOLVER])
+            ->update(['status' => 'done']);
+
+        OrderEvent::create([
+            'order_id' => $this->id,
+            'event_type' => 'ORDER_UNBLOCKED',
+            'actor' => $actor ?? auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $previousStatus?->value,
+            'new_value' => $targetStatus->value,
+            'metadata' => [
+                'reason' => $reason,
+                'blocked_days' => $diffInDays,
+                'blocked_duration' => $durationText,
+                'comment' => "Desbloqueado tras {$durationText}: {$reason}",
+            ],
+        ]);
+
+        app(AutomationEngine::class)->handleStatusChanged($this, $previousStatus, $targetStatus);
+
+        if ($this->trello_card_id) {
+            try {
+                app(TrelloSyncService::class)->updateCardOnTrello($this);
+            } catch (\Throwable $e) {
+                // Ignore network error
+            }
+        }
     }
 
     public function isUrgente(): bool
@@ -241,5 +416,71 @@ class Order extends Model
         }
 
         return $this->designer->dot_color_class;
+    }
+
+    public function isApproved(): bool
+    {
+        return (bool) ($this->approved || $this->substatus === Substatus::PONER_EN_ALTA);
+    }
+
+    public function isInProduction(): bool
+    {
+        return $this->core_status === CoreStatus::EN_PRODUCCION || $this->substatus === Substatus::AJUSTES_PRODUCCION || $this->substatus === Substatus::ENVIADO_EN_ALTA;
+    }
+
+    public function getCardBgClass(): string
+    {
+        if ($this->is_missing_from_trello) {
+            return 'bg-stone-100/90 border-2 border-dashed border-stone-300 text-stone-500 opacity-70 grayscale shadow-none';
+        }
+
+        if ($this->done_today) {
+            return 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0';
+        }
+
+        if ($this->isUrgente()) {
+            return 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40';
+        }
+
+        if ($this->isOverdue()) {
+            return 'bg-rose-50 border border-red-400 hover:border-red-500';
+        }
+
+        if ($this->isDueToday()) {
+            return 'bg-amber-50 border border-amber-300 hover:border-amber-400';
+        }
+
+        if ($this->isInProduction() || $this->isApproved()) {
+            return 'bg-pink-50/80 border border-pink-300 hover:border-pink-400 shadow-2xs';
+        }
+
+        return 'bg-white border border-[#e9e9e7] hover:border-stone-300';
+    }
+
+    public static function getActionRequiredCount(): int
+    {
+        $blockedOrdersCount = static::inWorkspace()
+            ->where(function ($q) {
+                $q->where('substatus', Substatus::BLOQUEADA)
+                    ->orWhere('substatus', Substatus::FALTA_APROBACION_ESTIMADO)
+                    ->orWhere('customer_service_required', true)
+                    ->orWhere(function ($dt) {
+                        $dt->where('core_status', CoreStatus::TO_DO_TODAY)
+                            ->where('done_today', true);
+                    })
+                    ->orWhere(function ($m) {
+                        $m->where('approved', true)->where('measures_confirmed', false);
+                    });
+            })->count();
+
+        $resolverTasksCount = RelatedTask::whereHas('order', fn ($q) => $q->inWorkspace())
+            ->where('status', 'todo')
+            ->whereIn('type', [
+                RelatedTaskType::RESOLVER,
+                RelatedTaskType::SOLICITAR_INFO,
+                RelatedTaskType::CORREO_ATRASO,
+            ])->count();
+
+        return $blockedOrdersCount + $resolverTasksCount;
     }
 }
