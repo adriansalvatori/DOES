@@ -64,8 +64,36 @@
             }
             $wire.scheduleSubtask(this.subtaskOrderId, this.subtaskTitle.trim(), this.subtaskDate, this.subtaskDesignerId, this.subtaskIsWorkTask);
             this.subtaskModalOpen = false;
+        },
+        undoToastOpen: false,
+        undoToastMessage: '',
+        undoToastTimer: null,
+        triggerUndoToast(msg) {
+            this.undoToastMessage = msg || '{{ __('Subtarea eliminada') }}';
+            this.undoToastOpen = true;
+            if (this.undoToastTimer) clearTimeout(this.undoToastTimer);
+            this.undoToastTimer = setTimeout(() => {
+                this.undoToastOpen = false;
+            }, 5000);
+        },
+        hideUndoToast() {
+            this.undoToastOpen = false;
+            if (this.undoToastTimer) clearTimeout(this.undoToastTimer);
         }
     }" 
+    @subtask-deleted.window="triggerUndoToast($event.detail.message)"
+    @subtask-restored.window="hideUndoToast()"
+    @keydown.window="(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            const active = document.activeElement;
+            const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable);
+            const hasModal = document.querySelector('[role=\'dialog\']');
+            if (!isInput && !hasModal && $wire.recentlyDeletedSubtaskIds.length > 0) {
+                e.preventDefault();
+                $wire.undoDeleteSubtask();
+            }
+        }
+    }"
     class="h-full flex flex-col space-y-4 text-xs font-sans bg-[#fbfbfa] min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-12 text-zinc-800">
 
     <!-- Top Sticky / Dynamic Toolbar Header -->
@@ -1560,5 +1588,34 @@
             </div>
         </div>
     @endif
+
+    <!-- Floating Bottom-Left Subtask Deletion Undo Toast -->
+    <div 
+        x-show="undoToastOpen" 
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-4"
+        x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 translate-y-0"
+        x-transition:leave-end="opacity-0 translate-y-4"
+        style="display: none;"
+        class="fixed bottom-5 left-5 z-50 flex items-center gap-3 px-3.5 py-2 rounded-xl bg-white/95 text-stone-800 text-xs font-medium shadow-xl shadow-stone-900/10 border border-stone-200/90 backdrop-blur-md">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+            <span class="text-stone-700 text-[11.5px] font-semibold truncate" x-text="undoToastMessage"></span>
+        </div>
+        <button 
+            wire:click="undoDeleteSubtask" 
+            @click="hideUndoToast()"
+            type="button" 
+            class="px-2.5 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-[10.5px] flex items-center gap-1.5 shrink-0 transition cursor-pointer shadow-2xs">
+            <x-lucide-undo-2 class="w-3 h-3 text-stone-300" />
+            <span>{{ __('Deshacer') }}</span>
+            <kbd class="hidden sm:inline-block px-1.5 py-0.2 text-[8.5px] bg-stone-700 text-stone-200 rounded font-mono">⌘Z</kbd>
+        </button>
+        <button @click="hideUndoToast()" type="button" class="p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-md transition">
+            <x-lucide-x class="w-3.5 h-3.5" />
+        </button>
+    </div>
 
 </div>

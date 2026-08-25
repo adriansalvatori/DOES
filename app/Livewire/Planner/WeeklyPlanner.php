@@ -31,6 +31,8 @@ class WeeklyPlanner extends Component
 
     public array $slaWarningDetails = [];
 
+    public array $recentlyDeletedSubtaskIds = [];
+
     public function closeSlaWarningModal()
     {
         $this->showSlaWarningModal = false;
@@ -315,8 +317,31 @@ class WeeklyPlanner extends Component
     {
         $subtask = RelatedTask::findOrFail($taskId);
         $subtask->delete();
-        session()->flash('message', __('Subtarea eliminada.'));
+        $this->recentlyDeletedSubtaskIds[] = (int) $taskId;
+
+        $this->dispatch('subtask-deleted', message: __('Subtarea eliminada'));
         $this->dispatch('order-updated');
+    }
+
+    public function undoDeleteSubtask()
+    {
+        if (empty($this->recentlyDeletedSubtaskIds)) {
+            $lastTrashed = RelatedTask::onlyTrashed()->latest('deleted_at')->first();
+            if ($lastTrashed) {
+                $this->recentlyDeletedSubtaskIds[] = (int) $lastTrashed->id;
+            }
+        }
+
+        if (! empty($this->recentlyDeletedSubtaskIds)) {
+            $taskId = array_pop($this->recentlyDeletedSubtaskIds);
+            $subtask = RelatedTask::onlyTrashed()->find($taskId);
+
+            if ($subtask) {
+                $subtask->restore();
+                $this->dispatch('subtask-restored');
+                $this->dispatch('order-updated');
+            }
+        }
     }
 
     public function unscheduleOrder($orderId)

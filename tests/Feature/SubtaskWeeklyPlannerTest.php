@@ -419,4 +419,40 @@ class SubtaskWeeklyPlannerTest extends TestCase
                     && $presets->pluck('title')->contains('Cambios Cliente');
             });
     }
+
+    public function test_can_delete_and_undo_subtask_deletion_in_weekly_planner(): void
+    {
+        $designer = Designer::create(['name' => 'Adrián', 'active' => true]);
+        $order = Order::create([
+            'company_name' => 'TAQUERIA UNDO TEST',
+            'task_name' => 'Menu Sign',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Subtarea borrable',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => now()->startOfWeek()->toDateString(),
+            'assignee_id' => $designer->id,
+        ]);
+
+        $component = Livewire::test(WeeklyPlanner::class);
+
+        $component->call('deleteSubtask', $subtask->id)
+            ->assertSet('recentlyDeletedSubtaskIds', [(int) $subtask->id])
+            ->assertSeeHtml('Subtarea');
+
+        $this->assertSoftDeleted('related_tasks', ['id' => $subtask->id]);
+
+        $component->call('undoDeleteSubtask');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $subtask->id,
+            'deleted_at' => null,
+        ]);
+    }
 }
