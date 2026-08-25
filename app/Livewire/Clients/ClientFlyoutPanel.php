@@ -89,8 +89,8 @@ class ClientFlyoutPanel extends Component
                 ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
             ];
             $this->links = [
-                ['id' => null, 'label' => 'Brandbook', 'url' => '', 'department' => 'Diseño'],
-                ['id' => null, 'label' => 'Assets / Recursos', 'url' => '', 'department' => 'Diseño'],
+                ['id' => null, 'label' => 'Brandbook', 'url' => '', 'department' => ''],
+                ['id' => null, 'label' => 'Assets / Recursos', 'url' => '', 'department' => ''],
             ];
             $this->locations = [
                 ['id' => null, 'name' => 'SEDE PRINCIPAL', 'address' => '', 'manager_name' => '', 'manager_phone' => '', 'notes' => ''],

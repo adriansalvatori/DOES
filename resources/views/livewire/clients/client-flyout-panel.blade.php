@@ -467,49 +467,39 @@
                         <div class="space-y-4">
                             @foreach($links as $index => $link)
                                 <div class="{{ $index > 0 ? 'pt-4 border-t border-zinc-200/60' : '' }} space-y-3">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-xs font-bold text-zinc-800 uppercase flex items-center gap-1.5">
-                                            <x-lucide-link class="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{{ __('Enlace #') . ($index + 1) }}</span>
-                                        </span>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <div class="flex items-center gap-1.5 flex-1 min-w-0">
+                                            <x-lucide-link class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                            <input 
+                                                type="text" 
+                                                wire:model="links.{{ $index }}.label" 
+                                                placeholder="{{ __('Nombre / Etiqueta del enlace') }}"
+                                                class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs text-zinc-900 font-bold uppercase tracking-wider focus:outline-none transition"
+                                            />
+                                        </div>
                                         <button 
                                             type="button" 
                                             wire:click="removeLink({{ $index }})"
-                                            class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1"
+                                            class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1 shrink-0"
                                         >
                                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                             <span>{{ __('Eliminar Enlace') }}</span>
                                         </button>
                                     </div>
 
-                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div>
-                                            <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Etiqueta') }}</label>
-                                            <input 
-                                                type="text" 
-                                                wire:model="links.{{ $index }}.label" 
-                                                placeholder="Ej. Brandbook, Assets"
-                                                class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-semibold"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Grupo / Depto') }}</label>
-                                            <input 
-                                                type="text" 
-                                                wire:model="links.{{ $index }}.department" 
-                                                placeholder="Ej. Diseño, Producción"
-                                                class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('URL Enlace (Drive/Web)') }}</label>
-                                            <input 
-                                                type="url" 
-                                                wire:model="links.{{ $index }}.url" 
-                                                placeholder="https://drive.google.com/..."
-                                                class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-mono"
-                                            />
-                                        </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <input 
+                                            type="text" 
+                                            wire:model="links.{{ $index }}.department" 
+                                            placeholder="{{ __('Notas (ej. Producción, versión...)') }}"
+                                            class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                        />
+                                        <input 
+                                            type="url" 
+                                            wire:model="links.{{ $index }}.url" 
+                                            placeholder="{{ __('URL Enlace (Drive/Web)') }}"
+                                            class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-mono"
+                                        />
                                     </div>
                                 </div>
                             @endforeach
