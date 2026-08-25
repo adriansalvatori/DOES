@@ -39,7 +39,8 @@
             <button 
                 wire:click="runTrelloSync" 
                 wire:loading.attr="disabled"
-                class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white font-medium text-xs shadow-2xs transition flex items-center gap-2 cursor-pointer">
+                :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20 font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-2xs font-medium'"
+                class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2">
                 <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="runTrelloSync" class="w-3.5 h-3.5" />
                 <span wire:loading.remove wire:target="runTrelloSync">{{ __('Sincronizar Desde Trello') }}</span>
                 <span wire:loading wire:target="runTrelloSync">{{ __('Sincronizando con Trello...') }}</span>

@@ -16,6 +16,7 @@
                         wo: $wire.editWoNumber || '',
                         trelloId: $wire.editTrelloCardId || '',
                         company: $wire.editCompanyName || '',
+                        location: $wire.editLocationName || '',
                         resp: $wire.editResponsiblePerson || '',
                         task: $wire.editTaskName || '',
                         designers: Array.from($wire.editDesignerIds || []).sort(),
@@ -32,6 +33,7 @@
                         wo: $wire.editWoNumber || '',
                         trelloId: $wire.editTrelloCardId || '',
                         company: $wire.editCompanyName || '',
+                        location: $wire.editLocationName || '',
                         resp: $wire.editResponsiblePerson || '',
                         task: $wire.editTaskName || '',
                         designers: Array.from($wire.editDesignerIds || []).sort(),
@@ -44,38 +46,52 @@
                     return current !== this.initialForm;
                 },
                 isCommentDirty() {
+                    if (!$wire.showModal) return false;
                     const c = ($wire.newTrelloComment || '').trim();
                     return c.length > 0;
                 },
                 isDirty() {
+                    if (!$wire.showModal) return false;
                     return this.isEditDirty() || this.isCommentDirty();
                 },
                 confirmClose(action) {
                     if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
                         return;
                     }
-                    let title = '¿Descartar cambios sin guardar?';
-                    let description = 'Tienes información editada que no ha sido guardada. Si sales ahora, estos cambios se perderán.';
+                    let title = '¿Guardar cambios de la orden?';
+                    let description = 'Tienes información editada en la orden sin guardar.';
 
                     if (this.isEditDirty() && this.isCommentDirty()) {
-                        title = '¿Descartar cambios y borrador de comentario?';
-                        description = 'Tienes información editada en los campos de la orden y un comentario sin publicar. Si sales ahora, se perderán ambos.';
+                        title = '¿Guardar cambios y publicar comentario?';
+                        description = 'Tienes información editada en los campos de la orden y un borrador de comentario.';
                     } else if (this.isEditDirty()) {
-                        title = '¿Descartar edición de la orden?';
-                        description = 'Tienes cambios realizados en la información de la orden sin guardar. Si sales ahora, la orden conservará sus datos anteriores.';
+                        title = '¿Guardar edición de la orden?';
+                        description = 'Tienes cambios realizados en los campos de la orden sin guardar.';
                     } else if (this.isCommentDirty()) {
-                        title = '¿Salir sin publicar el comentario?';
-                        description = 'Tienes un borrador de comentario escrito en la tarjeta. Si sales ahora, el texto de tu comentario se borrará.';
+                        title = '¿Publicar borrador de comentario?';
+                        description = 'Tienes un borrador de comentario escrito en la tarjeta.';
                     }
 
                     if (this.isDirty()) {
                         window.KudosDirtyGuard.openConfirmModal({
                             title: title,
                             description: description,
-                            confirmText: 'Sí, descartar y salir',
-                            cancelText: 'Continuar editando',
-                            onConfirm: () => {
+                            cancelText: 'Cancelar',
+                            discardText: 'No guardar',
+                            saveText: 'Guardar',
+                            onCancel: () => {},
+                            onDiscard: () => {
                                 window.KudosDirtyGuard.unregister('order-detail-modal');
+                                action();
+                            },
+                            onSave: () => {
+                                window.KudosDirtyGuard.unregister('order-detail-modal');
+                                if (this.isEditDirty()) {
+                                    $wire.saveOrder(false);
+                                }
+                                if (this.isCommentDirty()) {
+                                    $wire.postComment();
+                                }
                                 action();
                             }
                         });
@@ -680,12 +696,25 @@
                                 Cancelar
                             </button>
                             
-                            <button wire:click="saveOrder(false)" class="px-3.5 py-1.5 rounded-md bg-stone-800 hover:bg-stone-700 text-white font-medium text-xs transition">
-                                Guardar Cambios
+                            <button 
+                                type="button"
+                                wire:click="saveOrder(false)" 
+                                :disabled="!isEditDirty()"
+                                :class="isEditDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                                class="px-3.5 py-1.5 rounded-md font-semibold text-xs transition flex items-center gap-1.5"
+                            >
+                                <x-lucide-check class="w-3.5 h-3.5" x-show="isEditDirty()" />
+                                <span>Guardar Cambios</span>
                             </button>
 
                             @if(!$order->in_workspace)
-                                <button wire:click="saveOrder(true)" class="px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1">
+                                <button 
+                                    type="button"
+                                    wire:click="saveOrder(true)" 
+                                    :disabled="!isEditDirty()"
+                                    :class="isEditDirty() ? 'bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer shadow-sm shadow-emerald-700/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                                    class="px-3.5 py-1.5 rounded-md font-semibold text-xs shadow-2xs transition flex items-center gap-1.5"
+                                >
                                     <x-lucide-arrow-right-circle class="w-3.5 h-3.5" />
                                     <span>Guardar & Añadir a Workspace</span>
                                 </button>

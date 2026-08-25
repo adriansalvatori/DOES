@@ -50,7 +50,10 @@
             <!-- Save Mappings Button -->
             <button 
                 wire:click="saveMappings" 
-                class="px-3.5 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-2xs transition flex items-center gap-2 cursor-pointer">
+                @click="snapshot()"
+                :disabled="!isDirty()"
+                :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                class="px-3.5 py-1.5 rounded-md font-semibold text-xs transition flex items-center gap-2">
                 <x-lucide-save class="w-3.5 h-3.5" />
                 <span>{{ __('Guardar Mapeo') }}</span>
             </button>
@@ -180,7 +183,10 @@
         <div class="pt-3 border-t border-stone-100 flex justify-end">
             <button 
                 wire:click="saveMappings" 
-                class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl shadow-2xs transition cursor-pointer flex items-center gap-1.5">
+                @click="snapshot()"
+                :disabled="!isDirty()"
+                :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 font-bold">
                 <x-lucide-save class="w-3.5 h-3.5" />
                 <span>{{ __('Guardar Cambios de Mapeo') }}</span>
             </button>

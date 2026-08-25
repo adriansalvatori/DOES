@@ -97,6 +97,25 @@ window.addEventListener('beforeunload', (event) => {
     }
 });
 
+// Intercept internal link navigation if unsaved changes exist
+document.addEventListener('click', (event) => {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href.startsWith('#') || href.startsWith('javascript:') || link.getAttribute('target') === '_blank') {
+        return;
+    }
+
+    if (window.KudosDirtyGuard && window.KudosDirtyGuard.isDirty()) {
+        event.preventDefault();
+        event.stopPropagation();
+        window.KudosDirtyGuard.confirmIfDirty(() => {
+            window.location.href = href;
+        });
+    }
+}, true);
+
 // Kudos Design Ops - Global Dropdown Navigation Manager
 window.KudosDropdownNav = {
     handleKeydown(event, container, openSetter) {

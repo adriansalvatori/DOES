@@ -239,12 +239,25 @@
             <div 
                 x-data="{
                     initialTitle: null,
+                    initialIsWorkTask: null,
+                    initialEmoji: null,
+                    initialColorTheme: null,
+                    initialIsActive: null,
                     init() {
                         this.initialTitle = $wire.title || '';
+                        this.initialIsWorkTask = Boolean($wire.is_work_task);
+                        this.initialEmoji = $wire.emoji || '';
+                        this.initialColorTheme = $wire.color_theme || '';
+                        this.initialIsActive = Boolean($wire.is_active);
                         window.KudosDirtyGuard.register('subtask-preset-modal', () => this.isDirty());
                     },
                     isDirty() {
-                        return ($wire.title || '').trim() !== (this.initialTitle || '').trim();
+                        if (!$wire.showModal) return false;
+                        return ($wire.title || '').trim() !== (this.initialTitle || '').trim() ||
+                               Boolean($wire.is_work_task) !== this.initialIsWorkTask ||
+                               ($wire.emoji || '') !== this.initialEmoji ||
+                               ($wire.color_theme || '') !== this.initialColorTheme ||
+                               Boolean($wire.is_active) !== this.initialIsActive;
                     },
                     confirmClose(action) {
                         if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
@@ -252,13 +265,19 @@
                         }
                         if (this.isDirty()) {
                             window.KudosDirtyGuard.openConfirmModal({
-                                title: @js(__('¿Descartar cambios en la subtarea?')),
-                                description: @js(__('Has ingresado o editado información de esta plantilla de subtarea. Si cierras sin guardar, los cambios se borrarán.')),
-                                confirmText: @js(__('Sí, descartar cambios')),
-                                cancelText: @js(__('Continuar editando')),
-                                onConfirm: () => {
+                                title: @js(__('¿Guardar subtarea?')),
+                                description: @js(__('Has ingresado o editado información de esta plantilla de subtarea.')),
+                                cancelText: @js(__('Cancelar')),
+                                discardText: @js(__('No guardar')),
+                                saveText: @js(__('Guardar')),
+                                onCancel: () => {},
+                                onDiscard: () => {
                                     window.KudosDirtyGuard.unregister('subtask-preset-modal');
                                     action();
+                                },
+                                onSave: () => {
+                                    window.KudosDirtyGuard.unregister('subtask-preset-modal');
+                                    $wire.save();
                                 }
                             });
                         } else {
@@ -407,8 +426,12 @@
                         </button>
                         <button 
                             type="submit" 
-                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-2xs transition cursor-pointer">
-                            {{ __('Guardar Subtarea') }}
+                            :disabled="!isDirty()"
+                            :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                            class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5"
+                        >
+                            <x-lucide-check class="w-3.5 h-3.5" x-show="isDirty()" />
+                            <span>{{ __('Guardar Subtarea') }}</span>
                         </button>
                     </div>
                 </form>

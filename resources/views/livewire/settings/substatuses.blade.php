@@ -112,13 +112,18 @@
                 x-data="{
                     initialName: null,
                     initialColor: null,
+                    initialStyleType: null,
                     init() {
                         this.initialName = $wire.name || '';
                         this.initialColor = $wire.main_color || '';
+                        this.initialStyleType = $wire.style_type || '';
                         window.KudosDirtyGuard.register('substatus-modal', () => this.isDirty());
                     },
                     isDirty() {
-                        return ($wire.name || '') !== this.initialName || ($wire.main_color || '') !== this.initialColor;
+                        if (!$wire.showModal) return false;
+                        return ($wire.name || '') !== this.initialName || 
+                               ($wire.main_color || '') !== this.initialColor ||
+                               ($wire.style_type || '') !== this.initialStyleType;
                     },
                     confirmClose(action) {
                         if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
@@ -126,13 +131,19 @@
                         }
                         if (this.isDirty()) {
                             window.KudosDirtyGuard.openConfirmModal({
-                                title: @js(__('¿Descartar cambios en subestatus?')),
-                                description: @js(__('Has modificado la configuración de este subestatus. Si sales sin guardar, tus ajustes se descartarán.')),
-                                confirmText: @js(__('Sí, descartar cambios')),
-                                cancelText: @js(__('Continuar editando')),
-                                onConfirm: () => {
+                                title: @js(__('¿Guardar cambios en subestatus?')),
+                                description: @js(__('Has modificado la configuración de este subestatus.')),
+                                cancelText: @js(__('Cancelar')),
+                                discardText: @js(__('No guardar')),
+                                saveText: @js(__('Guardar')),
+                                onCancel: () => {},
+                                onDiscard: () => {
                                     window.KudosDirtyGuard.unregister('substatus-modal');
                                     action();
+                                },
+                                onSave: () => {
+                                    window.KudosDirtyGuard.unregister('substatus-modal');
+                                    $wire.save();
                                 }
                             });
                         } else {
@@ -255,8 +266,12 @@
                         </button>
                         <button 
                             type="submit" 
-                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-2xs transition cursor-pointer">
-                            {{ __('Guardar Subestatus') }}
+                            :disabled="!isDirty()"
+                            :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                            class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5"
+                        >
+                            <x-lucide-check class="w-3.5 h-3.5" x-show="isDirty()" />
+                            <span>{{ __('Guardar Subestatus') }}</span>
                         </button>
                     </div>
                 </form>

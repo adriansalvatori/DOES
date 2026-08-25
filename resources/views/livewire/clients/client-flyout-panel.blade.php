@@ -1,9 +1,106 @@
-<div>
+<div 
+    x-data="{
+        initialSnapshot: null,
+        init() {
+            this.snapshot();
+            this.$watch('$wire.isOpen', (open) => {
+                if (open) {
+                    this.snapshot();
+                } else {
+                    window.KudosDirtyGuard.unregister('client-flyout-panel');
+                }
+            });
+            window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
+        },
+        snapshot() {
+            this.initialSnapshot = JSON.stringify({
+                name: ($wire.name || '').trim(),
+                website: ($wire.website || '').trim(),
+                notes: ($wire.notes || '').trim(),
+                locations: ($wire.locations || []).map(l => ({
+                    name: (l.name || '').trim(),
+                    manager_name: (l.manager_name || '').trim(),
+                    address: (l.address || '').trim(),
+                    phone: (l.phone || '').trim(),
+                    email: (l.email || '').trim(),
+                    notes: (l.notes || '').trim()
+                })),
+                contacts: ($wire.contacts || []).map(c => ({
+                    name: (c.name || '').trim(),
+                    department: (c.department || '').trim(),
+                    phone: (c.phone || '').trim(),
+                    email: (c.email || '').trim(),
+                    is_primary: Boolean(c.is_primary)
+                })),
+                links: ($wire.links || []).map(l => ({
+                    label: (l.label || '').trim(),
+                    department: (l.department || '').trim(),
+                    url: (l.url || '').trim()
+                }))
+            });
+        },
+        isDirty() {
+            if (!$wire.isOpen || !this.initialSnapshot) return false;
+            const current = JSON.stringify({
+                name: ($wire.name || '').trim(),
+                website: ($wire.website || '').trim(),
+                notes: ($wire.notes || '').trim(),
+                locations: ($wire.locations || []).map(l => ({
+                    name: (l.name || '').trim(),
+                    manager_name: (l.manager_name || '').trim(),
+                    address: (l.address || '').trim(),
+                    phone: (l.phone || '').trim(),
+                    email: (l.email || '').trim(),
+                    notes: (l.notes || '').trim()
+                })),
+                contacts: ($wire.contacts || []).map(c => ({
+                    name: (c.name || '').trim(),
+                    department: (c.department || '').trim(),
+                    phone: (c.phone || '').trim(),
+                    email: (c.email || '').trim(),
+                    is_primary: Boolean(c.is_primary)
+                })),
+                links: ($wire.links || []).map(l => ({
+                    label: (l.label || '').trim(),
+                    department: (l.department || '').trim(),
+                    url: (l.url || '').trim()
+                }))
+            });
+            return current !== this.initialSnapshot;
+        },
+        confirmClose(action) {
+            if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
+                return;
+            }
+            if (this.isDirty()) {
+                window.KudosDirtyGuard.openConfirmModal({
+                    title: '¿Guardar cambios del cliente?',
+                    description: 'Tienes modificaciones en la información del cliente que no han sido guardadas.',
+                    cancelText: 'Cancelar',
+                    discardText: 'No guardar',
+                    saveText: 'Guardar',
+                    onCancel: () => {},
+                    onDiscard: () => {
+                        window.KudosDirtyGuard.unregister('client-flyout-panel');
+                        action();
+                    },
+                    onSave: () => {
+                        window.KudosDirtyGuard.unregister('client-flyout-panel');
+                        $wire.save();
+                    }
+                });
+            } else {
+                action();
+            }
+        }
+    }"
+    @keydown.window.escape="if ($wire.isOpen && !window.KudosDirtyGuard.isConfirmModalOpen) confirmClose(() => $wire.close())"
+>
     @if($isOpen)
         {{-- Backdrop --}}
         <div 
             class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs z-40 transition-opacity"
-            wire:click="close"
+            @click="confirmClose(() => $wire.close())"
         ></div>
 
         {{-- Slide-over Flyout Panel (Proportioned max-w-2xl ~ 672px width) --}}
@@ -58,7 +155,7 @@
                 </div>
                 <button 
                     type="button" 
-                    wire:click="close"
+                    @click="confirmClose(() => $wire.close())"
                     class="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition cursor-pointer"
                 >
                     <x-lucide-x class="w-4 h-4" />
@@ -714,7 +811,7 @@
             <div class="px-6 py-4 border-t border-zinc-100 bg-white flex items-center justify-end gap-2.5 shrink-0">
                 <button 
                     type="button" 
-                    wire:click="close"
+                    @click="confirmClose(() => $wire.close())"
                     class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium rounded-lg cursor-pointer transition"
                 >
                     {{ __('Cancelar') }}
@@ -722,9 +819,12 @@
                 <button 
                     type="button" 
                     wire:click="save"
-                    class="px-4 py-2 bg-zinc-900 hover:bg-black text-white text-xs font-semibold rounded-lg shadow-2xs cursor-pointer transition"
+                    :disabled="!isDirty()"
+                    :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-zinc-200 text-zinc-400 border border-zinc-200 cursor-not-allowed'"
+                    class="px-4 py-2 text-xs font-semibold rounded-lg transition flex items-center gap-1.5"
                 >
-                    {{ __('Guardar Cliente') }}
+                    <x-lucide-check class="w-3.5 h-3.5" x-show="isDirty()" />
+                    <span>{{ __('Guardar Cliente') }}</span>
                 </button>
             </div>
         </div>

@@ -4,7 +4,18 @@
             <div 
                 x-data="{
                     isDirty() {
-                        return Boolean(($wire.companyName || '').trim() || ($wire.taskName || '').trim() || ($wire.woNumber || '').trim() || ($wire.trelloCardId || '').trim() || ($wire.responsiblePerson || '').trim());
+                        if (!$wire.showModal) return false;
+                        return Boolean(
+                            ($wire.companyName || '').trim() ||
+                            ($wire.taskName || '').trim() ||
+                            ($wire.woNumber || '').trim() ||
+                            ($wire.trelloCardId || '').trim() ||
+                            ($wire.responsiblePerson || '').trim() ||
+                            ($wire.locationName || '').trim() ||
+                            ($wire.substatus || '').trim() ||
+                            ($wire.dueDate || '').trim() ||
+                            (Array.isArray($wire.designerIds) && $wire.designerIds.length > 0)
+                        );
                     },
                     confirmClose(action) {
                         if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
@@ -12,13 +23,19 @@
                         }
                         if (this.isDirty()) {
                             window.KudosDirtyGuard.openConfirmModal({
-                                title: '¿Descartar formulario de nueva orden?',
-                                description: 'Has ingresado datos para crear una nueva orden. Si cierras ahora, se borrará la información ingresada.',
-                                confirmText: 'Sí, descartar y salir',
-                                cancelText: 'Continuar editando',
-                                onConfirm: () => {
+                                title: '¿Guardar nueva orden?',
+                                description: 'Has ingresado datos para crear una nueva orden.',
+                                cancelText: 'Cancelar',
+                                discardText: 'No guardar',
+                                saveText: 'Guardar',
+                                onCancel: () => {},
+                                onDiscard: () => {
                                     window.KudosDirtyGuard.unregister('create-order-modal');
                                     action();
+                                },
+                                onSave: () => {
+                                    window.KudosDirtyGuard.unregister('create-order-modal');
+                                    $wire.save();
                                 }
                             });
                         } else {
@@ -436,7 +453,12 @@
                         <button type="button" @click="confirmClose(() => $wire.closeModal())" class="px-3.5 py-1.5 rounded-lg border border-stone-200 text-zinc-600 hover:bg-stone-100 transition font-medium cursor-pointer">
                             Cancelar
                         </button>
-                        <button type="submit" class="px-4 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-medium shadow-2xs transition flex items-center gap-1.5">
+                        <button 
+                            type="submit" 
+                            :disabled="!isDirty()"
+                            :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
+                            class="px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                        >
                             @if($isDuplicating)
                                 <x-lucide-copy class="w-3.5 h-3.5" />
                                 <span>Crear Copia</span>
