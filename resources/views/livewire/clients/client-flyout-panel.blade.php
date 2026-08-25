@@ -353,7 +353,36 @@
 
                                 <div x-show="openContacts" x-collapse class="mt-3 pt-3 border-t border-zinc-200/50 space-y-4">
                                     @foreach($contacts as $index => $contact)
+                                        @php
+                                            $dupWarning = $this->getDuplicateWarningForContact($index);
+                                        @endphp
                                         <div class="{{ $index > 0 ? 'pt-3.5 border-t border-zinc-200/50' : '' }} space-y-2">
+                                            @if($dupWarning)
+                                                <div class="px-2.5 py-1.5 bg-amber-50/90 border border-amber-200/80 rounded-lg flex items-center justify-between gap-2 text-amber-800 text-[11px] select-none">
+                                                    <div class="flex items-center gap-1.5 min-w-0">
+                                                        <x-lucide-alert-triangle class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                        <span class="truncate">
+                                                            {{ __('¡Posible contacto duplicado con') }} <strong>"{{ $dupWarning }}"</strong>!
+                                                        </span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1.5 shrink-0">
+                                                        <button 
+                                                            type="button" 
+                                                            wire:click="confirmMergeContact({{ $index }}, '{{ addslashes($dupWarning) }}')"
+                                                            class="text-[10px] font-bold text-amber-900 bg-amber-200/70 hover:bg-amber-300 px-1.5 py-0.5 rounded transition cursor-pointer"
+                                                        >
+                                                            {{ __('Confirmar') }}
+                                                        </button>
+                                                        <button 
+                                                            type="button" 
+                                                            wire:click="dismissDuplicateContact({{ $index }})"
+                                                            class="text-[10px] text-amber-700 hover:text-amber-950 font-medium cursor-pointer"
+                                                        >
+                                                            {{ __('Descartar') }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @endif
                                             {{-- Inline Editable Title Header with Contact Name & Subtle Principal Toggle --}}
                                             <div class="flex items-center justify-between gap-3">
                                                 <div class="flex items-center gap-1.5 flex-1 min-w-0 flex-wrap">
@@ -508,6 +537,11 @@
                                                     {{ $order->wo_number }}
                                                 </span>
                                             @endif
+                                            @if($order->designer)
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">
+                                                    {{ $order->designer->name }}
+                                                </span>
+                                            @endif
                                             @php
                                                 $locName = $order->location_name ?: $order->clientLocation?->name;
                                                 $cleanTask = $order->clean_task_name;
@@ -521,13 +555,6 @@
                                             @endif
                                             <span class="group-hover:text-emerald-700 transition truncate">{{ $cleanTask }}</span>
                                         </div>
-                                        @if($order->designer)
-                                            <div class="text-zinc-500 text-[10px] flex items-center gap-2 flex-wrap">
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium {{ $order->getDesignerBadgeStyle() }}">
-                                                    {{ $order->designer->name }}
-                                                </span>
-                                            </div>
-                                        @endif
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0">
                                         @if($order->substatus)

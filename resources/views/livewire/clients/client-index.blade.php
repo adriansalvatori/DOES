@@ -1,7 +1,8 @@
 <div class="h-full flex flex-col space-y-3 min-h-0 max-w-xl mx-auto w-full">
     
     <!-- Notion Header Controls (Compact Width) -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs shrink-0">
+    <div class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
+        {{-- Row 1: Title & Badge --}}
         <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
                 <x-lucide-building-2 class="w-4 h-4 text-stone-100" />
@@ -14,9 +15,10 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+        {{-- Row 2: Searchbar (fills space) & New Button --}}
+        <div class="flex items-center gap-2 w-full">
             <!-- Searchbar -->
-            <div class="relative flex-1 sm:w-48">
+            <div class="relative flex-1">
                 <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
                 <input 
                     type="text" 
@@ -30,7 +32,7 @@
             <button 
                 type="button" 
                 wire:click="openClientDetail"
-                class="px-2.5 py-1 h-7 rounded-md bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer shrink-0"
+                class="px-3 py-1 h-7 rounded-md bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer shrink-0"
             >
                 <x-lucide-plus class="w-3 h-3 text-stone-100" />
                 <span>{{ __('Nuevo') }}</span>

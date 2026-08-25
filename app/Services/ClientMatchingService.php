@@ -190,6 +190,10 @@ class ClientMatchingService
             }
 
             $order->update($updateData);
+
+            if ($order->in_workspace && $order->trello_card_id) {
+                app(TrelloSyncService::class)->updateCardOnTrello($order);
+            }
         }
 
         // Move locations

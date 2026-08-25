@@ -6,7 +6,9 @@ use App\Models\Client;
 use App\Models\ClientContact;
 use App\Models\ClientLink;
 use App\Models\ClientLocation;
+use App\Models\Order;
 use App\Services\ClientMatchingService;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -132,6 +134,52 @@ class ClientFlyoutPanel extends Component
         ];
     }
 
+    public array $dismissedContactDuplicates = [];
+
+    public function dismissDuplicateContact(int $index): void
+    {
+        $this->dismissedContactDuplicates[$index] = true;
+    }
+
+    public function confirmMergeContact(int $index, string $targetName): void
+    {
+        if (isset($this->contacts[$index])) {
+            $this->contacts[$index]['name'] = $targetName;
+            $this->dismissedContactDuplicates[$index] = true;
+        }
+    }
+
+    public function getDuplicateWarningForContact(int $index): ?string
+    {
+        if ($this->dismissedContactDuplicates[$index] ?? false) {
+            return null;
+        }
+
+        $name = mb_strtolower(trim($this->contacts[$index]['name'] ?? ''), 'UTF-8');
+        if (strlen($name) < 3) {
+            return null;
+        }
+
+        foreach ($this->contacts as $otherIndex => $other) {
+            if ($otherIndex === $index) {
+                continue;
+            }
+            $otherName = mb_strtolower(trim($other['name'] ?? ''), 'UTF-8');
+            if (empty($otherName) || $otherName === $name) {
+                continue;
+            }
+
+            $nameFirst = explode(' ', $name)[0] ?? '';
+            $otherFirst = explode(' ', $otherName)[0] ?? '';
+
+            if ((strlen($nameFirst) >= 3 && $nameFirst === $otherFirst) || Str::contains($otherName, $name) || Str::contains($name, $otherName)) {
+                return trim($other['name']);
+            }
+        }
+
+        return null;
+    }
+
     public function removeLink(int $index): void
     {
         unset($this->links[$index]);
@@ -152,8 +200,15 @@ class ClientFlyoutPanel extends Component
 
     public function removeLocation(int $index): void
     {
-        unset($this->locations[$index]);
-        $this->locations = array_values($this->locations);
+        if (isset($this->locations[$index])) {
+            $locId = $this->locations[$index]['id'] ?? null;
+            if ($locId) {
+                Order::where('client_location_id', $locId)->update(['client_location_id' => null]);
+                ClientLocation::where('id', $locId)->delete();
+            }
+            unset($this->locations[$index]);
+            $this->locations = array_values($this->locations);
+        }
     }
 
     public function save(): void
@@ -285,7 +340,21 @@ class ClientFlyoutPanel extends Component
                 $existingLocIds[] = $newLoc->id;
             }
         }
-        ClientLocation::where('client_id', $client->id)->whereNotIn('id', $existingLocIds)->delete();
+        // Nullify order location IDs for deleted locations
+        $deletedLocIds = ClientLocation::where('client_id', $client->id)->whereNotIn('id', $existingLocIds)->pluck('id');
+        if ($deletedLocIds->isNotEmpty()) {
+            Order::whereIn('client_location_id', $deletedLocIds)->update(['client_location_id' => null]);
+            ClientLocation::whereIn('id', $deletedLocIds)->delete();
+        }
+
+        // Push updated titles to Trello for active workspace orders
+        $activeOrders = $client->orders()->where('in_workspace', true)->get();
+        foreach ($activeOrders as $activeOrder) {
+            $activeOrder->update(['company_name' => $cleanName]);
+            if ($activeOrder->trello_card_id) {
+                app(TrelloSyncService::class)->updateCardOnTrello($activeOrder);
+            }
+        }
 
         session()->flash('message', "Cliente '{$client->name}' guardado correctamente.");
         $this->dispatch('client-updated');

@@ -197,4 +197,30 @@ class ClientDatabaseTest extends TestCase
             'phone' => '+57 311 0000000',
         ]);
     }
+
+    public function test_deleting_location_nullifies_order_location_id(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE LOCACION DELETION']);
+        $location = ClientLocation::create([
+            'client_id' => $client->id,
+            'name' => 'SEDE EL SOL',
+            'address' => 'Calle 100',
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE LOCACION DELETION',
+            'task_name' => 'Order with location',
+            'in_workspace' => true,
+            'client_id' => $client->id,
+            'client_location_id' => $location->id,
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->call('removeLocation', 0)
+            ->call('save');
+
+        $order->refresh();
+        $this->assertNull($order->client_location_id);
+    }
 }
