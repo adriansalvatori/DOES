@@ -123,7 +123,7 @@
                         <span>{{ __('Todos los Diseñadores') }}</span>
                     </button>
 
-                    @foreach($designers as $des)
+                    @foreach($allDesigners as $des)
                         <button 
                             wire:click="$set('selectedDesignerFilter', '{{ $des->id }}')" 
                             class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter == $des->id ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800' }}">
@@ -679,14 +679,9 @@
                                                                     $staskOverdue = $stask->order->isOverdue();
                                                                 @endphp
                                                                 @if($staskOverSla || $staskOverdue)
-                                                                    <div class="mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-600 text-white border border-red-700 shadow-2xs flex items-center gap-1">
+                                                                    <div class="mt-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-600 text-white border border-red-700 shadow-2xs flex items-center gap-1" title="SLA: {{ $stask->order->current_due_date->format('d M, Y') }}">
                                                                         <x-lucide-alert-triangle class="w-2.5 h-2.5 text-white shrink-0" />
-                                                                        <span>SLA Excedido ({{ $stask->order->current_due_date->format('d M') }})</span>
-                                                                    </div>
-                                                                @else
-                                                                    <div class="mt-0.5 text-[8.5px] font-bold text-zinc-700 bg-stone-100 border border-stone-300 px-1 py-0.2 rounded flex items-center gap-1">
-                                                                        <x-lucide-clock class="w-2.5 h-2.5 text-zinc-500 shrink-0" />
-                                                                        <span>SLA: {{ $stask->order->current_due_date->format('d M') }}</span>
+                                                                        <span>SLA Excedido</span>
                                                                     </div>
                                                                 @endif
                                                             @endif
@@ -911,20 +906,20 @@
                                         }
                                     "
                                     :class="{ 
-                                        'border-indigo-500 bg-indigo-50/60 ring-2 ring-indigo-300': draggingOver, 
-                                        '{{ $isToday ? 'bg-amber-50/40 border-amber-300 ring-2 ring-amber-400/40 shadow-xs' : ($isNextWeek ? 'bg-[#f4f4f2] border-dashed border-stone-300' : 'bg-[#fbfbfa] border-[#e9e9e7]') }}': !draggingOver 
+                                        'bg-indigo-50/70 rounded-md': draggingOver, 
+                                        '{{ $isToday ? 'bg-amber-50/30 rounded-md px-1.5' : '' }}': !draggingOver 
                                     }"
-                                    class="border rounded-lg p-2 space-y-1.5 min-h-[100px] flex flex-col justify-between min-w-0 transition-all">
+                                    class="pb-2.5 pt-1.5 border-b border-stone-200/50 last:border-b-0 space-y-1 min-h-[50px] flex flex-col justify-between min-w-0 transition-colors">
                                     
-                                    <div class="min-w-0 space-y-1.5">
+                                    <div class="min-w-0 space-y-1">
                                         <!-- Day Subdivision Header -->
-                                        <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-1">
-                                            <div class="flex items-center gap-1 min-w-0">
+                                        <div class="flex items-center justify-between pb-0.5">
+                                            <div class="flex items-center gap-1.5 min-w-0">
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-bold border uppercase tracking-wider {{ $dayColorClass }}">
                                                     {{ $day['day_name'] }}
                                                 </span>
                                                 @if($isToday)
-                                                    <span class="px-1 py-0.2 rounded bg-amber-600 text-white text-[8px] font-bold animate-pulse">
+                                                    <span class="px-1.5 py-0.2 rounded bg-amber-500 text-white text-[8px] font-bold uppercase tracking-wider">
                                                         HOY
                                                     </span>
                                                 @endif
@@ -936,7 +931,7 @@
 
                                         <!-- Subtasks List for this Day & Designer -->
                                         @if($daySubtasks->isNotEmpty())
-                                            <div class="divide-y divide-stone-100">
+                                            <div class="space-y-0.5">
                                                 @foreach($daySubtasks as $stask)
                                                     @php
                                                         $staskDone = $stask->isDone();
@@ -945,9 +940,9 @@
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
                                                         @click.stop="if({{ $stask->order ? 'true' : 'false' }}) $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
-                                                        class="py-1 px-1 flex items-center justify-between gap-1.5 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/80 rounded transition group {{ $staskDone ? 'opacity-65' : '' }}">
+                                                        class="py-0.5 px-1 flex items-center justify-between gap-1 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/70 rounded transition group {{ $staskDone ? 'opacity-60' : '' }}">
                                                         
-                                                        <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                                        <div class="flex items-center gap-1 min-w-0 flex-1 overflow-visible">
                                                             <button 
                                                                 @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
                                                                 type="button"
@@ -956,44 +951,63 @@
                                                                 <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                             </button>
 
-                                                            <div class="min-w-0 flex-1 text-[11px] leading-tight flex items-center gap-1 flex-wrap">
+                                                            <div class="min-w-0 flex-1 text-[10.5px] leading-tight flex items-center gap-1 overflow-visible">
                                                                 @if($stask->order)
-                                                                    <span class="font-bold text-zinc-900 uppercase tracking-tight shrink-0 max-w-[100px] truncate {{ $staskDone ? 'line-through text-zinc-400' : '' }}">{{ $stask->order->company_name }}</span>
+                                                                    <!-- Company Name with Instant Tooltip (Expands to fill available width) -->
+                                                                    <div class="relative group/tip min-w-0 flex-1">
+                                                                        <span class="font-bold text-zinc-900 uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : '' }}">
+                                                                            {{ $stask->order->company_name }}
+                                                                        </span>
+                                                                        <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                            {{ $stask->order->company_name }}
+                                                                        </div>
+                                                                    </div>
+
                                                                     @if($stask->order->task_name)
-                                                                        <span class="text-zinc-300 font-bold shrink-0">•</span>
-                                                                        <span class="text-zinc-500 font-medium shrink-0 max-w-[100px] truncate {{ $staskDone ? 'line-through text-zinc-400' : '' }}">{{ $stask->order->task_name }}</span>
+                                                                        <!-- Order Name with Instant Tooltip (Expands to fill available width equally) -->
+                                                                        <div class="relative group/tip min-w-0 flex-1">
+                                                                            <span class="text-zinc-500 font-medium block truncate {{ $staskDone ? 'line-through text-zinc-400' : '' }}">
+                                                                                {{ $stask->order->task_name }}
+                                                                            </span>
+                                                                            <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                {{ $stask->order->task_name }}
+                                                                            </div>
+                                                                        </div>
                                                                     @endif
-                                                                    <span class="text-zinc-300 font-bold shrink-0">•</span>
-                                                                                                          @php
+                                                                @endif
+
+                                                                <!-- Subtask Title Badge (Prioritized) -->
+                                                                @php
                                                                     $presetMatch = $subtaskPresets->firstWhere('title', $stask->title);
                                                                 @endphp
                                                                 @if($presetMatch)
-                                                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-medium border shrink-0 inline-flex items-center gap-1 {{ $presetMatch->badgeStyle() }} {{ $staskDone ? 'opacity-50 line-through' : '' }}">
+                                                                    <span class="px-1.5 py-0.2 rounded text-[9.5px] font-medium border shrink-0 inline-flex items-center gap-1 {{ $presetMatch->badgeStyle() }} {{ $staskDone ? 'opacity-50 line-through' : '' }}">
                                                                         <span>{{ $stask->title }}</span>
                                                                     </span>
                                                                 @else
-                                                                    <span class="font-medium text-amber-900 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded text-[10px] shrink-0 {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : '' }}">
+                                                                    <span class="font-medium text-amber-900 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded text-[9.5px] shrink-0 {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : '' }}">
                                                                         {{ $stask->title }}
                                                                     </span>
                                                                 @endif
 
+                                                                <!-- SLA Badge with Instant Tooltip (Shown only if SLA issue exists) -->
                                                                 @if($stask->order && $stask->order->current_due_date)
                                                                     @php
                                                                         $staskOverSla = $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
                                                                         $staskOverdue = $stask->order->isOverdue();
                                                                     @endphp
                                                                     @if($staskOverSla || $staskOverdue)
-                                                                        <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-red-600 text-white border border-red-700 shadow-2xs shrink-0 inline-flex items-center gap-0.5 {{ $staskDone ? 'opacity-50' : 'animate-pulse' }}" title="SLA Límite: {{ $stask->order->current_due_date->format('d M, Y') }}">
-                                                                            <x-lucide-alert-triangle class="w-2.5 h-2.5 text-white shrink-0" />
-                                                                            <span>SLA: {{ $stask->order->current_due_date->format('d M') }}</span>
-                                                                        </span>
-                                                                    @else
-                                                                        <span class="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-stone-100 text-zinc-700 border border-stone-300 shrink-0 inline-flex items-center gap-0.5" title="SLA Límite: {{ $stask->order->current_due_date->format('d M, Y') }}">
-                                                                            <x-lucide-clock class="w-2.5 h-2.5 text-zinc-500 shrink-0" />
-                                                                            <span>SLA: {{ $stask->order->current_due_date->format('d M') }}</span>
-                                                                        </span>
+                                                                        <div class="relative group/tip shrink-0">
+                                                                            <span class="px-1.5 py-0.2 rounded text-[8.5px] font-bold bg-red-600 text-white border border-red-700 shadow-2xs shrink-0 inline-flex items-center gap-0.5 {{ $staskDone ? 'opacity-50' : 'animate-pulse' }}">
+                                                                                <x-lucide-alert-triangle class="w-2.5 h-2.5 text-white shrink-0" />
+                                                                                <span>SLA</span>
+                                                                            </span>
+                                                                            <div class="absolute bottom-full right-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                SLA: {{ $stask->order->current_due_date->format('d M, Y') }}
+                                                                            </div>
+                                                                        </div>
                                                                     @endif
-                                                                @endif                         @endif
+                                                                @endif
                                                             </div>
                                                         </div>
 
