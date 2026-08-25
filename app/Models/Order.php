@@ -105,6 +105,23 @@ class Order extends Model
         return $query->where('core_status', CoreStatus::ARCHIVED);
     }
 
+    public function getCleanTaskNameAttribute(): string
+    {
+        $task = $this->task_name ?: $this->trello_title ?: '';
+
+        // Strip company_name or client name if task_name starts with it
+        $cName = $this->company_name ?: $this->client?->name;
+        if ($cName && str_starts_with(mb_strtolower($task, 'UTF-8'), mb_strtolower($cName, 'UTF-8')) && mb_strlen($task, 'UTF-8') > mb_strlen($cName, 'UTF-8')) {
+            $task = trim(mb_substr($task, mb_strlen($cName, 'UTF-8'), null, 'UTF-8'), " \t\n\r\0\x0B-:");
+        }
+
+        if (empty($task)) {
+            return $this->location_name ?: ($this->task_name ?: __('Proyecto sin nombre'));
+        }
+
+        return $task;
+    }
+
     public function getDaysToCloseAttribute(): ?int
     {
         if (! $this->archived_at) {

@@ -124,12 +124,17 @@ class OrderTitleParserService
         $companyName = trim(preg_replace('/[*_#]+/', '', $companyName), " \t\n\r\0\x0B-:");
         $taskName = trim(preg_replace('/[*_#]+/', '', $taskName), " \t\n\r\0\x0B-:");
 
+        // If taskName starts with companyName, strip companyName from taskName
+        if (! empty($companyName) && ! empty($taskName) && str_starts_with(mb_strtolower($taskName, 'UTF-8'), mb_strtolower($companyName, 'UTF-8')) && mb_strlen($taskName, 'UTF-8') > mb_strlen($companyName, 'UTF-8')) {
+            $taskName = trim(mb_substr($taskName, mb_strlen($companyName, 'UTF-8'), null, 'UTF-8'), " \t\n\r\0\x0B-:");
+        }
+
         // Fallbacks if empty
         if (empty($companyName)) {
             $companyName = $rawTitle;
         }
         if (empty($taskName)) {
-            $taskName = $companyName;
+            $taskName = ! empty($locationName) ? $locationName : $companyName;
         }
 
         return [
