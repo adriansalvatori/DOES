@@ -223,4 +223,25 @@ class ClientDatabaseTest extends TestCase
         $order->refresh();
         $this->assertNull($order->client_location_id);
     }
+
+    public function test_location_phone_formatting_and_validation(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE PHONE FORMATTING']);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->set('locations.0.name', 'SUWANEE')
+            ->set('locations.0.address', '3630 Peachtree Industrial Blvd')
+            ->set('locations.0.phone', '7708649359')
+            ->set('locations.0.email', 'suwanee@suvidha.com')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('client_locations', [
+            'client_id' => $client->id,
+            'name' => 'SUWANEE',
+            'phone' => '(770) 864-9359',
+            'email' => 'suwanee@suvidha.com',
+        ]);
+    }
 }

@@ -17,10 +17,49 @@ class ClientLocation extends Model
         'client_id',
         'name',
         'address',
+        'phone',
+        'email',
         'manager_name',
         'manager_phone',
         'notes',
     ];
+
+    public static function formatPhoneNumber(?string $phone): string
+    {
+        if (! $phone) {
+            return '';
+        }
+
+        $digits = preg_replace('/\D/', '', $phone);
+        if (str_starts_with($digits, '1') && strlen($digits) === 11) {
+            $digits = substr($digits, 1);
+        }
+
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 3), substr($digits, 3, 3), substr($digits, 6));
+        }
+
+        return $phone;
+    }
+
+    public static function isValidPhoneNumber(?string $phone): bool
+    {
+        if (empty(trim($phone ?? ''))) {
+            return true;
+        }
+
+        $digits = preg_replace('/\D/', '', $phone);
+        if (str_starts_with($digits, '1') && strlen($digits) === 11) {
+            $digits = substr($digits, 1);
+        }
+
+        return strlen($digits) === 10;
+    }
+
+    public function setPhoneAttribute(?string $value): void
+    {
+        $this->attributes['phone'] = self::formatPhoneNumber($value);
+    }
 
     public function setNameAttribute(string $value): void
     {

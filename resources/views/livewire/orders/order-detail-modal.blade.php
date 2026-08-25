@@ -209,7 +209,7 @@
 
                             @if($order->location_name || $order->clientLocation)
                                 <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] text-zinc-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0" title="Locación del Cliente">
-                                    <x-lucide-map-pin class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                     <span>{{ $order->location_name ?: $order->clientLocation?->name }}</span>
                                 </span>
                             @endif

@@ -51,7 +51,7 @@ class ClientFlyoutPanel extends Component
                 $this->contacts = $client->contacts->map(fn ($c) => [
                     'id' => $c->id,
                     'name' => $c->name,
-                    'phone' => $c->phone ?? '',
+                    'phone' => ClientLocation::formatPhoneNumber($c->phone ?? ''),
                     'email' => $c->email ?? '',
                     'department' => $c->department ?? '',
                     'is_primary' => (bool) $c->is_primary,
@@ -70,14 +70,22 @@ class ClientFlyoutPanel extends Component
                     'department' => $l->department ?? '',
                 ])->toArray();
 
-                $this->locations = $client->locations->map(fn ($loc) => [
-                    'id' => $loc->id,
-                    'name' => $loc->name,
-                    'address' => $loc->address,
-                    'manager_name' => $loc->manager_name ?? '',
-                    'manager_phone' => $loc->manager_phone ?? '',
-                    'notes' => $loc->notes ?? '',
-                ])->toArray();
+                $this->locations = $client->locations->map(function ($loc) {
+                    $addr = trim($loc->address ?? '');
+                    if ($addr === 'Por definir' || str_starts_with($addr, 'Por definir')) {
+                        $addr = '';
+                    }
+
+                    return [
+                        'id' => $loc->id,
+                        'name' => $loc->name,
+                        'address' => $addr,
+                        'phone' => ClientLocation::formatPhoneNumber($loc->phone ?? $loc->manager_phone ?? ''),
+                        'email' => $loc->email ?? '',
+                        'manager_name' => $loc->manager_name ?? '',
+                        'notes' => $loc->notes ?? '',
+                    ];
+                })->toArray();
 
                 $this->mergeSuggestions = app(ClientMatchingService::class)->findMergeSuggestions($client);
             }
@@ -93,7 +101,7 @@ class ClientFlyoutPanel extends Component
                 ['id' => null, 'label' => 'Assets / Recursos', 'url' => '', 'department' => ''],
             ];
             $this->locations = [
-                ['id' => null, 'name' => 'SEDE PRINCIPAL', 'address' => '', 'manager_name' => '', 'manager_phone' => '', 'notes' => ''],
+                ['id' => null, 'name' => 'SEDE PRINCIPAL', 'address' => '', 'phone' => '', 'email' => '', 'manager_name' => '', 'notes' => ''],
             ];
             $this->mergeSuggestions = [];
         }
@@ -186,14 +194,44 @@ class ClientFlyoutPanel extends Component
         $this->links = array_values($this->links);
     }
 
+    public function addContactWithName(string $name): void
+    {
+        $cleanName = trim($name);
+        if (empty($cleanName)) {
+            return;
+        }
+
+        foreach ($this->contacts as $c) {
+            if (mb_strtolower(trim($c['name'] ?? ''), 'UTF-8') === mb_strtolower($cleanName, 'UTF-8')) {
+                return;
+            }
+        }
+
+        if (count($this->contacts) === 1 && empty(trim($this->contacts[0]['name'] ?? ''))) {
+            $this->contacts[0]['name'] = $cleanName;
+
+            return;
+        }
+
+        $this->contacts[] = [
+            'id' => null,
+            'name' => $cleanName,
+            'phone' => '',
+            'email' => '',
+            'department' => '',
+            'is_primary' => empty($this->contacts),
+        ];
+    }
+
     public function addLocation(): void
     {
         $this->locations[] = [
             'id' => null,
             'name' => '',
             'address' => '',
+            'phone' => '',
+            'email' => '',
             'manager_name' => '',
-            'manager_phone' => '',
             'notes' => '',
         ];
     }
@@ -228,6 +266,26 @@ class ClientFlyoutPanel extends Component
             'name.unique' => 'Ya existe un cliente registrado con este nombre.',
         ]);
 
+        foreach ($this->locations as $index => $locData) {
+            if (empty(trim($locData['name'] ?? ''))) {
+                continue;
+            }
+
+            $phone = trim($locData['phone'] ?? '');
+            if (! empty($phone) && ! ClientLocation::isValidPhoneNumber($phone)) {
+                $this->addError("locations.{$index}.phone", 'El teléfono de la locación debe tener 10 dígitos (ej. (770) 864-9359).');
+
+                return;
+            }
+
+            $email = trim($locData['email'] ?? '');
+            if (! empty($email) && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->addError("locations.{$index}.email", 'El correo de la locación debe ser una dirección válida.');
+
+                return;
+            }
+        }
+
         $cleanName = mb_strtoupper(trim($this->name), 'UTF-8');
         $cleanWebsite = trim($this->website);
 
@@ -247,18 +305,27 @@ class ClientFlyoutPanel extends Component
             $this->clientId = $client->id;
         }
 
+        // Auto-ensure manager_names from locations exist in contacts array
+        foreach ($this->locations as $locData) {
+            $mName = trim($locData['manager_name'] ?? '');
+            if (! empty($mName)) {
+                $this->addContactWithName($mName);
+            }
+        }
+
         // Sync contacts
         $existingContactIds = [];
         foreach ($this->contacts as $cData) {
             if (empty(trim($cData['name'] ?? ''))) {
                 continue;
             }
+            $cPhone = ClientLocation::formatPhoneNumber($cData['phone'] ?? '');
             if (! empty($cData['id'])) {
                 $contact = ClientContact::find($cData['id']);
                 if ($contact) {
                     $contact->update([
                         'name' => trim($cData['name']),
-                        'phone' => trim($cData['phone'] ?? ''),
+                        'phone' => $cPhone,
                         'email' => trim($cData['email'] ?? ''),
                         'department' => trim($cData['department'] ?? ''),
                         'is_primary' => (bool) ($cData['is_primary'] ?? false),
@@ -269,7 +336,7 @@ class ClientFlyoutPanel extends Component
                 $newContact = ClientContact::create([
                     'client_id' => $client->id,
                     'name' => trim($cData['name']),
-                    'phone' => trim($cData['phone'] ?? ''),
+                    'phone' => $cPhone,
                     'email' => trim($cData['email'] ?? ''),
                     'department' => trim($cData['department'] ?? ''),
                     'is_primary' => (bool) ($cData['is_primary'] ?? false),
@@ -314,7 +381,13 @@ class ClientFlyoutPanel extends Component
                 continue;
             }
             $locName = mb_strtoupper(trim($locData['name']), 'UTF-8');
-            $locAddress = trim($locData['address'] ?? '') ?: 'Por definir';
+            $locAddress = trim($locData['address'] ?? '');
+            if ($locAddress === 'Por definir' || str_starts_with($locAddress, 'Por definir')) {
+                $locAddress = '';
+            }
+            $locPhone = ClientLocation::formatPhoneNumber($locData['phone'] ?? '');
+            $locEmail = mb_strtolower(trim($locData['email'] ?? ''), 'UTF-8');
+            $locManager = trim($locData['manager_name'] ?? '');
 
             if (! empty($locData['id'])) {
                 $location = ClientLocation::find($locData['id']);
@@ -322,8 +395,9 @@ class ClientFlyoutPanel extends Component
                     $location->update([
                         'name' => $locName,
                         'address' => $locAddress,
-                        'manager_name' => trim($locData['manager_name'] ?? ''),
-                        'manager_phone' => trim($locData['manager_phone'] ?? ''),
+                        'phone' => $locPhone,
+                        'email' => $locEmail,
+                        'manager_name' => $locManager,
                         'notes' => trim($locData['notes'] ?? ''),
                     ]);
                     $existingLocIds[] = $location->id;
@@ -333,8 +407,9 @@ class ClientFlyoutPanel extends Component
                     'client_id' => $client->id,
                     'name' => $locName,
                     'address' => $locAddress,
-                    'manager_name' => trim($locData['manager_name'] ?? ''),
-                    'manager_phone' => trim($locData['manager_phone'] ?? ''),
+                    'phone' => $locPhone,
+                    'email' => $locEmail,
+                    'manager_name' => $locManager,
                     'notes' => trim($locData['notes'] ?? ''),
                 ]);
                 $existingLocIds[] = $newLoc->id;

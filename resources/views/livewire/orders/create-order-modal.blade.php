@@ -266,7 +266,7 @@
                     <!-- Row 2.5: Location / Sede (Optional) -->
                     <div>
                         <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                            <x-lucide-map-pin class="w-3 h-3 text-zinc-400" />
+                            <x-lucide-map-pin class="w-3 h-3 text-rose-500" />
                             <span>Locación / Sede <span class="text-zinc-400 font-normal">(Opcional)</span></span>
                         </label>
                         <input 

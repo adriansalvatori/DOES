@@ -193,7 +193,16 @@
                                         <input 
                                             type="text" 
                                             wire:model="contacts.0.phone"
-                                            placeholder="+57 300 0000000"
+                                            x-on:input="
+                                                let val = $el.value.replace(/\D/g, '');
+                                                if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
+                                                if (val.length > 10) val = val.substring(0, 10);
+                                                if (val.length === 0) { $el.value = ''; }
+                                                else if (val.length <= 3) { $el.value = '(' + val; }
+                                                else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
+                                                else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
+                                            "
+                                            placeholder="(000) 000-0000"
                                             class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
                                         />
                                     </div>
@@ -234,10 +243,10 @@
                             <div class="space-y-6">
                                 @foreach($locations as $index => $location)
                                     <div class="{{ $index > 0 ? 'pt-6 border-t border-zinc-200/60' : '' }} space-y-3">
-                                        {{-- Inline Editable Title Header --}}
+                                        {{-- Inline Editable Title Header with Responsible Label --}}
                                         <div class="flex items-center justify-between gap-3">
-                                            <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                                                <x-lucide-map-pin class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                            <div class="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                                                <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                                 <input 
                                                     type="text" 
                                                     wire:model.live.debounce.150ms="locations.{{ $index }}.name" 
@@ -245,6 +254,104 @@
                                                     :size="Math.max(14, ({{ json_encode($location['name'] ?? '') }} || 'NOMBRE LOCACIÓN (EJ. GRAYSON)').length + 1)"
                                                     class="bg-transparent hover:bg-zinc-100/70 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs font-bold text-zinc-900 uppercase tracking-tight focus:outline-none transition shrink-0 max-w-full"
                                                 />
+
+                                                {{-- Responsible Contact Combobox Pill Label --}}
+                                                <div 
+                                                    x-data="{
+                                                        openResp: false,
+                                                        selectContact(name) {
+                                                            $wire.set('locations.{{ $index }}.manager_name', name);
+                                                            this.openResp = false;
+                                                        },
+                                                        createContactAndSelect(name) {
+                                                            let clean = (name || '').trim();
+                                                            if (clean) {
+                                                                $wire.call('addContactWithName', clean).then(() => {
+                                                                    $wire.set('locations.{{ $index }}.manager_name', clean);
+                                                                });
+                                                            }
+                                                            this.openResp = false;
+                                                        }
+                                                    }"
+                                                    class="relative shrink-0"
+                                                    @click.outside="openResp = false"
+                                                >
+                                                    <div 
+                                                        @click="openResp = !openResp"
+                                                        class="inline-flex items-center gap-1 bg-zinc-100/90 hover:bg-zinc-200/70 border border-zinc-200/60 focus-within:border-zinc-300 rounded-full px-2.5 py-0.5 text-xs transition cursor-pointer select-none"
+                                                    >
+                                                        <x-lucide-user class="w-3 h-3 text-zinc-500 shrink-0" />
+                                                        <input 
+                                                            type="text" 
+                                                            wire:model.live.debounce.150ms="locations.{{ $index }}.manager_name"
+                                                            @focus="openResp = true"
+                                                            placeholder="{{ __('Responsable...') }}"
+                                                            :size="Math.max(10, ({{ json_encode($location['manager_name'] ?? '') }} || 'Responsable...').length + 1)"
+                                                            class="bg-transparent border-none p-0 text-xs font-medium text-zinc-800 placeholder:text-zinc-400 placeholder:font-normal focus:outline-none transition shrink-0"
+                                                        />
+                                                        <x-lucide-chevron-down 
+                                                            class="w-3 h-3 text-zinc-400 shrink-0 transition-transform duration-150"
+                                                            ::class="{ 'rotate-180': openResp }"
+                                                        />
+                                                    </div>
+
+                                                    {{-- Dropdown Panel --}}
+                                                    <div 
+                                                        x-show="openResp" 
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        class="absolute left-0 top-full mt-1 z-30 bg-white border border-zinc-200/80 rounded-lg shadow-xl py-1 w-64 max-h-48 overflow-y-auto text-xs"
+                                                        style="display: none;"
+                                                    >
+                                                        @php
+                                                            $currentManager = trim($location['manager_name'] ?? '');
+                                                            $hasExactMatch = false;
+                                                        @endphp
+
+                                                        <div class="px-2.5 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-100 flex items-center justify-between">
+                                                            <span>{{ __('Contactos del cliente') }}</span>
+                                                        </div>
+
+                                                        @foreach($contacts as $c)
+                                                            @if(!empty(trim($c['name'] ?? '')))
+                                                                @php
+                                                                    $cName = trim($c['name']);
+                                                                    if ($currentManager && mb_strtolower($currentManager, 'UTF-8') === mb_strtolower($cName, 'UTF-8')) {
+                                                                        $hasExactMatch = true;
+                                                                    }
+                                                                @endphp
+                                                                <button 
+                                                                    type="button" 
+                                                                    @click="selectContact('{{ addslashes($cName) }}')"
+                                                                    class="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 hover:text-emerald-900 flex items-center justify-between transition cursor-pointer group"
+                                                                >
+                                                                    <div class="flex items-center gap-2 min-w-0">
+                                                                        <x-lucide-user class="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-600 shrink-0" />
+                                                                        <span class="font-semibold text-zinc-800 group-hover:text-emerald-950 truncate">{{ $cName }}</span>
+                                                                        @if(!empty($c['department']))
+                                                                            <span class="text-[10px] text-zinc-400">({{ $c['department'] }})</span>
+                                                                        @endif
+                                                                    </div>
+                                                                    @if($currentManager && mb_strtolower($currentManager, 'UTF-8') === mb_strtolower($cName, 'UTF-8'))
+                                                                        <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                                    @endif
+                                                                </button>
+                                                            @endif
+                                                        @endforeach
+
+                                                        @if(!$hasExactMatch && !empty($currentManager))
+                                                            <button 
+                                                                type="button" 
+                                                                @click="createContactAndSelect('{{ addslashes($currentManager) }}')"
+                                                                class="w-full text-left px-2.5 py-2 hover:bg-emerald-50 text-emerald-700 font-semibold border-t border-zinc-100 flex items-center gap-2 transition cursor-pointer"
+                                                            >
+                                                                <x-lucide-user-plus class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                                <span>{{ __('Crear contacto') }} "<strong>{{ $currentManager }}</strong>"</span>
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                </div>
                                             </div>
                                             <button 
                                                 type="button" 
@@ -257,47 +364,73 @@
                                         </div>
 
                                         {{-- Location Fields Grid --}}
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5">
+                                        <div 
+                                            x-data="{
+                                                formatPhoneInput(el) {
+                                                    let val = el.value || '';
+                                                    let digits = val.replace(/\D/g, '');
+                                                    if (digits.length === 11 && digits.startsWith('1')) {
+                                                        digits = digits.substring(1);
+                                                    }
+                                                    if (digits.length > 10) digits = digits.substring(0, 10);
+                                                    if (digits.length === 0) {
+                                                        el.value = '';
+                                                        return;
+                                                    }
+                                                    if (digits.length <= 3) {
+                                                        el.value = '(' + digits;
+                                                    } else if (digits.length <= 6) {
+                                                        el.value = '(' + digits.substring(0, 3) + ') ' + digits.substring(3);
+                                                    } else {
+                                                        el.value = '(' + digits.substring(0, 3) + ') ' + digits.substring(3, 6) + '-' + digits.substring(6);
+                                                    }
+                                                }
+                                            }"
+                                            class="grid grid-cols-1 sm:grid-cols-2 gap-2"
+                                        >
                                             <div class="sm:col-span-2">
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">
-                                                    {{ __('Dirección Física (Visible)') }} <span class="text-rose-500">*</span>
-                                                </label>
                                                 <input 
                                                     type="text" 
                                                     wire:model="locations.{{ $index }}.address" 
-                                                    placeholder="Dirección completa"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 font-bold focus:outline-none transition"
+                                                    placeholder="{{ __('Location Address') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 font-bold focus:outline-none transition"
                                                 />
+                                                @error("locations.{$index}.address")
+                                                    <p class="text-[11px] text-rose-600 mt-0.5">{{ $message }}</p>
+                                                @enderror
                                             </div>
+
+
+
                                             <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">
-                                                    {{ __('Gestor Locación') }} <span class="text-zinc-400 font-normal">({{ __('Opcional') }})</span>
-                                                </label>
                                                 <input 
                                                     type="text" 
-                                                    wire:model="locations.{{ $index }}.manager_name" 
-                                                    placeholder="Nombre del gestor"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                                    wire:model.blur="locations.{{ $index }}.phone" 
+                                                    x-on:input="formatPhoneInput($el)"
+                                                    placeholder="{{ __('Teléfono locación (ej. (770) 864-9359)') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-mono"
                                                 />
+                                                @error("locations.{$index}.phone")
+                                                    <p class="text-[11px] text-rose-600 mt-0.5">{{ $message }}</p>
+                                                @enderror
                                             </div>
                                             <div>
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">
-                                                    {{ __('Teléfono Gestor') }} <span class="text-zinc-400 font-normal">({{ __('Opcional') }})</span>
-                                                </label>
                                                 <input 
-                                                    type="text" 
-                                                    wire:model="locations.{{ $index }}.manager_phone" 
-                                                    placeholder="WhatsApp / Teléfono gestor"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-mono"
+                                                    type="email" 
+                                                    wire:model.blur="locations.{{ $index }}.email" 
+                                                    placeholder="{{ __('Correo electrónico de locación (ej. suwanee@suvidha.com)') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
                                                 />
+                                                @error("locations.{$index}.email")
+                                                    <p class="text-[11px] text-rose-600 mt-0.5">{{ $message }}</p>
+                                                @enderror
                                             </div>
                                             <div class="sm:col-span-2">
-                                                <label class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-0.5 block">{{ __('Notas / Especificaciones Técnicas') }}</label>
                                                 <textarea 
                                                     wire:model="locations.{{ $index }}.notes" 
                                                     rows="1.5" 
-                                                    placeholder="{{ __('Medidas, horarios de entrega, observaciones...') }}"
-                                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                                    placeholder="{{ __('Notas / Especificaciones técnicas (medidas, horarios de entrega, observaciones...)') }}"
+                                                    class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
                                                 ></textarea>
                                             </div>
                                         </div>
@@ -426,7 +559,16 @@
                                                 <input 
                                                     type="text" 
                                                     wire:model="contacts.{{ $index }}.phone" 
-                                                    placeholder="{{ __('Teléfono / WhatsApp') }}"
+                                                    x-on:input="
+                                                        let val = $el.value.replace(/\D/g, '');
+                                                        if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
+                                                        if (val.length > 10) val = val.substring(0, 10);
+                                                        if (val.length === 0) { $el.value = ''; }
+                                                        else if (val.length <= 3) { $el.value = '(' + val; }
+                                                        else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
+                                                        else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
+                                                    "
+                                                    placeholder="(000) 000-0000"
                                                     class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md px-2 py-1 text-xs text-zinc-700 font-mono focus:outline-none transition"
                                                 />
                                                 <input 
@@ -539,7 +681,7 @@
                                             @endphp
                                             @if($showLocBadge)
                                                 <span class="inline-flex items-center gap-1 font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded text-[10px] shrink-0" title="Locación del Cliente">
-                                                    <x-lucide-map-pin class="w-3 h-3 text-zinc-400 shrink-0" />
+                                                    <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
                                                     <span>{{ $locName }}</span>
                                                 </span>
                                             @endif

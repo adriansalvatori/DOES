@@ -101,7 +101,7 @@ class ClientMatchingService
                 $location = ClientLocation::create([
                     'client_id' => $client->id,
                     'name' => $locationName,
-                    'address' => 'Por definir - Locación '.$locationName,
+                    'address' => '',
                 ]);
             }
         }
@@ -170,7 +170,7 @@ class ClientMatchingService
                 $location = ClientLocation::create([
                     'client_id' => $targetClient->id,
                     'name' => $extractedLocationName,
-                    'address' => 'Por definir - Locación '.$extractedLocationName,
+                    'address' => '',
                 ]);
             }
             $targetLocationId = $location->id;
