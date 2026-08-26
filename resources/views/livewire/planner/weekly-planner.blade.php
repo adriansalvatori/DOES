@@ -22,6 +22,7 @@
         orderSearchQuery: '',
         workspaceOrdersList: @js($workspaceOrdersList),
         subtaskPresetsList: @js($presetDataList),
+        modalOrderHighlightedIndex: -1,
         getFilteredOrders() {
             if (!this.orderSearchQuery) {
                 return this.workspaceOrdersList;
@@ -32,6 +33,34 @@
                 o.company.toLowerCase().includes(q) || 
                 o.task.toLowerCase().includes(q)
             );
+        },
+        navigateModalOrder(step) {
+            const list = this.getFilteredOrders();
+            if (list.length === 0) return;
+            if (this.modalOrderHighlightedIndex === -1) {
+                this.modalOrderHighlightedIndex = step > 0 ? 0 : list.length - 1;
+            } else {
+                this.modalOrderHighlightedIndex = (this.modalOrderHighlightedIndex + step + list.length) % list.length;
+            }
+            this.$nextTick(() => {
+                const container = this.$refs.modalOrderDropdownPanel;
+                if (!container) return;
+                const items = container.querySelectorAll('.modal-order-item-btn');
+                if (items[this.modalOrderHighlightedIndex]) {
+                    items[this.modalOrderHighlightedIndex].scrollIntoView({ block: 'nearest' });
+                }
+            });
+        },
+        selectHighlightedModalOrder() {
+            const list = this.getFilteredOrders();
+            if (this.modalOrderHighlightedIndex >= 0 && list[this.modalOrderHighlightedIndex]) {
+                const item = list[this.modalOrderHighlightedIndex];
+                this.subtaskOrderId = item.id;
+                this.orderSearchQuery = item.text;
+                if (item.designer_id) this.subtaskDesignerId = String(item.designer_id);
+                this.orderDropdownOpen = false;
+                this.modalOrderHighlightedIndex = -1;
+            }
         },
         openCreateSubtaskModal(orderId = '', dateStr = '', designerId = '') {
             this.subtaskOrderId = orderId ? String(orderId) : '';
@@ -829,6 +858,8 @@
                                         dropdownOpen: false,
                                         presetDropdownOpen: false,
                                         presetHighlightedIndex: -1,
+                                        orderHighlightedIndex: -1,
+                                        titleFocused: false,
                                         getFilteredOrders() {
                                             if (!this.orderSearch) return this.workspaceOrdersList || [];
                                             const q = this.orderSearch.toLowerCase().trim();
@@ -837,6 +868,29 @@
                                                 o.company.toLowerCase().includes(q) || 
                                                 o.task.toLowerCase().includes(q)
                                             );
+                                        },
+                                        navigateOrder(step) {
+                                            const list = this.getFilteredOrders();
+                                            if (list.length === 0) return;
+                                            if (this.orderHighlightedIndex === -1) {
+                                                this.orderHighlightedIndex = step > 0 ? 0 : list.length - 1;
+                                            } else {
+                                                this.orderHighlightedIndex = (this.orderHighlightedIndex + step + list.length) % list.length;
+                                            }
+                                            this.$nextTick(() => {
+                                                const container = this.$refs.orderDropdownPanel;
+                                                if (!container) return;
+                                                const items = container.querySelectorAll('.order-item-btn');
+                                                if (items[this.orderHighlightedIndex]) {
+                                                    items[this.orderHighlightedIndex].scrollIntoView({ block: 'nearest' });
+                                                }
+                                            });
+                                        },
+                                        selectHighlightedOrder() {
+                                            const list = this.getFilteredOrders();
+                                            if (this.orderHighlightedIndex >= 0 && list[this.orderHighlightedIndex]) {
+                                                this.selectOrder(list[this.orderHighlightedIndex]);
+                                            }
                                         },
                                         getFilteredPresets() {
                                             const list = this.subtaskPresetsList || [];
@@ -863,10 +917,19 @@
                                             } else {
                                                 this.presetHighlightedIndex = (this.presetHighlightedIndex + step + list.length) % list.length;
                                             }
+                                            this.$nextTick(() => {
+                                                const container = this.$refs.presetDropdownPanel;
+                                                if (!container) return;
+                                                const items = container.querySelectorAll('.preset-item-btn');
+                                                if (items[this.presetHighlightedIndex]) {
+                                                    items[this.presetHighlightedIndex].scrollIntoView({ block: 'nearest' });
+                                                }
+                                            });
                                         },
                                         openInline() {
                                             this.inlineActive = true;
                                             this.isWorkTask = true;
+                                            this.orderHighlightedIndex = -1;
                                             this.$nextTick(() => {
                                                 if (this.$refs.orderSearchInput) this.$refs.orderSearchInput.focus();
                                             });
@@ -877,6 +940,7 @@
                                             this.selectedOrderTask = order.task || '';
                                             this.orderSearch = order.text;
                                             this.dropdownOpen = false;
+                                            this.orderHighlightedIndex = -1;
                                             this.presetDropdownOpen = true;
                                             this.presetHighlightedIndex = -1;
                                             this.$nextTick(() => {
@@ -899,6 +963,8 @@
                                             this.selectedOrderCompany = '';
                                             this.selectedOrderTask = '';
                                             this.isWorkTask = true;
+                                            this.dropdownOpen = false;
+                                            this.orderHighlightedIndex = -1;
                                             this.presetDropdownOpen = false;
                                             this.presetHighlightedIndex = -1;
                                             this.$nextTick(() => {
@@ -914,6 +980,7 @@
                                             this.subtaskTitle = '';
                                             this.isWorkTask = true;
                                             this.dropdownOpen = false;
+                                            this.orderHighlightedIndex = -1;
                                             this.presetDropdownOpen = false;
                                             this.presetHighlightedIndex = -1;
                                         }
@@ -1084,21 +1151,27 @@
                                                             x-ref="orderSearchInput"
                                                             type="text"
                                                             x-model="orderSearch"
-                                                            @focus="dropdownOpen = true"
-                                                            @input="dropdownOpen = true"
-                                                            @keydown.escape="cancelInline()"
+                                                            @focus="dropdownOpen = true; orderHighlightedIndex = -1;"
+                                                            @input="dropdownOpen = true; orderHighlightedIndex = -1;"
+                                                            @keydown.arrow-down.prevent="if(!dropdownOpen) dropdownOpen = true; else navigateOrder(1);"
+                                                            @keydown.arrow-up.prevent="if(!dropdownOpen) dropdownOpen = true; else navigateOrder(-1);"
+                                                            @keydown.enter.prevent="if (dropdownOpen && orderHighlightedIndex >= 0) { selectHighlightedOrder(); }"
+                                                            @keydown.escape.stop="if(dropdownOpen) { dropdownOpen = false; orderHighlightedIndex = -1; } else { cancelInline(); }"
                                                             placeholder="{{ __('+ Buscar empresa u orden...') }}"
                                                             class="w-full bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-[11px] font-normal text-zinc-800 placeholder-stone-400" />
 
                                                         <!-- Floating Dropdown for Orders -->
                                                         <div 
+                                                            x-ref="orderDropdownPanel"
                                                             x-show="dropdownOpen && getFilteredOrders().length > 0" 
                                                             class="absolute left-0 top-full mt-1 z-50 bg-white border border-stone-200 rounded-md shadow-md max-h-44 overflow-y-auto divide-y divide-stone-100 text-[11px] w-72">
-                                                            <template x-for="ord in getFilteredOrders()" :key="ord.id">
+                                                            <template x-for="(ord, idx) in getFilteredOrders()" :key="ord.id">
                                                                 <button 
                                                                     type="button" 
                                                                     @click="selectOrder(ord)" 
-                                                                    class="w-full text-left px-2.5 py-1.5 hover:bg-stone-100 transition flex items-center justify-between gap-2">
+                                                                    @mouseenter="orderHighlightedIndex = idx"
+                                                                    :class="{ 'bg-amber-50 text-amber-950 font-semibold ring-1 ring-amber-200': orderHighlightedIndex === idx, 'hover:bg-stone-100': orderHighlightedIndex !== idx }"
+                                                                    class="order-item-btn w-full text-left px-2.5 py-1.5 transition flex items-center justify-between gap-2 cursor-pointer">
                                                                     <div class="min-w-0 flex-1">
                                                                         <span class="font-bold text-zinc-900 block truncate" x-text="ord.company"></span>
                                                                         <span class="text-[10px] text-zinc-500 block truncate" x-text="ord.task"></span>
@@ -1109,30 +1182,40 @@
                                                     </div>
 
                                                     <!-- Phase 2: Selected Order + Subtask Name Input on the SAME line -->
-                                                    <div x-show="selectedOrderId" class="flex items-center gap-1.5 min-w-0 flex-1">
-                                                        <span class="font-bold text-zinc-900 uppercase tracking-tight shrink-0 max-w-[120px] truncate" x-text="selectedOrderCompany"></span>
-                                                        <span class="text-zinc-300 font-bold shrink-0" x-show="selectedOrderTask">•</span>
-                                                        <span class="text-zinc-500 font-medium shrink-0 max-w-[120px] truncate" x-show="selectedOrderTask" x-text="selectedOrderTask"></span>
-                                                        <span class="text-zinc-300 font-bold shrink-0">•</span>
+                                                     <div x-show="selectedOrderId" class="flex items-center gap-1 min-w-0 flex-1 relative" @click.outside="presetDropdownOpen = false; titleFocused = false;">
+                                                         <span 
+                                                             :class="titleFocused ? 'max-w-[40px] opacity-75' : 'max-w-[70px] opacity-100'"
+                                                             class="font-bold text-zinc-900 uppercase tracking-tight shrink-0 truncate transition-all duration-200" 
+                                                             :title="selectedOrderCompany"
+                                                             x-text="selectedOrderCompany"></span>
+                                                         <span class="text-zinc-300 font-bold shrink-0 transition-opacity duration-200" :class="titleFocused ? 'hidden' : 'inline'" x-show="selectedOrderTask">•</span>
+                                                         <span 
+                                                             :class="titleFocused ? 'hidden' : 'inline max-w-[65px]'"
+                                                             class="text-zinc-500 font-medium shrink-0 truncate transition-all duration-200" 
+                                                             :title="selectedOrderTask"
+                                                             x-show="selectedOrderTask" 
+                                                             x-text="selectedOrderTask"></span>
+                                                         <span class="text-zinc-300 font-bold shrink-0">•</span>
 
-                                                        <!-- Subtask Title Input with Delicate Presets Dropdown -->
-                                                        <div class="relative flex-1 min-w-0" @click.outside="presetDropdownOpen = false">
-                                                            <input 
-                                                                x-ref="titleInput"
-                                                                type="text"
-                                                                x-model="subtaskTitle"
-                                                                @focus="presetDropdownOpen = true"
-                                                                @input="presetDropdownOpen = true; presetHighlightedIndex = -1;"
-                                                                @keydown.arrow-down.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(1);"
-                                                                @keydown.arrow-up.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(-1);"
-                                                                @keydown.enter.prevent="if (presetDropdownOpen && presetHighlightedIndex >= 0 && getFilteredPresets()[presetHighlightedIndex]) { selectPreset(getFilteredPresets()[presetHighlightedIndex]); } else { submitSubtask(); }"
-                                                                @keydown.backspace="if(!subtaskTitle) { selectedOrderId = ''; selectedOrderCompany = ''; selectedOrderTask = ''; presetDropdownOpen = false; }"
-                                                                @keydown.escape.stop="if(presetDropdownOpen) { presetDropdownOpen = false; presetHighlightedIndex = -1; } else { cancelInline(); }"
-                                                                placeholder="{{ __('Nombre subtarea (Enter para guardar)...') }}"
-                                                                class="w-full bg-amber-50/90 border border-amber-200/80 px-1.5 py-0.5 rounded text-[10.5px] font-semibold text-amber-950 focus:ring-0 focus:outline-none placeholder-amber-700/50" />
+                                                         <!-- Subtask Title Input with Delicate Presets Dropdown -->
+                                                         <div class="relative flex-1 min-w-0 transition-all duration-200">
+                                                             <input 
+                                                                 x-ref="titleInput"
+                                                                 type="text"
+                                                                 x-model="subtaskTitle"
+                                                                 @focus="presetDropdownOpen = true; titleFocused = true;"
+                                                                 @input="presetDropdownOpen = true; presetHighlightedIndex = -1;"
+                                                                 @keydown.arrow-down.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(1);"
+                                                                 @keydown.arrow-up.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(-1);"
+                                                                 @keydown.enter.prevent="if (presetDropdownOpen && presetHighlightedIndex >= 0 && getFilteredPresets()[presetHighlightedIndex]) { selectPreset(getFilteredPresets()[presetHighlightedIndex]); } else { submitSubtask(); }"
+                                                                 @keydown.backspace="if(!subtaskTitle) { selectedOrderId = ''; selectedOrderCompany = ''; selectedOrderTask = ''; presetDropdownOpen = false; titleFocused = false; }"
+                                                                 @keydown.escape.stop="if(presetDropdownOpen) { presetDropdownOpen = false; presetHighlightedIndex = -1; } else { cancelInline(); }"
+                                                                 placeholder="{{ __('Nombre subtarea (Enter para guardar)...') }}"
+                                                                 class="w-full bg-amber-50/90 border border-amber-200/80 px-1.5 py-0.5 rounded text-[10.5px] font-semibold text-amber-950 focus:ring-1 focus:ring-amber-400 focus:border-amber-300 focus:outline-none placeholder-amber-700/50 transition-all duration-200" />
 
                                                             <!-- Delicate Dropdown Menu for Subtask Presets -->
                                                             <div 
+                                                                x-ref="presetDropdownPanel"
                                                                 x-show="presetDropdownOpen && getFilteredPresets().length > 0"
                                                                 x-transition:enter="transition ease-out duration-100"
                                                                 x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
@@ -1153,7 +1236,7 @@
                                                                             @click="selectPreset(preset)" 
                                                                             @mouseenter="presetHighlightedIndex = idx"
                                                                             :class="{ 'bg-amber-50 text-amber-950 font-semibold ring-1 ring-amber-200': presetHighlightedIndex === idx, 'text-zinc-700 hover:bg-stone-50': presetHighlightedIndex !== idx }"
-                                                                            class="w-full text-left px-2 py-1 rounded-md transition flex items-center justify-between gap-2 cursor-pointer group">
+                                                                            class="preset-item-btn w-full text-left px-2 py-1 rounded-md transition flex items-center justify-between gap-2 cursor-pointer group">
                                                                             <div class="flex items-center gap-1.5 min-w-0">
                                                                                 <span 
                                                                                     :class="preset.badge_style || 'bg-stone-100 text-stone-700 border-stone-200'"
@@ -1274,8 +1357,12 @@
                                     type="text" 
                                     x-ref="orderSearchInput"
                                     x-model="orderSearchQuery"
-                                    @focus="orderDropdownOpen = true"
-                                    @input="orderDropdownOpen = true; if (!orderSearchQuery) subtaskOrderId = '';"
+                                    @focus="orderDropdownOpen = true; modalOrderHighlightedIndex = -1;"
+                                    @input="orderDropdownOpen = true; modalOrderHighlightedIndex = -1; if (!orderSearchQuery) subtaskOrderId = '';"
+                                    @keydown.arrow-down.prevent="if(!orderDropdownOpen) orderDropdownOpen = true; else navigateModalOrder(1);"
+                                    @keydown.arrow-up.prevent="if(!orderDropdownOpen) orderDropdownOpen = true; else navigateModalOrder(-1);"
+                                    @keydown.enter.prevent="if (orderDropdownOpen && modalOrderHighlightedIndex >= 0) { selectHighlightedModalOrder(); }"
+                                    @keydown.escape.stop="if(orderDropdownOpen) { orderDropdownOpen = false; modalOrderHighlightedIndex = -1; }"
                                     placeholder="{{ __('Buscar por empresa o trabajo...') }}" 
                                     class="w-full bg-[#fbfbfa] focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-lg pl-9 pr-14 py-2 text-xs text-zinc-800 focus:outline-none transition shadow-2xs font-medium" />
 
@@ -1300,18 +1387,20 @@
                             </div>
 
                             <div 
+                                x-ref="modalOrderDropdownPanel"
                                 x-show="orderDropdownOpen"
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
                                 class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
                                 
-                                <template x-for="item in getFilteredOrders()" :key="item.id">
+                                <template x-for="(item, idx) in getFilteredOrders()" :key="item.id">
                                     <button 
                                         type="button"
-                                        @click="subtaskOrderId = item.id; orderSearchQuery = item.text; if (item.designer_id) subtaskDesignerId = String(item.designer_id); orderDropdownOpen = false"
-                                        :class="{ 'bg-violet-50 text-violet-900 font-semibold': subtaskOrderId === item.id }"
-                                        class="w-full text-left p-2.5 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
+                                        @click="subtaskOrderId = item.id; orderSearchQuery = item.text; if (item.designer_id) subtaskDesignerId = String(item.designer_id); orderDropdownOpen = false; modalOrderHighlightedIndex = -1;"
+                                        @mouseenter="modalOrderHighlightedIndex = idx"
+                                        :class="{ 'bg-violet-50 text-violet-900 font-semibold ring-1 ring-violet-200': modalOrderHighlightedIndex === idx || (modalOrderHighlightedIndex === -1 && subtaskOrderId === item.id), 'hover:bg-stone-100': modalOrderHighlightedIndex !== idx }"
+                                        class="modal-order-item-btn w-full text-left p-2.5 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
                                         <div class="min-w-0 flex-1">
                                             <span class="font-bold text-zinc-900 block truncate text-xs" x-text="item.company"></span>
                                             <span class="text-[11px] text-zinc-500 block truncate" x-text="item.task"></span>
