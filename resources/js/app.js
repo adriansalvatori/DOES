@@ -20,7 +20,8 @@ window.KudosDirtyGuard = {
                 const result = typeof checkFn === 'function' ? checkFn() : Boolean(checkFn);
                 if (result) return true;
             } catch (e) {
-                // Ignore stale checks
+                // Delete stale checks
+                this.dirtyRegistry.delete(id);
             }
         }
         return false;

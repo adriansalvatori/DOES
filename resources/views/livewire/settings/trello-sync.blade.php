@@ -6,6 +6,7 @@
             this.initialBoard = $wire.boardId || '';
             this.initialToken = $wire.userToken || '';
             window.KudosDirtyGuard.register('trello-sync', () => this.isDirty());
+            this.$cleanup(() => window.KudosDirtyGuard.unregister('trello-sync'));
         },
         isDirty() {
             return ($wire.boardId || '') !== this.initialBoard || ($wire.userToken || '') !== this.initialToken;

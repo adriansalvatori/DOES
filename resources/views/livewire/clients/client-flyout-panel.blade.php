@@ -11,6 +11,7 @@
                 }
             });
             window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
+            this.$cleanup(() => window.KudosDirtyGuard.unregister('client-flyout-panel'));
         },
         snapshot() {
             this.initialSnapshot = JSON.stringify({

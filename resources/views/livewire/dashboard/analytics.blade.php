@@ -141,52 +141,29 @@
         </div>
 
         <!-- Multi-Color Distribution Bar -->
-        <div class="w-full h-3 rounded-full overflow-hidden bg-stone-100 border border-stone-200 flex">
+        <div class="w-full h-3.5 rounded-full overflow-hidden bg-stone-100 border border-stone-200/80 flex shadow-inner">
             @foreach($coreStatusCounts as $item)
                 @if($item['count'] > 0)
                     <div 
                         class="h-full transition-all duration-300 first:rounded-l-full last:rounded-r-full" 
-                        style="width: {{ max($item['percentage'], 2) }}%; background-color: {{ match($item['status']->value) {
-                            'ENTRANTE' => '#64748b',
-                            'EURALIZ_ORDERS_RECEIVED' => '#d946ef',
-                            'CESAR_ORDERS_RECEIVED' => '#06b6d4',
-                            'ADRIAN_ORDERS_RECEIVED' => '#10b981',
-                            'ENVIADO_A_CAMILA' => '#f97316',
-                            'ENVIADO_AL_CLIENTE' => '#3b82f6',
-                            'ON_HOLD' => '#eab308',
-                            'EN_PRODUCCION' => '#8b5cf6',
-                            default => '#a1a1aa'
-                        } }};"
+                        style="width: {{ max($item['percentage'], 1.5) }}%; background-color: {{ $item['status']->hexColor() }};"
                         title="{{ $item['label'] }}: {{ $item['count'] }} tarjetas ({{ $item['percentage'] }}%)">
                     </div>
                 @endif
             @endforeach
         </div>
 
-        <!-- Grid Cards -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5 pt-1">
+        <!-- Core Status Cards (Single Responsive Horizontal Row) -->
+        <div class="flex items-center gap-2.5 overflow-x-auto pb-1 pt-1 min-w-0 w-full">
             @foreach($coreStatusCounts as $item)
-                @php
-                    $dotColor = match($item['status']->value) {
-                        'ENTRANTE' => 'bg-slate-500',
-                        'EURALIZ_ORDERS_RECEIVED' => 'bg-fuchsia-500',
-                        'CESAR_ORDERS_RECEIVED' => 'bg-cyan-500',
-                        'ADRIAN_ORDERS_RECEIVED' => 'bg-emerald-500',
-                        'ENVIADO_A_CAMILA' => 'bg-orange-500',
-                        'ENVIADO_AL_CLIENTE' => 'bg-blue-500',
-                        'ON_HOLD' => 'bg-amber-500',
-                        'EN_PRODUCCION' => 'bg-purple-500',
-                        default => 'bg-stone-400'
-                    };
-                @endphp
-                <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-2.5 space-y-1 text-xs">
+                <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-2.5 space-y-1 text-xs flex-1 min-w-[110px] shrink-0 xl:shrink hover:border-stone-300 transition shadow-2xs">
                     <div class="flex items-center gap-1.5 min-w-0">
-                        <span class="w-2 h-2 rounded-full {{ $dotColor }} shrink-0"></span>
+                        <span class="w-2 h-2 rounded-full {{ $item['status']->dotClass() }} shrink-0"></span>
                         <span class="text-[10px] font-bold text-zinc-700 truncate" title="{{ $item['label'] }}">{{ $item['label'] }}</span>
                     </div>
-                    <div class="flex items-baseline justify-between pt-1">
-                        <span class="text-lg font-bold font-mono text-zinc-900">{{ $item['count'] }}</span>
-                        <span class="text-[10px] font-mono text-zinc-400">{{ $item['percentage'] }}%</span>
+                    <div class="flex items-baseline justify-between pt-0.5 min-w-0">
+                        <span class="text-base font-bold font-mono text-zinc-900 leading-none">{{ $item['count'] }}</span>
+                        <span class="text-[10px] font-mono text-zinc-400 shrink-0">{{ $item['percentage'] }}%</span>
                     </div>
                 </div>
             @endforeach

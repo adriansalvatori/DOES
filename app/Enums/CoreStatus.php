@@ -71,4 +71,36 @@ enum CoreStatus: string
             self::CESAR_ORDERS_RECEIVED,
         ]);
     }
+
+    public function hexColor(): string
+    {
+        return match ($this) {
+            self::ENTRANTE => '#475569',
+            self::EURALIZ_ORDERS_RECEIVED => '#d946ef',
+            self::ADRIAN_ORDERS_RECEIVED => '#10b981',
+            self::CESAR_ORDERS_RECEIVED => '#06b6d4',
+            self::TO_DO_TODAY => '#f59e0b',
+            self::ENVIADO_A_CAMILA => '#f97316',
+            self::ENVIADO_AL_CLIENTE => '#3b82f6',
+            self::ON_HOLD => '#64748b',
+            self::EN_PRODUCCION => '#8b5cf6',
+            self::ARCHIVED => '#94a3b8',
+        };
+    }
+
+    public function dotClass(): string
+    {
+        return match ($this) {
+            self::ENTRANTE => 'bg-slate-600',
+            self::EURALIZ_ORDERS_RECEIVED => 'bg-fuchsia-500',
+            self::ADRIAN_ORDERS_RECEIVED => 'bg-emerald-500',
+            self::CESAR_ORDERS_RECEIVED => 'bg-cyan-500',
+            self::TO_DO_TODAY => 'bg-amber-500',
+            self::ENVIADO_A_CAMILA => 'bg-orange-500',
+            self::ENVIADO_AL_CLIENTE => 'bg-blue-500',
+            self::ON_HOLD => 'bg-slate-500',
+            self::EN_PRODUCCION => 'bg-purple-500',
+            self::ARCHIVED => 'bg-slate-400',
+        };
+    }
 }

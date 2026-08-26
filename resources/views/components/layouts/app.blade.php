@@ -42,10 +42,16 @@
 <body 
     x-data="{ 
         sidebarOpen: localStorage.getItem('sidebar_open') !== 'false',
-        dashboardOpen: {{ (request()->is('/') || request()->is('analytics*')) ? 'true' : 'false' }},
-        configOpen: {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'true' : 'false' }} 
+        dashboardOpen: localStorage.getItem('dashboard_open') !== 'false',
+        dashboardPopover: false,
+        configOpen: localStorage.getItem('config_open') !== 'false',
+        configPopover: false 
     }"
-    x-init="$watch('sidebarOpen', val => localStorage.setItem('sidebar_open', val))"
+    x-init="
+        $watch('sidebarOpen', val => localStorage.setItem('sidebar_open', val));
+        $watch('dashboardOpen', val => localStorage.setItem('dashboard_open', val));
+        $watch('configOpen', val => localStorage.setItem('config_open', val));
+    "
     class="h-full bg-[#fbfbfa] text-zinc-800 flex antialiased selection:bg-stone-200">
 
     <!-- Notion Left Sidebar Navigation (Collapsible) -->
@@ -73,9 +79,9 @@
             <!-- Operational Navigation Links (Notion Sidebar Item Style) -->
             <nav class="space-y-1 text-xs">
                 <!-- Dashboard Item with Submenu Dropdown -->
-                <div class="relative" @click.outside="if (!sidebarOpen) dashboardOpen = false">
+                <div class="relative" @click.outside="dashboardPopover = false">
                     <button 
-                        @click="dashboardOpen = !dashboardOpen" 
+                        @click="sidebarOpen ? (dashboardOpen = !dashboardOpen) : (dashboardPopover = !dashboardPopover)" 
                         title="{{ __('Dashboard') }}" 
                         class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('/') || request()->is('analytics*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                         <div class="flex items-center gap-2.5 min-w-0">
@@ -113,7 +119,7 @@
 
                     <!-- Floating Popover Sub-menu when Sidebar is Collapsed -->
                     <div 
-                        x-show="dashboardOpen && !sidebarOpen" 
+                        x-show="dashboardPopover && !sidebarOpen" 
                         x-transition:enter="transition ease-out duration-150"
                         x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
                         x-transition:enter-end="opacity-100 scale-100 translate-x-0"
@@ -198,9 +204,9 @@
                 </div>
 
                 <!-- Single Configuración Item with Context Dropdown Menu -->
-                <div class="pt-3 border-t border-[#e9e9e7] relative" @click.outside="if (!sidebarOpen) configOpen = false">
+                <div class="pt-3 border-t border-[#e9e9e7] relative" @click.outside="configPopover = false">
                     <button 
-                        @click="configOpen = !configOpen" 
+                        @click="sidebarOpen ? (configOpen = !configOpen) : (configPopover = !configPopover)" 
                         title="{{ __('Configuración') }}" 
                         class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                         <div class="flex items-center gap-2.5 min-w-0">
@@ -259,7 +265,7 @@
 
                     <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
                     <div 
-                        x-show="configOpen && !sidebarOpen" 
+                        x-show="configPopover && !sidebarOpen" 
                         x-transition:enter="transition ease-out duration-150"
                         x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
                         x-transition:enter-end="opacity-100 scale-100 translate-x-0"

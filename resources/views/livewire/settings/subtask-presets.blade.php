@@ -250,6 +250,7 @@
                         this.initialColorTheme = $wire.color_theme || '';
                         this.initialIsActive = Boolean($wire.is_active);
                         window.KudosDirtyGuard.register('subtask-preset-modal', () => this.isDirty());
+                        this.$cleanup(() => window.KudosDirtyGuard.unregister('subtask-preset-modal'));
                     },
                     isDirty() {
                         if (!$wire.showModal) return false;

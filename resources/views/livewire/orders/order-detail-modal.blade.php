@@ -10,6 +10,7 @@
                         if (val) this.snapshot();
                     });
                     window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty());
+                    this.$cleanup(() => window.KudosDirtyGuard.unregister('order-detail-modal'));
                 },
                 snapshot() {
                     this.initialForm = JSON.stringify({

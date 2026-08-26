@@ -44,6 +44,7 @@
                     },
                     init() {
                         window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty());
+                        this.$cleanup(() => window.KudosDirtyGuard.unregister('create-order-modal'));
                     }
                 }"
                 @keydown.window.escape="confirmClose(() => $wire.closeModal())"

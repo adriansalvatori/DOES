@@ -5,6 +5,7 @@
             this.snapshot();
             Livewire.on('mappings-saved', () => this.snapshot());
             window.KudosDirtyGuard.register('trello-mapping', () => this.isDirty());
+            this.$cleanup(() => window.KudosDirtyGuard.unregister('trello-mapping'));
         },
         snapshot() {
             this.initialMappings = JSON.stringify($wire.mappings || {});

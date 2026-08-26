@@ -118,6 +118,7 @@
                         this.initialColor = $wire.main_color || '';
                         this.initialStyleType = $wire.style_type || '';
                         window.KudosDirtyGuard.register('substatus-modal', () => this.isDirty());
+                        this.$cleanup(() => window.KudosDirtyGuard.unregister('substatus-modal'));
                     },
                     isDirty() {
                         if (!$wire.showModal) return false;
