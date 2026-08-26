@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Models\SubtaskPreset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -107,6 +108,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
     public function test_subtask_scheduling_does_not_change_parent_order_scheduled_date(): void
     {
+        $this->travelTo(Carbon::parse('2026-08-24'));
         $designer = Designer::create(['name' => 'Camila', 'active' => true]);
         $mondayStr = now()->startOfWeek()->toDateString();
         $wednesdayStr = now()->startOfWeek()->addDays(2)->toDateString();

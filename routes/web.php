@@ -9,6 +9,7 @@ use App\Livewire\Orders\ArchivedOrders;
 use App\Livewire\Orders\TrashBin;
 use App\Livewire\Planner\WeeklyPlanner;
 use App\Livewire\Resolver\ResolverList;
+use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\LanguageSettings;
 use App\Livewire\Settings\Substatuses;
 use App\Livewire\Settings\SubtaskPresets;
@@ -31,6 +32,7 @@ Route::get('/settings/language', LanguageSettings::class)->name('settings.langua
 Route::get('/settings/substatuses', Substatuses::class)->name('settings.substatuses');
 Route::get('/settings/subtasks', SubtaskPresets::class)->name('settings.subtasks');
 Route::get('/settings/trello-mapping', TrelloMapping::class)->name('settings.trello-mapping');
+Route::get('/settings/backups', Backups::class)->name('settings.backups');
 Route::get('/trash', TrashBin::class)->name('trash');
 
 Route::get('/set-locale/{locale}', function (string $locale) {

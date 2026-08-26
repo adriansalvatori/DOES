@@ -261,6 +261,13 @@
                             <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
                         </a>
+                        <a 
+                            href="/settings/backups" 
+                            title="{{ __('Respaldos de Base de Datos') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Respaldos') }}</span>
+                        </a>
                     </div>
 
                     <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
@@ -305,6 +312,13 @@
                             class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
                             <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/backups" 
+                            title="{{ __('Respaldos de Base de Datos') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Respaldos') }}</span>
                         </a>
                     </div>
                 </div>
