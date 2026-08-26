@@ -201,11 +201,39 @@ class ClientMatchingService
             'client_id' => $targetClient->id,
         ]);
 
-        // Move contacts
-        ClientContact::where('client_id', $sourceClient->id)->update([
-            'client_id' => $targetClient->id,
-            'is_primary' => false,
-        ]);
+        // Move or merge contacts
+        $sourceContacts = ClientContact::where('client_id', $sourceClient->id)->get();
+        foreach ($sourceContacts as $sContact) {
+            $sNameClean = mb_strtolower(trim($sContact->name), 'UTF-8');
+            $existingTargetContact = ClientContact::where('client_id', $targetClient->id)
+                ->get()
+                ->first(fn ($c) => mb_strtolower(trim($c->name), 'UTF-8') === $sNameClean || Str::contains(mb_strtolower(trim($c->name), 'UTF-8'), $sNameClean) || Str::contains($sNameClean, mb_strtolower(trim($c->name), 'UTF-8')));
+
+            if ($existingTargetContact) {
+                $updateData = [];
+                if (mb_strlen($sContact->name, 'UTF-8') > mb_strlen($existingTargetContact->name, 'UTF-8')) {
+                    $updateData['name'] = $sContact->name;
+                }
+                if (empty($existingTargetContact->phone) && ! empty($sContact->phone)) {
+                    $updateData['phone'] = $sContact->phone;
+                }
+                if (empty($existingTargetContact->email) && ! empty($sContact->email)) {
+                    $updateData['email'] = $sContact->email;
+                }
+                if (empty($existingTargetContact->department) && ! empty($sContact->department)) {
+                    $updateData['department'] = $sContact->department;
+                }
+                if (! empty($updateData)) {
+                    $existingTargetContact->update($updateData);
+                }
+                $sContact->delete();
+            } else {
+                $sContact->update([
+                    'client_id' => $targetClient->id,
+                    'is_primary' => false,
+                ]);
+            }
+        }
 
         // Move links
         ClientLink::where('client_id', $sourceClient->id)->update([

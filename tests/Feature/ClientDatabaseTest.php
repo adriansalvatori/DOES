@@ -6,6 +6,7 @@ use App\Livewire\Backlog\Index;
 use App\Livewire\Clients\ClientFlyoutPanel;
 use App\Livewire\Clients\ClientIndex;
 use App\Models\Client;
+use App\Models\ClientContact;
 use App\Models\ClientLocation;
 use App\Models\Order;
 use App\Services\ClientMatchingService;
@@ -243,5 +244,62 @@ class ClientDatabaseTest extends TestCase
             'phone' => '(770) 864-9359',
             'email' => 'suwanee@suvidha.com',
         ]);
+    }
+
+    public function test_confirming_duplicate_contact_merges_contacts_into_one_entry(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE DUP CONTACTS']);
+
+        $c1 = ClientContact::create([
+            'client_id' => $client->id,
+            'name' => 'GIO',
+            'phone' => '(770) 111-2222',
+            'is_primary' => true,
+        ]);
+
+        $c2 = ClientContact::create([
+            'client_id' => $client->id,
+            'name' => 'GIO GARCIA',
+            'email' => 'gio@example.com',
+            'is_primary' => false,
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->assertSee('¡Posible contacto duplicado con')
+            ->call('confirmMergeContact', 1, 'GIO')
+            ->call('save');
+
+        $this->assertDatabaseCount('client_contacts', 1);
+
+        $this->assertDatabaseHas('client_contacts', [
+            'client_id' => $client->id,
+            'name' => 'GIO GARCIA',
+            'phone' => '(770) 111-2222',
+            'email' => 'gio@example.com',
+        ]);
+    }
+
+    public function test_exact_duplicate_contact_names_trigger_warning_and_merge(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE EXACT DUP CONTACTS']);
+
+        $c1 = ClientContact::create([
+            'client_id' => $client->id,
+            'name' => 'GIO GARCIA',
+        ]);
+
+        $c2 = ClientContact::create([
+            'client_id' => $client->id,
+            'name' => 'GIO GARCIA',
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->assertSee('¡Posible contacto duplicado con')
+            ->call('confirmMergeContact', 1, 'GIO GARCIA')
+            ->call('save');
+
+        $this->assertDatabaseCount('client_contacts', 1);
     }
 }

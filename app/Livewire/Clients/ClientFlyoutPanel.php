@@ -8,6 +8,7 @@ use App\Models\ClientLink;
 use App\Models\ClientLocation;
 use App\Models\Order;
 use App\Services\ClientMatchingService;
+use App\Services\TrelloSyncService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
@@ -151,10 +152,60 @@ class ClientFlyoutPanel extends Component
 
     public function confirmMergeContact(int $index, string $targetName): void
     {
-        if (isset($this->contacts[$index])) {
-            $this->contacts[$index]['name'] = $targetName;
-            $this->dismissedContactDuplicates[$index] = true;
+        if (! isset($this->contacts[$index])) {
+            return;
         }
+
+        $source = $this->contacts[$index];
+        $targetIndex = null;
+        $cleanTarget = mb_strtolower(trim($targetName), 'UTF-8');
+
+        foreach ($this->contacts as $i => $c) {
+            if ($i === $index) {
+                continue;
+            }
+            $cName = mb_strtolower(trim($c['name'] ?? ''), 'UTF-8');
+            if (! empty($cName) && ($cName === $cleanTarget || Str::contains($cName, $cleanTarget) || Str::contains($cleanTarget, $cName))) {
+                $targetIndex = $i;
+                break;
+            }
+        }
+
+        if ($targetIndex !== null && isset($this->contacts[$targetIndex])) {
+            $target = &$this->contacts[$targetIndex];
+
+            $sourceName = trim($source['name'] ?? '');
+            $targetNameStr = trim($target['name'] ?? '');
+            if (mb_strlen($sourceName, 'UTF-8') > mb_strlen($targetNameStr, 'UTF-8')) {
+                $target['name'] = mb_strtoupper($sourceName, 'UTF-8');
+            } else {
+                $target['name'] = mb_strtoupper($targetNameStr, 'UTF-8');
+            }
+
+            if (empty(trim($target['phone'] ?? '')) && ! empty(trim($source['phone'] ?? ''))) {
+                $target['phone'] = $source['phone'];
+            }
+            if (empty(trim($target['email'] ?? '')) && ! empty(trim($source['email'] ?? ''))) {
+                $target['email'] = $source['email'];
+            }
+            if (empty(trim($target['department'] ?? '')) && ! empty(trim($source['department'] ?? ''))) {
+                $target['department'] = $source['department'];
+            }
+            if (! empty($source['is_primary'])) {
+                $target['is_primary'] = true;
+            }
+
+            if (! empty($source['id'])) {
+                ClientContact::where('id', $source['id'])->delete();
+            }
+
+            unset($this->contacts[$index]);
+            $this->contacts = array_values($this->contacts);
+        } else {
+            $this->contacts[$index]['name'] = mb_strtoupper($targetName, 'UTF-8');
+        }
+
+        $this->dismissedContactDuplicates = [];
     }
 
     public function getDuplicateWarningForContact(int $index): ?string
@@ -173,8 +224,12 @@ class ClientFlyoutPanel extends Component
                 continue;
             }
             $otherName = mb_strtolower(trim($other['name'] ?? ''), 'UTF-8');
-            if (empty($otherName) || $otherName === $name) {
+            if (empty($otherName)) {
                 continue;
+            }
+
+            if ($otherName === $name) {
+                return trim($other['name']);
             }
 
             $nameFirst = explode(' ', $name)[0] ?? '';
@@ -201,8 +256,10 @@ class ClientFlyoutPanel extends Component
             return;
         }
 
+        $cleanLower = mb_strtolower($cleanName, 'UTF-8');
         foreach ($this->contacts as $c) {
-            if (mb_strtolower(trim($c['name'] ?? ''), 'UTF-8') === mb_strtolower($cleanName, 'UTF-8')) {
+            $cName = mb_strtolower(trim($c['name'] ?? ''), 'UTF-8');
+            if (! empty($cName) && ($cName === $cleanLower || Str::contains($cName, $cleanLower) || Str::contains($cleanLower, $cName))) {
                 return;
             }
         }
