@@ -73,7 +73,7 @@
             </div>
             <div>
                 <div class="text-2xl font-mono font-bold text-zinc-900 tracking-tight" x-text="timeRemaining">
-                    00:00:00
+                    00h 00m
                 </div>
                 <p class="text-xs text-zinc-500 mt-0.5">
                     {{ __('Programado diariamente a las 00:00') }}
@@ -210,7 +210,7 @@
     document.addEventListener('alpine:init', () => {
         Alpine.data('backupCountdown', (targetIsoDate) => ({
             targetTime: new Date(targetIsoDate).getTime(),
-            timeRemaining: '00h 00m 00s',
+            timeRemaining: '00h 00m',
             timer: null,
 
             init() {
@@ -225,16 +225,15 @@
                 const diff = this.targetTime - now;
 
                 if (diff <= 0) {
-                    this.timeRemaining = '00h 00m 00s';
+                    this.timeRemaining = '00h 00m';
                     return;
                 }
 
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
                 const pad = (n) => String(n).padStart(2, '0');
-                this.timeRemaining = `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+                this.timeRemaining = `${pad(hours)}h ${pad(minutes)}m`;
             },
 
             destroy() {
