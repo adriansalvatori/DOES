@@ -17,7 +17,7 @@
             this.initialSnapshot = JSON.stringify({
                 name: ($wire.name || '').trim(),
                 website: ($wire.website || '').trim(),
-                aliasesInput: ($wire.aliasesInput || '').trim(),
+                aliases: ($wire.aliases || []).map(a => (a || '').trim()),
                 notes: ($wire.notes || '').trim(),
                 locations: ($wire.locations || []).map(l => ({
                     name: (l.name || '').trim(),
@@ -46,7 +46,7 @@
             const current = JSON.stringify({
                 name: ($wire.name || '').trim(),
                 website: ($wire.website || '').trim(),
-                aliasesInput: ($wire.aliasesInput || '').trim(),
+                aliases: ($wire.aliases || []).map(a => (a || '').trim()),
                 notes: ($wire.notes || '').trim(),
                 locations: ($wire.locations || []).map(l => ({
                     name: (l.name || '').trim(),
@@ -359,18 +359,37 @@
                                 />
                             </div>
 
-                            {{-- 4. Aliases / Nombres Alternativos --}}
+                            {{-- 4. Aliases / Nombres Alternativos (Interactive Tag Labels) --}}
                             <div class="flex items-start gap-2">
-                                <x-lucide-tags class="w-4 h-4 text-amber-600 shrink-0 mt-1" />
+                                <x-lucide-tags class="w-4 h-4 text-amber-600 shrink-0 mt-1.5" />
                                 <div class="w-full space-y-1">
-                                    <input 
-                                        type="text" 
-                                        wire:model="aliasesInput" 
-                                        placeholder="{{ __('Aliases (ej. FL, Fuerza Latina Insurance)') }}" 
-                                        class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-medium focus:outline-none transition"
-                                    />
-                                    <span class="text-[10px] text-zinc-400 block -mx-1 px-1">
-                                        {{ __('Separa múltiples aliases con coma. Se usarán para vincular tarjetas de Trello automáticamente.') }}
+                                    <div class="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-50 hover:bg-zinc-100/60 focus-within:bg-white border border-zinc-200/70 focus-within:border-zinc-300 focus-within:ring-2 focus-within:ring-zinc-900/5 rounded-lg transition min-h-[38px]">
+                                        @foreach($aliases as $index => $alias)
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-amber-100/90 text-amber-950 border border-amber-300/80 shadow-2xs">
+                                                <span>{{ $alias }}</span>
+                                                <button 
+                                                    type="button" 
+                                                    wire:click="removeAlias({{ $index }})" 
+                                                    class="hover:text-rose-700 text-amber-700/70 transition cursor-pointer p-0.5 rounded"
+                                                    title="{{ __('Eliminar alias') }}"
+                                                >
+                                                    <x-lucide-x class="w-3 h-3" />
+                                                </button>
+                                            </span>
+                                        @endforeach
+
+                                        <input 
+                                            type="text" 
+                                            wire:model="newAlias" 
+                                            wire:keydown.enter.prevent="addAlias" 
+                                            wire:keydown.comma.prevent="addAlias"
+                                            wire:blur="addAlias"
+                                            placeholder="{{ empty($aliases) ? __('Escribe un alias y presiona Enter...') : __('Agregar alias...') }}"
+                                            class="flex-1 min-w-[140px] bg-transparent text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none px-1 py-0.5"
+                                        />
+                                    </div>
+                                    <span class="text-[10px] text-zinc-400 block px-0.5">
+                                        {{ __('Presiona Enter para agregar cada alias. Se usarán para vincular tarjetas de Trello automáticamente.') }}
                                     </span>
                                 </div>
                             </div>

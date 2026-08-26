@@ -24,7 +24,9 @@ class ClientFlyoutPanel extends Component
 
     public string $website = '';
 
-    public string $aliasesInput = '';
+    public array $aliases = [];
+
+    public string $newAlias = '';
 
     public string $notes = '';
 
@@ -50,7 +52,8 @@ class ClientFlyoutPanel extends Component
             if ($client) {
                 $this->name = $client->name;
                 $this->website = $client->website ?? '';
-                $this->aliasesInput = is_array($client->aliases) ? implode(', ', $client->aliases) : '';
+                $this->aliases = is_array($client->aliases) ? array_values($client->aliases) : [];
+                $this->newAlias = '';
                 $this->notes = $client->notes ?? '';
                 $this->contacts = $client->contacts->map(fn ($c) => [
                     'id' => $c->id,
@@ -102,7 +105,8 @@ class ClientFlyoutPanel extends Component
         } else {
             $this->name = '';
             $this->website = '';
-            $this->aliasesInput = '';
+            $this->aliases = [];
+            $this->newAlias = '';
             $this->notes = '';
             $this->contacts = [
                 ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
@@ -118,6 +122,28 @@ class ClientFlyoutPanel extends Component
         }
 
         $this->isOpen = true;
+    }
+
+    public function addAlias(): void
+    {
+        $clean = trim($this->newAlias);
+        if (! empty($clean)) {
+            $parts = array_map('trim', explode(',', $clean));
+            foreach ($parts as $p) {
+                if (! empty($p) && ! in_array($p, $this->aliases, true)) {
+                    $this->aliases[] = $p;
+                }
+            }
+            $this->newAlias = '';
+        }
+    }
+
+    public function removeAlias(int $index): void
+    {
+        if (isset($this->aliases[$index])) {
+            unset($this->aliases[$index]);
+            $this->aliases = array_values($this->aliases);
+        }
     }
 
     public function close(): void
@@ -353,9 +379,13 @@ class ClientFlyoutPanel extends Component
             }
         }
 
+        if (! empty(trim($this->newAlias))) {
+            $this->addAlias();
+        }
+
         $cleanName = mb_strtoupper(trim($this->name), 'UTF-8');
         $cleanWebsite = trim($this->website);
-        $aliasesArray = array_values(array_filter(array_map('trim', explode(',', $this->aliasesInput))));
+        $aliasesArray = array_values(array_filter(array_map('trim', $this->aliases)));
 
         if ($this->clientId) {
             $client = Client::findOrFail($this->clientId);
