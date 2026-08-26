@@ -29,6 +29,8 @@ class WeeklyPlanner extends Component
 
     public bool $showSlaWarningModal = false;
 
+    public bool $showSystemTasks = true;
+
     public array $slaWarningDetails = [];
 
     public array $recentlyDeletedSubtaskIds = [];
@@ -44,6 +46,18 @@ class WeeklyPlanner extends Component
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->viewMonth = now()->format('Y-m');
         $this->viewMode = session('weekly_planner_view_mode', 'by_day');
+        $this->showSystemTasks = (bool) session('weekly_planner_show_system_tasks', true);
+    }
+
+    public function updatedShowSystemTasks($value)
+    {
+        session(['weekly_planner_show_system_tasks' => (bool) $value]);
+    }
+
+    public function toggleShowSystemTasks()
+    {
+        $this->showSystemTasks = ! $this->showSystemTasks;
+        session(['weekly_planner_show_system_tasks' => $this->showSystemTasks]);
     }
 
     public function updatedViewMode($value)
@@ -495,6 +509,8 @@ class WeeklyPlanner extends Component
                         'scheduled_date' => $st->scheduled_date->format('d M, Y'),
                         'current_due_date' => $st->order->current_due_date->format('d M, Y'),
                         'days_overdue' => $daysOverdue,
+                        'is_work_task' => (bool) $st->is_work_task,
+                        'is_system_task' => $st->isSystemTask(),
                     ]);
                 }
             }

@@ -85,4 +85,14 @@ class RelatedTask extends Model
     {
         return $this->status === 'done' || $this->completed_at !== null;
     }
+
+    public function isSystemTask(): bool
+    {
+        return ! $this->is_work_task || $this->trigger_type !== null;
+    }
+
+    public function isWorkTask(): bool
+    {
+        return (bool) $this->is_work_task && $this->trigger_type === null;
+    }
 }

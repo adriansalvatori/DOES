@@ -297,7 +297,7 @@
             <!-- LINE 3: Por Dia / Diseñador + Workspace Searchbar (Left) ____________________ Searchbar Backlog (Right) -->
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2.5 border-t border-[#e9e9e7]">
                 
-                <!-- Left: Por Dia / Diseñador View Mode Switcher + Workspace Searchbar -->
+                <!-- Left: Por Dia / Diseñador View Mode Switcher + Tareas de Sistema Toggle + Workspace Searchbar -->
                 <div class="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto">
                     <!-- View Mode Switcher -->
                     <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-1 h-8 text-xs font-medium shrink-0">
@@ -316,6 +316,16 @@
                             <span>{{ __('Por Diseñador') }}</span>
                         </button>
                     </div>
+
+                    <!-- System Tasks Toggle Button (Violet Accent) -->
+                    <button 
+                        type="button" 
+                        wire:click="toggleShowSystemTasks"
+                        class="px-2.5 py-1 h-8 rounded-lg border text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer shrink-0 {{ $showSystemTasks ? 'bg-violet-600 hover:bg-violet-700 text-white border-violet-700 shadow-xs' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200' }}"
+                        title="{{ $showSystemTasks ? __('Ocultar tareas de sistema') : __('Mostrar tareas de sistema') }}">
+                        <x-lucide-cpu class="w-3.5 h-3.5 {{ $showSystemTasks ? 'text-violet-100' : 'text-violet-600' }}" />
+                        <span>{{ __('Tareas de Sistema') }}</span>
+                    </button>
 
                     <!-- Workspace Orders Search Bar (Next to View Switcher) -->
                     <div class="relative shrink-0 w-full sm:w-56" x-data="{ open: true }" @click.outside="open = false">
@@ -509,6 +519,10 @@
                                         ? $designerSubtasks->filter(fn($st) => $st->scheduled_date && $st->scheduled_date->gte(Carbon\Carbon::parse($day['date_string'])))
                                         : $designerSubtasks->filter(fn($st) => $st->scheduled_date?->toDateString() === $day['date_string']);
 
+                                    if (! $showSystemTasks) {
+                                        $daySubtasks = $daySubtasks->filter(fn($st) => $st->isWorkTask());
+                                    }
+
                                     $dayColorClass = match($day['day_name'] ?? '') {
                                         'Lunes' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
                                         'Martes' => 'bg-sky-50 text-sky-700 border-sky-200',
@@ -691,9 +705,8 @@
                                                                     type="button"
                                                                     class="w-3.5 h-3.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                                                </button>
-                                                                <div class="min-w-0 flex-1">
-                                                                    <h5 class="font-bold text-[11px] text-zinc-900 truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : '' }}">
+                                                                                                                     <div class="min-w-0 flex-1">
+                                                                    <h5 class="font-bold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900') }}">
                                                                         {{ $stask->title }}
                                                                     </h5>
                                                                 </div>
@@ -714,9 +727,9 @@
                                                                     class="text-left min-w-0 flex-1 hover:underline group/link">
                                                                     <div class="flex items-center gap-1 min-w-0">
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
-                                                                        <span class="font-bold text-[10px] text-zinc-800 truncate leading-tight">{{ $stask->order->company_name }}</span>
+                                                                        <span class="font-bold text-[10px] truncate leading-tight {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
                                                                         @if($stask->order->task_name)
-                                                                            <span class="text-[9.5px] text-zinc-500 truncate leading-tight">• {{ $stask->order->task_name }}</span>
+                                                                            <span class="text-[9.5px] truncate leading-tight {{ $stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500' }}">• {{ $stask->order->task_name }}</span>
                                                                         @endif
                                                                     </div>
                                                                 </button>
@@ -780,6 +793,9 @@
                             }
                             return false;
                         });
+                        $designerTotalCount = $designerSubtasks->count();
+                        $visibleDesignerSubtasks = $showSystemTasks ? $designerSubtasks : $designerSubtasks->filter(fn($st) => $st->isWorkTask());
+                        $designerVisibleCount = $visibleDesignerSubtasks->count();
                     @endphp
                     <div class="flex flex-col min-w-0 pr-4 space-y-3">
                         
@@ -791,7 +807,11 @@
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
                                 <span class="px-2 py-0.5 rounded-full bg-stone-100 text-zinc-600 font-mono text-[10px] font-bold" title="{{ __('Subtareas semanales') }}">
-                                    {{ $designerSubtasks->count() }}
+                                    @if(!$showSystemTasks && $designerVisibleCount !== $designerTotalCount)
+                                        {{ $designerVisibleCount }} ({{ $designerTotalCount }})
+                                    @else
+                                        {{ $designerVisibleCount }}
+                                    @endif
                                 </span>
                                 <button 
                                     type="button"
@@ -822,6 +842,10 @@
                                             }
                                             return false;
                                         });
+
+                                    if (! $showSystemTasks) {
+                                        $daySubtasks = $daySubtasks->filter(fn($st) => $st->isWorkTask());
+                                    }
 
                                     $dayColorClass = match($day['day_name'] ?? '') {
                                         'Lunes', 'Monday' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
@@ -1039,7 +1063,7 @@
                                                                 @if($stask->order)
                                                                     <!-- Company Name with Instant Tooltip (Expands to fill available width) -->
                                                                     <div class="relative group/tip min-w-0 flex-1">
-                                                                        <span class="font-bold text-zinc-900 uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : '' }}">
+                                                                        <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-bold' : 'text-zinc-900 font-bold') }}">
                                                                             {{ $stask->order->company_name }}
                                                                         </span>
                                                                         <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -1050,7 +1074,7 @@
                                                                     @if($stask->order->task_name)
                                                                         <!-- Order Name with Instant Tooltip (Expands to fill available width equally) -->
                                                                         <div class="relative group/tip min-w-0 flex-1">
-                                                                            <span class="text-zinc-500 font-medium block truncate {{ $staskDone ? 'line-through text-zinc-400' : '' }}">
+                                                                            <span class="block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }}">
                                                                                 {{ $stask->order->task_name }}
                                                                             </span>
                                                                             <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -1069,7 +1093,7 @@
                                                                         <span>{{ $stask->title }}</span>
                                                                     </span>
                                                                 @else
-                                                                    <span class="font-medium text-amber-900 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded text-[9.5px] shrink-0 {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : '' }}">
+                                                                    <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] shrink-0 {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : ($stask->isSystemTask() ? 'text-violet-800 bg-violet-50 border border-violet-200' : 'text-amber-900 bg-amber-50 border border-amber-200/60') }}">
                                                                         {{ $stask->title }}
                                                                     </span>
                                                                 @endif
@@ -1622,8 +1646,8 @@
                                     <div class="p-3 bg-rose-50/40 hover:bg-rose-50/80 transition flex items-start justify-between gap-3">
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-1.5 mb-0.5">
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase {{ $item['type'] === 'subtask' ? 'bg-violet-100 text-violet-800 border border-violet-200' : 'bg-stone-200 text-zinc-800 border border-stone-300' }}">
-                                                    {{ $item['type'] === 'subtask' ? __('Subtarea') : __('Orden') }}
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? 'bg-violet-600 text-white border border-violet-700' : 'bg-violet-100 text-violet-800 border border-violet-200') : 'bg-stone-200 text-zinc-800 border border-stone-300' }}">
+                                                    {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? __('Sistema') : __('Subtarea')) : __('Orden') }}
                                                 </span>
                                                 <h4 class="font-bold text-xs text-zinc-900 truncate">{{ $item['company_name'] }}</h4>
                                             </div>

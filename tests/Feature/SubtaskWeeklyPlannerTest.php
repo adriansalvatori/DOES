@@ -455,4 +455,63 @@ class SubtaskWeeklyPlannerTest extends TestCase
             'deleted_at' => null,
         ]);
     }
+
+    public function test_can_toggle_system_tasks_visibility_and_persists_session(): void
+    {
+        $designer = Designer::create(['name' => 'Carla', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'EMPRESA TEST',
+            'task_name' => 'Diseño Web',
+            'core_status' => CoreStatus::ENTRANTE,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $todayStr = now()->startOfWeek()->toDateString();
+
+        $workTask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Diseño Banner',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => $todayStr,
+            'assignee_id' => $designer->id,
+            'is_work_task' => true,
+        ]);
+
+        $systemTask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Confirmar medidas',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => $todayStr,
+            'assignee_id' => $designer->id,
+            'is_work_task' => false,
+        ]);
+
+        $triggeredSystemTask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Enviar correo de atraso preventivo',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => $todayStr,
+            'assignee_id' => $designer->id,
+            'is_work_task' => true,
+            'trigger_type' => 'AUTOMATIC_OVERDUE_DETECTION',
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSet('showSystemTasks', true)
+            ->assertSee('Confirmar medidas')
+            ->assertSee('Enviar correo de atraso preventivo')
+            ->assertSee('Tareas de Sistema')
+            ->call('toggleShowSystemTasks')
+            ->assertSet('showSystemTasks', false)
+            ->assertDontSee('Confirmar medidas')
+            ->assertDontSee('Enviar correo de atraso preventivo')
+            ->assertSee('Diseño Banner');
+
+        $this->assertEquals(false, session('weekly_planner_show_system_tasks'));
+    }
 }
