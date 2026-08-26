@@ -271,6 +271,59 @@ class TrelloSyncService
             }
 
             if ($existing->in_workspace) {
+                // Check for field conflicts (excluding core_status and dates per rules)
+                $conflictFields = [];
+                if (! empty($parsed['company_name']) && $existing->company_name !== $parsed['company_name']) {
+                    $conflictFields[] = 'company_name';
+                }
+                if (! empty($parsed['task_name']) && $existing->task_name !== $parsed['task_name']) {
+                    $conflictFields[] = 'task_name';
+                }
+                if (! empty($parsed['wo_number'])) {
+                    $cleanLocalWO = preg_replace('/^WO\s*/i', '', trim($existing->wo_number ?? ''));
+                    $cleanTrelloWO = preg_replace('/^WO\s*/i', '', trim($parsed['wo_number'] ?? ''));
+                    if ($cleanLocalWO !== $cleanTrelloWO) {
+                        $conflictFields[] = 'wo_number';
+                    }
+                }
+                if ($designerId && $existing->designer_id !== $designerId) {
+                    $conflictFields[] = 'designer';
+                }
+
+                if (! empty($conflictFields)) {
+                    $trelloDesignerName = $designerId ? (Designer::find($designerId)?->name ?? 'Sin asignar') : 'Sin asignar';
+                    $trelloUpdatedAt = ! empty($cardData['dateLastActivity'])
+                        ? Carbon::parse($cardData['dateLastActivity'])->format('d M Y, h:i A')
+                        : 'N/A';
+                    $workspaceUpdatedAt = $existing->updated_at ? $existing->updated_at->format('d M Y, h:i A') : 'N/A';
+
+                    return [
+                        'order' => $existing,
+                        'action' => 'conflict',
+                        'company_name' => $existing->company_name,
+                        'task_name' => $existing->task_name,
+                        'previous_status' => $existing->core_status?->label() ?? '',
+                        'new_status' => $coreStatus->label(),
+                        'details' => ['Conflicto entre Workspace y Trello'],
+                        'diff_fields' => $conflictFields,
+                        'workspace_updated_at' => $workspaceUpdatedAt,
+                        'trello_updated_at' => $trelloUpdatedAt,
+                        'workspace_data' => [
+                            'company_name' => $existing->company_name,
+                            'task_name' => $existing->task_name,
+                            'wo_number' => $existing->wo_number,
+                            'designer_name' => $existing->designer?->name ?? 'Sin asignar',
+                        ],
+                        'trello_data' => [
+                            'company_name' => $parsed['company_name'],
+                            'task_name' => $parsed['task_name'],
+                            'wo_number' => $parsed['wo_number'],
+                            'designer_name' => $trelloDesignerName,
+                        ],
+                        'card_data' => $cardData,
+                    ];
+                }
+
                 // Local status takes precedence for active workspace orders
                 $targetStatus = $existing->core_status;
 
@@ -470,6 +523,10 @@ class TrelloSyncService
 
             if ($order->current_due_date) {
                 $params['due'] = $order->current_due_date->toIso8601String();
+            }
+
+            if ($order->designer && ! empty($order->designer->trello_member_id)) {
+                $params['idMembers'] = $order->designer->trello_member_id;
             }
 
             if ($order->core_status) {

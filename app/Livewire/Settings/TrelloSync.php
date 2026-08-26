@@ -6,6 +6,7 @@ use App\Models\DueDateHistory;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -43,13 +44,17 @@ class TrelloSync extends Component
 
     public string $activeFilter = 'all';
 
+    public ?array $selectedConflict = null;
+
     public array $syncReport = [
         'show' => false,
         'total' => 0,
         'added' => 0,
         'moved' => 0,
+        'pushed' => 0,
         'updated' => 0,
         'deleted' => 0,
+        'conflicts' => 0,
         'unchanged' => 0,
         'timestamp' => '',
         'changes' => [],
@@ -64,6 +69,140 @@ class TrelloSync extends Component
     {
         $this->syncReport['show'] = false;
         $this->activeFilter = 'all';
+        $this->selectedConflict = null;
+    }
+
+    public function openConflictModal(int $orderId): void
+    {
+        foreach ($this->syncReport['changes'] as $change) {
+            if (isset($change['order_id']) && $change['order_id'] == $orderId && $change['action'] === 'conflict') {
+                $this->selectedConflict = $change;
+                break;
+            }
+        }
+    }
+
+    public function closeConflictModal(): void
+    {
+        $this->selectedConflict = null;
+    }
+
+    public function resolveUseWorkspace(int $orderId): void
+    {
+        $order = Order::find($orderId);
+        $pushedTitle = '';
+        if ($order) {
+            // Sanitize task_name if it redundantly starts with company_name
+            $comp = trim($order->company_name);
+            $task = trim($order->task_name);
+            if (! empty($comp) && ! empty($task) && str_starts_with(mb_strtolower($task, 'UTF-8'), mb_strtolower($comp, 'UTF-8'))) {
+                $cleanTask = trim(mb_substr($task, mb_strlen($comp, 'UTF-8'), null, 'UTF-8'), " \t\n\r\0\x0B-:");
+                if (! empty($cleanTask)) {
+                    $order->update(['task_name' => $cleanTask]);
+                }
+            }
+
+            $success = app(TrelloSyncService::class)->updateCardOnTrello($order, $this->apiKey, $this->userToken, $this->boardId);
+            $pushedTitle = OrderTitleParserService::buildTitle($order);
+
+            if (! $success) {
+                session()->flash('error', '⚠️ No se pudo actualizar en Trello. Verifica tu conexión o token de Trello.');
+            }
+        }
+
+        foreach ($this->syncReport['changes'] as &$change) {
+            if (isset($change['order_id']) && $change['order_id'] == $orderId) {
+                $change['action'] = 'pushed_to_trello';
+                $change['pushed_title'] = $pushedTitle;
+                $change['details'] = ['Enviado a Trello con formato limpio'];
+                break;
+            }
+        }
+
+        $this->syncReport['conflicts'] = max(0, $this->syncReport['conflicts'] - 1);
+        $this->syncReport['pushed'] = ($this->syncReport['pushed'] ?? 0) + 1;
+        $this->selectedConflict = null;
+
+        session()->flash('message', 'Conflicto resuelto. Se enviaron los datos de Workspace a Trello.');
+    }
+
+    public function resolveUseTrello(int $orderId): void
+    {
+        $targetChange = null;
+        foreach ($this->syncReport['changes'] as &$change) {
+            if (isset($change['order_id']) && $change['order_id'] == $orderId) {
+                $targetChange = &$change;
+                break;
+            }
+        }
+
+        if ($targetChange && isset($targetChange['trello_data'])) {
+            $order = Order::find($orderId);
+            if ($order) {
+                $trelloData = $targetChange['trello_data'];
+                $updateData = [];
+
+                if (! empty($trelloData['company_name'])) {
+                    $updateData['company_name'] = $trelloData['company_name'];
+                }
+                if (! empty($trelloData['task_name'])) {
+                    $updateData['task_name'] = $trelloData['task_name'];
+                }
+                if (! empty($trelloData['wo_number'])) {
+                    $updateData['wo_number'] = $trelloData['wo_number'];
+                }
+
+                $order->update($updateData);
+            }
+
+            $targetChange['action'] = 'updated';
+            $targetChange['details'] = ['Conflicto resuelto: Usar datos de Trello'];
+            $this->syncReport['conflicts'] = max(0, $this->syncReport['conflicts'] - 1);
+            $this->syncReport['updated'] = ($this->syncReport['updated'] ?? 0) + 1;
+        }
+
+        $this->selectedConflict = null;
+        session()->flash('message', 'Conflicto resuelto. Se actualizaron los datos locales con la información de Trello.');
+    }
+
+    public function resolveAllWorkspace(): void
+    {
+        if (empty($this->syncReport['changes'])) {
+            return;
+        }
+
+        $conflictIds = [];
+        foreach ($this->syncReport['changes'] as $change) {
+            if (isset($change['order_id']) && $change['action'] === 'conflict') {
+                $conflictIds[] = (int) $change['order_id'];
+            }
+        }
+
+        foreach ($conflictIds as $id) {
+            $this->resolveUseWorkspace($id);
+        }
+
+        session()->flash('message', 'Todos los conflictos se resolvieron usando los datos de Workspace.');
+    }
+
+    public function resolveAllTrello(): void
+    {
+        if (empty($this->syncReport['changes'])) {
+            return;
+        }
+
+        $conflictIds = [];
+        foreach ($this->syncReport['changes'] as $change) {
+            if (isset($change['order_id']) && $change['action'] === 'conflict') {
+                $conflictIds[] = (int) $change['order_id'];
+            }
+        }
+
+        foreach ($conflictIds as $id) {
+            $this->resolveUseTrello($id);
+        }
+
+        session()->flash('message', 'Todos los conflictos se resolvieron usando los datos de Trello.');
     }
 
     public function runTrelloSync()
@@ -117,6 +256,7 @@ class TrelloSync extends Component
         $movedCount = 0;
         $pushedCount = 0;
         $updatedCount = 0;
+        $conflictCount = 0;
         $unchangedCount = 0;
         $changesList = [];
 
@@ -131,6 +271,7 @@ class TrelloSync extends Component
                 'moved' => $movedCount++,
                 'pushed_to_trello' => $pushedCount++,
                 'updated' => $updatedCount++,
+                'conflict' => $conflictCount++,
                 'unchanged' => $unchangedCount++,
                 default => null,
             };
@@ -144,6 +285,12 @@ class TrelloSync extends Component
                     'previous_status' => $res['previous_status'] ?? '',
                     'new_status' => $res['new_status'] ?? '',
                     'details' => $res['details'] ?? [],
+                    'diff_fields' => $res['diff_fields'] ?? [],
+                    'workspace_updated_at' => $res['workspace_updated_at'] ?? 'N/A',
+                    'trello_updated_at' => $res['trello_updated_at'] ?? 'N/A',
+                    'workspace_data' => $res['workspace_data'] ?? [],
+                    'trello_data' => $res['trello_data'] ?? [],
+                    'card_data' => $res['card_data'] ?? [],
                 ];
             }
         }
@@ -176,14 +323,15 @@ class TrelloSync extends Component
             'moved' => $movedCount,
             'pushed' => $pushedCount,
             'updated' => $updatedCount,
+            'conflicts' => $conflictCount,
             'deleted' => $deletedCount,
             'unchanged' => $unchangedCount,
             'timestamp' => now()->format('d M, Y - h:i A'),
             'changes' => $changesList,
         ];
 
-        $this->syncLog[] = "[$timestamp] 🎉 Sincronización exitosa: {$totalSynced} tarjetas procesadas ({$addedCount} nuevas, {$pushedCount} enviadas a Trello, {$movedCount} movidas, {$updatedCount} actualizadas, {$deletedCount} faltantes en Trello).";
-        session()->flash('message', "Sincronización con Trello completada exitosamente ({$totalSynced} tarjetas procesadas).");
+        $this->syncLog[] = "[$timestamp] 🎉 Sincronización procesada: {$totalSynced} tarjetas ({$addedCount} nuevas, {$pushedCount} enviadas a Trello, {$movedCount} movidas, {$updatedCount} actualizadas, {$conflictCount} conflictos, {$deletedCount} faltantes en Trello).";
+        session()->flash('message', "Sincronización con Trello completada. ({$conflictCount} conflictos pendientes por resolver).");
     }
 
     public function render()

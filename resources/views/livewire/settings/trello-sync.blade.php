@@ -86,34 +86,31 @@
                 </div>
 
                 <!-- Metrics Grid Report -->
-                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
                     <button 
                         wire:click="setFilter('created')"
                         class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'created' ? 'bg-emerald-100/70 border-emerald-400 ring-2 ring-emerald-400/30' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">{{ __('Nuevas Importadas') }}</span>
+                        <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">{{ __('Nuevas') }}</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-lg font-bold text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
-                            <span class="text-[10px] text-emerald-700">{{ __('tarjetas') }}</span>
                         </div>
                     </button>
 
                     <button 
                         wire:click="setFilter('pushed_to_trello')"
                         class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'pushed_to_trello' ? 'bg-purple-100/70 border-purple-400 ring-2 ring-purple-400/30' : 'bg-purple-50/70 border-purple-200 hover:bg-purple-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-purple-800 tracking-wider block truncate">{{ __('Enviadas a Trello') }}</span>
+                        <span class="text-[9px] uppercase font-bold text-purple-800 tracking-wider block truncate">{{ __('Enviadas') }}</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-lg font-bold text-purple-900 font-mono">{{ $syncReport['pushed'] ?? 0 }}</span>
-                            <span class="text-[10px] text-purple-700">{{ __('tarjetas') }}</span>
                         </div>
                     </button>
 
                     <button 
                         wire:click="setFilter('moved')"
                         class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'moved' ? 'bg-sky-100/70 border-sky-400 ring-2 ring-sky-400/30' : 'bg-sky-50/70 border-sky-200 hover:bg-sky-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-sky-800 tracking-wider block truncate">{{ __('Movidas Local') }}</span>
+                        <span class="text-[9px] uppercase font-bold text-sky-800 tracking-wider block truncate">{{ __('Movidas') }}</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-lg font-bold text-sky-900 font-mono">{{ $syncReport['moved'] }}</span>
-                            <span class="text-[10px] text-sky-700">{{ __('tarjetas') }}</span>
                         </div>
                     </button>
 
@@ -123,20 +120,52 @@
                         <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block truncate">{{ __('Actualizadas') }}</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
                             <span class="text-lg font-bold text-amber-900 font-mono">{{ $syncReport['updated'] }}</span>
-                            <span class="text-[10px] text-amber-700">{{ __('tarjetas') }}</span>
+                        </div>
+                    </button>
+
+                    <button 
+                        wire:click="setFilter('conflict')"
+                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'conflict' ? 'bg-rose-100/70 border-rose-400 ring-2 ring-rose-400/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/50' }}">
+                        <span class="text-[9px] uppercase font-bold text-rose-800 tracking-wider block truncate">{{ __('Conflictos') }}</span>
+                        <div class="flex items-baseline gap-1 mt-0.5">
+                            <span class="text-lg font-bold text-rose-900 font-mono">{{ $syncReport['conflicts'] ?? 0 }}</span>
                         </div>
                     </button>
 
                     <button 
                         wire:click="setFilter('deleted')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'deleted' ? 'bg-rose-100/70 border-rose-400 ring-2 ring-rose-400/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-rose-800 tracking-wider block truncate">{{ __('Faltantes Trello') }}</span>
+                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'deleted' ? 'bg-stone-200/70 border-stone-400 ring-2 ring-stone-400/30' : 'bg-stone-100/70 border-stone-300 hover:bg-stone-200/50' }}">
+                        <span class="text-[9px] uppercase font-bold text-stone-800 tracking-wider block truncate">{{ __('Faltantes') }}</span>
                         <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-rose-900 font-mono">{{ $syncReport['deleted'] }}</span>
-                            <span class="text-[10px] text-rose-700">{{ __('tarjetas') }}</span>
+                            <span class="text-lg font-bold text-stone-900 font-mono">{{ $syncReport['deleted'] }}</span>
                         </div>
                     </button>
                 </div>
+
+                @if(($syncReport['conflicts'] ?? 0) > 0)
+                    <div class="bg-amber-50/90 border border-amber-300/90 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                        <div class="flex items-center gap-2">
+                            <x-lucide-alert-triangle class="w-4 h-4 text-amber-700 shrink-0" />
+                            <span class="text-xs font-bold text-amber-950">{{ __('Conflictos Detectados:') }} {{ $syncReport['conflicts'] }} {{ __('orden(es)') }}</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button 
+                                wire:click="resolveAllWorkspace" 
+                                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                <x-lucide-arrow-up-right class="w-3.5 h-3.5" />
+                                <span>{{ __('Use Details from Workspace for All') }}</span>
+                            </button>
+
+                            <button 
+                                wire:click="resolveAllTrello" 
+                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                <x-lucide-arrow-down-left class="w-3.5 h-3.5" />
+                                <span>{{ __('Use Details from Trello for All') }}</span>
+                            </button>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="bg-stone-50 border border-stone-200 rounded-xl p-3 flex items-center justify-between text-xs font-medium text-zinc-700">
                     <span class="flex items-center gap-1.5">
@@ -178,11 +207,13 @@
                         <div class="space-y-2 max-h-64 overflow-y-auto pr-1 scrollbar-thin text-xs">
                             @foreach($filteredChanges as $chg)
                                 <div 
-                                    @if(isset($chg['order_id']))
+                                    @if(isset($chg['order_id']) && $chg['action'] === 'conflict')
+                                        wire:click="openConflictModal({{ $chg['order_id'] }})"
+                                    @elseif(isset($chg['order_id']))
                                         wire:click="$dispatch('open-order-detail', { orderId: {{ $chg['order_id'] }} })"
                                     @endif
                                     class="p-3 bg-[#fbfbfa] hover:bg-stone-100/90 rounded-xl border border-stone-200 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
-                                    title="{{ __('Haz clic para ver el detalle de esta orden') }}">
+                                    title="{{ $chg['action'] === 'conflict' ? __('Haz clic para resolver conflicto') : __('Haz clic para ver el detalle de esta orden') }}">
                                     <div class="min-w-0 flex-1 space-y-1">
                                         <div class="space-y-0.5">
                                             <span class="font-bold text-zinc-900 group-hover:text-stone-900 flex items-center gap-1.5 truncate text-xs">
@@ -194,11 +225,43 @@
                                             @endif
                                         </div>
 
-                                        @if(!empty($chg['details']))
+                                        <!-- Color-Coded Field Diff Highlights for Conflicts -->
+                                        @if($chg['action'] === 'conflict' && !empty($chg['diff_fields']))
+                                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                                @foreach($chg['diff_fields'] as $field)
+                                                    @if($field === 'company_name')
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                            Workspace: {{ $chg['workspace_data']['company_name'] ?? '' }}
+                                                        </span>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                            Trello: {{ $chg['trello_data']['company_name'] ?? '' }}
+                                                        </span>
+                                                    @elseif($field === 'task_name')
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                            Workspace: {{ $chg['workspace_data']['task_name'] ?? '' }}
+                                                        </span>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
+                                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                            Trello: {{ $chg['trello_data']['task_name'] ?? '' }}
+                                                        </span>
+                                                    @elseif($field === 'wo_number')
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300 font-mono">
+                                                            Workspace WO: {{ $chg['workspace_data']['wo_number'] ?? '' }}
+                                                        </span>
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300 font-mono">
+                                                            Trello WO: {{ $chg['trello_data']['wo_number'] ?? '' }}
+                                                        </span>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        @elseif(!empty($chg['details']))
                                             <div class="flex flex-wrap gap-1 pt-0.5">
                                                 @foreach($chg['details'] as $detail)
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-amber-50 text-amber-900 border border-amber-200/80 shadow-2xs">
-                                                        <x-lucide-sparkles class="w-3 h-3 text-amber-600 shrink-0" />
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium {{ $chg['action'] === 'conflict' ? 'bg-rose-100 text-rose-900 border border-rose-300' : 'bg-amber-50 text-amber-900 border border-amber-200/80' }} shadow-2xs">
+                                                        <x-lucide-sparkles class="w-3 h-3 {{ $chg['action'] === 'conflict' ? 'text-rose-600' : 'text-amber-600' }} shrink-0" />
                                                         <span>{{ $detail }}</span>
                                                     </span>
                                                 @endforeach
@@ -214,20 +277,33 @@
                                         @elseif($chg['action'] === 'pushed_to_trello')
                                             <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
                                                 <x-lucide-arrow-up-right class="w-3 h-3 text-purple-600 inline shrink-0" />
-                                                <span>{{ __('Enviado a Trello:') }} {{ $chg['previous_status'] }} ➔ {{ $chg['new_status'] }}</span>
+                                                @if(! empty($chg['pushed_title']))
+                                                    <span class="truncate max-w-[220px]" title="{{ $chg['pushed_title'] }}">{{ __('Enviado a Trello:') }} {{ $chg['pushed_title'] }}</span>
+                                                @elseif(! empty($chg['previous_status']) && ! empty($chg['new_status']) && $chg['previous_status'] !== $chg['new_status'])
+                                                    <span>{{ __('Enviado a Trello:') }} {{ $chg['previous_status'] }} ➔ {{ $chg['new_status'] }}</span>
+                                                @else
+                                                    <span>{{ __('Enviado a Trello') }}</span>
+                                                @endif
                                             </span>
                                         @elseif($chg['action'] === 'moved')
                                             <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 flex items-center gap-1">
-                                                <span>{{ $chg['previous_status'] }}</span>
+                                                <span>{{ $chg['previous_status'] ?? '' }}</span>
                                                 <x-lucide-arrow-right class="w-3 h-3 text-sky-600 inline shrink-0" />
-                                                <span>{{ $chg['new_status'] }}</span>
+                                                <span>{{ $chg['new_status'] ?? '' }}</span>
                                             </span>
                                         @elseif($chg['action'] === 'updated')
                                             <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
                                                 {{ __('Actualizada') }}
                                             </span>
+                                        @elseif($chg['action'] === 'conflict')
+                                            <button 
+                                                wire:click.stop="openConflictModal({{ $chg['order_id'] }})"
+                                                class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 border border-rose-700 flex items-center gap-1 shadow-2xs cursor-pointer">
+                                                <x-lucide-alert-triangle class="w-3 h-3 text-white inline shrink-0" />
+                                                <span>{{ __('Resolver Conflicto') }}</span>
+                                            </button>
                                         @elseif($chg['action'] === 'deleted')
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-stone-200 text-stone-800 border border-stone-300">
                                                 {{ __('Falta en Trello') }}
                                             </span>
                                         @endif
@@ -244,6 +320,144 @@
                         class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl shadow-2xs transition cursor-pointer">
                         {{ __('Entendido / Cerrar') }}
                     </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Side-by-Side Compact Conflict Resolution Modal -->
+    @if($selectedConflict)
+        <div class="fixed inset-0 z-[200] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-3xl w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150">
+                <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center font-bold">
+                            <x-lucide-alert-triangle class="w-4 h-4 text-amber-700" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900 tracking-tight">{{ __('Resolver Conflicto de Sincronización') }}</h3>
+                            <p class="text-xs text-zinc-500">{{ __('Compara los detalles entre Workspace y Trello para decidir cuál conservar.') }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeConflictModal" class="text-zinc-400 hover:text-zinc-700 cursor-pointer">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <!-- Side-by-Side Comparison Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    <!-- Workspace Card Details (Left - Mustard Yellow Theme) -->
+                    <div class="bg-amber-50/70 border border-amber-300/90 rounded-xl p-3.5 space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-amber-300/70 pb-2">
+                            <span class="font-bold text-amber-950 flex items-center gap-1.5 text-xs">
+                                <x-lucide-layout class="w-4 h-4 text-amber-700" />
+                                {{ __('Kudos Workspace (Local)') }}
+                            </span>
+                            <span class="text-[10px] text-amber-800 font-mono font-medium">
+                                🕒 {{ $selectedConflict['workspace_updated_at'] ?? 'N/A' }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div>
+                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
+                                <p class="font-bold text-zinc-900 p-1 rounded {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
+                                    {{ $selectedConflict['workspace_data']['company_name'] ?? '—' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NOMBRE DE TAREA') }}</span>
+                                <p class="font-medium text-zinc-800 p-1 rounded {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
+                                    {{ $selectedConflict['workspace_data']['task_name'] ?? '—' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
+                                <p class="font-mono text-zinc-800 p-1 rounded {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
+                                    {{ $selectedConflict['workspace_data']['wo_number'] ?: 'Sin WO' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('ASSIGNED DESIGNER') }}</span>
+                                <p class="text-zinc-800 p-1 rounded {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
+                                    {{ $selectedConflict['workspace_data']['designer_name'] ?? 'Sin asignar' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trello Card Details (Right - Royal Blue Theme) -->
+                    <div class="bg-blue-50/70 border border-blue-300/90 rounded-xl p-3.5 space-y-2.5">
+                        <div class="flex items-center justify-between border-b border-blue-300/70 pb-2">
+                            <span class="font-bold text-blue-950 flex items-center gap-1.5 text-xs">
+                                <x-lucide-trello class="w-4 h-4 text-blue-700" />
+                                {{ __('Tablero Trello') }}
+                            </span>
+                            <span class="text-[10px] text-blue-800 font-mono font-medium">
+                                🕒 {{ $selectedConflict['trello_updated_at'] ?? 'N/A' }}
+                            </span>
+                        </div>
+
+                        <div class="space-y-2">
+                            <div>
+                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
+                                <p class="font-bold text-zinc-900 p-1 rounded {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
+                                    {{ $selectedConflict['trello_data']['company_name'] ?? '—' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NOMBRE DE TAREA') }}</span>
+                                <p class="font-medium text-zinc-800 p-1 rounded {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
+                                    {{ $selectedConflict['trello_data']['task_name'] ?? '—' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
+                                <p class="font-mono text-zinc-800 p-1 rounded {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
+                                    {{ $selectedConflict['trello_data']['wo_number'] ?: 'Sin WO' }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('ASSIGNED DESIGNER') }}</span>
+                                <p class="text-zinc-800 p-1 rounded {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
+                                    {{ $selectedConflict['trello_data']['designer_name'] ?? 'Sin asignar' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Single Row Action Bar -->
+                <div class="pt-3.5 border-t border-stone-100 flex items-center justify-between gap-3">
+                    <button 
+                        wire:click="closeConflictModal" 
+                        class="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-zinc-700 font-medium text-xs rounded-xl transition cursor-pointer">
+                        {{ __('Cancel') }}
+                    </button>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Workspace Option (Mustard Yellow - First) -->
+                        <button 
+                            wire:click="resolveUseWorkspace({{ $selectedConflict['order_id'] }})"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
+                            <x-lucide-arrow-up-right class="w-3.5 h-3.5 shrink-0" />
+                            <span>{{ __('Use Details from Workspace') }}</span>
+                        </button>
+
+                        <!-- Trello Option (Royal Blue - Second) -->
+                        <button 
+                            wire:click="resolveUseTrello({{ $selectedConflict['order_id'] }})"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
+                            <x-lucide-arrow-down-left class="w-3.5 h-3.5 shrink-0" />
+                            <span>{{ __('Use Details from Trello') }}</span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

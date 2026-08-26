@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Client;
+
 class OrderTitleParserService
 {
     /**
@@ -55,6 +57,9 @@ class OrderTitleParserService
         // Take only the first non-empty line if title has multiline description text
         $lines = array_filter(array_map('trim', explode("\n", $title)));
         $title = ! empty($lines) ? reset($lines) : $rawTitle;
+
+        // Normalize all Unicode dash variants (en-dash, em-dash, etc.) to standard ASCII hyphen
+        $title = preg_replace('/[\x{2010}-\x{2015}\x{2212}]/u', '-', $title);
 
         $woNumber = null;
         $responsiblePerson = null;
@@ -137,6 +142,18 @@ class OrderTitleParserService
             $taskName = ! empty($locationName) ? $locationName : $companyName;
         }
 
+        // Check if companyName matches an existing Client name or alias
+        if (! empty($companyName) && class_exists(Client::class)) {
+            try {
+                $clientMatch = Client::all()->first(fn ($c) => $c->matchesNameOrAlias($companyName));
+                if ($clientMatch) {
+                    $companyName = $clientMatch->name;
+                }
+            } catch (\Throwable $e) {
+                // Ignore DB errors during parsing if not fully migrated
+            }
+        }
+
         return [
             'wo_number' => $woNumber,
             'company_name' => $companyName,
@@ -159,22 +176,32 @@ class OrderTitleParserService
         $responsible = is_array($data) ? ($data['responsible_person'] ?? '') : ($data->responsible_person ?? '');
         $task = is_array($data) ? ($data['task_name'] ?? '') : ($data->task_name ?? '');
 
+        $cleanTask = trim($task);
+        $cleanCompany = trim($company);
+
+        if (! empty($cleanCompany) && ! empty($cleanTask) && str_starts_with(mb_strtolower($cleanTask, 'UTF-8'), mb_strtolower($cleanCompany, 'UTF-8'))) {
+            $cleanTask = trim(mb_substr($cleanTask, mb_strlen($cleanCompany, 'UTF-8'), null, 'UTF-8'), " \t\n\r\0\x0B-:");
+        }
+
         $parts = [];
         if (! empty($wo)) {
             $parts[] = trim($wo);
         }
-        if (! empty($company)) {
-            $compStr = trim($company);
+        if (! empty($cleanCompany)) {
+            $compStr = $cleanCompany;
             if (! empty($location)) {
                 $compStr .= ' REF '.trim($location);
             }
+            if (! empty($responsible)) {
+                $compStr .= ' ('.trim($responsible).')';
+            }
             $parts[] = $compStr;
-        }
-        if (! empty($responsible)) {
+        } elseif (! empty($responsible)) {
             $parts[] = '('.trim($responsible).')';
         }
-        if (! empty($task) && strtolower(trim($task)) !== strtolower(trim($company))) {
-            $parts[] = '- '.trim($task);
+
+        if (! empty($cleanTask) && mb_strtolower($cleanTask, 'UTF-8') !== mb_strtolower($cleanCompany, 'UTF-8')) {
+            $parts[] = '- '.$cleanTask;
         }
 
         return implode(' ', $parts);

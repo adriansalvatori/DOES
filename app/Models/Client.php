@@ -15,9 +15,35 @@ class Client extends Model
 
     protected $fillable = [
         'name',
+        'aliases',
         'website',
         'notes',
     ];
+
+    protected $casts = [
+        'aliases' => 'array',
+    ];
+
+    /**
+     * Check if a given search term matches this client's primary name or any of its aliases.
+     */
+    public function matchesNameOrAlias(string $term): bool
+    {
+        $termClean = mb_strtolower(trim($term), 'UTF-8');
+        if (mb_strtolower(trim($this->name), 'UTF-8') === $termClean) {
+            return true;
+        }
+
+        if (is_array($this->aliases)) {
+            foreach ($this->aliases as $alias) {
+                if (mb_strtolower(trim($alias), 'UTF-8') === $termClean) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 
     public function setNameAttribute(string $value): void
     {

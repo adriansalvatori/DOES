@@ -208,7 +208,7 @@
                     <button 
                         @click="sidebarOpen ? (configOpen = !configOpen) : (configPopover = !configPopover)" 
                         title="{{ __('Configuración') }}" 
-                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('settings*') || request()->is('trello-sync*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ request()->is('settings*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                         <div class="flex items-center gap-2.5 min-w-0">
                             <x-lucide-settings class="w-4 h-4 text-zinc-500 shrink-0" />
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Configuración') }}</span>
@@ -246,13 +246,6 @@
                             class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                             <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
-                        </a>
-                        <a 
-                            href="/trello-sync" 
-                            title="{{ __('Sincronización Trello') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Sincronización Trello') }}</span>
                         </a>
                         <a 
                             href="/settings/trello-mapping" 
@@ -300,13 +293,6 @@
                             <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
                         </a>
                         <a 
-                            href="/trello-sync" 
-                            title="{{ __('Sincronización Trello') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('trello-sync*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-refresh-cw class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Sincronización Trello') }}</span>
-                        </a>
-                        <a 
                             href="/settings/trello-mapping" 
                             title="{{ __('Mapeo de Listas Trello') }}" 
                             class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
@@ -328,6 +314,12 @@
                     <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Backlog') }}</span>
                 </a>
+
+                <!-- Trello Sync Settings Link Below Backlog -->
+                <a href="/trello-sync" title="{{ __('Sincronización Trello') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('trello-sync*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-refresh-cw class="w-4 h-4 text-blue-600 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Sincronización Trello') }}</span>
+                </a>
             </nav>
         </div>
 
@@ -336,13 +328,6 @@
             <livewire:trello-pause-toggle />
         </div>
 
-        <!-- Sidebar Footer -->
-        <div class="p-3 border-t border-[#e9e9e7] bg-[#f7f7f5] text-[11px] text-zinc-500 flex items-center justify-between">
-            <span x-show="sidebarOpen" x-transition.opacity class="flex items-center gap-1">
-                <x-lucide-info class="w-3.5 h-3.5 text-zinc-400 shrink-0" /> Notion Light
-            </span>
-            <span x-show="sidebarOpen" x-transition.opacity class="font-mono text-[10px] text-zinc-400">v2.0</span>
-        </div>
 
     </aside>
 

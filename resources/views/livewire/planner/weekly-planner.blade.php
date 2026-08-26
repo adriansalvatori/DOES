@@ -124,7 +124,7 @@
             }
         }
     }"
-    class="h-full flex flex-col space-y-4 text-xs font-sans bg-[#fbfbfa] min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-12 text-zinc-800">
+    class="h-full flex flex-col space-y-4 text-xs font-sans bg-[#fbfbfa] min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-4 text-zinc-800">
 
     <!-- Top Sticky / Dynamic Toolbar Header -->
     <div class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
@@ -494,7 +494,7 @@
                         return false;
                     });
                 @endphp
-                <div class="bg-white border-b border-stone-200/70 pb-5 space-y-2">
+                <div class="space-y-2">
                     
                     <div class="flex items-center justify-between pb-1">
                         <div class="flex items-center gap-2">

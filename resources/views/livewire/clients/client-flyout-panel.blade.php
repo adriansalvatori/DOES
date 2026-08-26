@@ -17,6 +17,7 @@
             this.initialSnapshot = JSON.stringify({
                 name: ($wire.name || '').trim(),
                 website: ($wire.website || '').trim(),
+                aliasesInput: ($wire.aliasesInput || '').trim(),
                 notes: ($wire.notes || '').trim(),
                 locations: ($wire.locations || []).map(l => ({
                     name: (l.name || '').trim(),
@@ -45,6 +46,7 @@
             const current = JSON.stringify({
                 name: ($wire.name || '').trim(),
                 website: ($wire.website || '').trim(),
+                aliasesInput: ($wire.aliasesInput || '').trim(),
                 notes: ($wire.notes || '').trim(),
                 locations: ($wire.locations || []).map(l => ({
                     name: (l.name || '').trim(),
@@ -357,7 +359,23 @@
                                 />
                             </div>
 
-                            {{-- 4. Notes / Observaciones --}}
+                            {{-- 4. Aliases / Nombres Alternativos --}}
+                            <div class="flex items-start gap-2">
+                                <x-lucide-tags class="w-4 h-4 text-amber-600 shrink-0 mt-1" />
+                                <div class="w-full space-y-1">
+                                    <input 
+                                        type="text" 
+                                        wire:model="aliasesInput" 
+                                        placeholder="{{ __('Aliases (ej. FL, Fuerza Latina Insurance)') }}" 
+                                        class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-medium focus:outline-none transition"
+                                    />
+                                    <span class="text-[10px] text-zinc-400 block -mx-1 px-1">
+                                        {{ __('Separa múltiples aliases con coma. Se usarán para vincular tarjetas de Trello automáticamente.') }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- 5. Notes / Observaciones --}}
                             <div class="flex items-start gap-2">
                                 <x-lucide-file-text class="w-4 h-4 text-zinc-400 shrink-0 mt-1" />
                                 <textarea 

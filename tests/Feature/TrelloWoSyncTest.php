@@ -69,12 +69,11 @@ class TrelloWoSyncTest extends TestCase
         ];
 
         $service = app(TrelloSyncService::class);
-        $service->syncCardToOrder($cardData, ['list_entrante' => 'ENTRANTE']);
+        $res = $service->syncCardToOrder($cardData, ['list_entrante' => 'ENTRANTE']);
 
-        $order->refresh();
-
-        $this->assertNull($order->wo_number);
-        $this->assertEquals('WO 5432', $order->pending_wo_number);
+        $this->assertEquals('conflict', $res['action']);
+        $this->assertContains('wo_number', $res['diff_fields']);
+        $this->assertEquals('WO 5432', $res['trello_data']['wo_number']);
     }
 
     public function test_user_can_accept_pending_wo_in_order_detail_modal()

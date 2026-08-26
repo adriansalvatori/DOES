@@ -24,6 +24,8 @@ class ClientFlyoutPanel extends Component
 
     public string $website = '';
 
+    public string $aliasesInput = '';
+
     public string $notes = '';
 
     public array $contacts = [];
@@ -48,6 +50,7 @@ class ClientFlyoutPanel extends Component
             if ($client) {
                 $this->name = $client->name;
                 $this->website = $client->website ?? '';
+                $this->aliasesInput = is_array($client->aliases) ? implode(', ', $client->aliases) : '';
                 $this->notes = $client->notes ?? '';
                 $this->contacts = $client->contacts->map(fn ($c) => [
                     'id' => $c->id,
@@ -99,6 +102,7 @@ class ClientFlyoutPanel extends Component
         } else {
             $this->name = '';
             $this->website = '';
+            $this->aliasesInput = '';
             $this->notes = '';
             $this->contacts = [
                 ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
@@ -351,18 +355,21 @@ class ClientFlyoutPanel extends Component
 
         $cleanName = mb_strtoupper(trim($this->name), 'UTF-8');
         $cleanWebsite = trim($this->website);
+        $aliasesArray = array_values(array_filter(array_map('trim', explode(',', $this->aliasesInput))));
 
         if ($this->clientId) {
             $client = Client::findOrFail($this->clientId);
             $client->update([
                 'name' => $cleanName,
                 'website' => $cleanWebsite,
+                'aliases' => $aliasesArray,
                 'notes' => $this->notes,
             ]);
         } else {
             $client = Client::create([
                 'name' => $cleanName,
                 'website' => $cleanWebsite,
+                'aliases' => $aliasesArray,
                 'notes' => $this->notes,
             ]);
             $this->clientId = $client->id;

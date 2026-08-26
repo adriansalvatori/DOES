@@ -86,6 +86,7 @@ class TrelloSyncTest extends TestCase
         $workspaceOrder = Order::create([
             'company_name' => 'WORKSPACE CLIENT',
             'task_name' => 'Poster Design',
+            'wo_number' => 'WO 200',
             'trello_card_id' => 'trello_card_workspace_555',
             'in_workspace' => true,
             'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
