@@ -12,6 +12,9 @@
                     <h1 class="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight">{{ __('Base de Datos de Clientes') }}</h1>
                     <span class="px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-[10px] font-bold text-zinc-600">{{ $totalClientsCount }}</span>
                 </div>
+                <p class="text-xs text-zinc-500 mt-0.5 leading-relaxed">
+                    {{ __('Central repository of client profiles. Each subpage includes key information, assets, preferences, and project history—built to reduce friction, preserve context, and ensure consistency, speed, and clarity across the design team.') }}
+                </p>
             </div>
         </div>
 

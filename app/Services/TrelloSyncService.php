@@ -7,12 +7,34 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\TrelloListMapping;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class TrelloSyncService
 {
+    public const PAUSE_CACHE_KEY = 'trello_sync_paused';
+
     protected string $baseUrl = 'https://api.trello.com/1';
+
+    public function isPaused(): bool
+    {
+        return (bool) Cache::get(self::PAUSE_CACHE_KEY, false);
+    }
+
+    public function setPaused(bool $paused): void
+    {
+        Cache::forever(self::PAUSE_CACHE_KEY, $paused);
+        Log::info('Trello sync pause status set to: '.($paused ? 'PAUSED' : 'ACTIVE'));
+    }
+
+    public function togglePaused(): bool
+    {
+        $newStatus = ! $this->isPaused();
+        $this->setPaused($newStatus);
+
+        return $newStatus;
+    }
 
     public function extractBoardId(string $input): string
     {
@@ -419,7 +441,13 @@ class TrelloSyncService
      */
     public function updateCardOnTrello(Order $order, ?string $apiKey = null, ?string $apiToken = null, ?string $boardId = null): bool
     {
-        if (! $order->trello_card_id || ! $order->in_workspace) {
+        if ($this->isPaused()) {
+            Log::info("Trello sync skipped for order {$order->id}: Trello sync is currently paused.");
+
+            return false;
+        }
+
+        if (! $order->trello_card_id) {
             return false;
         }
 
@@ -466,6 +494,12 @@ class TrelloSyncService
      */
     public function createCardOnTrello(Order $order, ?string $apiKey = null, ?string $apiToken = null, ?string $boardId = null): array
     {
+        if ($this->isPaused()) {
+            Log::info("Trello card creation skipped for order {$order->id}: Trello sync is currently paused.");
+
+            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+        }
+
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
         $boardId = $boardId ?: config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
@@ -592,6 +626,12 @@ class TrelloSyncService
      */
     public function addCardComment(string $cardId, string $text, ?string $apiKey = null, ?string $apiToken = null): array
     {
+        if ($this->isPaused()) {
+            Log::info("Trello comment skipped for card {$cardId}: Trello sync is currently paused.");
+
+            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+        }
+
         $cardId = trim($cardId);
         $text = trim($text);
 

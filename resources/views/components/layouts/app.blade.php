@@ -331,6 +331,11 @@
             </nav>
         </div>
 
+        <!-- Trello Sync Pause Toggle -->
+        <div class="px-3 py-2 border-t border-[#e9e9e7] bg-[#fdfdfc]">
+            <livewire:trello-pause-toggle />
+        </div>
+
         <!-- Sidebar Footer -->
         <div class="p-3 border-t border-[#e9e9e7] bg-[#f7f7f5] text-[11px] text-zinc-500 flex items-center justify-between">
             <span x-show="sidebarOpen" x-transition.opacity class="flex items-center gap-1">
