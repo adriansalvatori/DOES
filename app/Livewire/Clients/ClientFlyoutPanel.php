@@ -88,6 +88,12 @@ class ClientFlyoutPanel extends Component
                     ];
                 })->toArray();
 
+                if (empty($this->locations)) {
+                    $this->locations = [
+                        ['id' => null, 'name' => 'SEDE PRINCIPAL', 'address' => '', 'phone' => '', 'email' => '', 'manager_name' => '', 'notes' => ''],
+                    ];
+                }
+
                 $this->mergeSuggestions = app(ClientMatchingService::class)->findMergeSuggestions($client);
             }
         } else {

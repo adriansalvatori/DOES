@@ -175,7 +175,7 @@
                             </div>
                         </div>
 
-                        <!-- Responsible Person (Searchable Combobox) -->
+                        <!-- Responsible Person (Searchable Dropdown Menu) -->
                         <div class="relative" 
                              x-data="{ 
                                  open: false,
@@ -197,12 +197,13 @@
                                     @click.outside="open = false"
                                     autocomplete="off"
                                     placeholder="Ej. AGUSTIN o buscar..." 
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none pr-7">
+                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none pr-7 font-semibold">
                                 
                                 <button 
                                     type="button" 
                                     @click="open = !open" 
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5">
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+                                    title="Ver lista de responsables">
                                     <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                 </button>
                             </div>
@@ -213,17 +214,48 @@
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
                                 class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs">
-                                @forelse($existingResponsibles as $resp)
-                                    <button 
-                                        type="button"
-                                        x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
-                                        @click="selectResp('{{ addslashes($resp) }}')" 
-                                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition">
-                                        {{ $resp }}
-                                    </button>
-                                @empty
+                                
+                                @if(!empty($clientContacts))
+                                    <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
+                                        <span>Contactos del cliente</span>
+                                        <x-lucide-user class="w-3 h-3 text-emerald-600" />
+                                    </div>
+                                    @foreach($clientContacts as $cResp)
+                                        <button 
+                                            type="button"
+                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($cResp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                            @click="selectResp('{{ addslashes($cResp) }}')" 
+                                            class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition flex items-center justify-between">
+                                            <span>{{ $cResp }}</span>
+                                            <span class="text-[10px] text-emerald-600 font-medium">(Registrado)</span>
+                                        </button>
+                                    @endforeach
+                                @endif
+
+                                @php
+                                    $otherResponsibles = array_diff($existingResponsibles->toArray(), $clientContacts ?? []);
+                                @endphp
+
+                                @if(!empty($otherResponsibles))
+                                    @if(!empty($clientContacts))
+                                        <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
+                                            Otros responsables
+                                        </div>
+                                    @endif
+                                    @foreach($otherResponsibles as $resp)
+                                        <button 
+                                            type="button"
+                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                            @click="selectResp('{{ addslashes($resp) }}')" 
+                                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition">
+                                            {{ $resp }}
+                                        </button>
+                                    @endforeach
+                                @endif
+
+                                @if(empty($clientContacts) && empty($otherResponsibles))
                                     <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo responsable...</div>
-                                @endforelse
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -281,17 +313,88 @@
                         @error('companyName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
-                    <!-- Row 2.5: Location / Sede (Optional) -->
-                    <div>
+                    <!-- Row 2.5: Location / Sede (Searchable Dropdown Menu) -->
+                    <div class="relative" 
+                         x-data="{ 
+                             open: false,
+                             selectLoc(loc) {
+                                 $wire.set('locationName', loc);
+                                 this.open = false;
+                             }
+                         }"
+                         x-dropdown-nav>
                         <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                             <x-lucide-map-pin class="w-3 h-3 text-rose-500" />
                             <span>Locación / Sede <span class="text-zinc-400 font-normal">(Opcional)</span></span>
                         </label>
-                        <input 
-                            type="text" 
-                            wire:model="locationName" 
-                            placeholder="Ej. TALPA 8, SUCURSAL CENTRO..." 
-                            class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none font-semibold text-emerald-700">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                wire:model.live="locationName" 
+                                @focus="open = true"
+                                @click.outside="open = false"
+                                autocomplete="off"
+                                placeholder="Ej. TALPA 8, SUCURSAL CENTRO..." 
+                                class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none font-semibold text-emerald-700 pr-7">
+                            
+                            <button 
+                                type="button" 
+                                @click="open = !open" 
+                                class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
+                                title="Ver locaciones disponibles">
+                                <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        <div 
+                            x-show="open" 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                            
+                            @if(!empty($clientLocations))
+                                <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
+                                    <span>Locaciones del cliente</span>
+                                    <x-lucide-map-pin class="w-3 h-3 text-rose-500" />
+                                </div>
+                                @foreach($clientLocations as $cLoc)
+                                    <button 
+                                        type="button"
+                                        x-show="!$wire.locationName || '{{ strtolower(addslashes($cLoc)) }}'.includes(($wire.locationName || '').toLowerCase())"
+                                        @click="selectLoc('{{ addslashes($cLoc) }}')" 
+                                        class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 uppercase transition flex items-center justify-between">
+                                        <span>{{ $cLoc }}</span>
+                                        <span class="text-[10px] text-emerald-600 font-medium normal-case">(Registrada)</span>
+                                    </button>
+                                @endforeach
+                            @endif
+
+                            @php
+                                $otherLocations = array_diff($existingLocations->toArray(), $clientLocations ?? []);
+                            @endphp
+
+                            @if(!empty($otherLocations))
+                                @if(!empty($clientLocations))
+                                    <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
+                                        Otras locaciones
+                                    </div>
+                                @endif
+                                @foreach($otherLocations as $loc)
+                                    <button 
+                                        type="button"
+                                        x-show="!$wire.locationName || '{{ strtolower(addslashes($loc)) }}'.includes(($wire.locationName || '').toLowerCase())"
+                                        @click="selectLoc('{{ addslashes($loc) }}')" 
+                                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-semibold text-zinc-800 uppercase transition">
+                                        {{ $loc }}
+                                    </button>
+                                @endforeach
+                            @endif
+
+                            @if(empty($clientLocations) && empty($otherLocations))
+                                <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe una nueva locación...</div>
+                            @endif
+                        </div>
                     </div>
 
                     <!-- Row 3: Task Description (Required) -->

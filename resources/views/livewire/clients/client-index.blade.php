@@ -77,6 +77,8 @@
                                     </span>
                                     @php
                                         $primaryContact = $client->primaryContact ?: $client->contacts->first();
+                                        $mainLocation = $client->locations->first();
+                                        $mainAddress = trim($mainLocation?->address ?? '');
                                     @endphp
                                     @if($primaryContact && ($primaryContact->name || $primaryContact->phone || $primaryContact->email))
                                         <div class="flex items-center gap-2.5 text-[11px] text-zinc-500 font-normal mt-0.5 flex-wrap">
@@ -98,6 +100,63 @@
                                                     <span>{{ $primaryContact->email }}</span>
                                                 </span>
                                             @endif
+                                        </div>
+                                    @endif
+
+                                    @if(!empty($mainAddress))
+                                        <div 
+                                            x-data="{ 
+                                                copied: false,
+                                                copyText(text) {
+                                                    if (!text) return;
+                                                    if (navigator.clipboard && window.isSecureContext) {
+                                                        navigator.clipboard.writeText(text).then(() => {
+                                                            this.copied = true;
+                                                            setTimeout(() => this.copied = false, 2000);
+                                                        }).catch(() => this.fallbackCopy(text));
+                                                    } else {
+                                                        this.fallbackCopy(text);
+                                                    }
+                                                },
+                                                fallbackCopy(text) {
+                                                    const ta = document.createElement('textarea');
+                                                    ta.value = text;
+                                                    ta.style.position = 'fixed';
+                                                    ta.style.opacity = '0';
+                                                    document.body.appendChild(ta);
+                                                    ta.focus();
+                                                    ta.select();
+                                                    try { document.execCommand('copy'); } catch (e) {}
+                                                    document.body.removeChild(ta);
+                                                    this.copied = true;
+                                                    setTimeout(() => this.copied = false, 2000);
+                                                }
+                                            }"
+                                            class="flex items-center gap-1.5 text-[11px] text-zinc-600 mt-1 flex-wrap"
+                                        >
+                                            <span class="flex items-center gap-1 text-zinc-700 min-w-0">
+                                                <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
+                                                <span class="font-medium truncate">{{ $mainAddress }}</span>
+                                            </span>
+                                            <button 
+                                                type="button" 
+                                                @click.stop.prevent="copyText({{ json_encode($mainAddress) }})"
+                                                class="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-zinc-600 hover:text-zinc-900 text-[10px] font-semibold transition cursor-pointer flex items-center gap-1 shrink-0 border border-stone-200/80 shadow-2xs"
+                                                title="{{ __('Copiar dirección') }}"
+                                            >
+                                                <template x-if="!copied">
+                                                    <span class="flex items-center gap-0.5">
+                                                        <x-lucide-copy class="w-2.5 h-2.5 text-zinc-500" />
+                                                        <span>{{ __('Copiar') }}</span>
+                                                    </span>
+                                                </template>
+                                                <template x-if="copied">
+                                                    <span class="flex items-center gap-0.5 text-emerald-600 font-bold">
+                                                        <x-lucide-check class="w-2.5 h-2.5 text-emerald-600" />
+                                                        <span>{{ __('¡Copiado!') }}</span>
+                                                    </span>
+                                                </template>
+                                            </button>
                                         </div>
                                     @endif
                                 </div>

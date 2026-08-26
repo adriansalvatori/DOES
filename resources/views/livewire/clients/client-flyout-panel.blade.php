@@ -238,81 +238,117 @@
                 @if($activeTab === 'general')
                     <div class="space-y-6">
                         {{-- Section 1: Información Principal del Cliente --}}
-                        <div class="space-y-4">
+                        <div class="space-y-3.5">
                             {{-- 1. Company (client) name --}}
                             <div>
-                                <label class="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1">
-                                    {{ __('Nombre del Cliente / Empresa') }} <span class="text-rose-500">*</span>
-                                </label>
                                 <input 
                                     type="text" 
                                     wire:model="name"
-                                    placeholder="EJ. PORKYS REAL MEXICAN FOOD"
-                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1.5 text-sm text-zinc-900 uppercase font-bold focus:outline-none transition"
+                                    placeholder="{{ __('NOMBRE DEL CLIENTE / EMPRESA') }}"
+                                    class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-sm text-zinc-900 uppercase font-bold focus:outline-none transition"
                                 />
                                 @error('name') <span class="text-[11px] text-rose-500 mt-1 block font-medium">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- 2. Main Responsible --}}
-                            @if(isset($contacts[0]))
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3.5 pt-1">
-                                    <div class="sm:col-span-2">
-                                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
-                                            <x-lucide-user class="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>{{ __('Responsable Principal') }}</span>
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            wire:model="contacts.0.name"
-                                            placeholder="Nombre del responsable principal"
-                                            class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 font-semibold focus:outline-none transition"
-                                        />
-                                    </div>
-
-                                    {{-- 3. Email & Phone Number --}}
-                                    <div>
-                                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
-                                            <x-lucide-mail class="w-3 h-3 text-zinc-400" />
-                                            <span>{{ __('Correo Electrónico') }}</span>
-                                        </label>
-                                        <input 
-                                            type="email" 
-                                            wire:model="contacts.0.email"
-                                            placeholder="correo@cliente.com"
-                                            class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
-                                            <x-lucide-phone class="w-3 h-3 text-zinc-400" />
-                                            <span>{{ __('Teléfono / WhatsApp') }}</span>
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            wire:model="contacts.0.phone"
-                                            x-on:input="
-                                                let val = $el.value.replace(/\D/g, '');
-                                                if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
-                                                if (val.length > 10) val = val.substring(0, 10);
-                                                if (val.length === 0) { $el.value = ''; }
-                                                else if (val.length <= 3) { $el.value = '(' + val; }
-                                                else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
-                                                else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
-                                            "
-                                            placeholder="(000) 000-0000"
-                                            class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
-                                        />
-                                    </div>
+                            {{-- Main Address Display Box (Read-only reflection with soft gray background) --}}
+                            @php
+                                $mainAddress = trim($locations[0]['address'] ?? '');
+                            @endphp
+                            <div 
+                                x-data="{ 
+                                    copied: false,
+                                    copyText() {
+                                        const text = {{ json_encode($mainAddress) }} || $wire.locations?.[0]?.address || '';
+                                        if (!text) return;
+                                        if (navigator.clipboard && window.isSecureContext) {
+                                            navigator.clipboard.writeText(text).then(() => {
+                                                this.copied = true;
+                                                setTimeout(() => this.copied = false, 2000);
+                                            }).catch(() => this.fallbackCopy(text));
+                                        } else {
+                                            this.fallbackCopy(text);
+                                        }
+                                    },
+                                    fallbackCopy(text) {
+                                        const ta = document.createElement('textarea');
+                                        ta.value = text;
+                                        ta.style.position = 'fixed';
+                                        ta.style.opacity = '0';
+                                        document.body.appendChild(ta);
+                                        ta.focus();
+                                        ta.select();
+                                        try { document.execCommand('copy'); } catch (e) {}
+                                        document.body.removeChild(ta);
+                                        this.copied = true;
+                                        setTimeout(() => this.copied = false, 2000);
+                                    }
+                                }"
+                                class="p-2.5 px-3 bg-zinc-100/80 border border-zinc-200/70 rounded-lg flex items-center justify-between gap-3 text-xs select-none"
+                            >
+                                <div class="flex items-center gap-2 min-w-0 flex-1">
+                                    <x-lucide-map-pin class="w-4 h-4 text-rose-500 shrink-0" />
+                                    <span class="font-medium text-zinc-700 truncate {{ empty($mainAddress) ? 'text-zinc-400 italic font-normal' : '' }}">
+                                        {{ $mainAddress ?: __('Sin dirección principal registrada') }}
+                                    </span>
                                 </div>
-                            @endif
+                                @if(!empty($mainAddress))
+                                    <button 
+                                        type="button" 
+                                        @click.stop.prevent="copyText()"
+                                        class="px-2.5 py-1 rounded-md bg-white hover:bg-zinc-50 border border-zinc-200 text-zinc-700 hover:text-zinc-900 text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-2xs"
+                                        title="{{ __('Copiar dirección') }}"
+                                    >
+                                        <template x-if="!copied">
+                                            <span class="flex items-center gap-1">
+                                                <x-lucide-copy class="w-3.5 h-3.5 text-zinc-500" />
+                                                <span>{{ __('Copiar') }}</span>
+                                            </span>
+                                        </template>
+                                        <template x-if="copied">
+                                            <span class="flex items-center gap-1 text-emerald-600 font-bold">
+                                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>{{ __('¡Copiado!') }}</span>
+                                            </span>
+                                        </template>
+                                    </button>
+                                @endif
+                            </div>
 
-                            {{-- 4. Client Website --}}
-                            <div>
-                                <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
-                                    <x-lucide-globe class="w-3.5 h-3.5 text-zinc-400" />
-                                    <span>{{ __('Sitio Web del Cliente') }}</span>
-                                </label>
+                            {{-- 2. Marketing Phone & Email (Independent from contact cards) --}}
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                <div class="flex items-center gap-2">
+                                    <x-lucide-phone class="w-4 h-4 text-zinc-400 shrink-0" />
+                                    <input 
+                                        type="text" 
+                                        wire:model.blur="locations.0.phone"
+                                        x-on:input="
+                                            let val = $el.value.replace(/\D/g, '');
+                                            if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
+                                            if (val.length > 10) val = val.substring(0, 10);
+                                            if (val.length === 0) { $el.value = ''; }
+                                            else if (val.length <= 3) { $el.value = '(' + val; }
+                                            else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
+                                            else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
+                                        "
+                                        placeholder="(000) 000-0000"
+                                        class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
+                                    />
+                                </div>
+
+                                <div class="flex items-center gap-2">
+                                    <x-lucide-mail class="w-4 h-4 text-zinc-400 shrink-0" />
+                                    <input 
+                                        type="email" 
+                                        wire:model.blur="locations.0.email"
+                                        placeholder="correo@cliente.com"
+                                        class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
+                                    />
+                                </div>
+                            </div>
+
+                            {{-- 3. Client Website --}}
+                            <div class="flex items-center gap-2">
+                                <x-lucide-globe class="w-4 h-4 text-zinc-400 shrink-0" />
                                 <input 
                                     type="url" 
                                     wire:model="website"
@@ -321,12 +357,9 @@
                                 />
                             </div>
 
-                            {{-- 5. Notes / Observaciones --}}
-                            <div>
-                                <label class="block text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-0.5 flex items-center gap-1">
-                                    <x-lucide-file-text class="w-3.5 h-3.5 text-zinc-400" />
-                                    <span>{{ __('Notas Generales u Observaciones') }}</span>
-                                </label>
+                            {{-- 4. Notes / Observaciones --}}
+                            <div class="flex items-start gap-2">
+                                <x-lucide-file-text class="w-4 h-4 text-zinc-400 shrink-0 mt-1" />
                                 <textarea 
                                     wire:model="notes" 
                                     rows="2" 
@@ -489,7 +522,7 @@
                                             <div class="sm:col-span-2">
                                                 <input 
                                                     type="text" 
-                                                    wire:model="locations.{{ $index }}.address" 
+                                                    wire:model.live.debounce.250ms="locations.{{ $index }}.address" 
                                                     placeholder="{{ __('Location Address') }}"
                                                     class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-900 font-bold focus:outline-none transition"
                                                 />

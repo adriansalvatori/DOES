@@ -4,6 +4,7 @@ namespace App\Livewire\Orders;
 
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
+use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -222,6 +223,13 @@ class CreateOrderModal extends Component
 
     public function render()
     {
+        $client = ! empty($this->companyName)
+            ? Client::with(['locations', 'contacts'])->where('name', mb_strtoupper(trim($this->companyName), 'UTF-8'))->first()
+            : null;
+
+        $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
+        $clientContacts = $client ? $client->contacts->pluck('name')->filter()->toArray() : [];
+
         return view('livewire.orders.create-order-modal', [
             'designers' => Designer::where('active', true)->get(),
             'coreStatuses' => CoreStatus::cases(),
@@ -238,6 +246,13 @@ class CreateOrderModal extends Component
                 ->distinct()
                 ->orderBy('responsible_person')
                 ->pluck('responsible_person'),
+            'existingLocations' => Order::whereNotNull('location_name')
+                ->where('location_name', '!=', '')
+                ->distinct()
+                ->orderBy('location_name')
+                ->pluck('location_name'),
+            'clientLocations' => $clientLocations,
+            'clientContacts' => $clientContacts,
             'availableTrelloCards' => Order::whereNotNull('trello_card_id')
                 ->where('trello_card_id', '!=', '')
                 ->orderBy('trello_created_at', 'desc')

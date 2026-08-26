@@ -5,6 +5,7 @@ namespace App\Livewire\Orders;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -702,8 +703,15 @@ class OrderDetailModal extends Component
     public function render()
     {
         $order = $this->orderId
-            ? Order::with(['designer', 'relatedTasks.assignee', 'events', 'dueDateHistories'])->find($this->orderId)
+            ? Order::with(['designer', 'client.locations', 'client.contacts', 'relatedTasks.assignee', 'events', 'dueDateHistories'])->find($this->orderId)
             : null;
+
+        $client = ! empty($this->editCompanyName)
+            ? Client::with(['locations', 'contacts'])->where('name', mb_strtoupper(trim($this->editCompanyName), 'UTF-8'))->first()
+            : ($order?->client ?? null);
+
+        $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
+        $clientContacts = $client ? $client->contacts->pluck('name')->filter()->toArray() : [];
 
         return view('livewire.orders.order-detail-modal', [
             'order' => $order,
@@ -722,6 +730,13 @@ class OrderDetailModal extends Component
                 ->distinct()
                 ->orderBy('responsible_person')
                 ->pluck('responsible_person'),
+            'existingLocations' => Order::whereNotNull('location_name')
+                ->where('location_name', '!=', '')
+                ->distinct()
+                ->orderBy('location_name')
+                ->pluck('location_name'),
+            'clientLocations' => $clientLocations,
+            'clientContacts' => $clientContacts,
             'availableTrelloCards' => Order::whereNotNull('trello_card_id')
                 ->where('trello_card_id', '!=', '')
                 ->orderBy('trello_created_at', 'desc')
