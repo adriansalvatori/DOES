@@ -14,6 +14,8 @@ class DatabaseBackupsSettingsTest extends TestCase
 
     protected string $backupDir;
 
+    protected array $createdTestFiles = [];
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -22,8 +24,10 @@ class DatabaseBackupsSettingsTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (File::exists($this->backupDir)) {
-            File::cleanDirectory($this->backupDir);
+        foreach ($this->createdTestFiles as $file) {
+            if (File::exists($file)) {
+                File::delete($file);
+            }
         }
         parent::tearDown();
     }
@@ -39,12 +43,17 @@ class DatabaseBackupsSettingsTest extends TestCase
 
     public function test_can_create_backup_from_settings_component(): void
     {
+        $existingFiles = array_map(fn ($f) => $f->getPathname(), File::files($this->backupDir));
+
         Livewire::test(Backups::class)
             ->call('createBackup')
             ->assertSee(__('Respaldo generado exitosamente.'));
 
-        $files = File::files($this->backupDir);
-        $this->assertNotEmpty($files);
+        $newFiles = array_map(fn ($f) => $f->getPathname(), File::files($this->backupDir));
+        $created = array_diff($newFiles, $existingFiles);
+        $this->createdTestFiles = array_merge($this->createdTestFiles, $created);
+
+        $this->assertNotEmpty($created);
     }
 
     public function test_can_delete_backup_from_settings_component(): void
@@ -52,6 +61,7 @@ class DatabaseBackupsSettingsTest extends TestCase
         File::ensureDirectoryExists($this->backupDir);
         $dummyPath = $this->backupDir.'/backup_sqlite_2026-08-26_120000.sqlite';
         File::put($dummyPath, 'test content');
+        $this->createdTestFiles[] = $dummyPath;
 
         Livewire::test(Backups::class)
             ->call('deleteBackup', 'backup_sqlite_2026-08-26_120000.sqlite')
@@ -65,6 +75,7 @@ class DatabaseBackupsSettingsTest extends TestCase
         File::ensureDirectoryExists($this->backupDir);
         $dummyPath = $this->backupDir.'/backup_sqlite_2026-08-26_120000.sqlite';
         File::put($dummyPath, 'test content');
+        $this->createdTestFiles[] = $dummyPath;
 
         Livewire::test(Backups::class)
             ->call('downloadBackup', 'backup_sqlite_2026-08-26_120000.sqlite')

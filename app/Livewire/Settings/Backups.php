@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -67,7 +68,8 @@ class Backups extends Component
         $this->errorMessage = null;
     }
 
-    public function getBackupsProperty(): array
+    #[Computed]
+    public function backups(): array
     {
         $backupDir = storage_path('app/backups');
 
@@ -85,7 +87,7 @@ class Backups extends Component
             return $b->getMTime() <=> $a->getMTime();
         });
 
-        return array_map(function (\SplFileInfo $file) {
+        return array_values(array_map(function (\SplFileInfo $file) {
             $bytes = $file->getSize();
             $formattedSize = $bytes >= 1048576
                 ? number_format($bytes / 1048576, 2).' MB'
@@ -111,10 +113,11 @@ class Backups extends Component
                 'created_at_human' => $mtime->diffForHumans(),
                 'timestamp' => $mtime->getTimestamp(),
             ];
-        }, $backups);
+        }, $backups));
     }
 
-    public function getNextBackupTimeProperty(): string
+    #[Computed]
+    public function nextBackupTime(): string
     {
         return Carbon::tomorrow()->startOfDay()->toIso8601String();
     }
