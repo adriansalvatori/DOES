@@ -181,7 +181,7 @@
                 </a>
 
                 <!-- Team Designers List -->
-                <div class="pt-3 border-t border-[#e9e9e7] space-y-1.5">
+                <div id="tour-designer-colors" class="pt-3 border-t border-[#e9e9e7] space-y-1.5">
                     <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2">{{ __('Diseñadores') }}</span>
                     <div class="space-y-1.5 text-[11px] text-zinc-600 font-medium px-2">
                         <div class="flex items-center gap-2" title="Euralíz (Magenta)">
@@ -368,6 +368,14 @@
                 $overdueCount = \App\Models\Order::inWorkspace()->where('substatus', \App\Enums\Substatus::OVERDUE)->count();
             @endphp
             <div class="flex items-center gap-3 shrink-0">
+                <button 
+                    id="tour-demo-btn"
+                    @click="window.dispatchEvent(new CustomEvent('toggle-tutorial-mode'))"
+                    title="{{ __('Activar / Desactivar Modo Demo Presentación') }}"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center gap-1.5 cursor-pointer shrink-0 shadow-2xs">
+                    <x-lucide-presentation class="w-3.5 h-3.5 text-emerald-600" />
+                    <span class="hidden lg:inline">{{ __('Modo Demo') }}</span>
+                </button>
                 <span class="text-zinc-500 font-mono text-[11px] hidden md:inline">{{ __('Órdenes Activas') }}: <strong>{{ $totalWorkspaceOrdersCount }}</strong></span>
                 @if($overdueCount > 0)
                     <span class="px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200 font-semibold text-[10px]">

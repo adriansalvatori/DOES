@@ -17,7 +17,7 @@
     @endif
     
     <!-- Top Notion-Style Header Controls -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs shrink-0">
+    <div id="tour-kanban-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
@@ -34,6 +34,7 @@
 
             <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                 <button 
+                    id="tour-kanban-new-btn"
                     @click="$dispatch('open-create-order')" 
                     class="px-3 py-1.5 h-8 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 shrink-0">
                     <x-lucide-plus class="w-3.5 h-3.5 text-white" />
@@ -52,6 +53,7 @@
             <div class="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-sm" x-data="{ open: true }" x-dropdown-nav @click.outside="open = false">
                 <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5 shrink-0 z-10" />
                 <input type="text" 
+                       id="tour-kanban-search"
                        wire:model.live.debounce.200ms="search" 
                        @focus="open = true" 
                        @input="open = true"
@@ -292,6 +294,7 @@
                  }"
                  x-dropdown-nav>
                 <button 
+                    id="tour-kanban-substatus-filter"
                     type="button" 
                     @click="open = !open" 
                     @click.outside="open = false"
@@ -342,7 +345,7 @@
     </div>
 
     <!-- Notion Column Group Filter Tabs Bar -->
-    <div class="flex items-center gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
+    <div id="tour-kanban-group-tabs" class="flex items-center gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
         <button wire:click="$set('columnGroup', 'all')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
             <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500" />
             <span>{{ __('Todas las Listas') }} (9)</span>
@@ -422,7 +425,8 @@
         @dragend="stopAutoScroll()"
         @drop="stopAutoScroll()"
         @dragleave.self="stopAutoScroll()"
-        class="flex gap-3 overflow-x-auto pb-3 pt-1 custom-horizontal-scrollbar flex-1 min-h-0 w-full">
+        class="flex gap-3 overflow-x-auto pb-3 pt-1 custom-horizontal-scrollbar flex-1 min-h-0 w-full"
+        id="tour-kanban-board">
         @foreach($columns as $column)
             @if($column === \App\Enums\CoreStatus::ARCHIVED)
                 <!-- Archive Dropzone Column (No cards displayed) -->

@@ -6,7 +6,7 @@
 <div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
     
     <!-- Top Notion Header -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
+    <div id="tour-resolver-header" class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
         <div class="flex items-center gap-3">
             @if($hasActionRequired)
                 <div class="w-9 h-9 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
@@ -23,7 +23,7 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div id="tour-resolver-cases-badge" class="flex items-center gap-2">
             @if($hasActionRequired)
                 <span class="px-3 py-1 rounded-md bg-orange-50 border border-orange-200 text-orange-700 font-medium text-xs">
                     {{ $totalActionCount }} {{ __('Casos Pendientes') }}

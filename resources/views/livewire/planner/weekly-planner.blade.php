@@ -128,7 +128,7 @@
 
     <!-- Top Sticky / Dynamic Toolbar Header -->
     <div class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
-        <div class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 md:p-4 shadow-2xs space-y-3">
+        <div id="tour-planner-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 md:p-4 shadow-2xs space-y-3">
             
             <!-- LINE 1: Title -->
             <div class="flex items-center justify-between min-w-0 gap-3">

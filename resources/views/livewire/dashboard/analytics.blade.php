@@ -1,7 +1,7 @@
 <div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
     
     <!-- Header & Action Bar -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-[#e9e9e7] shadow-2xs shrink-0">
+    <div id="tour-analytics-header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-[#e9e9e7] shadow-2xs shrink-0">
         <div class="space-y-1">
             <div class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-xl bg-stone-100 border border-stone-200 text-zinc-700 flex items-center justify-center font-bold">
@@ -30,7 +30,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
         <!-- KPI 1: Carga Operativa Activa (Active Design Workload) -->
-        <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 space-y-3 shadow-2xs">
+        <div id="tour-analytics-kpi-1" class="bg-white border border-[#e9e9e7] rounded-2xl p-4 space-y-3 shadow-2xs">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold text-zinc-500 uppercase tracking-wider">{{ __('Carga Operativa Activa') }}</span>
                 <div class="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center">

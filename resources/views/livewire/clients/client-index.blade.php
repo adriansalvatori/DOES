@@ -1,7 +1,7 @@
 <div class="h-full flex flex-col space-y-3 min-h-0 max-w-xl mx-auto w-full">
     
     <!-- Notion Header Controls (Compact Width) -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
+    <div id="tour-client-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
         {{-- Row 1: Title & Badge --}}
         <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
@@ -21,6 +21,7 @@
             <div class="relative flex-1">
                 <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
                 <input 
+                    id="tour-client-search"
                     type="text" 
                     wire:model.live.debounce.200ms="search" 
                     placeholder="{{ __('Buscar cliente...') }}" 
@@ -30,6 +31,7 @@
 
             <!-- Nuevo Cliente -->
             <button 
+                id="tour-client-new-btn"
                 type="button" 
                 wire:click="openClientDetail"
                 class="px-3 py-1 h-7 rounded-md bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer shrink-0"

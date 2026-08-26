@@ -16,7 +16,7 @@
 
         <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto shrink-0">
             <!-- Quick Role / Persona View Switcher -->
-            <div class="inline-flex rounded-lg bg-stone-100 p-0.5 border border-stone-200 text-[11px] font-semibold shrink-0">
+            <div id="tour-role-switcher" class="inline-flex rounded-lg bg-stone-100 p-0.5 border border-stone-200 text-[11px] font-semibold shrink-0">
                 <button 
                     wire:click="setUserRole('all')" 
                     class="px-2.5 py-1 rounded-md transition flex items-center gap-1 {{ $userRole === 'all' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}">
@@ -117,9 +117,10 @@
     @endif
 
     <!-- Top Section Filter Cards Grid: Single Horizontal Row for all 8 buttons -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
+    <div id="tour-dashboard-stats" class="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2.5">
         <!-- 1. PARA HOY -->
         <button 
+            id="tour-stats-today"
             wire:click="setActiveTab('today')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'today' ? 'bg-amber-50/70 border-2 border-amber-400 ring-4 ring-amber-300/40 shadow-xs' : 'bg-white border-amber-200/60 hover:border-amber-300 hover:bg-amber-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
@@ -131,6 +132,7 @@
 
         <!-- 2. ATRASADAS -->
         <button 
+            id="tour-stats-overdue"
             wire:click="setActiveTab('overdue')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'overdue' ? 'bg-red-50/70 border-2 border-red-500 ring-4 ring-red-300/40 shadow-xs' : 'bg-white border-red-200/80 hover:border-red-300 hover:bg-red-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
@@ -153,6 +155,7 @@
 
         <!-- 4. RESOLVER -->
         <button 
+            id="tour-stats-resolver"
             wire:click="setActiveTab('resolver')" 
             class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'resolver' ? 'bg-orange-50/70 border-2 border-orange-500 ring-4 ring-orange-300/40 shadow-xs' : 'bg-white border-orange-200/80 hover:border-orange-300 hover:bg-orange-50/30' }}">
             <div class="flex items-center justify-between text-xs min-w-0">

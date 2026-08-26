@@ -20,7 +20,7 @@
     </div>
     
     <!-- Top Notion Header -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
+    <div id="tour-trello-sync-header" class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
         <div class="flex items-center gap-3">
             <x-lucide-refresh-cw class="w-5 h-5 text-zinc-700" />
             <div>
@@ -31,13 +31,14 @@
 
         <div class="flex items-center gap-2.5">
             <!-- Clear Demo Data Button -->
-            <button wire:click="clearDemoData" wire:confirm="{{ __('¿Estás seguro de eliminar todas las órdenes y tareas?') }}" class="px-3 py-1.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-medium text-xs transition flex items-center gap-1.5">
+            <button id="tour-trello-clear-btn" wire:click="clearDemoData" wire:confirm="{{ __('¿Estás seguro de eliminar todas las órdenes y tareas?') }}" class="px-3 py-1.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-medium text-xs transition flex items-center gap-1.5">
                 <x-lucide-trash-2 class="w-3.5 h-3.5 text-rose-600" />
                 <span>{{ __('Limpiar Datos') }}</span>
             </button>
 
             <!-- Sync Button with Loading Animation -->
             <button 
+                id="tour-trello-sync-btn"
                 wire:click="runTrelloSync" 
                 wire:loading.attr="disabled"
                 :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20 font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-2xs font-medium'"
@@ -275,7 +276,7 @@
                 <!-- Trello Board URL / ID Input -->
                 <div>
                     <label class="text-zinc-700 block font-medium mb-1">{{ __('1. URL o ID de tu Tablero Trello:') }}</label>
-                    <input type="text" wire:model="boardId" placeholder="Ej: https://trello.com/b/ABC123xyz/kudos-design-ops o ABC123xyz" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-2 text-xs text-zinc-900 focus:outline-none w-full font-mono">
+                    <input id="tour-trello-board-input" type="text" wire:model="boardId" placeholder="Ej: https://trello.com/b/ABC123xyz/kudos-design-ops o ABC123xyz" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-2 text-xs text-zinc-900 focus:outline-none w-full font-mono">
                     <p class="text-[11px] text-zinc-400 mt-1">{{ __('Pega el link de tu tablero Trello o el ID de 8 caracteres.') }}</p>
                 </div>
 
