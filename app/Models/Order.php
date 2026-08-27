@@ -555,8 +555,14 @@ class Order extends Model
                     ->orWhere('substatus', Substatus::FALTA_APROBACION_ESTIMADO)
                     ->orWhere('customer_service_required', true)
                     ->orWhere(function ($dt) {
-                        $dt->where('core_status', CoreStatus::TO_DO_TODAY)
-                            ->where('done_today', true);
+                        $dt->where('done_today', true)
+                            ->whereNotIn('core_status', [
+                                CoreStatus::ENVIADO_A_CAMILA,
+                                CoreStatus::ENVIADO_AL_CLIENTE,
+                                CoreStatus::EN_PRODUCCION,
+                                CoreStatus::ON_HOLD,
+                                CoreStatus::ARCHIVED,
+                            ]);
                     })
                     ->orWhere(function ($m) {
                         $m->where('approved', true)->where('measures_confirmed', false);

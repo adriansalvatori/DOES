@@ -63,6 +63,10 @@ class AutomationEngine
      */
     public function handleStatusChanged(Order $order, CoreStatus $previousStatus, CoreStatus $newStatus): void
     {
+        if ($order->core_status !== $newStatus) {
+            $order->update(['core_status' => $newStatus]);
+        }
+
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'CORE_STATUS_CHANGED',
@@ -72,8 +76,12 @@ class AutomationEngine
             'metadata' => ['timestamp' => now()->toIso8601String()],
         ]);
 
-        // Reset done_today when status changes or is re-asserted
-        $order->update(['done_today' => false]);
+        // Set done_today to true when moved to status Camila, Client, or Production, otherwise reset to false
+        if (in_array($newStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION], true)) {
+            $order->update(['done_today' => true]);
+        } else {
+            $order->update(['done_today' => false]);
+        }
 
         // Set scheduled_date to today when entering TO_DO_TODAY if not already set or in past
         if ($newStatus === CoreStatus::TO_DO_TODAY && (! $order->scheduled_date || $order->scheduled_date->isPast())) {
@@ -100,7 +108,7 @@ class AutomationEngine
 
         // Handle transitions to EN_PRODUCCION
         if ($newStatus === CoreStatus::EN_PRODUCCION) {
-            $order->update(['substatus' => Substatus::ENVIADO_EN_ALTA, 'done_today' => false]);
+            $order->update(['substatus' => Substatus::ENVIADO_EN_ALTA]);
         }
 
         // Handle transitions from ENVIADO A CAMILA -> TO DO TODAY
@@ -518,6 +526,93 @@ class AutomationEngine
                 'trigger_type' => 'CLIENT_FOLLOW_UP_CYCLE',
                 'priority' => 'normal',
             ]);
+        }
+    }
+
+    /**
+     * Automatically evaluate subtasks scheduled for today or past dates (or all subtasks).
+     * Marks the order done_today = true when all subtasks (or all today/past subtasks) are completed.
+     * If future pending work subtasks exist, moves the order back to the designer's column.
+     */
+    public function evaluateSubtaskCompletionAutoDone(?Order $order): void
+    {
+        if (! $order) {
+            return;
+        }
+
+        if (in_array($order->core_status, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION], true)) {
+            if (! $order->done_today) {
+                $order->update(['done_today' => true]);
+            }
+
+            return;
+        }
+
+        $allSubtasksQuery = RelatedTask::where('order_id', $order->id);
+        $totalSubtasks = (clone $allSubtasksQuery)->count();
+
+        if ($totalSubtasks === 0) {
+            return;
+        }
+
+        $uncompletedAllCount = (clone $allSubtasksQuery)
+            ->where(function ($q) {
+                $q->whereNull('completed_at')
+                    ->where('status', '!=', 'done');
+            })->count();
+
+        $todayOrPastQuery = RelatedTask::where('order_id', $order->id)
+            ->where(function ($q) {
+                $q->whereDate('scheduled_date', '<=', today())
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('scheduled_date')
+                            ->whereDate('due_date', '<=', today());
+                    });
+            });
+
+        $totalTodayOrPast = (clone $todayOrPastQuery)->count();
+        $uncompletedTodayOrPastCount = (clone $todayOrPastQuery)
+            ->where(function ($q) {
+                $q->whereNull('completed_at')
+                    ->where('status', '!=', 'done');
+            })->count();
+
+        $allTasksDone = ($uncompletedAllCount === 0);
+        $todayTasksDone = ($totalTodayOrPast > 0 && $uncompletedTodayOrPastCount === 0);
+
+        if ($allTasksDone || $todayTasksDone) {
+            // All tasks (or all today/past tasks) completed -> mark order done today
+            $order->update(['done_today' => true]);
+            $this->dismissPendingOverdueTasks($order);
+
+            // Check if there are pending work-type subtasks scheduled for future dates
+            $hasFuturePendingWorkSubtasks = RelatedTask::where('order_id', $order->id)
+                ->where('scheduled_date', '>', today())
+                ->where('is_work_task', true)
+                ->whereNull('completed_at')
+                ->where('status', '!=', 'done')
+                ->exists();
+
+            if ($hasFuturePendingWorkSubtasks && $order->core_status === CoreStatus::TO_DO_TODAY) {
+                $targetStatus = $order->getDesignerOrdersReceivedStatus();
+                $order->update(['core_status' => $targetStatus]);
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'ROUTED_TO_DESIGNER_FUTURE_SUBTASKS',
+                    'actor' => 'AutomationEngine',
+                    'previous_value' => CoreStatus::TO_DO_TODAY->value,
+                    'new_value' => $targetStatus->value,
+                    'metadata' => ['reason' => 'Today subtasks completed, pending work subtasks scheduled for future dates'],
+                ]);
+            }
+        } else {
+            // Has uncompleted subtasks. If not in Camila/Client/Production, unmark done_today
+            if (! in_array($order->core_status, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION], true)) {
+                if ($order->done_today) {
+                    $order->update(['done_today' => false]);
+                }
+            }
         }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\RelatedTaskType;
+use App\Services\AutomationEngine;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -77,6 +78,22 @@ class RelatedTask extends Model
                         ],
                     ]);
                 }
+            }
+
+            if ($task->order) {
+                app(AutomationEngine::class)->evaluateSubtaskCompletionAutoDone($task->order);
+            }
+        });
+
+        static::updated(function (RelatedTask $task) {
+            if ($task->order) {
+                app(AutomationEngine::class)->evaluateSubtaskCompletionAutoDone($task->order);
+            }
+        });
+
+        static::deleted(function (RelatedTask $task) {
+            if ($task->order) {
+                app(AutomationEngine::class)->evaluateSubtaskCompletionAutoDone($task->order);
             }
         });
     }

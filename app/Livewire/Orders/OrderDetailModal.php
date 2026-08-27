@@ -453,6 +453,8 @@ class OrderDetailModal extends Component
             app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
         }
 
+        $isDoneStatus = in_array($newCoreStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION], true);
+
         $updateData = [
             'wo_number' => ! empty($cleanWo) ? "WO {$cleanWo}" : null,
             'pending_wo_number' => null,
@@ -467,7 +469,7 @@ class OrderDetailModal extends Component
             'current_due_date' => $newDueDate,
             'client_revision_count' => (int) $this->editClientRevisionCount,
             'internal_revision_count' => (int) $this->editInternalRevisionCount,
-            'done_today' => false,
+            'done_today' => $isDoneStatus ? true : $order->done_today,
         ];
 
         if (! empty($this->editCompanyName)) {

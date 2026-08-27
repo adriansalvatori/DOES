@@ -112,6 +112,12 @@ class Board extends Component
             $order->update([
                 'core_status' => $newStatus,
                 'substatus' => Substatus::ENVIADO_EN_ALTA,
+                'done_today' => true,
+            ]);
+        } elseif (in_array($newStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE], true)) {
+            $order->update([
+                'core_status' => $newStatus,
+                'done_today' => true,
             ]);
         } else {
             $order->update(['core_status' => $newStatus]);

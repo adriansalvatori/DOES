@@ -152,7 +152,7 @@ class WorkingTodayStatusTest extends TestCase
 
         $order->refresh();
         $this->assertEquals(CoreStatus::ENVIADO_A_CAMILA, $order->core_status);
-        $this->assertFalse($order->done_today);
+        $this->assertTrue($order->done_today);
     }
 
     public function test_only_working_today_orders_with_done_today_appear_in_action_required(): void
@@ -220,5 +220,123 @@ class WorkingTodayStatusTest extends TestCase
         Livewire::test(ResolverList::class)
             ->assertSee('WORKSPACE ORDER')
             ->assertDontSee('ARCHIVED ORDER');
+    }
+
+    public function test_moving_card_to_camila_client_or_production_marks_it_as_done(): void
+    {
+        $order = Order::create([
+            'company_name' => 'TEST MOVE DONE',
+            'task_name' => 'Card Move Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'done_today' => false,
+            'in_workspace' => true,
+        ]);
+
+        // Move to Camila
+        app(AutomationEngine::class)->handleStatusChanged($order, CoreStatus::TO_DO_TODAY, CoreStatus::ENVIADO_A_CAMILA);
+        $this->assertTrue($order->fresh()->done_today);
+
+        // Move to Client
+        $order->update(['done_today' => false]);
+        app(AutomationEngine::class)->handleStatusChanged($order, CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE);
+        $this->assertTrue($order->fresh()->done_today);
+
+        // Move to Production
+        $order->update(['done_today' => false]);
+        app(AutomationEngine::class)->handleStatusChanged($order, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION);
+        $this->assertTrue($order->fresh()->done_today);
+
+        // Move back to To Do Today -> resets done_today to false
+        app(AutomationEngine::class)->handleStatusChanged($order, CoreStatus::EN_PRODUCCION, CoreStatus::TO_DO_TODAY);
+        $this->assertFalse($order->fresh()->done_today);
+    }
+
+    public function test_subtask_completion_auto_marks_order_done_and_routes_future_subtasks_to_designer_column(): void
+    {
+        $designer = Designer::create(['name' => 'Adrián', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'SUBTASK AUTO DONE',
+            'task_name' => 'Multi Step Design',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'done_today' => false,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $todayTask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Today Task',
+            'type' => RelatedTaskType::SUBTASK,
+            'scheduled_date' => now()->toDateString(),
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        $futureTask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Future Task',
+            'type' => RelatedTaskType::SUBTASK,
+            'scheduled_date' => now()->addDays(3)->toDateString(),
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        // Mark today task complete
+        $todayTask->update(['status' => 'done', 'completed_at' => now()]);
+
+        $order->refresh();
+        $this->assertTrue($order->done_today);
+        // Because future subtask exists, order should have routed back to designer's column
+        $this->assertEquals(CoreStatus::ADRIAN_ORDERS_RECEIVED, $order->core_status);
+
+        // Action required view should surface this order with keepOnPendingWork option
+        Livewire::test(ResolverList::class)
+            ->assertSee('SUBTASK AUTO DONE')
+            ->assertSee('Conservar en trabajo pendiente')
+            ->call('keepOnPendingWork', $order->id);
+
+        $order->refresh();
+        $this->assertFalse($order->done_today);
+        $this->assertEquals(CoreStatus::ADRIAN_ORDERS_RECEIVED, $order->core_status);
+    }
+
+    public function test_card_with_all_future_subtasks_completed_is_marked_as_done(): void
+    {
+        $designer = Designer::create(['name' => 'César', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'CITY OF BROOKHAVEN',
+            'task_name' => 'Pinwheel Renovación',
+            'core_status' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            'done_today' => false,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $task1 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Task 1',
+            'type' => RelatedTaskType::SUBTASK,
+            'scheduled_date' => now()->addDays(2)->toDateString(),
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        $task2 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Task 2',
+            'type' => RelatedTaskType::SUBTASK,
+            'scheduled_date' => now()->addDays(2)->toDateString(),
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        // Complete both tasks (2/2)
+        $task1->update(['status' => 'done', 'completed_at' => now()]);
+        $this->assertFalse($order->fresh()->done_today);
+
+        $task2->update(['status' => 'done', 'completed_at' => now()]);
+        $this->assertTrue($order->fresh()->done_today);
     }
 }

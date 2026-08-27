@@ -94,6 +94,10 @@
                                             <span>{{ __('Enviado a Producción') }}</span>
                                         </button>
                                     @endif
+                                    <button wire:click="keepOnPendingWork({{ $order->id }})" class="px-2 py-1 rounded bg-stone-600 hover:bg-stone-700 text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs">
+                                        <x-lucide-clock class="w-3 h-3" />
+                                        <span>{{ __('Conservar en trabajo pendiente') }}</span>
+                                    </button>
                                 </div>
                             @endif
 

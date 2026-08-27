@@ -77,7 +77,7 @@ class ResolverList extends Component
         $prev = $order->core_status;
         $order->update([
             'core_status' => CoreStatus::ENVIADO_A_CAMILA,
-            'done_today' => false,
+            'done_today' => true,
         ]);
         app(AutomationEngine::class)->handleStatusChanged($order, $prev, CoreStatus::ENVIADO_A_CAMILA);
         if ($order->trello_card_id) {
@@ -96,7 +96,7 @@ class ResolverList extends Component
         $prev = $order->core_status;
         $order->update([
             'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
-            'done_today' => false,
+            'done_today' => true,
         ]);
         app(AutomationEngine::class)->handleStatusChanged($order, $prev, CoreStatus::ENVIADO_AL_CLIENTE);
         if ($order->trello_card_id) {
@@ -116,7 +116,7 @@ class ResolverList extends Component
         $order->update([
             'core_status' => CoreStatus::EN_PRODUCCION,
             'substatus' => Substatus::ENVIADO_EN_ALTA,
-            'done_today' => false,
+            'done_today' => true,
         ]);
         app(AutomationEngine::class)->handleStatusChanged($order, $prev, CoreStatus::EN_PRODUCCION);
         if ($order->trello_card_id) {
@@ -129,6 +129,14 @@ class ResolverList extends Component
         $this->dispatch('order-updated');
     }
 
+    public function keepOnPendingWork($orderId)
+    {
+        $order = Order::findOrFail($orderId);
+        $order->update(['done_today' => false]);
+        session()->flash('message', __('Orden :company conservada en trabajo pendiente del diseñador.', ['company' => $order->company_name]));
+        $this->dispatch('order-updated');
+    }
+
     public function render()
     {
         $blockedOrders = Order::inWorkspace()->with(['designer', 'relatedTasks'])
@@ -137,8 +145,14 @@ class ResolverList extends Component
                     ->orWhere('substatus', Substatus::FALTA_APROBACION_ESTIMADO)
                     ->orWhere('customer_service_required', true)
                     ->orWhere(function ($dt) {
-                        $dt->where('core_status', CoreStatus::TO_DO_TODAY)
-                            ->where('done_today', true);
+                        $dt->where('done_today', true)
+                            ->whereNotIn('core_status', [
+                                CoreStatus::ENVIADO_A_CAMILA,
+                                CoreStatus::ENVIADO_AL_CLIENTE,
+                                CoreStatus::EN_PRODUCCION,
+                                CoreStatus::ON_HOLD,
+                                CoreStatus::ARCHIVED,
+                            ]);
                     })
                     ->orWhere(function ($m) {
                         $m->where('approved', true)->where('measures_confirmed', false);
