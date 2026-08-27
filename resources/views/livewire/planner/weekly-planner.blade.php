@@ -11,6 +11,7 @@
 <div 
     wire:poll.3s 
     @open-subtask-modal.window="openCreateSubtaskModal($event.detail.orderId || '', $event.detail.dateStr || '', $event.detail.designerId || '')"
+    @open-link-note-modal.window="openLinkNoteModal($event.detail.taskId || null, $event.detail.noteTitle || '')"
     x-data="{ 
         calendarOpen: false,
         subtaskModalOpen: false,
@@ -24,6 +25,77 @@
         workspaceOrdersList: @js($workspaceOrdersList),
         subtaskPresetsList: @js($presetDataList),
         modalOrderHighlightedIndex: -1,
+        linkNoteModalOpen: false,
+        linkNoteTaskId: null,
+        linkNoteTitle: '',
+        linkNoteOrderId: '',
+        linkNoteSearchQuery: '',
+        linkNoteDropdownOpen: false,
+        linkNoteHighlightedIndex: -1,
+        openLinkNoteModal(taskId, noteTitle = '') {
+            this.linkNoteTaskId = taskId;
+            this.linkNoteTitle = noteTitle;
+            this.linkNoteOrderId = '';
+            this.linkNoteSearchQuery = '';
+            this.linkNoteDropdownOpen = true;
+            this.linkNoteHighlightedIndex = -1;
+            this.linkNoteModalOpen = true;
+            this.$nextTick(() => {
+                if (this.$refs.linkNoteSearchInput) {
+                    this.$refs.linkNoteSearchInput.focus();
+                }
+            });
+        },
+        getFilteredLinkNoteOrders() {
+            if (!this.linkNoteSearchQuery) {
+                return this.workspaceOrdersList;
+            }
+            const q = this.linkNoteSearchQuery.toLowerCase().trim();
+            return this.workspaceOrdersList.filter(o => 
+                (o.text && o.text.toLowerCase().includes(q)) || 
+                (o.company && o.company.toLowerCase().includes(q)) || 
+                (o.location && o.location.toLowerCase().includes(q)) ||
+                (o.task && o.task.toLowerCase().includes(q)) ||
+                (o.wo_number && o.wo_number.toLowerCase().includes(q)) ||
+                (o.trello_card_title && o.trello_card_title.toLowerCase().includes(q))
+            );
+        },
+        navigateLinkNoteOrder(step) {
+            const list = this.getFilteredLinkNoteOrders();
+            if (list.length === 0) return;
+            if (this.linkNoteHighlightedIndex === -1) {
+                this.linkNoteHighlightedIndex = step > 0 ? 0 : list.length - 1;
+            } else {
+                this.linkNoteHighlightedIndex = (this.linkNoteHighlightedIndex + step + list.length) % list.length;
+            }
+            this.$nextTick(() => {
+                const container = this.$refs.linkNoteDropdownPanel;
+                if (!container) return;
+                const items = container.querySelectorAll('.link-note-order-item-btn');
+                if (items[this.linkNoteHighlightedIndex]) {
+                    items[this.linkNoteHighlightedIndex].scrollIntoView({ block: 'nearest' });
+                }
+            });
+        },
+        selectHighlightedLinkNoteOrder() {
+            const list = this.getFilteredLinkNoteOrders();
+            if (this.linkNoteHighlightedIndex >= 0 && list[this.linkNoteHighlightedIndex]) {
+                const item = list[this.linkNoteHighlightedIndex];
+                this.linkNoteOrderId = item.id;
+                this.linkNoteSearchQuery = item.text;
+                this.linkNoteDropdownOpen = false;
+                this.linkNoteHighlightedIndex = -1;
+                this.submitLinkNoteModal();
+            }
+        },
+        submitLinkNoteModal() {
+            if (!this.linkNoteOrderId) {
+                alert('{{ __('Debes seleccionar una orden del workspace para vincular la nota.') }}');
+                return;
+            }
+            $wire.linkSubtaskToOrder(this.linkNoteTaskId, this.linkNoteOrderId);
+            this.linkNoteModalOpen = false;
+        },
         getFilteredOrders() {
             if (!this.orderSearchQuery) {
                 return this.workspaceOrdersList;
@@ -87,15 +159,11 @@
             });
         },
         submitSubtaskModal() {
-            if (!this.subtaskOrderId) {
-                alert('{{ __('Por favor selecciona una orden.') }}');
-                return;
-            }
             if (!this.subtaskTitle.trim()) {
-                alert('{{ __('Por favor ingresa el nombre de la subtarea.') }}');
+                alert('{{ __('Por favor ingresa el nombre de la subtarea o nota.') }}');
                 return;
             }
-            $wire.scheduleSubtask(this.subtaskOrderId, this.subtaskTitle.trim(), this.subtaskDate, this.subtaskDesignerId, this.subtaskIsWorkTask);
+            $wire.scheduleSubtask(this.subtaskOrderId || null, this.subtaskTitle.trim(), this.subtaskDate, this.subtaskDesignerId, this.subtaskIsWorkTask);
             this.subtaskModalOpen = false;
         },
         undoToastOpen: false,
@@ -708,8 +776,8 @@
                                                                     type="button"
                                                                     class="w-3.5 h-3.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                                                                                                     <div class="min-w-0 flex-1">
-                                                                    <h5 class="font-bold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900') }}">
+                                                                                                                     <div class="min-w-0 flex-1" @click="if({{ $stask->isNote() ? 'true' : 'false' }}) { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }">
+                                                                    <h5 class="font-bold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900') }} {{ $stask->isNote() ? 'cursor-pointer hover:text-amber-700' : '' }}">
                                                                         {{ $stask->title }}
                                                                     </h5>
                                                                 </div>
@@ -760,6 +828,19 @@
                                                                     </div>
                                                                 @endif
                                                             @endif
+                                                        @else
+                                                            <div class="pt-0.5 flex items-center justify-between gap-1 text-[10px]">
+                                                                <button 
+                                                                    @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })" 
+                                                                    type="button"
+                                                                    class="text-left min-w-0 flex-1 group/link flex items-center gap-1 cursor-pointer">
+                                                                    <span class="inline-flex items-center gap-1 text-[9.5px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80">
+                                                                        <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
+                                                                        <span>{{ __('Nota (Sin Orden)') }}</span>
+                                                                        <span class="text-[9px] text-amber-600 font-normal underline hover:text-amber-900">({{ __('Vincular orden') }})</span>
+                                                                    </span>
+                                                                </button>
+                                                            </div>
                                                         @endif
 
                                                     </div>
@@ -918,6 +999,15 @@
                                                 this.selectOrder(list[this.orderHighlightedIndex]);
                                             }
                                         },
+                                        handleOrderEnter() {
+                                            const list = this.getFilteredOrders();
+                                            if (this.dropdownOpen && this.orderHighlightedIndex >= 0 && list[this.orderHighlightedIndex]) {
+                                                this.selectHighlightedOrder();
+                                            } else if (this.orderSearch.trim()) {
+                                                $wire.scheduleSubtask(null, this.orderSearch.trim(), '{{ $day['date_string'] }}', '{{ $designer->id }}', this.isWorkTask);
+                                                this.resetInline();
+                                            }
+                                        },
                                         getFilteredPresets() {
                                             const list = this.subtaskPresetsList || [];
                                             if (!this.subtaskTitle) return list;
@@ -976,7 +1066,12 @@
                                         },
                                         submitSubtask() {
                                             if (!this.selectedOrderId) {
-                                                alert('{{ __('Por favor selecciona una orden de la lista.') }}');
+                                                if (this.orderSearch.trim()) {
+                                                    $wire.scheduleSubtask(null, this.orderSearch.trim(), '{{ $day['date_string'] }}', '{{ $designer->id }}', this.isWorkTask);
+                                                    this.resetInline();
+                                                    return;
+                                                }
+                                                alert('{{ __('Por favor ingresa el nombre de la subtarea o nota.') }}');
                                                 return;
                                             }
                                             if (!this.subtaskTitle.trim()) {
@@ -984,12 +1079,15 @@
                                                 return;
                                             }
                                             $wire.scheduleSubtask(this.selectedOrderId, this.subtaskTitle.trim(), '{{ $day['date_string'] }}', '{{ $designer->id }}', this.isWorkTask);
-                                            this.subtaskTitle = '';
+                                            this.resetInline();
+                                        },
+                                        resetInline() {
                                             this.orderSearch = '';
                                             this.selectedOrderId = '';
                                             this.selectedOrderCompany = '';
                                             this.selectedOrderTask = '';
                                             this.selectedOrderLocation = '';
+                                            this.subtaskTitle = '';
                                             this.isWorkTask = true;
                                             this.dropdownOpen = false;
                                             this.orderHighlightedIndex = -1;
@@ -1063,7 +1161,7 @@
                                                     <div 
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
-                                                        @click.stop="if({{ $stask->order ? 'true' : 'false' }}) $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
+                                                        @click.stop="if({{ $stask->order ? 'true' : 'false' }}) { $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} }) } else { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }"
                                                         class="py-1 px-2 flex items-center justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/70 rounded transition group {{ $staskDone ? 'opacity-60' : '' }}">
                                                         
                                                         <div class="flex items-center gap-2 min-w-0 flex-1 overflow-visible">
@@ -1197,9 +1295,9 @@
                                                             @input="dropdownOpen = true; orderHighlightedIndex = -1;"
                                                             @keydown.arrow-down.prevent="if(!dropdownOpen) dropdownOpen = true; else navigateOrder(1);"
                                                             @keydown.arrow-up.prevent="if(!dropdownOpen) dropdownOpen = true; else navigateOrder(-1);"
-                                                            @keydown.enter.prevent="if (dropdownOpen && orderHighlightedIndex >= 0) { selectHighlightedOrder(); }"
+                                                            @keydown.enter.prevent="handleOrderEnter()"
                                                             @keydown.escape.stop="if(dropdownOpen) { dropdownOpen = false; orderHighlightedIndex = -1; } else { cancelInline(); }"
-                                                            placeholder="{{ __('+ Buscar empresa u orden...') }}"
+                                                            placeholder="{{ __('+ Buscar empresa o escribir nota...') }}"
                                                             class="w-full bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-[11px] font-normal text-zinc-800 placeholder-stone-400" />
 
                                                         <!-- Floating Dropdown for Orders -->
@@ -1388,7 +1486,7 @@
                     <div class="p-5 space-y-4 text-xs">
                         <div class="space-y-1 relative" @click.outside="orderDropdownOpen = false">
                             <label class="font-semibold text-zinc-700 block flex items-center justify-between">
-                                <span>{{ __('Orden / Trabajo Principal') }} <span class="text-red-500">*</span></span>
+                                <span>{{ __('Orden / Trabajo Principal') }} <span class="text-zinc-400 font-normal">({{ __('Opcional - dejar en blanco para Nota') }})</span></span>
                                 <template x-if="subtaskOrderId">
                                     <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 flex items-center gap-1">
                                         <x-lucide-check class="w-3 h-3" />
@@ -1627,7 +1725,151 @@
                             @click="submitSubtaskModal()"
                             class="px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 text-white font-semibold text-xs transition cursor-pointer shadow-2xs flex items-center gap-1.5">
                             <x-lucide-check class="w-3.5 h-3.5" />
-                            <span>{{ __('Crear Subtarea') }}</span>
+                            <span x-text="subtaskOrderId ? '{{ __('Crear Subtarea') }}' : '{{ __('Crear Nota') }}'"></span>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </template>
+
+        <!-- Modal Vincular Nota a Orden -->
+        <template x-if="linkNoteModalOpen">
+            <div 
+                class="fixed inset-0 z-[105] overflow-y-auto bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+                @keydown.window.escape="linkNoteModalOpen = false"
+                x-transition:enter="transition ease-out duration-150"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-100"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0">
+            
+                <div 
+                    @click.outside="linkNoteModalOpen = false"
+                    class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-md w-full flex flex-col transition duration-200 overflow-visible relative"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100">
+                    
+                    <div class="px-5 py-4 border-b border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-between">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="p-2 rounded-lg bg-amber-500 text-white shrink-0 shadow-2xs">
+                                <x-lucide-link class="w-4 h-4" />
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="font-bold text-sm text-zinc-900 leading-snug">{{ __('Vincular Nota a Orden') }}</h3>
+                                <p class="text-xs text-zinc-500 truncate">
+                                    {{ __('Asociar nota a un trabajo del workspace') }}
+                                </p>
+                            </div>
+                        </div>
+                        <button 
+                            type="button" 
+                            @click="linkNoteModalOpen = false"
+                            class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition cursor-pointer">
+                            <x-lucide-x class="w-4 h-4" />
+                        </button>
+                    </div>
+
+                    <div class="p-5 space-y-4 text-xs">
+                        <div class="bg-amber-50 border border-amber-200/80 rounded-lg p-3 text-amber-900 space-y-1">
+                            <div class="font-bold flex items-center gap-1.5 text-xs">
+                                <x-lucide-info class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                <span>{{ __('Vinculación Obligatoria') }}</span>
+                            </div>
+                            <p class="text-[11px] leading-relaxed text-amber-800">
+                                {{ __('Para marcar una nota como completada o asociarla al timeline de un cliente, debes vincularla a una orden. La información redundante del título (empresa/ubicación) se limpiará automáticamente.') }}
+                            </p>
+                            <div class="pt-1 font-semibold text-[11px] text-amber-950 flex items-center gap-1">
+                                <span>{{ __('Nota:') }}</span>
+                                <span class="italic font-bold text-zinc-900" x-text="linkNoteTitle"></span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1 relative" @click.outside="linkNoteDropdownOpen = false">
+                            <label class="font-semibold text-zinc-700 block flex items-center justify-between">
+                                <span>{{ __('Seleccionar Orden del Workspace') }} <span class="text-red-500">*</span></span>
+                            </label>
+
+                            <div class="relative">
+                                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                
+                                <input 
+                                    type="text" 
+                                    x-ref="linkNoteSearchInput"
+                                    x-model="linkNoteSearchQuery"
+                                    @focus="linkNoteDropdownOpen = true; linkNoteHighlightedIndex = -1;"
+                                    @input="linkNoteDropdownOpen = true; linkNoteHighlightedIndex = -1; if (!linkNoteSearchQuery) linkNoteOrderId = '';"
+                                    @keydown.arrow-down.prevent="if(!linkNoteDropdownOpen) linkNoteDropdownOpen = true; else navigateLinkNoteOrder(1);"
+                                    @keydown.arrow-up.prevent="if(!linkNoteDropdownOpen) linkNoteDropdownOpen = true; else navigateLinkNoteOrder(-1);"
+                                    @keydown.enter.prevent="if (linkNoteDropdownOpen && linkNoteHighlightedIndex >= 0) { selectHighlightedLinkNoteOrder(); } else if (linkNoteOrderId) { submitLinkNoteModal(); }"
+                                    @keydown.escape.stop="if(linkNoteDropdownOpen) { linkNoteDropdownOpen = false; linkNoteHighlightedIndex = -1; } else { linkNoteModalOpen = false; }"
+                                    placeholder="{{ __('Buscar por empresa, ubicación o trabajo...') }}" 
+                                    class="w-full bg-[#fbfbfa] focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-lg pl-9 pr-8 py-2 text-xs text-zinc-800 focus:outline-none transition shadow-2xs font-medium" />
+
+                                <div class="absolute right-2 top-1/2 -translate-y-1/2">
+                                    <button 
+                                        type="button" 
+                                        @click="linkNoteDropdownOpen = !linkNoteDropdownOpen" 
+                                        class="p-1 text-zinc-400 hover:text-zinc-700 rounded-md transition cursor-pointer">
+                                        <x-lucide-chevron-down class="w-3.5 h-3.5 transition-transform duration-150" x-bind:class="linkNoteDropdownOpen ? 'rotate-180' : ''" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div 
+                                x-ref="linkNoteDropdownPanel"
+                                x-show="linkNoteDropdownOpen"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                
+                                <template x-for="(item, idx) in getFilteredLinkNoteOrders()" :key="item.id">
+                                    <button 
+                                        type="button"
+                                        @click="linkNoteOrderId = item.id; linkNoteSearchQuery = item.text; linkNoteDropdownOpen = false; submitLinkNoteModal();"
+                                        @mouseenter="linkNoteHighlightedIndex = idx"
+                                        :class="{ 'bg-amber-50 text-amber-900 font-semibold ring-1 ring-amber-200': linkNoteHighlightedIndex === idx || (linkNoteHighlightedIndex === -1 && linkNoteOrderId === item.id), 'hover:bg-stone-100': linkNoteHighlightedIndex !== idx }"
+                                        class="link-note-order-item-btn w-full text-left p-2.5 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <span class="font-bold text-zinc-900 truncate text-xs" x-text="item.company"></span>
+                                                <template x-if="item.location">
+                                                    <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 shrink-0 truncate max-w-[150px]" x-text="item.location"></span>
+                                                </template>
+                                            </div>
+                                            <span class="text-[11px] text-zinc-500 block truncate" x-text="item.task"></span>
+                                        </div>
+                                        <template x-if="linkNoteOrderId === item.id">
+                                            <x-lucide-check class="w-3.5 h-3.5 text-amber-600 shrink-0 stroke-[2.5]" />
+                                        </template>
+                                    </button>
+                                </template>
+
+                                <template x-if="getFilteredLinkNoteOrders().length === 0">
+                                    <div class="p-3 text-center text-zinc-400 italic text-[11px]">
+                                        {{ __('No se encontraron órdenes coincidentes.') }}
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-5 py-3 border-t border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-end gap-2">
+                        <button 
+                            type="button" 
+                            @click="linkNoteModalOpen = false"
+                            class="px-3 py-1.5 rounded-lg border border-[#d0d0ce] bg-white hover:bg-stone-50 text-zinc-700 font-semibold text-xs transition cursor-pointer shadow-2xs">
+                            {{ __('Cancelar') }}
+                        </button>
+                        <button 
+                            type="button" 
+                            @click="submitLinkNoteModal()"
+                            class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition cursor-pointer shadow-2xs flex items-center gap-1.5">
+                            <x-lucide-link class="w-3.5 h-3.5" />
+                            <span>{{ __('Vincular a Orden') }}</span>
                         </button>
                     </div>
 

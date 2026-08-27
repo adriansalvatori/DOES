@@ -163,90 +163,114 @@ class WeeklyPlanner extends Component
         $this->scheduleSubtask($orderId, $order->task_name ?: __('Trabajo programado'), $dateString);
     }
 
-    public function scheduleSubtask($orderId, $title = '', $dateString = '', $designerId = null)
+    public function scheduleSubtask($orderId = null, $title = '', $dateString = '', $designerId = null, $isWorkTask = true)
     {
-        $order = Order::findOrFail($orderId);
         $scheduledDate = Carbon::parse($dateString);
-        $assigneeId = $designerId ?: ($order->designer_id ?? $order->designers->first()?->id);
 
-        $taskTitle = trim($title) ?: ($order->task_name ?: __('Trabajo programado'));
+        if (! empty($orderId)) {
+            $order = Order::findOrFail($orderId);
+            $assigneeId = $designerId ?: ($order->designer_id ?? $order->designers->first()?->id);
+            $rawTitle = trim($title) ?: ($order->task_name ?: __('Trabajo programado'));
+            $taskTitle = RelatedTask::cleanTitleForOrder($rawTitle, $order);
 
-        $preset = SubtaskPreset::where('title', $taskTitle)->first();
-        $isWorkTask = $preset ? (bool) $preset->is_work_task : true;
+            $preset = SubtaskPreset::where('title', $rawTitle)->orWhere('title', $taskTitle)->first();
+            $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
 
-        $subtask = RelatedTask::create([
-            'order_id' => $order->id,
-            'title' => $taskTitle,
-            'type' => RelatedTaskType::SUBTASK->value,
-            'scheduled_date' => $scheduledDate->toDateString(),
-            'assignee_id' => $assigneeId,
-            'status' => 'todo',
-            'priority' => 'normal',
-            'is_work_task' => $isWorkTask,
-        ]);
+            $subtask = RelatedTask::create([
+                'order_id' => $order->id,
+                'title' => $taskTitle,
+                'type' => RelatedTaskType::SUBTASK->value,
+                'scheduled_date' => $scheduledDate->toDateString(),
+                'assignee_id' => $assigneeId,
+                'status' => 'todo',
+                'priority' => 'normal',
+                'is_work_task' => $isWorkTask,
+            ]);
 
-        $updateData = ['in_workspace' => true];
+            $updateData = ['in_workspace' => true];
 
-        if ($isWorkTask && $scheduledDate->isToday()) {
-            $updateData['scheduled_date'] = $scheduledDate->toDateString();
+            if ($isWorkTask && $scheduledDate->isToday()) {
+                $updateData['scheduled_date'] = $scheduledDate->toDateString();
 
-            if ($order->core_status === CoreStatus::ARCHIVED) {
-                $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
-                $updateData['substatus'] = Substatus::TICKET;
-                $updateData['archived_at'] = null;
-            } elseif ($order->core_status === CoreStatus::EN_PRODUCCION) {
-                // Keep EN PRODUCCIÓN core status, subtask appears in Working Today
-            } else {
-                $previousStatus = $order->core_status;
-                $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
-                if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
-                    $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
-                } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
-                    $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
+                if ($order->core_status === CoreStatus::ARCHIVED) {
+                    $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+                    $updateData['substatus'] = Substatus::TICKET;
+                    $updateData['archived_at'] = null;
+                } elseif ($order->core_status === CoreStatus::EN_PRODUCCION) {
+                    // Keep EN PRODUCCIÓN core status, subtask appears in Working Today
+                } else {
+                    $previousStatus = $order->core_status;
+                    $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+                    if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                        $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
+                    } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                        $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
+                    }
                 }
             }
-        }
 
-        if (! $order->designer_id && $order->designers->isEmpty() && $assigneeId) {
-            $updateData['designer_id'] = $assigneeId;
-        }
+            if (! $order->designer_id && $order->designers->isEmpty() && $assigneeId) {
+                $updateData['designer_id'] = $assigneeId;
+            }
 
-        $order->update($updateData);
+            $order->update($updateData);
 
-        // Log OrderEvent for timeline
-        OrderEvent::create([
-            'order_id' => $order->id,
-            'event_type' => 'SUBTASK_SCHEDULED',
-            'actor' => auth()->user()?->name ?? __('Diseñador'),
-            'new_value' => $taskTitle,
-            'metadata' => [
-                'task_id' => $subtask->id,
-                'task_title' => $taskTitle,
-                'date' => $scheduledDate->toDateString(),
-                'is_work_task' => $isWorkTask,
-            ],
-        ]);
+            // Log OrderEvent for timeline
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'SUBTASK_SCHEDULED',
+                'actor' => auth()->user()?->name ?? __('Diseñador'),
+                'new_value' => $taskTitle,
+                'metadata' => [
+                    'task_id' => $subtask->id,
+                    'task_title' => $taskTitle,
+                    'date' => $scheduledDate->toDateString(),
+                    'is_work_task' => $isWorkTask,
+                ],
+            ]);
 
-        if ($order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
-            $daysOverdue = (int) $order->current_due_date->diffInDays($scheduledDate);
-            $this->slaWarningDetails = [
-                'company_name' => $order->company_name,
-                'task_name' => $taskTitle,
-                'scheduled_date' => $scheduledDate->format('d M, Y'),
-                'current_due_date' => $order->current_due_date->format('d M, Y'),
-                'days_overdue' => max(1, $daysOverdue),
-            ];
-            $this->showSlaWarningModal = true;
-            session()->flash('warning', __('Atención: Subtarea ":title" programada para :company el :date supera la fecha límite del SLA (:due).', [
-                'title' => $taskTitle,
-                'company' => $order->company_name,
-                'date' => $scheduledDate->format('d M'),
-                'due' => $order->current_due_date->format('d M'),
-            ]));
+            if ($order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
+                $daysOverdue = (int) $order->current_due_date->diffInDays($scheduledDate);
+                $this->slaWarningDetails = [
+                    'company_name' => $order->company_name,
+                    'task_name' => $taskTitle,
+                    'scheduled_date' => $scheduledDate->format('d M, Y'),
+                    'current_due_date' => $order->current_due_date->format('d M, Y'),
+                    'days_overdue' => max(1, $daysOverdue),
+                ];
+                $this->showSlaWarningModal = true;
+                session()->flash('warning', __('Atención: Subtarea ":title" programada para :company el :date supera la fecha límite del SLA (:due).', [
+                    'title' => $taskTitle,
+                    'company' => $order->company_name,
+                    'date' => $scheduledDate->format('d M'),
+                    'due' => $order->current_due_date->format('d M'),
+                ]));
+            } else {
+                session()->flash('message', __('Subtarea ":title" programada para :company el :date.', [
+                    'title' => $taskTitle,
+                    'company' => $order->company_name,
+                    'date' => $scheduledDate->format('d M'),
+                ]));
+            }
         } else {
-            session()->flash('message', __('Subtarea ":title" programada para :company el :date.', [
+            // Note type subtask (no order attached)
+            $taskTitle = trim($title) ?: __('Nota sin nombre');
+            $preset = SubtaskPreset::where('title', $taskTitle)->first();
+            $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
+
+            $subtask = RelatedTask::create([
+                'order_id' => null,
                 'title' => $taskTitle,
-                'company' => $order->company_name,
+                'type' => RelatedTaskType::SUBTASK->value,
+                'scheduled_date' => $scheduledDate->toDateString(),
+                'assignee_id' => $designerId ?: null,
+                'status' => 'todo',
+                'priority' => 'normal',
+                'is_work_task' => $isWorkTask,
+            ]);
+
+            session()->flash('message', __('Nota ":title" creada para el :date.', [
+                'title' => $taskTitle,
                 'date' => $scheduledDate->format('d M'),
             ]));
         }
@@ -303,6 +327,14 @@ class WeeklyPlanner extends Component
     public function toggleSubtaskComplete($taskId)
     {
         $subtask = RelatedTask::with('order')->findOrFail($taskId);
+
+        if ($subtask->isNote()) {
+            session()->flash('warning', __('Para marcar como completada, es obligatorio vincular la nota a una tarjeta existente del workspace.'));
+            $this->dispatch('open-link-note-modal', taskId: $subtask->id, noteTitle: $subtask->title);
+
+            return;
+        }
+
         $newStatus = $subtask->status === 'done' ? 'todo' : 'done';
 
         $subtask->update([
@@ -323,6 +355,44 @@ class WeeklyPlanner extends Component
                 ],
             ]);
         }
+
+        $this->dispatch('order-updated');
+    }
+
+    public function linkSubtaskToOrder($taskId, $orderId)
+    {
+        $subtask = RelatedTask::findOrFail($taskId);
+        $order = Order::findOrFail($orderId);
+
+        $cleanedTitle = RelatedTask::cleanTitleForOrder($subtask->title, $order);
+        $assigneeId = $subtask->assignee_id ?: ($order->designer_id ?? $order->designers->first()?->id);
+
+        $subtask->update([
+            'order_id' => $order->id,
+            'title' => $cleanedTitle,
+            'assignee_id' => $assigneeId,
+        ]);
+
+        $order->update(['in_workspace' => true]);
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'SUBTASK_SCHEDULED',
+            'actor' => auth()->user()?->name ?? __('Diseñador'),
+            'new_value' => $cleanedTitle,
+            'metadata' => [
+                'task_id' => $subtask->id,
+                'task_title' => $cleanedTitle,
+                'date' => $subtask->scheduled_date?->toDateString(),
+                'is_work_task' => $subtask->is_work_task,
+                'linked_from_note' => true,
+            ],
+        ]);
+
+        session()->flash('message', __('Nota vinculada a :company como subtarea ":title".', [
+            'company' => $order->company_name,
+            'title' => $cleanedTitle,
+        ]));
 
         $this->dispatch('order-updated');
     }
@@ -419,7 +489,10 @@ class WeeklyPlanner extends Component
         $designers = $designerQuery->get();
 
         $subtasks = RelatedTask::with(['order.clientLocation', 'order.designer', 'order.designers'])
-            ->whereHas('order', fn ($q) => $q->inWorkspace())
+            ->where(function ($q) {
+                $q->whereNull('order_id')
+                    ->orWhereHas('order', fn ($oq) => $oq->inWorkspace());
+            })
             ->whereNotNull('scheduled_date')
             ->get();
 

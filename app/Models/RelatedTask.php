@@ -113,6 +113,66 @@ class RelatedTask extends Model
         return (bool) $this->is_work_task && $this->trigger_type === null;
     }
 
+    public function isNote(): bool
+    {
+        return $this->order_id === null;
+    }
+
+    public static function cleanTitleForOrder(string $title, Order $order): string
+    {
+        $rawTitle = trim($title);
+        if ($rawTitle === '') {
+            return '';
+        }
+
+        $candidates = array_filter([
+            $order->location_text,
+            $order->location_name,
+            $order->clientLocation?->name,
+            $order->company_name,
+            $order->wo_number,
+        ], fn ($val) => ! empty($val) && is_string($val));
+
+        $terms = [];
+        foreach ($candidates as $cand) {
+            $candTrimmed = trim($cand);
+            if ($candTrimmed !== '') {
+                $terms[] = $candTrimmed;
+                if (preg_match_all('/\b[A-Za-z0-9]{2,}\b/u', $candTrimmed, $matches)) {
+                    foreach ($matches[0] as $token) {
+                        if (! in_array(mb_strtolower($token), ['de', 'la', 'el', 'los', 'las', 'del', 'en', 'y'], true)) {
+                            $terms[] = $token;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Sort terms longest first to avoid partial replacements (e.g. "Talpa 16" before "16")
+        usort($terms, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+        $terms = array_values(array_unique($terms));
+
+        $cleaned = $rawTitle;
+        foreach ($terms as $term) {
+            $quoted = preg_quote($term, '/');
+            // Remove with word boundary so internal letters of other words are preserved (e.g. "la" won't match inside "Camila")
+            $pattern = '/\b'.$quoted.'\b/iu';
+            $cleaned = preg_replace($pattern, '', $cleaned);
+        }
+
+        // Remove leftover leading/trailing punctuation, dashes, colons, pipes, and whitespace
+        $cleaned = preg_replace('/^[\s\-:,|]+|[\s\-:,|]+$/u', '', $cleaned);
+        $cleaned = preg_replace('/\s+/', ' ', $cleaned);
+        $cleaned = trim($cleaned);
+
+        if ($cleaned === '') {
+            return $rawTitle;
+        }
+
+        // Capitalize first character
+        return mb_strtoupper(mb_substr($cleaned, 0, 1)).mb_substr($cleaned, 1);
+    }
+
     public function isFollowUp(): bool
     {
         if ($this->type && in_array($this->type, [
