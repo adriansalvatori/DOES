@@ -180,8 +180,103 @@
         hideUndoToast() {
             this.undoToastOpen = false;
             if (this.undoToastTimer) clearTimeout(this.undoToastTimer);
+        },
+        initDragAutoScroll() {
+            let scrollInterval = null;
+            let currentX = 0;
+            let currentY = 0;
+            let isDragging = false;
+
+            const EDGE_THRESHOLD = 90;
+            const MAX_SPEED = 24;
+
+            const handleDragOver = (e) => {
+                if (e.clientX === 0 && e.clientY === 0) return;
+                currentX = e.clientX;
+                currentY = e.clientY;
+                isDragging = true;
+
+                if (!scrollInterval) {
+                    scrollInterval = requestAnimationFrame(scrollLoop);
+                }
+            };
+
+            const handleDragEnd = () => {
+                isDragging = false;
+                if (scrollInterval) {
+                    cancelAnimationFrame(scrollInterval);
+                    scrollInterval = null;
+                }
+            };
+
+            const scrollLoop = () => {
+                if (!isDragging) {
+                    scrollInterval = null;
+                    return;
+                }
+
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+
+                // 1. Window vertical scrolling
+                if (currentY < EDGE_THRESHOLD && window.scrollY > 0) {
+                    const intensity = (EDGE_THRESHOLD - Math.max(0, currentY)) / EDGE_THRESHOLD;
+                    window.scrollBy(0, -Math.ceil(intensity * MAX_SPEED));
+                } else if (currentY > vh - EDGE_THRESHOLD) {
+                    const intensity = (Math.min(vh, currentY) - (vh - EDGE_THRESHOLD)) / EDGE_THRESHOLD;
+                    window.scrollBy(0, Math.ceil(intensity * MAX_SPEED));
+                }
+
+                // 2. Window horizontal scrolling
+                if (currentX < EDGE_THRESHOLD && window.scrollX > 0) {
+                    const intensity = (EDGE_THRESHOLD - Math.max(0, currentX)) / EDGE_THRESHOLD;
+                    window.scrollBy(-Math.ceil(intensity * MAX_SPEED), 0);
+                } else if (currentX > vw - EDGE_THRESHOLD) {
+                    const intensity = (Math.min(vw, currentX) - (vw - EDGE_THRESHOLD)) / EDGE_THRESHOLD;
+                    window.scrollBy(Math.ceil(intensity * MAX_SPEED), 0);
+                }
+
+                // 3. Overflow scroll containers
+                const containers = document.querySelectorAll('.overflow-x-auto, .overflow-y-auto, .custom-vertical-scrollbar, .custom-horizontal-scrollbar');
+                containers.forEach(container => {
+                    const rect = container.getBoundingClientRect();
+                    const isWithinY = currentY >= rect.top - 30 && currentY <= rect.bottom + 30;
+                    const isWithinX = currentX >= rect.left - 30 && currentX <= rect.right + 30;
+
+                    if (isWithinY && isWithinX) {
+                        // Container horizontal scroll
+                        if (container.scrollWidth > container.clientWidth) {
+                            if (currentX > rect.right - EDGE_THRESHOLD) {
+                                const intensity = Math.min(1, (currentX - (rect.right - EDGE_THRESHOLD)) / EDGE_THRESHOLD);
+                                container.scrollLeft += Math.ceil(intensity * MAX_SPEED);
+                            } else if (currentX < rect.left + EDGE_THRESHOLD) {
+                                const intensity = Math.min(1, ((rect.left + EDGE_THRESHOLD) - currentX) / EDGE_THRESHOLD);
+                                container.scrollLeft -= Math.ceil(intensity * MAX_SPEED);
+                            }
+                        }
+
+                        // Container vertical scroll
+                        if (container.scrollHeight > container.clientHeight) {
+                            if (currentY > rect.bottom - EDGE_THRESHOLD) {
+                                const intensity = Math.min(1, (currentY - (rect.bottom - EDGE_THRESHOLD)) / EDGE_THRESHOLD);
+                                container.scrollTop += Math.ceil(intensity * MAX_SPEED);
+                            } else if (currentY < rect.top + EDGE_THRESHOLD) {
+                                const intensity = Math.min(1, ((rect.top + EDGE_THRESHOLD) - currentY) / EDGE_THRESHOLD);
+                                container.scrollTop -= Math.ceil(intensity * MAX_SPEED);
+                            }
+                        }
+                    }
+                });
+
+                scrollInterval = requestAnimationFrame(scrollLoop);
+            };
+
+            window.addEventListener('dragover', handleDragOver, { passive: true });
+            window.addEventListener('dragend', handleDragEnd, { passive: true });
+            window.addEventListener('drop', handleDragEnd, { passive: true });
         }
     }" 
+    x-init="initDragAutoScroll()"
     @subtask-deleted.window="triggerUndoToast($event.detail.message)"
     @subtask-restored.window="hideUndoToast()"
     @keydown.window="(e) => {
@@ -1162,86 +1257,99 @@
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
                                                         @click.stop="if({{ $stask->order ? 'true' : 'false' }}) { $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} }) } else { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }"
-                                                        class="py-1 px-2 flex items-center justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/70 rounded transition group {{ $staskDone ? 'opacity-60' : '' }}">
+                                                        class="py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/80 rounded-md transition group {{ $staskDone ? 'opacity-60' : '' }}">
                                                         
-                                                        <div class="flex items-center gap-2 min-w-0 flex-1 overflow-visible">
+                                                        <div class="flex items-start gap-2 min-w-0 flex-1 overflow-visible">
                                                             <button 
                                                                 @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
                                                                 type="button"
-                                                                class="w-3.5 h-3.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $staskDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                                                class="w-3.5 h-3.5 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $staskDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
                                                                 title="{{ $staskDone ? 'Subtarea completada' : 'Marcar subtarea como completada' }}">
                                                                 <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                             </button>
 
-                                                            <div class="min-w-0 flex-1 text-[10.5px] leading-tight flex items-center gap-1 overflow-visible">
+                                                            <div class="min-w-0 flex-1 flex flex-col gap-0.5 overflow-visible">
                                                                 @if($stask->order)
-                                                                    <!-- Company Name with Instant Tooltip -->
-                                                                    <div class="relative group/tip min-w-0 shrink">
-                                                                        <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-bold' : 'text-zinc-900 font-bold') }}">
-                                                                            {{ $stask->order->company_name }}
-                                                                        </span>
-                                                                        <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
-                                                                            {{ $stask->order->company_name }}
+                                                                    <!-- Row 1: Order Details (Company, Location, Task Name) -->
+                                                                    <div class="flex items-center gap-1 text-[10.5px] leading-tight min-w-0">
+                                                                        <!-- Company Name with Instant Tooltip -->
+                                                                        <div class="relative group/tip min-w-0 shrink">
+                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-bold' : 'text-zinc-900 font-bold') }}">
+                                                                                {{ $stask->order->company_name }}
+                                                                            </span>
+                                                                            <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                {{ $stask->order->company_name }}
+                                                                            </div>
                                                                         </div>
+
+                                                                        @if($stask->order->location_text)
+                                                                            <!-- Location Name with Instant Tooltip -->
+                                                                            <div class="relative group/tip min-w-0 shrink flex items-center gap-0.5">
+                                                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2.5]" />
+                                                                                <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : 'text-zinc-900 font-bold' }} text-[10px]">
+                                                                                    {{ $stask->order->location_text }}
+                                                                                </span>
+                                                                                <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                    {{ $stask->order->location_text }}
+                                                                                </div>
+                                                                            </div>
+                                                                        @endif
+
+                                                                        @if($stask->order->task_name)
+                                                                            <!-- Order Name with Instant Tooltip -->
+                                                                            <div class="relative group/tip min-w-0 flex-1">
+                                                                                <span class="block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }} text-[10px]">
+                                                                                    • {{ $stask->order->task_name }}
+                                                                                </span>
+                                                                                <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                    {{ $stask->order->task_name }}
+                                                                                </div>
+                                                                            </div>
+                                                                        @endif
                                                                     </div>
 
-                                                                    @if($stask->order->location_text)
-                                                                        <!-- Location Name with Instant Tooltip -->
-                                                                        <div class="relative group/tip min-w-0 shrink flex items-center gap-0.5">
-                                                                            <x-lucide-map-pin class="w-3 h-3 text-red-500 shrink-0 stroke-[2.5]" />
-                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : 'text-zinc-900 font-bold' }} text-[10.5px]">
-                                                                                {{ $stask->order->location_text }}
+                                                                    <!-- Row 2: Subtask Badge/Title & SLA Warning -->
+                                                                    <div class="flex items-center gap-1 text-[10px] leading-tight min-w-0 pt-0.5">
+                                                                        <!-- Subtask Title Badge -->
+                                                                        @php
+                                                                            $presetMatch = $subtaskPresets->firstWhere('title', $stask->title);
+                                                                        @endphp
+                                                                        @if($presetMatch)
+                                                                            <span class="px-1.5 py-0.2 rounded text-[9.5px] font-medium border shrink-0 inline-flex items-center gap-1 max-w-full truncate {{ $presetMatch->badgeStyle() }} {{ $staskDone ? 'opacity-50 line-through' : '' }}">
+                                                                                <span class="truncate">{{ $stask->title }}</span>
                                                                             </span>
-                                                                            <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
-                                                                                {{ $stask->order->location_text }}
-                                                                            </div>
-                                                                        </div>
-                                                                    @endif
-
-                                                                    @if($stask->order->task_name)
-                                                                        <!-- Order Name with Instant Tooltip -->
-                                                                        <div class="relative group/tip min-w-0 shrink">
-                                                                            <span class="block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }}">
-                                                                                {{ $stask->order->task_name }}
+                                                                        @else
+                                                                            <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] shrink-0 max-w-full truncate {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : ($stask->isSystemTask() ? 'text-violet-800 bg-violet-50 border border-violet-200' : ($stask->isNote() ? 'text-amber-900 bg-amber-50 border border-amber-200/60' : 'text-amber-900 bg-amber-50 border border-amber-200/60')) }}">
+                                                                                <span class="truncate">{{ $stask->title }}</span>
                                                                             </span>
-                                                                            <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
-                                                                                {{ $stask->order->task_name }}
-                                                                            </div>
-                                                                        </div>
-                                                                    @endif
-                                                                @endif
+                                                                        @endif
 
-                                                                <!-- Subtask Title Badge (Prioritized) -->
-                                                                @php
-                                                                    $presetMatch = $subtaskPresets->firstWhere('title', $stask->title);
-                                                                @endphp
-                                                                @if($presetMatch)
-                                                                    <span class="px-1.5 py-0.2 rounded text-[9.5px] font-medium border shrink-0 inline-flex items-center gap-1 {{ $presetMatch->badgeStyle() }} {{ $staskDone ? 'opacity-50 line-through' : '' }}">
-                                                                        <span>{{ $stask->title }}</span>
-                                                                    </span>
+                                                                        <!-- SLA Badge with Instant Tooltip -->
+                                                                        @if($stask->order->current_due_date)
+                                                                            @php
+                                                                                $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
+                                                                                $staskOverdue = $stask->order->isOverdue();
+                                                                            @endphp
+                                                                            @if($staskOverSla || $staskOverdue)
+                                                                                <div class="relative group/tip shrink-0">
+                                                                                    <span class="text-[9px] font-bold text-red-600 shrink-0 inline-flex items-center gap-0.5 {{ $staskDone ? 'opacity-50' : '' }}">
+                                                                                        <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
+                                                                                        <span>SLA</span>
+                                                                                    </span>
+                                                                                    <div class="absolute bottom-full right-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                        SLA: {{ $stask->order->current_due_date->format('d M, Y') }}
+                                                                                    </div>
+                                                                                </div>
+                                                                            @endif
+                                                                        @endif
+                                                                    </div>
                                                                 @else
-                                                                    <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] shrink-0 {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : ($stask->isSystemTask() ? 'text-violet-800 bg-violet-50 border border-violet-200' : 'text-amber-900 bg-amber-50 border border-amber-200/60') }}">
-                                                                        {{ $stask->title }}
-                                                                    </span>
-                                                                @endif
-
-                                                                <!-- SLA Badge with Instant Tooltip (Shown only if SLA issue exists) -->
-                                                                @if($stask->order && $stask->order->current_due_date)
-                                                                    @php
-                                                                        $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
-                                                                        $staskOverdue = $stask->order->isOverdue();
-                                                                    @endphp
-                                                                    @if($staskOverSla || $staskOverdue)
-                                                                        <div class="relative group/tip shrink-0">
-                                                                            <span class="text-[9px] font-bold text-red-600 shrink-0 inline-flex items-center gap-0.5 {{ $staskDone ? 'opacity-50' : '' }}">
-                                                                                <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
-                                                                                <span>SLA</span>
-                                                                            </span>
-                                                                            <div class="absolute bottom-full right-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
-                                                                                SLA: {{ $stask->order->current_due_date->format('d M, Y') }}
-                                                                            </div>
-                                                                        </div>
-                                                                    @endif
+                                                                    <!-- Standalone subtask (without order) -->
+                                                                    <div class="flex items-center gap-1 min-w-0">
+                                                                        <span class="font-bold text-[10.5px] truncate leading-tight {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-900') }}">
+                                                                            {{ $stask->title }}
+                                                                        </span>
+                                                                    </div>
                                                                 @endif
                                                             </div>
                                                         </div>
@@ -1250,7 +1358,7 @@
                                                             @click.stop 
                                                             wire:click="deleteSubtask({{ $stask->id }})" 
                                                             type="button"
-                                                            class="p-0.5 text-zinc-400 hover:text-red-600 transition shrink-0 opacity-0 group-hover:opacity-100" 
+                                                            class="p-0.5 mt-0.5 text-zinc-400 hover:text-red-600 transition shrink-0 opacity-0 group-hover:opacity-100" 
                                                             title="Eliminar subtarea">
                                                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                                         </button>
