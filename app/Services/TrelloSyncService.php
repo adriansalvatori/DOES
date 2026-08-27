@@ -457,6 +457,58 @@ class TrelloSyncService
     }
 
     /**
+     * Handle orders with a trello_card_id that are missing from the incoming Trello card IDs.
+     * Orders in EN_PRODUCCION are completed (moved to ARCHIVED and archived_at set).
+     * All missing orders are marked with is_missing_from_trello = true.
+     */
+    public function handleMissingOrders(array $incomingCardIds): array
+    {
+        $deletedOrders = Order::whereNotNull('trello_card_id')
+            ->whereNotIn('trello_card_id', $incomingCardIds)
+            ->get();
+
+        $changesList = [];
+        foreach ($deletedOrders as $delOrder) {
+            $previousStatus = $delOrder->core_status;
+
+            if ($previousStatus === CoreStatus::EN_PRODUCCION) {
+                $delOrder->update([
+                    'core_status' => CoreStatus::ARCHIVED,
+                    'archived_at' => now(),
+                    'is_missing_from_trello' => true,
+                ]);
+
+                app(AutomationEngine::class)->handleStatusChanged($delOrder, $previousStatus, CoreStatus::ARCHIVED);
+
+                $changesList[] = [
+                    'order_id' => $delOrder->id,
+                    'action' => 'completed',
+                    'company' => $delOrder->company_name ?: 'Empresa',
+                    'task' => $delOrder->task_name ?: 'Tarea',
+                    'previous_status' => $previousStatus?->label() ?: 'En Producción',
+                    'new_status' => 'Completada (Falta en Trello)',
+                ];
+            } else {
+                $delOrder->update(['is_missing_from_trello' => true]);
+
+                $changesList[] = [
+                    'order_id' => $delOrder->id,
+                    'action' => 'deleted',
+                    'company' => $delOrder->company_name ?: 'Empresa',
+                    'task' => $delOrder->task_name ?: 'Tarea',
+                    'previous_status' => $previousStatus?->label() ?: 'Tablero Trello',
+                    'new_status' => 'Falta en Trello (Marcada como faltante)',
+                ];
+            }
+        }
+
+        return [
+            'count' => $deletedOrders->count(),
+            'changes' => $changesList,
+        ];
+    }
+
+    /**
      * Get Trello List ID corresponding to a CoreStatus.
      */
     public function getTrelloListIdForCoreStatus(CoreStatus $status, ?string $boardId = null, ?string $apiKey = null, ?string $apiToken = null): ?string

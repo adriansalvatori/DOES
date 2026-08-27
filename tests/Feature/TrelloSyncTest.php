@@ -61,6 +61,7 @@ class TrelloSyncTest extends TestCase
                 'previous_status' => 'ENTRANTE',
                 'new_status' => 'ENTRANTE',
             ]);
+            $mock->shouldReceive('handleMissingOrders')->passthru();
         });
 
         Livewire::test(TrelloSync::class)
@@ -81,8 +82,38 @@ class TrelloSyncTest extends TestCase
         ]);
     }
 
+    public function test_syncing_trello_completes_order_if_core_status_is_in_production(): void
+    {
+        $productionOrder = Order::create([
+            'company_name' => 'PRODUCTION CLIENT',
+            'task_name' => 'Production Banner',
+            'trello_card_id' => 'trello_prod_card_999',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+        ]);
+
+        $service = new TrelloSyncService;
+        $result = $service->handleMissingOrders(['some_other_card_123']);
+
+        $this->assertEquals(1, $result['count']);
+        $this->assertEquals('completed', $result['changes'][0]['action']);
+
+        $productionOrder->refresh();
+        $this->assertEquals(CoreStatus::ARCHIVED, $productionOrder->core_status);
+        $this->assertNotNull($productionOrder->archived_at);
+        $this->assertTrue($productionOrder->is_missing_from_trello);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $productionOrder->id,
+            'event_type' => 'CORE_STATUS_CHANGED',
+            'previous_value' => CoreStatus::EN_PRODUCCION->value,
+            'new_value' => CoreStatus::ARCHIVED->value,
+        ]);
+    }
+
     public function test_active_workspace_orders_retain_local_status_during_trello_sync(): void
     {
+
         $workspaceOrder = Order::create([
             'company_name' => 'WORKSPACE CLIENT',
             'task_name' => 'Poster Design',

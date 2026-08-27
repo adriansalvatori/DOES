@@ -251,7 +251,16 @@ class Order extends Model
 
     public function isOverdue(): bool
     {
-        if ($this->done_today || ! $this->in_workspace) {
+        if ($this->done_today || ! $this->in_workspace || $this->isPaused()) {
+            return false;
+        }
+
+        if (in_array($this->core_status, [
+            CoreStatus::ENVIADO_AL_CLIENTE,
+            CoreStatus::EN_PRODUCCION,
+            CoreStatus::ON_HOLD,
+            CoreStatus::ARCHIVED,
+        ], true)) {
             return false;
         }
 
@@ -261,10 +270,6 @@ class Order extends Model
 
         if ($this->substatus === Substatus::OVERDUE) {
             return true;
-        }
-
-        if ($this->isPaused() || $this->core_status === CoreStatus::EN_PRODUCCION || $this->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
-            return false;
         }
 
         if ($this->current_due_date->isPast() && ! $this->current_due_date->isToday()) {

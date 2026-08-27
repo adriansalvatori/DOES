@@ -98,7 +98,7 @@ class Index extends Component
 
         $allOrders = (clone $query)->get();
 
-        $overdueOrders = $allOrders->filter(fn ($o) => $o->substatus === Substatus::OVERDUE || ($o->current_due_date && $o->current_due_date->isPast() && ! $o->isPaused() && $o->core_status !== CoreStatus::EN_PRODUCCION));
+        $overdueOrders = $allOrders->filter(fn ($o) => $o->isOverdue());
 
         $toDoTodayOrders = $allOrders->filter(fn ($o) => $o->core_status === CoreStatus::TO_DO_TODAY || $o->scheduled_date?->isToday());
 

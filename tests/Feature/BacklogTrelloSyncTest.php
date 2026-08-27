@@ -50,6 +50,7 @@ class BacklogTrelloSyncTest extends TestCase
                 'previous_status' => 'ENTRANTE',
                 'new_status' => 'ENTRANTE',
             ]);
+            $mock->shouldReceive('handleMissingOrders')->passthru();
         });
 
         Livewire::test(BacklogIndex::class)

@@ -277,22 +277,10 @@ class Index extends Component
         }
 
         // Mark missing orders
-        $deletedOrders = Order::whereNotNull('trello_card_id')
-            ->whereNotIn('trello_card_id', $incomingCardIds)
-            ->get();
-
-        $deletedCount = $deletedOrders->count();
-        foreach ($deletedOrders as $delOrder) {
-            $changesList[] = [
-                'order_id' => $delOrder->id,
-                'action' => 'deleted',
-                'company' => $delOrder->company_name ?: 'Empresa',
-                'task' => $delOrder->task_name ?: 'Tarea',
-                'previous_status' => $delOrder->core_status?->label() ?: 'Tablero Trello',
-                'new_status' => 'Falta en Trello (Marcada como faltante)',
-            ];
-
-            $delOrder->update(['is_missing_from_trello' => true]);
+        $missingResult = $syncService->handleMissingOrders($incomingCardIds);
+        $deletedCount = $missingResult['count'];
+        foreach ($missingResult['changes'] as $change) {
+            $changesList[] = $change;
         }
 
         $totalSynced = count($cards);

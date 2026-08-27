@@ -93,7 +93,36 @@ class SlaEngine
      */
     public function checkOverdue(Order $order): bool
     {
-        if ($order->isPaused() || $order->core_status === CoreStatus::EN_PRODUCCION || $order->core_status === CoreStatus::ENVIADO_AL_CLIENTE || $order->done_today) {
+        $isExcludedStatus = $order->isPaused() ||
+            $order->done_today ||
+            in_array($order->core_status, [
+                CoreStatus::ENVIADO_AL_CLIENTE,
+                CoreStatus::EN_PRODUCCION,
+                CoreStatus::ON_HOLD,
+                CoreStatus::ARCHIVED,
+            ], true);
+
+        if ($isExcludedStatus) {
+            if ($order->substatus === Substatus::OVERDUE || $order->substatus === Substatus::ALMOST_OVERDUE) {
+                $targetSubstatus = match ($order->core_status) {
+                    CoreStatus::ENVIADO_AL_CLIENTE => Substatus::WAITING_FOR_CLIENT,
+                    CoreStatus::EN_PRODUCCION => Substatus::ENVIADO_EN_ALTA,
+                    default => null,
+                };
+
+                $previousSubstatus = $order->substatus->value;
+                $order->update(['substatus' => $targetSubstatus]);
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'SUBSTATUS_CHANGED',
+                    'actor' => 'SlaEngine',
+                    'previous_value' => $previousSubstatus,
+                    'new_value' => $targetSubstatus?->value,
+                    'metadata' => ['reason' => 'Cleared overdue substatus due to non-actionable status'],
+                ]);
+            }
+
             return false;
         }
 

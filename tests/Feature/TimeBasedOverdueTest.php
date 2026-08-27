@@ -170,4 +170,43 @@ class TimeBasedOverdueTest extends TestCase
             'type' => RelatedTaskType::CORREO_ATRASO->value,
         ]);
     }
+
+    public function test_orders_sent_to_client_are_never_overdue(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO-106',
+            'company_name' => 'Test Company',
+            'task_name' => 'Task 106',
+            'current_due_date' => '2026-08-20',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'substatus' => Substatus::OVERDUE,
+            'done_today' => false,
+            'in_workspace' => true,
+        ]);
+
+        $this->assertFalse($order->isOverdue());
+
+        $slaEngine = app(SlaEngine::class);
+        $slaEngine->checkOverdue($order);
+        $order->refresh();
+
+        $this->assertEquals(Substatus::WAITING_FOR_CLIENT, $order->substatus);
+        $this->assertFalse($order->isOverdue());
+    }
+
+    public function test_orders_sent_to_camila_can_be_overdue(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO-107',
+            'company_name' => 'Test Company',
+            'task_name' => 'Task 107',
+            'current_due_date' => '2026-08-20',
+            'core_status' => CoreStatus::ENVIADO_A_CAMILA,
+            'substatus' => null,
+            'done_today' => false,
+            'in_workspace' => true,
+        ]);
+
+        $this->assertTrue($order->isOverdue());
+    }
 }
