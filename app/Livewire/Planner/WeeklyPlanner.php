@@ -412,13 +412,13 @@ class WeeklyPlanner extends Component
             'range_label' => $nextWeekMonday->format('d M').' - '.$nextWeekFriday->format('d M'),
         ];
 
-        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['designers', 'designer'])]);
+        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['clientLocation', 'designers', 'designer'])]);
         if ($this->selectedDesignerFilter !== 'all') {
             $designerQuery->where('id', $this->selectedDesignerFilter);
         }
         $designers = $designerQuery->get();
 
-        $subtasks = RelatedTask::with(['order.designer', 'order.designers'])
+        $subtasks = RelatedTask::with(['order.clientLocation', 'order.designer', 'order.designers'])
             ->whereHas('order', fn ($q) => $q->inWorkspace())
             ->whereNotNull('scheduled_date')
             ->get();
@@ -437,6 +437,8 @@ class WeeklyPlanner extends Component
                 $q->where(function ($sub) {
                     $sub->where('company_name', 'like', '%'.$this->unscheduledSearch.'%')
                         ->orWhere('task_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('location_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', '%'.$this->unscheduledSearch.'%'))
                         ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
                 });
             })
@@ -455,17 +457,28 @@ class WeeklyPlanner extends Component
             ->get();
 
         $allWorkspaceOrders = Order::inWorkspace()
+            ->with(['clientLocation'])
             ->prioritizeUrgente()
             ->orderBy('company_name')
             ->get();
 
-        $workspaceOrdersList = $allWorkspaceOrders->map(fn ($o) => [
-            'id' => (string) $o->id,
-            'company' => $o->company_name,
-            'task' => $o->task_name ?? '',
-            'text' => $o->company_name.($o->task_name ? ' - '.$o->task_name : ''),
-            'designer_id' => (string) ($o->designer_id ?? $o->designers->first()?->id ?? ''),
-        ])->values();
+        $workspaceOrdersList = $allWorkspaceOrders->map(function ($o) {
+            $loc = $o->location_text ?? '';
+            $text = $o->company_name
+                .($loc ? ' ('.$loc.')' : '')
+                .($o->task_name ? ' - '.$o->task_name : '');
+
+            return [
+                'id' => (string) $o->id,
+                'company' => $o->company_name,
+                'location' => $loc,
+                'task' => $o->task_name ?? '',
+                'wo_number' => $o->wo_number ?? '',
+                'trello_card_title' => $o->trello_card_title ?? '',
+                'text' => $text,
+                'designer_id' => (string) ($o->designer_id ?? $o->designers->first()?->id ?? ''),
+            ];
+        })->values();
 
         $backlogOrders = collect();
         if (! empty($this->backlogSearch)) {
@@ -474,6 +487,8 @@ class WeeklyPlanner extends Component
                 ->where(function ($sub) {
                     $sub->where('company_name', 'like', '%'.$this->backlogSearch.'%')
                         ->orWhere('task_name', 'like', '%'.$this->backlogSearch.'%')
+                        ->orWhere('location_name', 'like', '%'.$this->backlogSearch.'%')
+                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', '%'.$this->backlogSearch.'%'))
                         ->orWhere('wo_number', 'like', '%'.$this->backlogSearch.'%')
                         ->orWhere('trello_card_title', 'like', '%'.$this->backlogSearch.'%');
                 })
@@ -489,6 +504,8 @@ class WeeklyPlanner extends Component
                 ->where(function ($sub) {
                     $sub->where('company_name', 'like', '%'.$this->unscheduledSearch.'%')
                         ->orWhere('task_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhere('location_name', 'like', '%'.$this->unscheduledSearch.'%')
+                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', '%'.$this->unscheduledSearch.'%'))
                         ->orWhere('wo_number', 'like', '%'.$this->unscheduledSearch.'%')
                         ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
                 })

@@ -30,9 +30,12 @@
             }
             const q = this.orderSearchQuery.toLowerCase().trim();
             return this.workspaceOrdersList.filter(o => 
-                o.text.toLowerCase().includes(q) || 
-                o.company.toLowerCase().includes(q) || 
-                o.task.toLowerCase().includes(q)
+                (o.text && o.text.toLowerCase().includes(q)) || 
+                (o.company && o.company.toLowerCase().includes(q)) || 
+                (o.location && o.location.toLowerCase().includes(q)) ||
+                (o.task && o.task.toLowerCase().includes(q)) ||
+                (o.wo_number && o.wo_number.toLowerCase().includes(q)) ||
+                (o.trello_card_title && o.trello_card_title.toLowerCase().includes(q))
             );
         },
         navigateModalOrder(step) {
@@ -728,6 +731,12 @@
                                                                     <div class="flex items-center gap-1 min-w-0">
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
                                                                         <span class="font-bold text-[10px] truncate leading-tight {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
+                                                                        @if($stask->order->location_text)
+                                                                            <span class="inline-flex items-center gap-0.5 text-[9.5px] font-bold text-zinc-900 shrink-0 truncate max-w-[100px]">
+                                                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2.5]" />
+                                                                                <span class="uppercase truncate">{{ $stask->order->location_text }}</span>
+                                                                            </span>
+                                                                        @endif
                                                                         @if($stask->order->task_name)
                                                                             <span class="text-[9.5px] truncate leading-tight {{ $stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500' }}">• {{ $stask->order->task_name }}</span>
                                                                         @endif
@@ -866,6 +875,7 @@
                                         selectedOrderId: '',
                                         selectedOrderCompany: '',
                                         selectedOrderTask: '',
+                                        selectedOrderLocation: '',
                                         subtaskTitle: '',
                                         isWorkTask: true,
                                         dropdownOpen: false,
@@ -877,9 +887,12 @@
                                             if (!this.orderSearch) return this.workspaceOrdersList || [];
                                             const q = this.orderSearch.toLowerCase().trim();
                                             return (this.workspaceOrdersList || []).filter(o => 
-                                                o.text.toLowerCase().includes(q) || 
-                                                o.company.toLowerCase().includes(q) || 
-                                                o.task.toLowerCase().includes(q)
+                                                (o.text && o.text.toLowerCase().includes(q)) || 
+                                                (o.company && o.company.toLowerCase().includes(q)) || 
+                                                (o.location && o.location.toLowerCase().includes(q)) ||
+                                                (o.task && o.task.toLowerCase().includes(q)) ||
+                                                (o.wo_number && o.wo_number.toLowerCase().includes(q)) ||
+                                                (o.trello_card_title && o.trello_card_title.toLowerCase().includes(q))
                                             );
                                         },
                                         navigateOrder(step) {
@@ -951,6 +964,7 @@
                                             this.selectedOrderId = String(order.id);
                                             this.selectedOrderCompany = order.company;
                                             this.selectedOrderTask = order.task || '';
+                                            this.selectedOrderLocation = order.location || '';
                                             this.orderSearch = order.text;
                                             this.dropdownOpen = false;
                                             this.orderHighlightedIndex = -1;
@@ -975,6 +989,7 @@
                                             this.selectedOrderId = '';
                                             this.selectedOrderCompany = '';
                                             this.selectedOrderTask = '';
+                                            this.selectedOrderLocation = '';
                                             this.isWorkTask = true;
                                             this.dropdownOpen = false;
                                             this.orderHighlightedIndex = -1;
@@ -990,6 +1005,7 @@
                                             this.selectedOrderId = '';
                                             this.selectedOrderCompany = '';
                                             this.selectedOrderTask = '';
+                                            this.selectedOrderLocation = '';
                                             this.subtaskTitle = '';
                                             this.isWorkTask = true;
                                             this.dropdownOpen = false;
@@ -1070,6 +1086,19 @@
                                                                             {{ $stask->order->company_name }}
                                                                         </div>
                                                                     </div>
+
+                                                                    @if($stask->order->location_text)
+                                                                        <!-- Location Name with Instant Tooltip -->
+                                                                        <div class="relative group/tip min-w-0 shrink flex items-center gap-0.5">
+                                                                            <x-lucide-map-pin class="w-3 h-3 text-red-500 shrink-0 stroke-[2.5]" />
+                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : 'text-zinc-900 font-bold' }} text-[10.5px]">
+                                                                                {{ $stask->order->location_text }}
+                                                                            </span>
+                                                                            <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                {{ $stask->order->location_text }}
+                                                                            </div>
+                                                                        </div>
+                                                                    @endif
 
                                                                     @if($stask->order->task_name)
                                                                         <!-- Order Name with Instant Tooltip -->
@@ -1186,7 +1215,12 @@
                                                                     :class="{ 'bg-amber-50 text-amber-950 font-semibold ring-1 ring-amber-200': orderHighlightedIndex === idx, 'hover:bg-stone-100': orderHighlightedIndex !== idx }"
                                                                     class="order-item-btn w-full text-left px-2.5 py-1.5 transition flex items-center justify-between gap-2 cursor-pointer">
                                                                     <div class="min-w-0 flex-1">
-                                                                        <span class="font-bold text-zinc-900 block truncate" x-text="ord.company"></span>
+                                                                        <div class="flex items-center gap-1.5 min-w-0">
+                                                                            <span class="font-bold text-zinc-900 truncate" x-text="ord.company"></span>
+                                                                            <template x-if="ord.location">
+                                                                                <span class="text-[9.5px] font-semibold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200 shrink-0 truncate max-w-[120px]" x-text="ord.location"></span>
+                                                                            </template>
+                                                                        </div>
                                                                         <span class="text-[10px] text-zinc-500 block truncate" x-text="ord.task"></span>
                                                                     </div>
                                                                 </button>
@@ -1415,8 +1449,13 @@
                                         :class="{ 'bg-violet-50 text-violet-900 font-semibold ring-1 ring-violet-200': modalOrderHighlightedIndex === idx || (modalOrderHighlightedIndex === -1 && subtaskOrderId === item.id), 'hover:bg-stone-100': modalOrderHighlightedIndex !== idx }"
                                         class="modal-order-item-btn w-full text-left p-2.5 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
                                         <div class="min-w-0 flex-1">
-                                            <span class="font-bold text-zinc-900 block truncate text-xs" x-text="item.company"></span>
-                                            <span class="text-[11px] text-zinc-500 block truncate" x-text="item.task"></span>
+                                             <div class="flex items-center gap-1.5 min-w-0">
+                                                 <span class="font-bold text-zinc-900 truncate text-xs" x-text="item.company"></span>
+                                                 <template x-if="item.location">
+                                                     <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200 shrink-0 truncate max-w-[150px]" x-text="item.location"></span>
+                                                 </template>
+                                             </div>
+                                             <span class="text-[11px] text-zinc-500 block truncate" x-text="item.task"></span>
                                         </div>
                                         <template x-if="subtaskOrderId === item.id">
                                             <x-lucide-check class="w-3.5 h-3.5 text-violet-600 shrink-0 stroke-[2.5]" />

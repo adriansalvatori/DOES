@@ -516,4 +516,28 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         $this->assertEquals(false, session('weekly_planner_show_system_tasks'));
     }
+
+    public function test_weekly_planner_workspace_orders_list_includes_and_searches_locations(): void
+    {
+        $orderWithLocation = Order::create([
+            'company_name' => 'SUCURSAL PRINCIPAL COMPANY',
+            'location_name' => 'SEDE NORTE CANCUN',
+            'task_name' => 'Instalación Letrero',
+            'core_status' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertViewHas('workspaceOrdersList', function ($list) use ($orderWithLocation) {
+                $item = collect($list)->firstWhere('id', (string) $orderWithLocation->id);
+
+                return $item !== null
+                    && $item['location'] === 'SEDE NORTE CANCUN'
+                    && str_contains($item['text'], 'SEDE NORTE CANCUN');
+            })
+            ->set('unscheduledSearch', 'SEDE NORTE CANCUN')
+            ->assertViewHas('workspaceSearchResults', function ($results) use ($orderWithLocation) {
+                return $results->pluck('id')->contains($orderWithLocation->id);
+            });
+    }
 }

@@ -37,6 +37,10 @@ class HeaderSearch extends Component
                         ->orWhere('trello_title', 'like', $searchTerm)
                         ->orWhere('wo_number', 'like', $searchTerm)
                         ->orWhere('responsible_person', 'like', $searchTerm)
+                        ->orWhere('location_name', 'like', $searchTerm)
+                        ->orWhereHas('clientLocation', function ($lq) use ($searchTerm) {
+                            $lq->where('name', 'like', $searchTerm);
+                        })
                         ->orWhereHas('designer', function ($dq) use ($searchTerm) {
                             $dq->where('name', 'like', $searchTerm);
                         })
