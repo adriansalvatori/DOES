@@ -159,7 +159,15 @@ class ResolverList extends Component
                     });
             })->get();
 
-        $resolverTasks = RelatedTask::whereHas('order', fn ($q) => $q->inWorkspace())
+        $resolverTasks = RelatedTask::whereHas('order', function ($q) {
+            $q->inWorkspace()->whereNotIn('core_status', [
+                CoreStatus::ENVIADO_A_CAMILA,
+                CoreStatus::ENVIADO_AL_CLIENTE,
+                CoreStatus::EN_PRODUCCION,
+                CoreStatus::ON_HOLD,
+                CoreStatus::ARCHIVED,
+            ]);
+        })
             ->with(['order', 'assignee'])
             ->where('status', 'todo')
             ->whereIn('type', [

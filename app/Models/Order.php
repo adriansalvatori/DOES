@@ -576,7 +576,15 @@ class Order extends Model
                     });
             })->count();
 
-        $resolverTasksCount = RelatedTask::whereHas('order', fn ($q) => $q->inWorkspace())
+        $resolverTasksCount = RelatedTask::whereHas('order', function ($q) {
+            $q->inWorkspace()->whereNotIn('core_status', [
+                CoreStatus::ENVIADO_A_CAMILA,
+                CoreStatus::ENVIADO_AL_CLIENTE,
+                CoreStatus::EN_PRODUCCION,
+                CoreStatus::ON_HOLD,
+                CoreStatus::ARCHIVED,
+            ]);
+        })
             ->where('status', 'todo')
             ->whereIn('type', [
                 RelatedTaskType::RESOLVER,
