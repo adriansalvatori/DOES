@@ -9,6 +9,7 @@ use App\Livewire\Kanban\Board;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\RelatedTask;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -93,5 +94,30 @@ class KanbanBoardTest extends TestCase
 
         $this->assertEquals(CoreStatus::EN_PRODUCCION, $freshOrder->core_status);
         $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $freshOrder->substatus);
+    }
+
+    public function test_can_delete_related_task_directly_from_kanban_board(): void
+    {
+        $order = Order::create([
+            'company_name' => 'Acme Corp',
+            'task_name' => 'Banner Design',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $task = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Revisar dimensiones',
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(Board::class)
+            ->call('deleteTask', $task->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertSoftDeleted('related_tasks', [
+            'id' => $task->id,
+        ]);
     }
 }

@@ -345,25 +345,32 @@
     </div>
 
     <!-- Notion Column Group Filter Tabs Bar -->
-    <div id="tour-kanban-group-tabs" class="flex items-center gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
-        <button wire:click="$set('columnGroup', 'all')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500" />
-            <span>{{ __('Todas las Listas') }} (9)</span>
-        </button>
+    <div id="tour-kanban-group-tabs" class="flex items-center justify-between gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
+        <div class="flex items-center gap-1 shrink-0">
+            <button wire:click="$set('columnGroup', 'all')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
+                <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500" />
+                <span>{{ __('Todas las Listas') }} (9)</span>
+            </button>
 
-        <button wire:click="$set('columnGroup', 'incoming')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'incoming' ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-inbox class="w-3.5 h-3.5 text-zinc-500" />
-            <span>{{ __('Bloqueadas & Pendientes') }} (4)</span>
-        </button>
+            <button wire:click="$set('columnGroup', 'incoming')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'incoming' ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
+                <x-lucide-inbox class="w-3.5 h-3.5 text-zinc-500" />
+                <span>{{ __('Bloqueadas & Pendientes') }} (4)</span>
+            </button>
 
-        <button wire:click="$set('columnGroup', 'in_progress')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'in_progress' ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-play-circle class="w-3.5 h-3.5 text-zinc-500" />
-            <span>{{ __('En Proceso') }} (3)</span>
-        </button>
+            <button wire:click="$set('columnGroup', 'in_progress')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'in_progress' ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
+                <x-lucide-play-circle class="w-3.5 h-3.5 text-zinc-500" />
+                <span>{{ __('En Proceso') }} (3)</span>
+            </button>
 
-        <button wire:click="$set('columnGroup', 'final')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'final' ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
-            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-zinc-500" />
-            <span>{{ __('Producción & Hold') }} (2)</span>
+            <button wire:click="$set('columnGroup', 'final')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'final' ? 'bg-white text-zinc-900 border border-stone-300 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
+                <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-zinc-500" />
+                <span>{{ __('Producción & Hold') }} (2)</span>
+            </button>
+        </div>
+
+        <button wire:click="toggleStandaloneTaskCards" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 text-xs {{ $showStandaloneTaskCards ? 'bg-violet-100 text-violet-900 border border-violet-300 font-semibold' : 'bg-white text-zinc-600 border border-stone-200 hover:bg-stone-50' }}" title="{{ __('Mostrar u ocultar tarjetas de tareas como elementos independientes en las columnas') }}">
+            <x-lucide-list-todo class="w-3.5 h-3.5 {{ $showStandaloneTaskCards ? 'text-violet-700' : 'text-zinc-500' }}" />
+            <span>{{ $showStandaloneTaskCards ? __('Ocultar Tarjetas de Tareas') : __('Mostrar Tarjetas de Tareas') }}</span>
         </button>
     </div>
 
@@ -541,6 +548,7 @@
                         @foreach($urgentColumnOrders as $order)
                             <div 
                                 wire:key="order-card-{{ $order->id }}"
+                                x-data="{ showTasks: false }"
                                 @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
@@ -636,13 +644,64 @@
                                         </span>
                                     </div>
 
-                                    @if($order->relatedTasks->where('status', 'todo')->count() > 0)
-                                        <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 font-semibold border border-violet-200 flex items-center gap-1 shrink-0 whitespace-nowrap" title="Tareas vinculadas activas">
-                                            <x-lucide-check-square class="w-3 h-3 text-violet-600 shrink-0" />
-                                            <span>{{ $order->relatedTasks->where('status', 'todo')->count() }} Tareas</span>
-                                        </span>
+                                    @if($order->relatedTasks->count() > 0)
+                                        <button 
+                                            @click.stop="showTasks = !showTasks"
+                                            type="button"
+                                            class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
+                                            title="Ver subtareas de la orden">
+                                            <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
+                                            <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} Tareas</span>
+                                            <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
+                                        </button>
                                     @endif
                                 </div>
+
+                                <!-- Expandable Subtasks List -->
+                                @if($order->relatedTasks->count() > 0)
+                                    <div x-show="showTasks" x-collapse @click.stop class="pt-2 border-t border-red-200/60 space-y-1.5 min-w-0">
+                                        <div class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+                                            <span>Subtareas & Acciones</span>
+                                            <span class="text-[9px] text-zinc-400 font-normal">{{ $order->relatedTasks->where('status', 'todo')->count() }} pendientes</span>
+                                        </div>
+                                        @foreach($order->relatedTasks as $task)
+                                            <div class="flex items-center justify-between gap-1.5 p-1.5 rounded bg-white/90 border border-stone-200 text-[11px] shadow-2xs">
+                                                <div class="flex items-center gap-1.5 min-w-0">
+                                                    <button 
+                                                        wire:click="toggleTaskComplete({{ $task->id }})"
+                                                        @click.stop
+                                                        type="button" 
+                                                        class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent' }}">
+                                                        <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                                    </button>
+                                                    <span class="font-medium truncate text-[11px] {{ $task->isDone() ? 'line-through text-zinc-400' : 'text-zinc-800' }}" title="{{ $task->title }}">
+                                                        {{ $task->title }}
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-center gap-1 shrink-0">
+                                                    @if($task->type === \App\Enums\RelatedTaskType::SUBTASK)
+                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                                            SUBTAREA
+                                                        </span>
+                                                        <button 
+                                                            wire:click="deleteTask({{ $task->id }})"
+                                                            wire:confirm="¿Eliminar esta subtarea?"
+                                                            @click.stop
+                                                            type="button"
+                                                            class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                                            title="Eliminar subtarea">
+                                                            <x-lucide-x class="w-3 h-3" />
+                                                        </button>
+                                                    @else
+                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-violet-100 text-violet-800 border border-violet-200 shrink-0">
+                                                            ACCION
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
 
                                 <!-- Quick Move Select & Modal Trigger -->
                                 <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t min-w-0 {{ $order->done_today ? 'border-stone-200' : 'border-red-200/60' }}">
@@ -681,8 +740,8 @@
                         @foreach($columnTasks as $task)
                             <div 
                                 wire:key="task-card-{{ $task->id }}"
-                                x-data="{ isCompleting: false }"
-                                :class="{ 'opacity-0 scale-90 -translate-y-3 pointer-events-none transition-all duration-300 ease-out': isCompleting }"
+                                x-data="{ isCompleting: false, isRemoving: false }"
+                                :class="{ 'opacity-0 scale-90 -translate-y-3 pointer-events-none transition-all duration-300 ease-out': isCompleting || isRemoving }"
                                 class="bg-violet-50/60 border border-violet-200 hover:border-violet-300 rounded-lg p-3 space-y-2 shadow-2xs transition duration-200 group relative select-none">
                                 <!-- Task Header: Badge & Assignee -->
                                 <div class="flex items-start justify-between gap-1.5 min-w-0">
@@ -692,7 +751,7 @@
                                             <span>TAREA VINCULADA</span>
                                         </span>
                                         @if($task->type)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-100 text-violet-800 border border-violet-200 shrink-0">
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 {{ $task->type === \App\Enums\RelatedTaskType::SUBTASK ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-violet-100 text-violet-800 border border-violet-200' }}">
                                                 {{ $task->type->label() }}
                                             </span>
                                         @endif
@@ -718,18 +777,31 @@
                                     @endif
                                 </div>
 
-                                <!-- Task Controls: Quick Complete & View Order -->
+                                <!-- Task Controls: Quick Complete, Delete & View Order -->
                                 <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t border-violet-100 min-w-0">
-                                    <button 
-                                        @click="isCompleting = true; setTimeout(() => $wire.toggleTaskComplete({{ $task->id }}), 300)"
-                                        class="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 transition flex items-center gap-1 shadow-2xs">
-                                        <x-lucide-check-circle-2 class="w-3 h-3 text-emerald-600" />
-                                        <span>Completar</span>
-                                    </button>
+                                    <div class="flex items-center gap-1">
+                                        <button 
+                                            @click="isCompleting = true; setTimeout(() => $wire.toggleTaskComplete({{ $task->id }}), 300)"
+                                            class="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 transition flex items-center gap-1 shadow-2xs">
+                                            <x-lucide-check-circle-2 class="w-3 h-3 text-emerald-600" />
+                                            <span>Completar</span>
+                                        </button>
+                                        <button 
+                                            wire:click="deleteTask({{ $task->id }})"
+                                            wire:confirm="¿Eliminar esta tarea vinculada?"
+                                            @click.stop
+                                            class="px-1.5 py-0.5 rounded bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 transition flex items-center gap-1 text-[10px] shadow-2xs"
+                                            title="Eliminar tarea">
+                                            <x-lucide-trash-2 class="w-3 h-3" />
+                                            <span>Eliminar</span>
+                                        </button>
+                                    </div>
 
                                     @if($task->order)
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-stone-100 border border-stone-200 text-[10px] font-medium text-zinc-700 transition flex items-center gap-1">
                                             <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
+                                            <span>Ver Orden</span>
+                                        </button>
                                     @endif
                                 </div>
                             </div>
@@ -739,6 +811,7 @@
                         @foreach($regularColumnOrders as $order)
                             <div 
                                 wire:key="order-card-{{ $order->id }}"
+                                x-data="{ showTasks: false }"
                                 @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
@@ -839,13 +912,64 @@
                                         @endif
                                     </div>
 
-                                    @if($order->relatedTasks->where('status', 'todo')->count() > 0)
-                                        <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-800 font-semibold border border-violet-200 flex items-center gap-1 shrink-0 whitespace-nowrap" title="Tareas vinculadas activas">
-                                            <x-lucide-check-square class="w-3 h-3 text-violet-600 shrink-0" />
-                                            <span>{{ $order->relatedTasks->where('status', 'todo')->count() }} Tareas</span>
-                                        </span>
+                                    @if($order->relatedTasks->count() > 0)
+                                        <button 
+                                            @click.stop="showTasks = !showTasks"
+                                            type="button"
+                                            class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
+                                            title="Ver subtareas de la orden">
+                                            <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
+                                            <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} Tareas</span>
+                                            <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
+                                        </button>
                                     @endif
                                 </div>
+
+                                <!-- Expandable Subtasks List -->
+                                @if($order->relatedTasks->count() > 0)
+                                    <div x-show="showTasks" x-collapse @click.stop class="pt-2 border-t border-[#f0f0ee] space-y-1.5 min-w-0">
+                                        <div class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+                                            <span>Subtareas & Acciones</span>
+                                            <span class="text-[9px] text-zinc-400 font-normal">{{ $order->relatedTasks->where('status', 'todo')->count() }} pendientes</span>
+                                        </div>
+                                        @foreach($order->relatedTasks as $task)
+                                            <div class="flex items-center justify-between gap-1.5 p-1.5 rounded bg-[#fbfbfa] border border-stone-200 text-[11px] shadow-2xs">
+                                                <div class="flex items-center gap-1.5 min-w-0">
+                                                    <button 
+                                                        wire:click="toggleTaskComplete({{ $task->id }})"
+                                                        @click.stop
+                                                        type="button" 
+                                                        class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent' }}">
+                                                        <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                                    </button>
+                                                    <span class="font-medium truncate text-[11px] {{ $task->isDone() ? 'line-through text-zinc-400' : 'text-zinc-800' }}" title="{{ $task->title }}">
+                                                        {{ $task->title }}
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-center gap-1 shrink-0">
+                                                    @if($task->type === \App\Enums\RelatedTaskType::SUBTASK)
+                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                                            SUBTAREA
+                                                        </span>
+                                                        <button 
+                                                            wire:click="deleteTask({{ $task->id }})"
+                                                            wire:confirm="¿Eliminar esta subtarea?"
+                                                            @click.stop
+                                                            type="button"
+                                                            class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                                                            title="Eliminar subtarea">
+                                                            <x-lucide-x class="w-3 h-3" />
+                                                        </button>
+                                                    @else
+                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-violet-100 text-violet-800 border border-violet-200 shrink-0">
+                                                            ACCION
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
 
                                 <!-- Quick Move Select & Modal Trigger -->
                                 <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t border-[#f0f0ee] min-w-0">

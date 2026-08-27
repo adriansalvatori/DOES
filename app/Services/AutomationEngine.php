@@ -82,6 +82,12 @@ class AutomationEngine
 
         // Handle transitions to completion / client / camila / production / on hold / archived states
         if (in_array($newStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD, CoreStatus::ARCHIVED], true)) {
+            RelatedTask::where('order_id', $order->id)
+                ->where('type', RelatedTaskType::BIENVENIDA->value)
+                ->whereNull('completed_at')
+                ->where('status', '!=', 'done')
+                ->forceDelete();
+
             $this->dismissTriggeredSubtasks($order);
         }
 
@@ -423,6 +429,17 @@ class AutomationEngine
      */
     public function checkAndCreateOverdueTask(Order $order): void
     {
+        $allowedStatuses = [
+            CoreStatus::EURALIZ_ORDERS_RECEIVED,
+            CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            CoreStatus::CESAR_ORDERS_RECEIVED,
+            CoreStatus::TO_DO_TODAY,
+        ];
+
+        if (! in_array($order->core_status, $allowedStatuses, true)) {
+            return;
+        }
+
         $now = now();
         $isPastTwoThirty = ($now->hour > 14 || ($now->hour === 14 && $now->minute >= 30));
 
@@ -465,6 +482,7 @@ class AutomationEngine
             ->where(function ($q) {
                 $q->whereNotNull('trigger_type')
                     ->orWhereIn('type', [
+                        RelatedTaskType::BIENVENIDA->value,
                         RelatedTaskType::CORREO_ATRASO->value,
                         RelatedTaskType::FOLLOW_UP_CLIENTE->value,
                         RelatedTaskType::FOLLOW_UP_CAMILA->value,

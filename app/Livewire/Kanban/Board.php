@@ -35,6 +35,13 @@ class Board extends Component
 
     public string $onHoldReason = '';
 
+    public bool $showStandaloneTaskCards = false;
+
+    public function toggleStandaloneTaskCards(): void
+    {
+        $this->showStandaloneTaskCards = ! $this->showStandaloneTaskCards;
+    }
+
     public function getSearchResultsProperty()
     {
         if (strlen(trim($this->search)) < 2) {
@@ -237,6 +244,17 @@ class Board extends Component
         session()->flash('message', "Tarea '{$task->title}' actualizada.");
     }
 
+    public function deleteTask($taskId)
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $taskTitle = $task->title;
+            $task->delete();
+            $this->dispatch('order-updated');
+            session()->flash('message', "Tarea '{$taskTitle}' eliminada.");
+        }
+    }
+
     public function toggleDoneToday($orderId)
     {
         $order = Order::findOrFail($orderId);
@@ -250,7 +268,7 @@ class Board extends Component
 
     public function render()
     {
-        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks']);
+        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee']);
 
         if (! empty($this->search)) {
             $query->where(function ($q) {
@@ -286,17 +304,20 @@ class Board extends Component
             app(SlaEngine::class)->checkOverdue($order);
         }
 
-        // Load all related tasks belonging to workspace orders, respecting designer filter
-        $tasksQuery = RelatedTask::whereHas('order', function ($q) {
-            $q->inWorkspace();
-            if ($this->designerFilter !== 'all') {
-                $q->where('designer_id', $this->designerFilter);
+        if ($this->showStandaloneTaskCards) {
+            $tasksQuery = RelatedTask::whereHas('order', function ($q) {
+                $q->inWorkspace()->whereNotIn('core_status', [CoreStatus::ARCHIVED->value, CoreStatus::ON_HOLD->value]);
+                if ($this->designerFilter !== 'all') {
+                    $q->where('designer_id', $this->designerFilter);
+                }
+            })->with(['order', 'assignee']);
+            if (! empty($this->search)) {
+                $tasksQuery->where('title', 'like', "%{$this->search}%");
             }
-        })->with(['order', 'assignee']);
-        if (! empty($this->search)) {
-            $tasksQuery->where('title', 'like', "%{$this->search}%");
+            $relatedTasks = $tasksQuery->get();
+        } else {
+            $relatedTasks = collect();
         }
-        $relatedTasks = $tasksQuery->get();
 
         $allColumns = [
             CoreStatus::ENTRANTE,
