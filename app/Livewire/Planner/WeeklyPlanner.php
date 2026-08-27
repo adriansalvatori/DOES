@@ -516,7 +516,7 @@ class WeeklyPlanner extends Component
 
         $slaBreachedList = collect();
         foreach ($subtasks as $st) {
-            if ($st->order && $st->order->current_due_date && $st->scheduled_date) {
+            if ($st->order && $st->order->current_due_date && $st->scheduled_date && ! $st->isFollowUp() && ! $st->order->isSlaExempt()) {
                 if ($st->scheduled_date->gt($st->order->current_due_date) || $st->order->isOverdue()) {
                     $daysOverdue = (int) max(1, $st->order->current_due_date->diffInDays($st->scheduled_date));
                     $slaBreachedList->push([
@@ -535,7 +535,7 @@ class WeeklyPlanner extends Component
 
         foreach ($designers as $des) {
             foreach ($des->orders as $ord) {
-                if ($ord->current_due_date && $ord->scheduled_date) {
+                if ($ord->current_due_date && $ord->scheduled_date && ! $ord->isSlaExempt()) {
                     if ($ord->scheduled_date->gt($ord->current_due_date) || $ord->isOverdue()) {
                         $alreadyAdded = $slaBreachedList->contains(fn ($item) => $item['company_name'] === $ord->company_name && $item['task_name'] === ($ord->task_name ?? 'Orden Principal'));
                         if (! $alreadyAdded) {

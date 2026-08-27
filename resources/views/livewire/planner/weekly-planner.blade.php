@@ -620,7 +620,7 @@
 
                                                         @if($order->current_due_date)
                                                             @php
-                                                                $orderOverSla = $order->scheduled_date && $order->scheduled_date->gt($order->current_due_date);
+                                                                $orderOverSla = ! $order->isSlaExempt() && $order->scheduled_date && $order->scheduled_date->gt($order->current_due_date);
                                                                 $orderOverdue = $order->isOverdue();
                                                             @endphp
                                                             <div class="flex items-center justify-between pt-1 border-t border-stone-100 text-[9px]">
@@ -750,7 +750,7 @@
                                                             </div>
                                                             @if($stask->order->current_due_date)
                                                                 @php
-                                                                    $staskOverSla = $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
+                                                                    $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
                                                                     $staskOverdue = $stask->order->isOverdue();
                                                                 @endphp
                                                                 @if($staskOverSla || $staskOverdue)
@@ -1130,7 +1130,7 @@
                                                                 <!-- SLA Badge with Instant Tooltip (Shown only if SLA issue exists) -->
                                                                 @if($stask->order && $stask->order->current_due_date)
                                                                     @php
-                                                                        $staskOverSla = $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
+                                                                        $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
                                                                         $staskOverdue = $stask->order->isOverdue();
                                                                     @endphp
                                                                     @if($staskOverSla || $staskOverdue)

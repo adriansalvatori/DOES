@@ -112,4 +112,17 @@ class RelatedTask extends Model
     {
         return (bool) $this->is_work_task && $this->trigger_type === null;
     }
+
+    public function isFollowUp(): bool
+    {
+        if ($this->type && in_array($this->type, [
+            RelatedTaskType::FOLLOW_UP_CLIENTE,
+            RelatedTaskType::FOLLOW_UP_CAMILA,
+            RelatedTaskType::FOLLOW_UP_ALTA,
+        ], true)) {
+            return true;
+        }
+
+        return str_contains(strtolower($this->title), 'follow up');
+    }
 }

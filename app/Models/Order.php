@@ -251,18 +251,23 @@ class Order extends Model
         return now()->hour < 16;
     }
 
-    public function isOverdue(): bool
+    public function isSlaExempt(): bool
     {
         if ($this->done_today || ! $this->in_workspace || $this->isPaused()) {
-            return false;
+            return true;
         }
 
-        if (in_array($this->core_status, [
+        return in_array($this->core_status, [
             CoreStatus::ENVIADO_AL_CLIENTE,
             CoreStatus::EN_PRODUCCION,
             CoreStatus::ON_HOLD,
             CoreStatus::ARCHIVED,
-        ], true)) {
+        ], true);
+    }
+
+    public function isOverdue(): bool
+    {
+        if ($this->isSlaExempt()) {
             return false;
         }
 
