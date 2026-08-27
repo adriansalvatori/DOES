@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Settings;
 
+use App\Models\Client;
 use App\Models\DueDateHistory;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Services\ClientMatchingService;
 use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Facades\DB;
@@ -91,39 +93,69 @@ class TrelloSync extends Component
     {
         $order = Order::find($orderId);
         $pushedTitle = '';
+        $success = false;
+
         if ($order) {
-            // Sanitize task_name if it redundantly starts with company_name
+            // Trim and sanitize company_name and task_name
             $comp = trim($order->company_name);
             $task = trim($order->task_name);
+
+            // Strip redundant company_name prefix or trailing parenthesis matching responsible_person
             if (! empty($comp) && ! empty($task) && str_starts_with(mb_strtolower($task, 'UTF-8'), mb_strtolower($comp, 'UTF-8'))) {
-                $cleanTask = trim(mb_substr($task, mb_strlen($comp, 'UTF-8'), null, 'UTF-8'), " \t\n\r\0\x0B-:");
-                if (! empty($cleanTask)) {
-                    $order->update(['task_name' => $cleanTask]);
+                $task = trim(mb_substr($task, mb_strlen($comp, 'UTF-8'), null, 'UTF-8'), " \t\n\r\0\x0B-:");
+            }
+
+            // Strip parenthesized contact tags e.g. (ENTRO POR VALENTINA) from task_name if present
+            if (preg_match('/\s*\(\s*([^)]+)\s*\)\s*/', $task, $matches)) {
+                $parenContent = trim($matches[1]);
+                $task = trim(preg_replace('/\s*\(\s*[^)]+\s*\)\s*/', ' ', $task), " \t\n\r\0\x0B-:");
+                if (empty($order->responsible_person) && ! empty($parenContent)) {
+                    $order->responsible_person = mb_strtoupper($parenContent, 'UTF-8');
                 }
             }
 
-            $success = app(TrelloSyncService::class)->updateCardOnTrello($order, $this->apiKey, $this->userToken, $this->boardId);
-            $pushedTitle = OrderTitleParserService::buildTitle($order);
+            $order->update([
+                'company_name' => $comp,
+                'task_name' => $task,
+                'wo_number' => trim($order->wo_number ?? ''),
+                'responsible_person' => $order->responsible_person,
+            ]);
 
-            if (! $success) {
-                session()->flash('error', '⚠️ No se pudo actualizar en Trello. Verifica tu conexión o token de Trello.');
+            $pushedTitle = OrderTitleParserService::buildTitle($order);
+            $success = app(TrelloSyncService::class)->updateCardOnTrello($order, $this->apiKey, $this->userToken, $this->boardId);
+
+            if ($success) {
+                $order->update(['trello_title' => $pushedTitle]);
+            } else {
+                session()->flash('error', '⚠️ No se pudo actualizar en Trello. Verifica tu conexión o token y vuelve a intentarlo.');
             }
         }
 
         foreach ($this->syncReport['changes'] as &$change) {
             if (isset($change['order_id']) && $change['order_id'] == $orderId) {
-                $change['action'] = 'pushed_to_trello';
-                $change['pushed_title'] = $pushedTitle;
-                $change['details'] = ['Enviado a Trello con formato limpio'];
+                if ($success) {
+                    $change['action'] = 'pushed_to_trello';
+                    $change['pushed_title'] = $pushedTitle;
+                    $change['details'] = ['Enviado a Trello con formato limpio'];
+                    $change['push_error'] = false;
+                } else {
+                    $change['push_error'] = true;
+                    $change['details'] = ['⚠️ Error al enviar a Trello. Puedes reintentar.'];
+                    if ($this->selectedConflict && ($this->selectedConflict['order_id'] ?? null) == $orderId) {
+                        $this->selectedConflict['push_error'] = true;
+                        $this->selectedConflict['details'] = ['⚠️ Error al enviar a Trello. Puedes reintentar.'];
+                    }
+                }
                 break;
             }
         }
 
-        $this->syncReport['conflicts'] = max(0, $this->syncReport['conflicts'] - 1);
-        $this->syncReport['pushed'] = ($this->syncReport['pushed'] ?? 0) + 1;
-        $this->selectedConflict = null;
-
-        session()->flash('message', 'Conflicto resuelto. Se enviaron los datos de Workspace a Trello.');
+        if ($success) {
+            $this->syncReport['conflicts'] = max(0, $this->syncReport['conflicts'] - 1);
+            $this->syncReport['pushed'] = ($this->syncReport['pushed'] ?? 0) + 1;
+            $this->selectedConflict = null;
+            session()->flash('message', 'Conflicto resuelto. Se enviaron los datos de Workspace a Trello.');
+        }
     }
 
     public function resolveUseTrello(int $orderId): void
@@ -143,13 +175,42 @@ class TrelloSync extends Component
                 $updateData = [];
 
                 if (! empty($trelloData['company_name'])) {
-                    $updateData['company_name'] = $trelloData['company_name'];
+                    $rawComp = trim($trelloData['company_name']);
+                    $updateData['company_name'] = $rawComp;
+
+                    $clientMatch = Client::all()->first(fn ($c) => $c->matchesNameOrAlias($rawComp));
+                    if ($clientMatch) {
+                        $updateData['client_id'] = $clientMatch->id;
+                        $updateData['company_name'] = $clientMatch->name;
+                    } else {
+                        $match = app(ClientMatchingService::class)->matchOrCreate(
+                            $rawComp,
+                            $order->responsible_person,
+                            createIfMissing: false
+                        );
+                        if ($match['client']) {
+                            $updateData['client_id'] = $match['client']->id;
+                            $updateData['company_name'] = $match['client']->name;
+                        }
+                        if ($match['location']) {
+                            $updateData['client_location_id'] = $match['location']->id;
+                        }
+                    }
                 }
                 if (! empty($trelloData['task_name'])) {
-                    $updateData['task_name'] = $trelloData['task_name'];
+                    $updateData['task_name'] = trim($trelloData['task_name']);
                 }
                 if (! empty($trelloData['wo_number'])) {
-                    $updateData['wo_number'] = $trelloData['wo_number'];
+                    $updateData['wo_number'] = trim($trelloData['wo_number']);
+                }
+                if (! empty($trelloData['trello_title'])) {
+                    $updateData['trello_title'] = trim($trelloData['trello_title']);
+                }
+                if (! empty($trelloData['responsible_person']) && $trelloData['responsible_person'] !== 'Sin contacto') {
+                    $updateData['responsible_person'] = trim($trelloData['responsible_person']);
+                }
+                if (array_key_exists('designer_id', $trelloData)) {
+                    $updateData['designer_id'] = $trelloData['designer_id'];
                 }
 
                 $order->update($updateData);

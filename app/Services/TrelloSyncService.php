@@ -273,12 +273,20 @@ class TrelloSyncService
             if ($existing->in_workspace) {
                 // Check for field conflicts (excluding core_status and dates per rules)
                 $conflictFields = [];
-                if (! empty($parsed['company_name']) && $existing->company_name !== $parsed['company_name']) {
+                $cleanLocalComp = trim($existing->company_name ?? '');
+                $cleanParsedComp = trim($parsed['company_name'] ?? '');
+
+                if (! empty($cleanParsedComp) && mb_strtolower($cleanLocalComp, 'UTF-8') !== mb_strtolower($cleanParsedComp, 'UTF-8')) {
                     $conflictFields[] = 'company_name';
                 }
-                if (! empty($parsed['task_name']) && $existing->task_name !== $parsed['task_name']) {
+
+                $cleanLocalTask = trim(preg_replace('/\s*\([^\)]+\)\s*/', ' ', $existing->task_name ?? ''));
+                $cleanParsedTask = trim(preg_replace('/\s*\([^\)]+\)\s*/', ' ', $parsed['task_name'] ?? ''));
+
+                if (! empty($cleanParsedTask) && mb_strtolower($cleanLocalTask, 'UTF-8') !== mb_strtolower($cleanParsedTask, 'UTF-8')) {
                     $conflictFields[] = 'task_name';
                 }
+
                 if (! empty($parsed['wo_number'])) {
                     $cleanLocalWO = preg_replace('/^WO\s*/i', '', trim($existing->wo_number ?? ''));
                     $cleanTrelloWO = preg_replace('/^WO\s*/i', '', trim($parsed['wo_number'] ?? ''));
@@ -286,7 +294,7 @@ class TrelloSyncService
                         $conflictFields[] = 'wo_number';
                     }
                 }
-                if ($designerId && $existing->designer_id !== $designerId) {
+                if (! empty($cardData['members']) && $designerId && $existing->designer_id !== $designerId) {
                     $conflictFields[] = 'designer';
                 }
 
@@ -297,6 +305,9 @@ class TrelloSyncService
                         : 'N/A';
                     $workspaceUpdatedAt = $existing->updated_at ? $existing->updated_at->format('d M Y, h:i A') : 'N/A';
 
+                    $wsDueDateStr = $existing->current_due_date ? $existing->current_due_date->format('d M Y') : 'Sin fecha';
+                    $trDueDateStr = $dueDate ? Carbon::parse($dueDate)->format('d M Y') : 'Sin fecha';
+
                     return [
                         'order' => $existing,
                         'action' => 'conflict',
@@ -305,7 +316,7 @@ class TrelloSyncService
                         'previous_status' => $existing->core_status?->label() ?? '',
                         'new_status' => $coreStatus->label(),
                         'details' => ['Conflicto entre Workspace y Trello'],
-                        'diff_fields' => $conflictFields,
+                        'diff_fields' => array_values(array_unique($conflictFields)),
                         'workspace_updated_at' => $workspaceUpdatedAt,
                         'trello_updated_at' => $trelloUpdatedAt,
                         'workspace_data' => [
@@ -313,12 +324,24 @@ class TrelloSyncService
                             'task_name' => $existing->task_name,
                             'wo_number' => $existing->wo_number,
                             'designer_name' => $existing->designer?->name ?? 'Sin asignar',
+                            'due_date' => $wsDueDateStr,
+                            'core_status' => $existing->core_status?->label() ?? 'Sin estado',
+                            'responsible_person' => $existing->responsible_person ?: 'Sin contacto',
+                            'is_client_linked' => ! empty($existing->client_id),
+                            'client_name' => $existing->client?->name ?? null,
                         ],
                         'trello_data' => [
                             'company_name' => $parsed['company_name'],
                             'task_name' => $parsed['task_name'],
                             'wo_number' => $parsed['wo_number'],
+                            'designer_id' => $designerId,
                             'designer_name' => $trelloDesignerName,
+                            'due_date' => $trDueDateStr,
+                            'core_status' => $coreStatus->label(),
+                            'responsible_person' => $parsed['responsible_person'] ?: 'Sin contacto',
+                            'trello_title' => $rawCardName,
+                            'trello_url' => $cardData['shortUrl'] ?? ($cardData['url'] ?? "https://trello.com/c/{$cardData['id']}"),
+                            'trello_desc' => ! empty($cardData['desc']) ? mb_strimwidth(trim($cardData['desc']), 0, 180, '...') : '',
                         ],
                         'card_data' => $cardData,
                     ];
@@ -556,11 +579,11 @@ class TrelloSyncService
             return false;
         }
 
-        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
-        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
-        $boardId = $boardId ?: config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
+        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+        $boardId = ! empty(trim($boardId ?? '')) ? trim($boardId) : config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
 
-        if (! $apiToken) {
+        if (empty($apiToken)) {
             Log::info("Trello sync skipped for order {$order->id}: No API token set.");
 
             return false;
@@ -579,6 +602,8 @@ class TrelloSyncService
 
             if ($order->designer && ! empty($order->designer->trello_member_id)) {
                 $params['idMembers'] = $order->designer->trello_member_id;
+            } else {
+                $params['idMembers'] = '';
             }
 
             if ($order->core_status) {

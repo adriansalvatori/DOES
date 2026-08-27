@@ -18,6 +18,20 @@
         <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0" />
         <span>{{ __('Tienes cambios sin guardar en la configuración del tablero o token de Trello. Sincroniza para aplicar tus cambios.') }}</span>
     </div>
+
+    @if (session()->has('message'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-xl text-xs font-medium flex items-center gap-2 shadow-2xs">
+            <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
+            <span class="truncate">{{ session('message') }}</span>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs font-medium flex items-center gap-2 shadow-2xs">
+            <x-lucide-alert-octagon class="w-4 h-4 text-rose-600 shrink-0" />
+            <span class="truncate">{{ session('error') }}</span>
+        </div>
+    @endif
     
     <!-- Top Notion Header -->
     <div id="tour-trello-sync-header" class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
@@ -325,10 +339,10 @@
         </div>
     @endif
 
-    <!-- Side-by-Side Compact Conflict Resolution Modal -->
+    <!-- Side-by-Side Extended Conflict Resolution Modal -->
     @if($selectedConflict)
         <div class="fixed inset-0 z-[200] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-3xl w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150">
+            <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-4xl w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto custom-vertical-scrollbar">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center font-bold">
@@ -339,15 +353,36 @@
                             <p class="text-xs text-zinc-500">{{ __('Compara los detalles entre Workspace y Trello para decidir cuál conservar.') }}</p>
                         </div>
                     </div>
-                    <button wire:click="closeConflictModal" class="text-zinc-400 hover:text-zinc-700 cursor-pointer">
-                        <x-lucide-x class="w-4 h-4" />
-                    </button>
+
+                    <div class="flex items-center gap-2">
+                        @if(!empty($selectedConflict['trello_data']['trello_url']))
+                            <a href="{{ $selectedConflict['trello_data']['trello_url'] }}" target="_blank" rel="noopener" class="px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1 transition">
+                                <x-lucide-external-link class="w-3.5 h-3.5" />
+                                <span>{{ __('Ver en Trello.com') }}</span>
+                            </a>
+                        @endif
+                        <button wire:click="closeConflictModal" class="text-zinc-400 hover:text-zinc-700 cursor-pointer p-1">
+                            <x-lucide-x class="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
+
+                @if(!empty($selectedConflict['push_error']))
+                    <div class="bg-rose-50 border border-rose-300 text-rose-900 p-3 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 shadow-2xs animate-pulse">
+                        <div class="flex items-center gap-2">
+                            <x-lucide-alert-octagon class="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>{{ __('⚠️ No se pudo enviar la tarjeta a Trello. Verifica tu conexión o token API y vuelve a intentarlo.') }}</span>
+                        </div>
+                        <button wire:click="resolveUseWorkspace({{ $selectedConflict['order_id'] }})" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[11px] shrink-0 transition shadow-2xs">
+                            {{ __('Reintentar Envío a Trello') }}
+                        </button>
+                    </div>
+                @endif
 
                 <!-- Side-by-Side Comparison Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                     <!-- Workspace Card Details (Left - Mustard Yellow Theme) -->
-                    <div class="bg-amber-50/70 border border-amber-300/90 rounded-xl p-3.5 space-y-2.5">
+                    <div class="bg-amber-50/70 border border-amber-300/90 rounded-xl p-3.5 space-y-3">
                         <div class="flex items-center justify-between border-b border-amber-300/70 pb-2">
                             <span class="font-bold text-amber-950 flex items-center gap-1.5 text-xs">
                                 <x-lucide-layout class="w-4 h-4 text-amber-700" />
@@ -358,39 +393,71 @@
                             </span>
                         </div>
 
-                        <div class="space-y-2">
+                        <div class="space-y-2.5">
                             <div>
-                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
-                                <p class="font-bold text-zinc-900 p-1 rounded {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
+                                    @if(!empty($selectedConflict['workspace_data']['is_client_linked']))
+                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                            ✓ {{ __('Cliente Vinculado DB') }}
+                                        </span>
+                                    @endif
+                                </div>
+                                <p class="font-bold text-zinc-900 p-1.5 rounded mt-0.5 {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 border border-amber-400' : 'bg-amber-100/40' }}">
                                     {{ $selectedConflict['workspace_data']['company_name'] ?? '—' }}
                                 </p>
                             </div>
 
                             <div>
                                 <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NOMBRE DE TAREA') }}</span>
-                                <p class="font-medium text-zinc-800 p-1 rounded {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
+                                <p class="font-medium text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
                                     {{ $selectedConflict['workspace_data']['task_name'] ?? '—' }}
                                 </p>
                             </div>
 
-                            <div>
-                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
-                                <p class="font-mono text-zinc-800 p-1 rounded {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
-                                    {{ $selectedConflict['workspace_data']['wo_number'] ?: 'Sin WO' }}
-                                </p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
+                                    <p class="font-mono text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                        {{ $selectedConflict['workspace_data']['wo_number'] ?: 'Sin WO' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('DISEÑADOR ASIGNADO') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                        {{ $selectedConflict['workspace_data']['designer_name'] ?? 'Sin asignar' }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('FECHA DE ENTREGA') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                        📅 {{ $selectedConflict['workspace_data']['due_date'] ?? 'Sin fecha' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('ESTADO LOCAL') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                        📌 {{ $selectedConflict['workspace_data']['core_status'] ?? 'Sin estado' }}
+                                    </p>
+                                </div>
                             </div>
 
                             <div>
-                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('ASSIGNED DESIGNER') }}</span>
-                                <p class="text-zinc-800 p-1 rounded {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : '' }}">
-                                    {{ $selectedConflict['workspace_data']['designer_name'] ?? 'Sin asignar' }}
+                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('CONTACTO / RESPONSABLE') }}</span>
+                                <p class="text-zinc-800 p-1.5 rounded mt-0.5 bg-amber-100/40 font-medium">
+                                    👤 {{ $selectedConflict['workspace_data']['responsible_person'] ?? 'Sin contacto' }}
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Trello Card Details (Right - Royal Blue Theme) -->
-                    <div class="bg-blue-50/70 border border-blue-300/90 rounded-xl p-3.5 space-y-2.5">
+                    <div class="bg-blue-50/70 border border-blue-300/90 rounded-xl p-3.5 space-y-3">
                         <div class="flex items-center justify-between border-b border-blue-300/70 pb-2">
                             <span class="font-bold text-blue-950 flex items-center gap-1.5 text-xs">
                                 <x-lucide-trello class="w-4 h-4 text-blue-700" />
@@ -401,32 +468,57 @@
                             </span>
                         </div>
 
-                        <div class="space-y-2">
+                        <div class="space-y-2.5">
                             <div>
                                 <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
-                                <p class="font-bold text-zinc-900 p-1 rounded {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
+                                <p class="font-bold text-zinc-900 p-1.5 rounded mt-0.5 {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
                                     {{ $selectedConflict['trello_data']['company_name'] ?? '—' }}
                                 </p>
                             </div>
 
                             <div>
                                 <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NOMBRE DE TAREA') }}</span>
-                                <p class="font-medium text-zinc-800 p-1 rounded {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
+                                <p class="font-medium text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
                                     {{ $selectedConflict['trello_data']['task_name'] ?? '—' }}
                                 </p>
                             </div>
 
-                            <div>
-                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
-                                <p class="font-mono text-zinc-800 p-1 rounded {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
-                                    {{ $selectedConflict['trello_data']['wo_number'] ?: 'Sin WO' }}
-                                </p>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
+                                    <p class="font-mono text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                        {{ $selectedConflict['trello_data']['wo_number'] ?: 'Sin WO' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('DISEÑADOR ASIGNADO') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                        {{ $selectedConflict['trello_data']['designer_name'] ?? 'Sin asignar' }}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('FECHA DE ENTREGA') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                        📅 {{ $selectedConflict['trello_data']['due_date'] ?? 'Sin fecha' }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('LISTA EN TRELLO') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                        📌 {{ $selectedConflict['trello_data']['core_status'] ?? 'Sin estado' }}
+                                    </p>
+                                </div>
                             </div>
 
                             <div>
-                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('ASSIGNED DESIGNER') }}</span>
-                                <p class="text-zinc-800 p-1 rounded {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : '' }}">
-                                    {{ $selectedConflict['trello_data']['designer_name'] ?? 'Sin asignar' }}
+                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('DESCRIPCIÓN / NOTAS TRELLO') }}</span>
+                                <p class="text-zinc-700 p-1.5 rounded mt-0.5 bg-blue-100/40 font-mono text-[11px] truncate">
+                                    {{ $selectedConflict['trello_data']['trello_desc'] ?: 'Sin descripción' }}
                                 </p>
                             </div>
                         </div>
@@ -438,16 +530,19 @@
                     <button 
                         wire:click="closeConflictModal" 
                         class="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-zinc-700 font-medium text-xs rounded-xl transition cursor-pointer">
-                        {{ __('Cancel') }}
+                        {{ __('Cancelar') }}
                     </button>
 
                     <div class="flex items-center gap-2">
                         <!-- Workspace Option (Mustard Yellow - First) -->
                         <button 
                             wire:click="resolveUseWorkspace({{ $selectedConflict['order_id'] }})"
-                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
-                            <x-lucide-arrow-up-right class="w-3.5 h-3.5 shrink-0" />
-                            <span>{{ __('Use Details from Workspace') }}</span>
+                            wire:loading.attr="disabled"
+                            wire:target="resolveUseWorkspace({{ $selectedConflict['order_id'] }})"
+                            class="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
+                            <x-lucide-refresh-cw wire:loading wire:target="resolveUseWorkspace({{ $selectedConflict['order_id'] }})" class="w-3.5 h-3.5 animate-spin" />
+                            <x-lucide-arrow-up-right wire:loading.remove wire:target="resolveUseWorkspace({{ $selectedConflict['order_id'] }})" class="w-3.5 h-3.5 shrink-0" />
+                            <span>{{ __('Usar Datos de Workspace (Enviar a Trello)') }}</span>
                         </button>
 
                         <!-- Trello Option (Royal Blue - Second) -->
@@ -455,7 +550,7 @@
                             wire:click="resolveUseTrello({{ $selectedConflict['order_id'] }})"
                             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap">
                             <x-lucide-arrow-down-left class="w-3.5 h-3.5 shrink-0" />
-                            <span>{{ __('Use Details from Trello') }}</span>
+                            <span>{{ __('Usar Datos de Trello') }}</span>
                         </button>
                     </div>
                 </div>

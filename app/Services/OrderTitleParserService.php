@@ -84,19 +84,23 @@ class OrderTitleParserService
         $title = trim($title, " \t\n\r\0\x0B-:");
 
         // 2. Extract Responsible Person from parentheses e.g. "( MARCELA )"
-        if (preg_match('/\(\s*([^)]+)\s*\)/', $title, $matches)) {
-            $responsiblePerson = strtoupper(trim($matches[1]));
+        if (preg_match_all('/\(\s*([^)]+)\s*\)/', $title, $allMatches, PREG_SET_ORDER)) {
+            $responsiblePerson = strtoupper(trim($allMatches[0][1]));
 
-            // Split title around the parenthesis
-            $parts = explode($matches[0], $title, 2);
-            $beforeParen = trim($parts[0], " \t\n\r\0\x0B-:");
-            $afterParen = isset($parts[1]) ? trim($parts[1], " \t\n\r\0\x0B-:") : '';
+            // Strip all parenthesis blocks from title
+            $titleClean = trim(preg_replace('/\s*\(\s*[^)]+\s*\)\s*/', ' ', $title), " \t\n\r\0\x0B-:");
 
-            if (! empty($beforeParen)) {
-                $companyName = $beforeParen;
-            }
-            if (! empty($afterParen)) {
-                $taskName = $afterParen;
+            if (str_contains($titleClean, ' - ')) {
+                $parts = explode(' - ', $titleClean, 2);
+                $companyName = trim($parts[0]);
+                $taskName = trim($parts[1]);
+            } elseif (str_contains($titleClean, '-')) {
+                $parts = explode('-', $titleClean, 2);
+                $companyName = trim($parts[0]);
+                $taskName = trim($parts[1]);
+            } else {
+                $companyName = $titleClean;
+                $taskName = $titleClean;
             }
         }
 

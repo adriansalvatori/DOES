@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class TrelloSyncOptimizationTest extends TestCase
@@ -77,7 +78,12 @@ class TrelloSyncOptimizationTest extends TestCase
             'core_status' => CoreStatus::ENTRANTE,
         ]);
 
+        Http::fake([
+            'api.trello.com/*' => Http::response([], 200),
+        ]);
+
         $component = new TrelloSync;
+        $component->userToken = 'dummy_token';
         $component->syncReport = [
             'total' => 2,
             'created' => 0,
