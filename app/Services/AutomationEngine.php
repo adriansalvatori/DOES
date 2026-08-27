@@ -9,6 +9,7 @@ use App\Enums\Substatus;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Models\SystemTaskConfig;
 use Carbon\Carbon;
 
 class AutomationEngine
@@ -156,20 +157,47 @@ class AutomationEngine
         // Handle transitions from ENVIADO AL CLIENTE -> TO DO TODAY / ORDERS RECEIVED
         if ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE && ($newStatus === CoreStatus::TO_DO_TODAY || CoreStatus::isPendingDesign($newStatus))) {
             $this->handleClientResponse($order);
+
+            // Clean up obsolete pending client follow-up tasks from previous client cycle
+            RelatedTask::where('order_id', $order->id)
+                ->where('type', RelatedTaskType::FOLLOW_UP_CLIENTE->value)
+                ->where('status', '!=', 'done')
+                ->whereNull('completed_at')
+                ->forceDelete();
         }
 
         // Handle entering ENVIADO AL CLIENTE
         if ($newStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
             $wasApproved = $order->approved;
 
-            $order->update([
+            $updateData = [
                 'substatus' => Substatus::WAITING_FOR_CLIENT,
                 'client_last_response' => null,
                 'last_meaningful_update' => now(),
                 'approved' => false,
                 'measures_confirmed' => false,
                 'estimate_approved' => false,
-            ]);
+            ];
+
+            if ($previousStatus !== CoreStatus::ENVIADO_AL_CLIENTE) {
+                $updateData['last_sent_to_client_at'] = now();
+            }
+
+            $order->update($updateData);
+
+            if ($previousStatus !== CoreStatus::ENVIADO_AL_CLIENTE) {
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'ORDER_SENT_TO_CLIENT',
+                    'actor' => 'User/Automation',
+                    'previous_value' => $previousStatus->value,
+                    'new_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
+                    'metadata' => [
+                        'timestamp' => now()->toIso8601String(),
+                        'revision_count' => $order->client_revision_count,
+                    ],
+                ]);
+            }
 
             if ($wasApproved) {
                 OrderEvent::create([
@@ -326,9 +354,10 @@ class AutomationEngine
         $clientOrders = Order::where('core_status', CoreStatus::ENVIADO_AL_CLIENTE)->get();
 
         foreach ($clientOrders as $order) {
-            $daysInClient = $order->updated_at ? $order->updated_at->diffInWeekdays(now()) : 0;
+            $sentAt = $order->last_sent_to_client_at ?? $order->last_meaningful_update ?? $order->created_at;
+            $daysInClient = $sentAt ? (int) $sentAt->diffInWeekdays(now()) : 0;
 
-            if ($daysInClient > 9) {
+            if ($daysInClient >= 9) {
                 $order->update([
                     'core_status' => CoreStatus::ON_HOLD,
                     'substatus' => Substatus::CUSTOMER_SERVICE_REQUIRED,
@@ -341,7 +370,7 @@ class AutomationEngine
                     'actor' => 'AutomationEngine',
                     'previous_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
                     'new_value' => CoreStatus::ON_HOLD->value,
-                    'metadata' => ['reason' => 'More than 9 days without client response'],
+                    'metadata' => ['reason' => 'Client non-responsive for 9+ business days'],
                 ]);
             } elseif ($daysInClient >= 3 && $daysInClient < 6) {
                 $this->ensureTaskExists($order, 'Follow Up Cliente #1', RelatedTaskType::FOLLOW_UP_CLIENTE);
@@ -511,8 +540,14 @@ class AutomationEngine
 
     protected function ensureTaskExists(Order $order, string $title, RelatedTaskType $type): void
     {
+        $sysConfig = SystemTaskConfig::where('task_type', $type->value)->first();
+        if ($sysConfig && ! $sysConfig->is_active) {
+            return;
+        }
+
         $exists = RelatedTask::where('order_id', $order->id)
             ->where('title', $title)
+            ->when($order->last_sent_to_client_at, fn ($q) => $q->where('created_at', '>=', $order->last_sent_to_client_at))
             ->exists();
 
         if (! $exists) {
@@ -522,6 +557,7 @@ class AutomationEngine
                 'type' => $type,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
+                'scheduled_date' => now()->toDateString(),
                 'due_date' => now()->toDateString(),
                 'trigger_type' => 'CLIENT_FOLLOW_UP_CYCLE',
                 'priority' => 'normal',

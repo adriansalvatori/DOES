@@ -948,13 +948,13 @@
                                     <div class="flex items-center gap-1 min-w-0">
                                         @if($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE)
                                             @php
-                                                $sentDate = $order->last_meaningful_update ?? $order->updated_at ?? now();
+                                                $sentDate = $order->last_sent_to_client_at ?? $order->last_meaningful_update ?? $order->updated_at ?? now();
                                                 $daysElapsed = $sentDate ? $sentDate->diffInWeekdays(now()) : 0;
                                                 $daysRemaining = max(0, 9 - $daysElapsed);
                                             @endphp
                                             <x-lucide-send class="w-3 h-3 text-sky-500 shrink-0" />
-                                            <span class="font-mono font-medium truncate text-sky-800" title="Enviado el {{ $sentDate->format('d M, Y') }} ({{ $daysElapsed }}d transcurridos)">
-                                                Enviado hace {{ $daysElapsed }}d <span class="text-sky-600 font-normal">({{ $daysRemaining }}d a Hold)</span>
+                                            <span class="font-mono font-medium truncate text-sky-800" title="Enviado el {{ $sentDate->format('d M, Y') }} ({{ $daysElapsed }}d hábiles transcurridos)">
+                                                Enviado hace {{ $daysElapsed }}d hábiles <span class="text-sky-600 font-normal">({{ $daysRemaining }}d a Hold)</span>
                                             </span>
                                         @else
                                             <x-lucide-calendar class="w-3 h-3 text-zinc-400 shrink-0" />
