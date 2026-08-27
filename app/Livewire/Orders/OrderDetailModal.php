@@ -12,6 +12,7 @@ use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
+use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
@@ -499,8 +500,13 @@ class OrderDetailModal extends Component
         app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
 
         // Safely sync updated title to Trello if card is linked
-        if ($order->trello_card_id) {
-            app(TrelloSyncService::class)->updateCardOnTrello($order);
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
+            $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+            $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+            if ($success) {
+                $freshOrder->update(['trello_title' => $pushedTitle]);
+            }
         }
 
         $this->isEditing = false;

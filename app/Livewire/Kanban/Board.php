@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
+use App\Services\OrderTitleParserService;
 use App\Services\SlaEngine;
 use App\Services\TrelloSyncService;
 use Livewire\Attributes\On;
@@ -127,9 +128,14 @@ class Board extends Component
         app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
 
         // Optionally attempt Trello sync in background without interrupting UI
-        if ($order->trello_card_id) {
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
             try {
-                app(TrelloSyncService::class)->updateCardOnTrello($order);
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $pushed = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($pushed) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
             } catch (\Throwable $e) {
                 // Ignore remote network error so local drag-and-drop state is preserved
             }
@@ -248,9 +254,14 @@ class Board extends Component
             ],
         ]);
 
-        if ($order->trello_card_id) {
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
             try {
-                app(TrelloSyncService::class)->updateCardOnTrello($order);
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $pushed = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($pushed) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
             } catch (\Throwable $e) {
             }
         }

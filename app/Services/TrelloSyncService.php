@@ -575,6 +575,9 @@ class TrelloSyncService
             return false;
         }
 
+        // Always refresh order from database to ensure fresh relationships and attributes
+        $order = $order->fresh() ?? $order;
+
         if (! $order->trello_card_id) {
             return false;
         }
@@ -590,14 +593,18 @@ class TrelloSyncService
         }
 
         try {
+            $order->loadMissing(['designer', 'designers']);
+            $pushedTitle = OrderTitleParserService::buildTitle($order);
             $params = [
                 'key' => $apiKey,
                 'token' => $apiToken,
-                'name' => OrderTitleParserService::buildTitle($order),
+                'name' => $pushedTitle,
             ];
 
             if ($order->current_due_date) {
                 $params['due'] = $order->current_due_date->toIso8601String();
+            } else {
+                $params['due'] = 'null';
             }
 
             if ($order->designer && ! empty($order->designer->trello_member_id)) {
@@ -615,7 +622,15 @@ class TrelloSyncService
 
             $response = Http::put("{$this->baseUrl}/cards/{$order->trello_card_id}", $params);
 
-            return $response->successful();
+            if ($response->successful()) {
+                $order->updateQuietly(['trello_title' => $pushedTitle]);
+
+                return true;
+            }
+
+            Log::warning("Failed to update Trello card {$order->trello_card_id}: ".$response->body());
+
+            return false;
         } catch (\Exception $e) {
             Log::warning("Failed to update Trello card {$order->trello_card_id}: ".$e->getMessage());
 
