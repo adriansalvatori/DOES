@@ -102,6 +102,7 @@ class OrderDetailModal extends Component
         $this->showModal = true;
         $this->newTaskDate = now()->toDateString();
         $this->newTaskIsWork = true;
+        $this->newTrelloComment = '';
 
         if ($startEdit) {
             $this->startEditing();
@@ -529,6 +530,7 @@ class OrderDetailModal extends Component
         $this->showApprovalModal = false;
         $this->showDelayModal = false;
         $this->isEditing = false;
+        $this->newTrelloComment = '';
     }
 
     public function moveToBacklog()

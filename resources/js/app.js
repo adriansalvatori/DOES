@@ -7,8 +7,8 @@ window.KudosDirtyGuard = {
     dirtyRegistry: new Map(),
     isConfirmModalOpen: false,
 
-    register(id, isDirtyFn) {
-        this.dirtyRegistry.set(id, isDirtyFn);
+    register(id, isDirtyFn, element = null) {
+        this.dirtyRegistry.set(id, { checkFn: isDirtyFn, el: element });
         this.updateGlobalState();
     },
 
@@ -18,8 +18,17 @@ window.KudosDirtyGuard = {
     },
 
     isDirty() {
-        for (const [id, checkFn] of this.dirtyRegistry.entries()) {
+        for (const [id, entry] of this.dirtyRegistry.entries()) {
             try {
+                const checkFn = typeof entry === 'function' ? entry : entry?.checkFn;
+                const el = typeof entry === 'object' ? entry?.el : null;
+
+                // Auto-cleanup if registered DOM element is no longer attached to document
+                if (el && !document.body.contains(el)) {
+                    this.dirtyRegistry.delete(id);
+                    continue;
+                }
+
                 const result = typeof checkFn === 'function' ? checkFn() : Boolean(checkFn);
                 if (result) return true;
             } catch (e) {
@@ -55,7 +64,8 @@ window.KudosDirtyGuard = {
 
     confirmCheck(checkId, actionCallback, options = {}) {
         if (this.isConfirmModalOpen) return;
-        const checkFn = this.dirtyRegistry.get(checkId);
+        const entry = this.dirtyRegistry.get(checkId);
+        const checkFn = typeof entry === 'function' ? entry : entry?.checkFn;
         let isCheckDirty = false;
         if (checkFn) {
             try {

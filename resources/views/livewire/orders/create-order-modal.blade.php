@@ -3,19 +3,49 @@
         <div @click.self="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[100] overflow-y-auto bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4">
             <div 
                 x-data="{
+                    initialForm: null,
+                    init() {
+                        this.snapshot();
+                        this.$watch('$wire.showModal', (show) => {
+                            if (!show) {
+                                window.KudosDirtyGuard.unregister('create-order-modal');
+                            } else {
+                                this.snapshot();
+                                window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
+                            }
+                        });
+                        window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
+                        this.$cleanup(() => window.KudosDirtyGuard.unregister('create-order-modal'));
+                    },
+                    snapshot() {
+                        this.initialForm = JSON.stringify({
+                            company: ($wire.companyName || '').toString().trim(),
+                            task: ($wire.taskName || '').toString().trim(),
+                            wo: ($wire.woNumber || '').toString().trim(),
+                            trelloId: ($wire.trelloCardId || '').toString().trim(),
+                            resp: ($wire.responsiblePerson || '').toString().trim(),
+                            location: ($wire.locationName || '').toString().trim(),
+                            substatus: ($wire.substatus || '').toString().trim(),
+                            due: ($wire.dueDate || '').toString().trim(),
+                            createOnTrello: Boolean($wire.createOnTrello),
+                            designers: Array.from($wire.designerIds || []).map(String).sort()
+                        });
+                    },
                     isDirty() {
-                        if (!$wire.showModal) return false;
-                        return Boolean(
-                            ($wire.companyName || '').trim() ||
-                            ($wire.taskName || '').trim() ||
-                            ($wire.woNumber || '').trim() ||
-                            ($wire.trelloCardId || '').trim() ||
-                            ($wire.responsiblePerson || '').trim() ||
-                            ($wire.locationName || '').trim() ||
-                            ($wire.substatus || '').trim() ||
-                            ($wire.dueDate || '').trim() ||
-                            (Array.isArray($wire.designerIds) && $wire.designerIds.length > 0)
-                        );
+                        if (!$wire.showModal || !this.initialForm) return false;
+                        const current = JSON.stringify({
+                            company: ($wire.companyName || '').toString().trim(),
+                            task: ($wire.taskName || '').toString().trim(),
+                            wo: ($wire.woNumber || '').toString().trim(),
+                            trelloId: ($wire.trelloCardId || '').toString().trim(),
+                            resp: ($wire.responsiblePerson || '').toString().trim(),
+                            location: ($wire.locationName || '').toString().trim(),
+                            substatus: ($wire.substatus || '').toString().trim(),
+                            due: ($wire.dueDate || '').toString().trim(),
+                            createOnTrello: Boolean($wire.createOnTrello),
+                            designers: Array.from($wire.designerIds || []).map(String).sort()
+                        });
+                        return current !== this.initialForm;
                     },
                     confirmClose(action) {
                         if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
@@ -41,10 +71,6 @@
                         } else {
                             action();
                         }
-                    },
-                    init() {
-                        window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty());
-                        this.$cleanup(() => window.KudosDirtyGuard.unregister('create-order-modal'));
                     }
                 }"
                 @keydown.window.escape="confirmClose(() => $wire.closeModal())"

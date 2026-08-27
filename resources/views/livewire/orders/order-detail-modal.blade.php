@@ -9,40 +9,47 @@
                     this.$watch('$wire.isEditing', (val) => {
                         if (val) this.snapshot();
                     });
-                    window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty());
+                    this.$watch('$wire.showModal', (show) => {
+                        if (!show) {
+                            window.KudosDirtyGuard.unregister('order-detail-modal');
+                        } else {
+                            window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
+                        }
+                    });
+                    window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
                     this.$cleanup(() => window.KudosDirtyGuard.unregister('order-detail-modal'));
                 },
                 snapshot() {
                     this.initialForm = JSON.stringify({
-                        wo: $wire.editWoNumber || '',
-                        trelloId: $wire.editTrelloCardId || '',
-                        company: $wire.editCompanyName || '',
-                        location: $wire.editLocationName || '',
-                        resp: $wire.editResponsiblePerson || '',
-                        task: $wire.editTaskName || '',
-                        designers: Array.from($wire.editDesignerIds || []).sort(),
-                        status: $wire.editCoreStatus || '',
-                        substatus: $wire.editSubstatus || '',
-                        due: $wire.editDueDate || '',
-                        clientRev: $wire.editClientRevisionCount || 0,
-                        internalRev: $wire.editInternalRevisionCount || 0
+                        wo: ($wire.editWoNumber || '').toString().trim(),
+                        trelloId: ($wire.editTrelloCardId || '').toString().trim(),
+                        company: ($wire.editCompanyName || '').toString().trim(),
+                        location: ($wire.editLocationName || '').toString().trim(),
+                        resp: ($wire.editResponsiblePerson || '').toString().trim(),
+                        task: ($wire.editTaskName || '').toString().trim(),
+                        designers: Array.from($wire.editDesignerIds || []).map(String).sort(),
+                        status: ($wire.editCoreStatus || '').toString().trim(),
+                        substatus: ($wire.editSubstatus || '').toString().trim(),
+                        due: ($wire.editDueDate || '').toString().trim(),
+                        clientRev: Number($wire.editClientRevisionCount || 0),
+                        internalRev: Number($wire.editInternalRevisionCount || 0)
                     });
                 },
                 isEditDirty() {
                     if (!$wire.isEditing || !this.initialForm) return false;
                     const current = JSON.stringify({
-                        wo: $wire.editWoNumber || '',
-                        trelloId: $wire.editTrelloCardId || '',
-                        company: $wire.editCompanyName || '',
-                        location: $wire.editLocationName || '',
-                        resp: $wire.editResponsiblePerson || '',
-                        task: $wire.editTaskName || '',
-                        designers: Array.from($wire.editDesignerIds || []).sort(),
-                        status: $wire.editCoreStatus || '',
-                        substatus: $wire.editSubstatus || '',
-                        due: $wire.editDueDate || '',
-                        clientRev: $wire.editClientRevisionCount || 0,
-                        internalRev: $wire.editInternalRevisionCount || 0
+                        wo: ($wire.editWoNumber || '').toString().trim(),
+                        trelloId: ($wire.editTrelloCardId || '').toString().trim(),
+                        company: ($wire.editCompanyName || '').toString().trim(),
+                        location: ($wire.editLocationName || '').toString().trim(),
+                        resp: ($wire.editResponsiblePerson || '').toString().trim(),
+                        task: ($wire.editTaskName || '').toString().trim(),
+                        designers: Array.from($wire.editDesignerIds || []).map(String).sort(),
+                        status: ($wire.editCoreStatus || '').toString().trim(),
+                        substatus: ($wire.editSubstatus || '').toString().trim(),
+                        due: ($wire.editDueDate || '').toString().trim(),
+                        clientRev: Number($wire.editClientRevisionCount || 0),
+                        internalRev: Number($wire.editInternalRevisionCount || 0)
                     });
                     return current !== this.initialForm;
                 },
@@ -97,6 +104,7 @@
                             }
                         });
                     } else {
+                        window.KudosDirtyGuard.unregister('order-detail-modal');
                         action();
                     }
                 }
