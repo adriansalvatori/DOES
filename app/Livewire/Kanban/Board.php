@@ -3,7 +3,6 @@
 namespace App\Livewire\Kanban;
 
 use App\Enums\CoreStatus;
-use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
 use App\Models\Designer;
 use App\Models\Order;
@@ -34,6 +33,24 @@ class Board extends Component
     public ?int $pendingOnHoldOrderId = null;
 
     public string $onHoldReason = '';
+
+    public bool $showBlockModal = false;
+
+    public ?int $pendingBlockOrderId = null;
+
+    public string $blockReason = 'FALTAN MEDIDAS';
+
+    public string $blockReasonOther = '';
+
+    public string $blockComment = '';
+
+    public bool $requireCustomerService = false;
+
+    public bool $showUnblockModal = false;
+
+    public ?int $pendingUnblockOrderId = null;
+
+    public string $unblockReason = '';
 
     public bool $showStandaloneTaskCards = false;
 
@@ -80,41 +97,12 @@ class Board extends Component
         }
 
         if ($newStatus === CoreStatus::ENTRANTE) {
-            $designerStatus = match ($order->designer?->name) {
-                'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
-                'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-                default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
-            };
-
-            $order->update([
-                'core_status' => $designerStatus,
-                'substatus' => Substatus::BLOQUEADA,
-            ]);
-
-            RelatedTask::create([
-                'order_id' => $order->id,
-                'title' => "Bloqueado: {$order->company_name} - {$order->task_name}",
-                'type' => RelatedTaskType::BLOCKED,
-                'status' => 'todo',
-                'assignee_id' => $order->designer_id,
-                'due_date' => now()->toDateString(),
-                'priority' => 'high',
-            ]);
-
-            OrderEvent::create([
-                'order_id' => $order->id,
-                'event_type' => 'ORDER_BLOCKED',
-                'actor' => 'User',
-                'previous_value' => $previousStatus->value,
-                'new_value' => $designerStatus->value,
-                'metadata' => [
-                    'substatus' => Substatus::BLOQUEADA->value,
-                    'comment' => 'Orden asignada a la lista del diseñador con etiqueta BLOQUEADA y subtarea creada en BLOCKED.',
-                ],
-            ]);
-
-            $this->dispatch('order-updated');
-            session()->flash('message', "Orden {$order->company_name} marcada como Bloqueada en la lista del diseñador y subtarea agregada a BLOCKED.");
+            $this->pendingBlockOrderId = $orderId;
+            $this->blockReason = 'FALTAN MEDIDAS';
+            $this->blockReasonOther = '';
+            $this->blockComment = '';
+            $this->requireCustomerService = false;
+            $this->showBlockModal = true;
 
             return;
         }
@@ -142,6 +130,81 @@ class Board extends Component
         }
 
         session()->flash('message', "Orden {$order->company_name} movida a {$newStatus->label()}.");
+    }
+
+    public function confirmBlock()
+    {
+        if (! $this->pendingBlockOrderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->pendingBlockOrderId);
+
+        $order->block(
+            reason: $this->blockReason,
+            reasonOther: $this->blockReasonOther,
+            comment: $this->blockComment,
+            requireCS: $this->requireCustomerService,
+            actor: 'Usuario'
+        );
+
+        $this->showBlockModal = false;
+        $this->pendingBlockOrderId = null;
+        $this->blockReason = 'FALTAN MEDIDAS';
+        $this->blockReasonOther = '';
+        $this->blockComment = '';
+        $this->requireCustomerService = false;
+
+        $this->dispatch('order-updated');
+        session()->flash('message', "Orden {$order->company_name} marcada como Bloqueada.");
+    }
+
+    public function cancelBlock()
+    {
+        $this->showBlockModal = false;
+        $this->pendingBlockOrderId = null;
+        $this->blockReason = 'FALTAN MEDIDAS';
+        $this->blockReasonOther = '';
+        $this->blockComment = '';
+        $this->requireCustomerService = false;
+    }
+
+    public function openUnblockModal($orderId)
+    {
+        $this->pendingUnblockOrderId = $orderId;
+        $this->unblockReason = '';
+        $this->showUnblockModal = true;
+    }
+
+    public function confirmUnblock()
+    {
+        if (! $this->pendingUnblockOrderId) {
+            return;
+        }
+
+        $this->validate([
+            'unblockReason' => 'required|string|min:3',
+        ], [
+            'unblockReason.required' => 'Ingresa el motivo o forma en que se resolvió el bloqueo.',
+            'unblockReason.min' => 'El motivo debe contener al menos 3 caracteres.',
+        ]);
+
+        $order = Order::findOrFail($this->pendingUnblockOrderId);
+        $order->unblock($this->unblockReason);
+
+        $this->showUnblockModal = false;
+        $this->pendingUnblockOrderId = null;
+        $this->unblockReason = '';
+
+        $this->dispatch('order-updated');
+        session()->flash('message', "Orden {$order->company_name} desbloqueada y devuelta a la lista del diseñador.");
+    }
+
+    public function cancelUnblock()
+    {
+        $this->showUnblockModal = false;
+        $this->pendingUnblockOrderId = null;
+        $this->unblockReason = '';
     }
 
     public function confirmOnHold()
@@ -268,7 +331,7 @@ class Board extends Component
 
     public function render()
     {
-        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee']);
+        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee', 'clientLocation']);
 
         if (! empty($this->search)) {
             $query->where(function ($q) {

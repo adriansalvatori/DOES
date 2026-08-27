@@ -1061,8 +1061,8 @@
 
                                                             <div class="min-w-0 flex-1 text-[10.5px] leading-tight flex items-center gap-1 overflow-visible">
                                                                 @if($stask->order)
-                                                                    <!-- Company Name with Instant Tooltip (Expands to fill available width) -->
-                                                                    <div class="relative group/tip min-w-0 flex-1">
+                                                                    <!-- Company Name with Instant Tooltip -->
+                                                                    <div class="relative group/tip min-w-0 shrink">
                                                                         <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-bold' : 'text-zinc-900 font-bold') }}">
                                                                             {{ $stask->order->company_name }}
                                                                         </span>
@@ -1072,8 +1072,8 @@
                                                                     </div>
 
                                                                     @if($stask->order->task_name)
-                                                                        <!-- Order Name with Instant Tooltip (Expands to fill available width equally) -->
-                                                                        <div class="relative group/tip min-w-0 flex-1">
+                                                                        <!-- Order Name with Instant Tooltip -->
+                                                                        <div class="relative group/tip min-w-0 shrink">
                                                                             <span class="block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }}">
                                                                                 {{ $stask->order->task_name }}
                                                                             </span>

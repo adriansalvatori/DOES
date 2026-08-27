@@ -227,16 +227,29 @@
                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
                     </button>
                     <div class="space-y-1 min-w-0 flex-1">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
-                                {{ $order->company_name }}
-                            </h2>
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-2 flex-wrap min-w-0">
+                                <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
+                                    {{ $order->company_name }}
+                                </h2>
 
-                            @if($order->location_name || $order->clientLocation)
-                                <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] text-zinc-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0" title="Locación del Cliente">
-                                    <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                    <span>{{ $order->location_name ?: $order->clientLocation?->name }}</span>
-                                </span>
+                                @if($order->location_name || $order->clientLocation)
+                                    <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] text-zinc-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0" title="Locación del Cliente">
+                                        <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                        <span>{{ $order->location_name ?: $order->clientLocation?->name }}</span>
+                                    </span>
+                                @endif
+                            </div>
+
+                            @if($order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE)
+                                <button 
+                                    wire:click="openUnblockModal" 
+                                    type="button"
+                                    class="px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 shrink-0 cursor-pointer opacity-100 filter-none"
+                                    title="Desbloquear orden">
+                                    <x-lucide-unlock class="w-4 h-4 text-white stroke-[2.5]" />
+                                    <span>Desbloquear</span>
+                                </button>
                             @endif
                         </div>
 
@@ -1658,6 +1671,82 @@
                     <button wire:click="confirmUnblock" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
                         <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
                         <span>{{ __('Confirmar Desbloqueo') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- BLOCK MODAL -->
+    @if($showBlockModal)
+        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" wire:keydown.escape="closeBlockModal">
+            <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                            <x-lucide-alert-octagon class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Bloquear Orden') }}</h3>
+                            <p class="text-xs text-zinc-500">{{ $order->company_name ?? '' }} &mdash; {{ $order->task_name ?? '' }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeBlockModal" class="text-zinc-400 hover:text-zinc-600 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <div>
+                        <label class="font-medium text-zinc-700 block mb-1.5">{{ __('Motivo del Bloqueo:') }}</label>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            @foreach([
+                                'FALTAN MEDIDAS' => 'Faltan Medidas',
+                                'FALTA LOGO' => 'Falta Logo / Arte',
+                                'FALTA APROBACIÓN DE ESTIMADO' => 'Falta Aprobación Estimado',
+                                'ESPERANDO CLIENTE' => 'Esperando Cliente',
+                                'OTROS' => 'Otro Motivo'
+                            ] as $value => $label)
+                                <button type="button" 
+                                        wire:click="$set('blockReason', '{{ $value }}')" 
+                                        class="px-2.5 py-1.5 rounded-lg border text-[11px] font-medium text-left transition flex items-center justify-between {{ $blockReason === $value ? 'bg-rose-50 border-rose-300 text-rose-800 font-semibold shadow-2xs' : 'bg-stone-50 border-stone-200 text-zinc-700 hover:bg-stone-100' }}">
+                                    <span>{{ $label }}</span>
+                                    @if($blockReason === $value)
+                                        <x-lucide-check class="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                    @endif
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    @if($blockReason === 'OTROS')
+                        <div class="space-y-1">
+                            <label class="font-medium text-zinc-700 block">{{ __('Especificar Otro Motivo:') }}</label>
+                            <input type="text" wire:model="blockReasonOther" placeholder="Ej: Esperando material especial de proveedor..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400">
+                        </div>
+                    @endif
+
+                    <div class="space-y-1">
+                        <label class="font-medium text-zinc-700 block">{{ __('Detalles o Comentarios Adicionales (Opcional):') }}</label>
+                        <textarea wire:model="blockComment" rows="2" placeholder="Explica brevemente la situación..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    </div>
+
+                    <div class="pt-1 border-t border-stone-100">
+                        <label class="flex items-center gap-2 cursor-pointer text-zinc-800 font-medium">
+                            <input type="checkbox" wire:model="requireCustomerService" class="rounded border-stone-300 text-rose-600 focus:ring-rose-500 w-4 h-4">
+                            <span>{{ __('Requiere atención / seguimiento del cliente o responsable') }}</span>
+                        </label>
+                        <p class="text-[11px] text-zinc-500 pl-6 mt-0.5">{{ __('Creará una tarea pendiente para dar seguimiento con el contacto o responsable del cliente.') }}</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e9e9e7]">
+                    <button wire:click="closeBlockModal" type="button" class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmBlock" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
+                        <x-lucide-alert-octagon class="w-3.5 h-3.5" />
+                        <span>{{ __('Bloquear Orden') }}</span>
                     </button>
                 </div>
             </div>

@@ -122,6 +122,11 @@ class Order extends Model
         return $task;
     }
 
+    public function getLocationTextAttribute(): ?string
+    {
+        return $this->location_name ?: $this->clientLocation?->name;
+    }
+
     public function getDaysToCloseAttribute(): ?int
     {
         if (! $this->archived_at) {
@@ -328,6 +333,70 @@ class Order extends Model
             || $this->blocking_reason !== null;
     }
 
+    public function block(?string $reason = null, ?string $reasonOther = null, ?string $comment = null, bool $requireCS = false, ?string $actor = null): void
+    {
+        $previousStatus = $this->core_status;
+        $blockingEnum = null;
+
+        if ($reason) {
+            $blockingEnum = BlockingReason::tryFrom($reason) ?? BlockingReason::OTROS;
+        }
+
+        $substatus = ($reason === 'FALTA APROBACIÓN DE ESTIMADO' || $reason === 'FALTA_APROBACION_ESTIMADO')
+            ? Substatus::FALTA_APROBACION_ESTIMADO
+            : Substatus::BLOQUEADA;
+
+        $this->update([
+            'core_status' => CoreStatus::ENTRANTE,
+            'substatus' => $substatus,
+            'blocking_reason' => $blockingEnum,
+            'blocking_reason_other' => $reasonOther ?: ($reason === 'OTROS' ? $comment : null),
+            'customer_service_required' => $requireCS,
+        ]);
+
+        if ($requireCS) {
+            $taskTitle = "Resolver bloqueo: {$this->company_name} - {$this->task_name}";
+            if ($comment) {
+                $taskTitle .= " ({$comment})";
+            }
+
+            RelatedTask::create([
+                'order_id' => $this->id,
+                'title' => $taskTitle,
+                'type' => RelatedTaskType::SOLICITAR_INFO,
+                'status' => 'todo',
+                'assignee_id' => $this->getPrimaryDesignerId(),
+                'due_date' => now()->toDateString(),
+                'priority' => 'high',
+            ]);
+        }
+
+        OrderEvent::create([
+            'order_id' => $this->id,
+            'event_type' => 'ORDER_BLOCKED',
+            'actor' => $actor ?? auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $previousStatus?->value,
+            'new_value' => CoreStatus::ENTRANTE->value,
+            'metadata' => [
+                'substatus' => $substatus->value,
+                'reason' => $reason,
+                'reason_other' => $reasonOther,
+                'comment' => $comment ?? 'Orden marcada como Bloqueada.',
+                'customer_service_required' => $requireCS,
+            ],
+        ]);
+
+        app(AutomationEngine::class)->handleStatusChanged($this, $previousStatus, CoreStatus::ENTRANTE);
+
+        if ($this->trello_card_id) {
+            try {
+                app(TrelloSyncService::class)->updateCardOnTrello($this);
+            } catch (\Throwable $e) {
+                // Ignore network error
+            }
+        }
+    }
+
     public function unblock(string $reason, ?string $actor = null): void
     {
         $previousStatus = $this->core_status;
@@ -449,6 +518,10 @@ class Order extends Model
     {
         if ($this->is_missing_from_trello) {
             return 'bg-stone-100/90 border-2 border-dashed border-stone-300 text-stone-500 opacity-70 grayscale shadow-none';
+        }
+
+        if ($this->isBlocked() || $this->core_status === CoreStatus::ENTRANTE) {
+            return 'bg-stone-100/90 border border-stone-300 text-zinc-500 opacity-60 grayscale-[50%] shadow-none ring-0';
         }
 
         if ($this->done_today) {

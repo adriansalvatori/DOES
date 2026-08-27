@@ -31,6 +31,16 @@ class OrderDetailModal extends Component
 
     public $unblockReason = '';
 
+    public $showBlockModal = false;
+
+    public $blockReason = 'FALTAN MEDIDAS';
+
+    public $blockReasonOther = '';
+
+    public $blockComment = '';
+
+    public $requireCustomerService = false;
+
     // Edit Mode state
     public $isEditing = false;
 
@@ -254,6 +264,9 @@ class OrderDetailModal extends Component
     {
         if ($value === Substatus::ENVIADO_EN_ALTA->value || $value === 'ENVIADO EN ALTA') {
             $this->editCoreStatus = CoreStatus::EN_PRODUCCION->value;
+        } elseif ($value === Substatus::BLOQUEADA->value || $value === 'BLOQUEADA') {
+            $this->editCoreStatus = CoreStatus::ENTRANTE->value;
+            $this->openBlockModal();
         }
     }
 
@@ -261,7 +274,50 @@ class OrderDetailModal extends Component
     {
         if ($value === CoreStatus::EN_PRODUCCION->value || $value === 'EN PRODUCCIÓN') {
             $this->editSubstatus = Substatus::ENVIADO_EN_ALTA->value;
+        } elseif ($value === CoreStatus::ENTRANTE->value || $value === 'ENTRANTE' || $value === 'BLOCKED') {
+            $this->editSubstatus = Substatus::BLOQUEADA->value;
+            $this->openBlockModal();
         }
+    }
+
+    public function openBlockModal()
+    {
+        $this->blockReason = 'FALTAN MEDIDAS';
+        $this->blockReasonOther = '';
+        $this->blockComment = '';
+        $this->requireCustomerService = false;
+        $this->showBlockModal = true;
+    }
+
+    public function closeBlockModal()
+    {
+        $this->showBlockModal = false;
+        $this->blockReason = 'FALTAN MEDIDAS';
+        $this->blockReasonOther = '';
+        $this->blockComment = '';
+        $this->requireCustomerService = false;
+    }
+
+    public function confirmBlock()
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        $order->block(
+            reason: $this->blockReason,
+            reasonOther: $this->blockReasonOther,
+            comment: $this->blockComment,
+            requireCS: (bool) $this->requireCustomerService,
+            actor: 'Usuario'
+        );
+
+        $this->editCoreStatus = CoreStatus::ENTRANTE->value;
+        $this->editSubstatus = Substatus::BLOQUEADA->value;
+        $this->closeBlockModal();
+        $this->dispatch('order-updated');
+        session()->flash('message', __('Orden :company marcada como Bloqueada.', ['company' => $order->company_name]));
     }
 
     public function acceptPendingWo()

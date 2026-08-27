@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
@@ -27,7 +28,7 @@ class KanbanBoardTest extends TestCase
         Designer::create(['name' => 'César', 'active' => true]);
     }
 
-    public function test_moving_order_to_blocked_creates_subtask_and_places_order_in_designer_column_with_blocked_tag(): void
+    public function test_moving_order_to_blocked_opens_block_modal_and_sets_status_to_entrante_upon_confirmation(): void
     {
         $adrian = Designer::where('name', 'Adrián')->first();
 
@@ -40,17 +41,25 @@ class KanbanBoardTest extends TestCase
         ]);
 
         Livewire::test(Board::class)
-            ->call('moveOrder', $order->id, 'ENTRANTE');
+            ->call('moveOrder', $order->id, 'ENTRANTE')
+            ->assertSet('showBlockModal', true)
+            ->assertSet('pendingBlockOrderId', $order->id)
+            ->set('blockReason', 'FALTAN MEDIDAS')
+            ->set('blockComment', 'Cliente debe enviar ancho y alto')
+            ->set('requireCustomerService', true)
+            ->call('confirmBlock')
+            ->assertSet('showBlockModal', false);
 
         $freshOrder = $order->fresh();
 
-        $this->assertEquals(CoreStatus::ADRIAN_ORDERS_RECEIVED, $freshOrder->core_status);
+        $this->assertEquals(CoreStatus::ENTRANTE, $freshOrder->core_status);
         $this->assertEquals(Substatus::BLOQUEADA, $freshOrder->substatus);
+        $this->assertEquals(BlockingReason::FALTAN_MEDIDAS, $freshOrder->blocking_reason);
+        $this->assertTrue((bool) $freshOrder->customer_service_required);
 
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
-            'title' => 'Bloqueado: Acme Corp - Logo Design',
-            'type' => RelatedTaskType::BLOCKED->value,
+            'type' => RelatedTaskType::SOLICITAR_INFO->value,
             'status' => 'todo',
             'assignee_id' => $adrian->id,
         ]);
@@ -119,5 +128,20 @@ class KanbanBoardTest extends TestCase
         $this->assertSoftDeleted('related_tasks', [
             'id' => $task->id,
         ]);
+    }
+
+    public function test_kanban_board_displays_order_location_next_to_company_name(): void
+    {
+        $order = Order::create([
+            'company_name' => 'FUERZA LATINA',
+            'location_name' => 'EL SOL',
+            'task_name' => 'PROPUESTA DE SIGN',
+            'core_status' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(Board::class)
+            ->assertSee('FUERZA LATINA')
+            ->assertSee('EL SOL');
     }
 }
