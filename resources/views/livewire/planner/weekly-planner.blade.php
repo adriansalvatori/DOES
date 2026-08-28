@@ -294,17 +294,18 @@
 
     <!-- Top Sticky / Dynamic Toolbar Header -->
     <div class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
-        <div id="tour-planner-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 md:p-4 shadow-2xs space-y-3">
+        <div id="tour-planner-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3 md:p-3.5 shadow-2xs space-y-2.5">
             
-            <!-- LINE 1: Title -->
-            <div class="flex items-center justify-between min-w-0 gap-3">
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="p-2.5 rounded-xl bg-stone-900 text-white shrink-0 shadow-2xs">
-                        <x-lucide-calendar-days class="w-5 h-5" />
+            <!-- ROW 1: Title & Main Date Navigation Controls -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
+                <!-- Title & Date Label -->
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="p-2 rounded-lg bg-stone-900 text-white shrink-0 shadow-2xs">
+                        <x-lucide-calendar-days class="w-4 h-4" />
                     </div>
                     <div class="min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <h1 class="font-black text-base md:text-lg text-zinc-900 tracking-tight leading-none">
+                            <h1 class="font-bold text-base text-zinc-900 tracking-tight leading-none">
                                 {{ __('Agenda Semanal') }}
                             </h1>
                             @php
@@ -314,63 +315,41 @@
                                 $isThisWeek = $startVal->toDateString() === $currentMonday;
                             @endphp
                             @if($isThisWeek)
-                                <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] uppercase tracking-wider border border-emerald-300">
+                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px] uppercase tracking-wider border border-emerald-200">
                                     {{ __('Semana Actual') }}
                                 </span>
                             @endif
+                            @if(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
+                                <button 
+                                    wire:click="openAllSlaWarningsModal"
+                                    type="button" 
+                                    class="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 font-semibold text-[10px] flex items-center gap-1 border border-red-200 cursor-pointer transition"
+                                    title="{{ __('Ver tareas que superan SLA') }}">
+                                    <x-lucide-alert-triangle class="w-3 h-3 text-red-600 animate-pulse" />
+                                    <span>{{ $slaBreachedList->count() }} {{ __('Alertas SLA') }}</span>
+                                </button>
+                            @endif
                         </div>
-                        <p class="text-xs text-zinc-500 font-medium truncate mt-0.5">
-                            Lunes {{ $startVal->format('d') }} de {{ $startVal->locale('es')->translatedFormat('F') }} al Viernes {{ $endVal->format('d') }} de {{ $endVal->locale('es')->translatedFormat('F, Y') }}
+                        <p class="text-[11px] text-zinc-500 font-medium truncate mt-0.5">
+                            Lunes {{ $startVal->format('d') }} de {{ $startVal->locale('es')->translatedFormat('F') }} - Viernes {{ $endVal->format('d') }} de {{ $endVal->locale('es')->translatedFormat('F, Y') }}
                         </p>
                     </div>
                 </div>
 
-                @if(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
-                    <button 
-                        wire:click="openAllSlaWarningsModal"
-                        type="button" 
-                        class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs flex items-center gap-1.5 transition shadow-xs border border-red-700 cursor-pointer shrink-0"
-                        title="{{ __('Ver tareas que superan SLA') }}">
-                        <x-lucide-alert-triangle class="w-4 h-4 text-white animate-bounce" />
-                        <span>{{ $slaBreachedList->count() }} {{ __('Alertas SLA') }}</span>
-                    </button>
-                @endif
-            </div>
-
-            <!-- LINE 2: Designer Filter (Left) ___________________ Week jump, This Week, Next Week, Open Calendar (Right) -->
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pt-2.5 border-t border-[#e9e9e7]">
-                
-                <!-- Left: Designer Filter Tabs -->
-                <div class="flex items-center gap-1 overflow-x-auto scrollbar-none text-xs shrink-0 relative z-10">
-                    <button wire:click="$set('selectedDesignerFilter', 'all')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800' }}">
-                        <x-lucide-users class="w-3.5 h-3.5 text-zinc-500" />
-                        <span>{{ __('Todos los Diseñadores') }}</span>
-                    </button>
-
-                    @foreach($allDesigners as $des)
-                        <button 
-                            wire:click="$set('selectedDesignerFilter', '{{ $des->id }}')" 
-                            class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter == $des->id ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800' }}">
-                            <span class="w-2 h-2 rounded-full {{ $des->dot_color_class }}"></span>
-                            <span>{{ $des->name }}</span>
-                        </button>
-                    @endforeach
-                </div>
-
-                <!-- Right: Week jump, This Week, Next Week, Open Calendar -->
-                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                <!-- Right Controls: Week jump, This Week, Next Week, Open Calendar -->
+                <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                     <!-- Week jump navigator -->
-                    <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-1 rounded-lg gap-1.5 h-8">
+                    <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-1 h-7.5">
                         <button wire:click="previousWeek" class="p-1 rounded-md hover:bg-white hover:shadow-2xs text-zinc-700 transition cursor-pointer" title="Semana anterior">
-                            <x-lucide-chevron-left class="w-4 h-4" />
+                            <x-lucide-chevron-left class="w-3.5 h-3.5" />
                         </button>
 
-                        <span class="px-2 font-bold text-xs text-zinc-900 font-mono tracking-tight select-none">
+                        <span class="px-2 font-semibold text-xs text-zinc-800 font-mono tracking-tight select-none">
                             {{ $startVal->format('d M') }} - {{ $endVal->format('d M') }}
                         </span>
 
                         <button wire:click="nextWeek" class="p-1 rounded-md hover:bg-white hover:shadow-2xs text-zinc-700 transition cursor-pointer" title="Semana siguiente">
-                            <x-lucide-chevron-right class="w-4 h-4" />
+                            <x-lucide-chevron-right class="w-3.5 h-3.5" />
                         </button>
                     </div>
 
@@ -381,7 +360,7 @@
                     @endphp
                     <button 
                         wire:click="thisWeek" 
-                        class="px-3 py-1 h-8 rounded-lg text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer {{ $isThisWeek ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200' }}"
+                        class="px-2.5 py-1 h-7.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer {{ $isThisWeek ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200' }}"
                         title="Ir a la semana actual">
                         <x-lucide-calendar-days class="w-3.5 h-3.5" />
                         <span>{{ __('Esta Semana') }}</span>
@@ -390,7 +369,7 @@
                     <!-- Next Week -->
                     <button 
                         wire:click="jumpWeeks(1)" 
-                        class="px-3 py-1 h-8 rounded-lg text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer {{ $isNextWeek ? 'bg-indigo-600 text-white shadow-xs' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200' }}"
+                        class="px-2.5 py-1 h-7.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 cursor-pointer {{ $isNextWeek ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200' }}"
                         title="Ir a la próxima semana">
                         <x-lucide-arrow-right-circle class="w-3.5 h-3.5" />
                         <span>{{ __('Próxima Semana') }}</span>
@@ -400,10 +379,10 @@
                     <div class="relative" @click.outside="calendarOpen = false">
                         <button 
                             @click="calendarOpen = !calendarOpen"
-                            class="px-3 py-1.5 h-8 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-2xs transition flex items-center gap-2 cursor-pointer">
+                            class="px-2.5 py-1 h-7.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
                             <x-lucide-calendar class="w-3.5 h-3.5 text-stone-200" />
-                            <span>{{ __('Abrir Calendario') }}</span>
-                            <x-lucide-chevron-down class="w-3.5 h-3.5 text-stone-400" />
+                            <span>{{ __('Calendario') }}</span>
+                            <x-lucide-chevron-down class="w-3 h-3 text-stone-400" />
                         </button>
 
                         <!-- Mini-Calendar Interactive Popover Modal -->
@@ -460,56 +439,73 @@
                 </div>
             </div>
 
-            <!-- LINE 3: Por Dia / Diseñador + Workspace Searchbar (Left) ____________________ Searchbar Backlog (Right) -->
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-2.5 border-t border-[#e9e9e7]">
+            <!-- ROW 2: View Controls, Designer Filters & Unified Search Bar -->
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pt-2 border-t border-[#e9e9e7]">
                 
-                <!-- Left: Por Dia / Diseñador View Mode Switcher + Tareas de Sistema Toggle + Workspace Searchbar -->
-                <div class="flex flex-col sm:flex-row items-center gap-2.5 w-full md:w-auto">
-                    <!-- View Mode Switcher -->
-                    <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-1 h-8 text-xs font-medium shrink-0">
+                <!-- Left: View Mode Switcher + System Tasks Toggle -->
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-0.5 h-7.5 text-xs font-medium shrink-0">
                         <button 
                             type="button" 
                             wire:click="changeViewMode('by_day')"
-                            class="px-2.5 py-1 h-7 rounded-md transition cursor-pointer flex items-center gap-1.5 {{ $viewMode === 'by_day' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}">
+                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1.5 {{ $viewMode === 'by_day' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}">
                             <x-lucide-calendar-days class="w-3.5 h-3.5" />
                             <span>{{ __('Por Días') }}</span>
                         </button>
                         <button 
                             type="button" 
                             wire:click="changeViewMode('by_designer')"
-                            class="px-2.5 py-1 h-7 rounded-md transition cursor-pointer flex items-center gap-1.5 {{ $viewMode === 'by_designer' ? 'bg-white text-zinc-900 font-bold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}">
+                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1.5 {{ $viewMode === 'by_designer' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}">
                             <x-lucide-users class="w-3.5 h-3.5" />
                             <span>{{ __('Por Diseñador') }}</span>
                         </button>
                     </div>
 
-                    <!-- System Tasks Toggle Button (Violet Accent) -->
                     <button 
                         type="button" 
                         wire:click="toggleShowSystemTasks"
-                        class="px-2.5 py-1 h-8 rounded-lg border text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 cursor-pointer shrink-0 {{ $showSystemTasks ? 'bg-violet-600 hover:bg-violet-700 text-white border-violet-700 shadow-xs' : 'bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200' }}"
+                        class="px-2.5 py-1 h-7.5 rounded-lg border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shrink-0 {{ $showSystemTasks ? 'bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200' : 'bg-stone-50 hover:bg-stone-100 text-stone-500 border-stone-200' }}"
                         title="{{ $showSystemTasks ? __('Ocultar tareas de sistema') : __('Mostrar tareas de sistema') }}">
-                        <x-lucide-cpu class="w-3.5 h-3.5 {{ $showSystemTasks ? 'text-violet-100' : 'text-violet-600' }}" />
-                        <span>{{ __('Tareas de Sistema') }}</span>
+                        <x-lucide-cpu class="w-3.5 h-3.5 {{ $showSystemTasks ? 'text-violet-600' : 'text-stone-400' }}" />
+                        <span>{{ __('Sistema') }}</span>
+                    </button>
+                </div>
+
+                <!-- Center: Designer Filter Tabs -->
+                <div class="flex items-center gap-1 overflow-x-auto custom-horizontal-scrollbar py-0.5 text-xs shrink min-w-0">
+                    <button wire:click="$set('selectedDesignerFilter', 'all')" class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-zinc-900 text-white font-medium shadow-2xs' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
+                        <x-lucide-users class="w-3 h-3 text-zinc-400" />
+                        <span>{{ __('Todos') }}</span>
                     </button>
 
-                    <!-- Workspace Orders Search Bar (Next to View Switcher) -->
-                    <div class="relative shrink-0 w-full sm:w-56" x-data="{ open: true }" @click.outside="open = false">
+                    @foreach($allDesigners as $des)
+                        <button 
+                            wire:click="$set('selectedDesignerFilter', '{{ $des->id }}')" 
+                            class="px-2 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter == $des->id ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
+                            <span class="w-2 h-2 rounded-full {{ $des->dot_color_class }}"></span>
+                            <span>{{ $des->name }}</span>
+                        </button>
+                    @endforeach
+                </div>
+
+                <!-- Right: Search Inputs (Workspace & Backlog Compact) -->
+                <div class="flex items-center gap-1.5 shrink-0 w-full lg:w-auto">
+                    <!-- Workspace Search -->
+                    <div class="relative flex-1 lg:w-44" x-data="{ open: true }" @click.outside="open = false">
                         <div class="relative w-full">
-                            <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <x-lucide-search class="w-3 h-3 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                             <input 
                                 type="text" 
                                 wire:model.live.debounce.150ms="unscheduledSearch"
                                 @focus="open = true"
-                                placeholder="{{ __('Buscar en Workspace...') }}" 
-                                class="bg-[#fbfbfa] focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-lg pl-7 pr-7 py-1 text-xs text-zinc-800 focus:outline-none w-full font-normal shadow-2xs transition h-8 placeholder-zinc-400" />
+                                placeholder="{{ __('Workspace...') }}" 
+                                class="bg-[#fbfbfa] focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-lg pl-7 pr-6 py-1 text-xs text-zinc-800 focus:outline-none w-full font-normal shadow-2xs transition h-7.5 placeholder-zinc-400" />
                             @if($unscheduledSearch)
                                 <button 
                                     wire:click="$set('unscheduledSearch', '')" 
                                     type="button" 
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700"
-                                    title="{{ __('Limpiar búsqueda') }}">
-                                    <x-lucide-x class="w-3.5 h-3.5" />
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700">
+                                    <x-lucide-x class="w-3 h-3" />
                                 </button>
                             @endif
                         </div>
@@ -521,7 +517,7 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs">
+                                class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs">
                                 
                                 <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-500 flex items-center justify-between">
                                     <span class="flex items-center gap-1.5">
@@ -565,79 +561,78 @@
                             </div>
                         @endif
                     </div>
-                </div>
 
-                <!-- Right: Backlog Search Bar -->
-                <div class="relative shrink-0 w-full sm:w-56" x-data="{ open: true }" @click.outside="open = false">
-                    <div class="relative w-full">
-                        <x-lucide-archive class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                        <input 
-                            type="text" 
-                            wire:model.live.debounce.150ms="backlogSearch"
-                            @focus="open = true"
-                            placeholder="{{ __('Buscar en Backlog...') }}" 
-                            class="bg-[#fbfbfa] focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-lg pl-7 pr-7 py-1 text-xs text-zinc-800 focus:outline-none w-full font-normal shadow-2xs transition h-8 placeholder-zinc-400" />
-                        @if($backlogSearch)
-                            <button 
-                                wire:click="$set('backlogSearch', '')" 
-                                type="button" 
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700"
-                                title="{{ __('Limpiar búsqueda') }}">
-                                <x-lucide-x class="w-3.5 h-3.5" />
-                            </button>
+                    <!-- Backlog Search -->
+                    <div class="relative flex-1 lg:w-44" x-data="{ open: true }" @click.outside="open = false">
+                        <div class="relative w-full">
+                            <x-lucide-archive class="w-3 h-3 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input 
+                                type="text" 
+                                wire:model.live.debounce.150ms="backlogSearch"
+                                @focus="open = true"
+                                placeholder="{{ __('Backlog...') }}" 
+                                class="bg-[#fbfbfa] focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-lg pl-7 pr-6 py-1 text-xs text-zinc-800 focus:outline-none w-full font-normal shadow-2xs transition h-7.5 placeholder-zinc-400" />
+                            @if($backlogSearch)
+                                <button 
+                                    wire:click="$set('backlogSearch', '')" 
+                                    type="button" 
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700">
+                                    <x-lucide-x class="w-3 h-3" />
+                                </button>
+                            @endif
+                        </div>
+
+                        <!-- Backlog Search Results Popover -->
+                        @if(!empty($backlogSearch))
+                            <div 
+                                x-show="open"
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs">
+                                
+                                <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-500 flex items-center justify-between">
+                                    <span class="flex items-center gap-1.5">
+                                        <x-lucide-archive class="w-3.5 h-3.5 text-zinc-500" />
+                                        {{ __('Órdenes en Backlog') }} ({{ $backlogOrders->count() }})
+                                    </span>
+                                    <span class="text-[9px] font-normal text-zinc-400">{{ __('Sin agendar') }}</span>
+                                </div>
+
+                                <div class="max-h-72 overflow-y-auto custom-vertical-scrollbar divide-y divide-stone-100">
+                                    @forelse($backlogOrders as $bOrder)
+                                        <div 
+                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $bOrder->id }} })"
+                                            @click="open = false"
+                                            class="p-2.5 hover:bg-stone-100 cursor-pointer flex items-center justify-between gap-2 transition group">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1 mb-0.5">
+                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+                                                        Backlog
+                                                    </span>
+                                                    @if($bOrder->wo_number)
+                                                        <x-wo-badge :number="$bOrder->wo_number" variant="outline" prefix="#" class="text-[9px]" />
+                                                    @endif
+                                                    @if($bOrder->designer)
+                                                        <span class="text-[9px] text-zinc-500 font-medium truncate">• {{ $bOrder->designer->name }}</span>
+                                                    @endif
+                                                </div>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate group-hover:text-stone-900 transition">{{ $bOrder->company_name }}</h4>
+                                                <p class="text-[11px] text-zinc-500 truncate mt-0.2">{{ $bOrder->task_name }}</p>
+                                            </div>
+                                            <div class="flex items-center gap-1 shrink-0">
+                                                <x-lucide-panel-right class="w-4 h-4 text-zinc-400 group-hover:text-stone-700 transition" />
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <div class="p-4 text-center text-zinc-400 italic text-[11px]">
+                                            {{ __('No se encontraron órdenes en backlog para ":query".', ['query' => $backlogSearch]) }}
+                                        </div>
+                                    @endforelse
+                                </div>
+                            </div>
                         @endif
                     </div>
-
-                    <!-- Backlog Search Results Popover -->
-                    @if(!empty($backlogSearch))
-                        <div 
-                            x-show="open"
-                            x-transition:enter="transition ease-out duration-100"
-                            x-transition:enter-start="opacity-0 scale-95"
-                            x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs">
-                            
-                            <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-500 flex items-center justify-between">
-                                <span class="flex items-center gap-1.5">
-                                    <x-lucide-archive class="w-3.5 h-3.5 text-zinc-500" />
-                                    {{ __('Órdenes en Backlog') }} ({{ $backlogOrders->count() }})
-                                </span>
-                                <span class="text-[9px] font-normal text-zinc-400">{{ __('Sin agendar') }}</span>
-                            </div>
-
-                            <div class="max-h-72 overflow-y-auto custom-vertical-scrollbar divide-y divide-stone-100">
-                                @forelse($backlogOrders as $bOrder)
-                                    <div 
-                                        wire:click="$dispatch('open-order-detail', { orderId: {{ $bOrder->id }} })"
-                                        @click="open = false"
-                                        class="p-2.5 hover:bg-stone-100 cursor-pointer flex items-center justify-between gap-2 transition group">
-                                        <div class="min-w-0 flex-1">
-                                            <div class="flex items-center gap-1 mb-0.5">
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                                                    Backlog
-                                                </span>
-                                                @if($bOrder->wo_number)
-                                                    <x-wo-badge :number="$bOrder->wo_number" variant="outline" prefix="#" class="text-[9px]" />
-                                                @endif
-                                                @if($bOrder->designer)
-                                                    <span class="text-[9px] text-zinc-500 font-medium truncate">• {{ $bOrder->designer->name }}</span>
-                                                @endif
-                                            </div>
-                                            <h4 class="font-bold text-xs text-zinc-900 truncate group-hover:text-stone-900 transition">{{ $bOrder->company_name }}</h4>
-                                            <p class="text-[11px] text-zinc-500 truncate mt-0.2">{{ $bOrder->task_name }}</p>
-                                        </div>
-                                        <div class="flex items-center gap-1 shrink-0">
-                                            <x-lucide-panel-right class="w-4 h-4 text-zinc-400 group-hover:text-stone-700 transition" />
-                                        </div>
-                                    </div>
-                                @empty
-                                    <div class="p-4 text-center text-zinc-400 italic text-[11px]">
-                                        {{ __('No se encontraron órdenes en backlog para ":query".', ['query' => $backlogSearch]) }}
-                                    </div>
-                                @endforelse
-                            </div>
-                        </div>
-                    @endif
                 </div>
             </div>
 
@@ -744,8 +739,8 @@
                                     <!-- Kanban Cards Body -->
                                     <div class="p-2 overflow-y-auto flex-1 space-y-2 min-h-0">
                                         @if($dayOrders->isEmpty() && $daySubtasks->isEmpty())
-                                            <div class="py-8 text-center border border-dashed border-stone-300/70 rounded-lg my-1">
-                                                <span class="text-[10px] text-zinc-400 font-normal block">Sin trabajo agendado</span>
+                                            <div class="py-6 text-center border border-dashed border-stone-200/80 rounded-lg my-1 bg-stone-50/40">
+                                                <span class="text-[10px] text-zinc-400 font-normal select-none">Sin trabajo agendado</span>
                                             </div>
                                         @else
                                             <div class="space-y-2">
@@ -755,7 +750,7 @@
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'order:{{ $order->id }}')"
                                                         x-data="{ openSub: false, customTitle: '', targetDate: '{{ $day['date_string'] }}' }"
-                                                        class="bg-white border border-[#e9e9e7] hover:border-stone-400 rounded-xl p-2.5 space-y-1.5 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] opacity-75' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 ring-1 ring-red-300/40') : ($order->isOverdue() && !$order->done_today ? 'bg-rose-50/50 border-rose-200' : '') }}">
+                                                        class="bg-white border rounded-xl p-2.5 space-y-1.5 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $order->done_today ? 'opacity-65 bg-stone-50 border-stone-200' : ($order->isUrgente() ? 'border-red-400 border-l-4 border-l-red-500 bg-red-50/30' : ($order->isOverdue() ? 'border-amber-400 border-l-4 border-l-amber-500 bg-amber-50/20' : 'border-[#e9e9e7] hover:border-stone-400')) }}">
                                                         
                                                         <div class="flex items-start justify-between gap-1.5 min-w-0">
                                                             <div class="flex items-center gap-2 min-w-0 flex-1">
@@ -766,7 +761,7 @@
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                                 </button>
                                                                 <div class="min-w-0 flex-1">
-                                                                    <h4 class="font-bold text-[11px] text-zinc-900 truncate leading-tight {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
+                                                                    <h4 class="font-semibold text-[11.5px] text-zinc-900 truncate leading-tight capitalize {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
                                                                     <p class="font-normal text-[10px] text-zinc-500 truncate leading-tight mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->task_name }}</p>
                                                                 </div>
                                                             </div>
@@ -788,7 +783,7 @@
                                                             @endphp
                                                             <div class="flex items-center justify-between pt-1 border-t border-stone-100 text-[9px]">
                                                                 @if($orderOverSla || $orderOverdue)
-                                                                    <span class="font-bold text-red-600 inline-flex items-center gap-1" title="SLA: {{ $order->current_due_date->format('d M, Y') }}">
+                                                                    <span class="font-semibold text-red-600 inline-flex items-center gap-1 bg-red-50 px-1.5 py-0.2 rounded border border-red-200/60" title="SLA: {{ $order->current_due_date->format('d M, Y') }}">
                                                                         <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
                                                                         <span>SLA Excedido</span>
                                                                     </span>
@@ -862,7 +857,7 @@
                                                     <div 
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
-                                                        class="bg-white/80 border border-stone-200/80 hover:border-stone-300 rounded-lg p-2 space-y-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing">
+                                                        class="bg-white border border-stone-200/80 hover:border-stone-300 rounded-lg p-2 space-y-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
                                                         <div class="flex items-center justify-between gap-1 min-w-0">
                                                             <div class="flex items-center gap-2 min-w-0 flex-1">
@@ -871,8 +866,9 @@
                                                                     type="button"
                                                                     class="w-3.5 h-3.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                                                                                                     <div class="min-w-0 flex-1" @click="if({{ $stask->isNote() ? 'true' : 'false' }}) { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }">
-                                                                    <h5 class="font-bold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900') }} {{ $stask->isNote() ? 'cursor-pointer hover:text-amber-700' : '' }}">
+                                                                </button>
+                                                                <div class="min-w-0 flex-1" @click="if({{ $stask->isNote() ? 'true' : 'false' }}) { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }">
+                                                                    <h5 class="font-semibold text-[11px] truncate leading-tight capitalize {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900') }} {{ $stask->isNote() ? 'cursor-pointer hover:text-amber-700' : '' }}">
                                                                         {{ $stask->title }}
                                                                     </h5>
                                                                 </div>
@@ -893,11 +889,11 @@
                                                                     class="text-left min-w-0 flex-1 hover:underline group/link">
                                                                     <div class="flex items-center gap-1 min-w-0">
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
-                                                                        <span class="font-bold text-[10px] truncate leading-tight {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
+                                                                        <span class="font-semibold text-[10px] truncate leading-tight capitalize {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
                                                                         @if($stask->order->location_text)
-                                                                            <span class="inline-flex items-center gap-0.5 text-[9.5px] font-bold text-zinc-900 shrink-0 truncate max-w-[100px]">
-                                                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2.5]" />
-                                                                                <span class="uppercase truncate">{{ $stask->order->location_text }}</span>
+                                                                            <span class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-zinc-700 shrink-0 truncate max-w-[100px]">
+                                                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2]" />
+                                                                                <span class="capitalize truncate">{{ $stask->order->location_text }}</span>
                                                                             </span>
                                                                         @endif
                                                                         @if($stask->order->task_name)
@@ -917,7 +913,7 @@
                                                                     $staskOverdue = $stask->order->isOverdue();
                                                                 @endphp
                                                                 @if($staskOverSla || $staskOverdue)
-                                                                    <div class="pt-0.5 text-[9px] font-bold text-red-600 flex items-center gap-1" title="SLA: {{ $stask->order->current_due_date->format('d M, Y') }}">
+                                                                    <div class="pt-0.5 text-[9px] font-semibold text-red-600 flex items-center gap-1" title="SLA: {{ $stask->order->current_due_date->format('d M, Y') }}">
                                                                         <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
                                                                         <span>SLA Excedido</span>
                                                                     </div>
@@ -929,7 +925,7 @@
                                                                     @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })" 
                                                                     type="button"
                                                                     class="text-left min-w-0 flex-1 group/link flex items-center gap-1 cursor-pointer">
-                                                                    <span class="inline-flex items-center gap-1 text-[9.5px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80">
+                                                                    <span class="inline-flex items-center gap-1 text-[9.5px] font-semibold text-amber-800 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200/80">
                                                                         <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
                                                                         <span>{{ __('Nota (Sin Orden)') }}</span>
                                                                         <span class="text-[9px] text-amber-600 font-normal underline hover:text-amber-900">({{ __('Vincular orden') }})</span>
@@ -1272,9 +1268,9 @@
                                                                 @if($stask->order)
                                                                     <!-- Row 1: Order Details (Company, Location, Task Name) -->
                                                                     <div class="flex items-center gap-1 text-[10.5px] leading-tight min-w-0">
-                                                                        <!-- Company Name with Instant Tooltip -->
+                                                                         <!-- Company Name with Instant Tooltip -->
                                                                         <div class="relative group/tip min-w-0 shrink">
-                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-bold' : 'text-zinc-900 font-bold') }}">
+                                                                            <span class="capitalize tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900 font-semibold') }}">
                                                                                 {{ $stask->order->company_name }}
                                                                             </span>
                                                                             <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -1285,8 +1281,8 @@
                                                                         @if($stask->order->location_text)
                                                                             <!-- Location Name with Instant Tooltip -->
                                                                             <div class="relative group/tip min-w-0 shrink flex items-center gap-0.5">
-                                                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2.5]" />
-                                                                                <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : 'text-zinc-900 font-bold' }} text-[10px]">
+                                                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2]" />
+                                                                                <span class="capitalize tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : 'text-zinc-800 font-semibold' }} text-[10px]">
                                                                                     {{ $stask->order->location_text }}
                                                                                 </span>
                                                                                 <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">

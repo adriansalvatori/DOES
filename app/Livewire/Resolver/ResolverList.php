@@ -139,7 +139,7 @@ class ResolverList extends Component
 
     public function render()
     {
-        $blockedOrders = Order::inWorkspace()->with(['designer', 'relatedTasks'])
+        $blockedOrders = Order::inWorkspace()->with(['designer', 'relatedTasks', 'clientLocation'])
             ->where(function ($q) {
                 $q->where('substatus', Substatus::BLOQUEADA)
                     ->orWhere('substatus', Substatus::FALTA_APROBACION_ESTIMADO)
@@ -168,7 +168,7 @@ class ResolverList extends Component
                 CoreStatus::ARCHIVED,
             ]);
         })
-            ->with(['order', 'assignee'])
+            ->with(['order.clientLocation', 'assignee'])
             ->where('status', 'todo')
             ->whereIn('type', [
                 RelatedTaskType::RESOLVER,

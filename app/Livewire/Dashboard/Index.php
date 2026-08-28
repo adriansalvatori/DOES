@@ -83,7 +83,7 @@ class Index extends Component
 
     public function render()
     {
-        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks']);
+        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks', 'clientLocation']);
 
         if ($this->selectedDesigner !== 'all') {
             $query->where('designer_id', $this->selectedDesigner);

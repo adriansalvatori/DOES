@@ -131,4 +131,20 @@ class UnblockOrderTest extends TestCase
         $this->assertEquals('AUTOMATIC_OVERDUE_DETECTION', $event->metadata['trigger_type']);
         $this->assertEquals('urgent', $event->metadata['priority']);
     }
+
+    public function test_action_required_view_displays_location_text()
+    {
+        $order = Order::create([
+            'company_name' => 'SUVIDHA INTERNATIONAL MARKET',
+            'location_name' => 'DALLAS DOWNTOWN',
+            'task_name' => 'OUTDOOR BANNER',
+            'core_status' => CoreStatus::ENTRANTE,
+            'substatus' => Substatus::BLOQUEADA,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(ResolverList::class)
+            ->assertSee('SUVIDHA INTERNATIONAL MARKET')
+            ->assertSee('DALLAS DOWNTOWN');
+    }
 }

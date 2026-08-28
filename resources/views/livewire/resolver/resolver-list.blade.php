@@ -63,6 +63,12 @@
                                         {{ $order->blocking_reason?->label() ?? ($order->substatus ? $order->substatus->label() : __('BLOQUEADA')) }}
                                     </span>
                                     <h4 class="font-semibold text-xs text-zinc-900 mt-1 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                    @if($order->location_text)
+                                        <p class="text-[11px] font-semibold text-stone-600 truncate uppercase tracking-tight flex items-center gap-1 mt-0.5" title="{{ __('Locación') }}: {{ $order->location_text }}">
+                                            <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
+                                            <span class="truncate">{{ $order->location_text }}</span>
+                                        </p>
+                                    @endif
                                     <p class="text-[11px] text-zinc-500 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                 </div>
 
@@ -129,12 +135,18 @@
                     @foreach($resolverTasks as $task)
                         <div class="rounded-lg p-3 bg-[#fcfcfb] border border-orange-200 flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 flex-wrap">
                                     <span class="px-2 py-0.5 rounded text-[9px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
                                         {{ $task->type?->label() ?? $task->type }}
                                     </span>
                                     @if($task->order)
                                         <span class="text-xs font-semibold text-zinc-900 truncate">{{ $task->order->company_name }}</span>
+                                        @if($task->order->location_text)
+                                            <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $task->order->location_text }}">
+                                                <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                                <span class="uppercase truncate max-w-[120px]">{{ $task->order->location_text }}</span>
+                                            </span>
+                                        @endif
                                     @endif
                                 </div>
                                 <p class="text-xs text-zinc-700 mt-1">{{ $task->title }}</p>
@@ -166,7 +178,13 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-sm text-zinc-900">{{ __('Desbloquear Orden') }}</h3>
-                            <p class="text-xs text-zinc-500">{{ $unblockingOrder->company_name }} &mdash; {{ $unblockingOrder->task_name }}</p>
+                            <p class="text-xs text-zinc-500">
+                                {{ $unblockingOrder->company_name }}
+                                @if($unblockingOrder->location_text)
+                                    &bull; <span class="font-medium text-stone-700 uppercase">{{ $unblockingOrder->location_text }}</span>
+                                @endif
+                                &mdash; {{ $unblockingOrder->task_name }}
+                            </p>
                         </div>
                     </div>
                     <button wire:click="closeUnblockModal" class="text-zinc-400 hover:text-zinc-600 transition">

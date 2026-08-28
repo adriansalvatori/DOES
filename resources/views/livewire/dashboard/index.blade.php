@@ -403,6 +403,12 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
                                             <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            @if($order->location_text)
+                                                <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $order->location_text }}">
+                                                    <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                                    <span class="uppercase truncate max-w-[100px]">{{ $order->location_text }}</span>
+                                                </span>
+                                            @endif
                                             <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-50 text-orange-800 border border-orange-200 shrink-0 whitespace-nowrap">
                                                 {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
                                             </span>
@@ -616,6 +622,12 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
                                             <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            @if($order->location_text)
+                                                <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $order->location_text }}">
+                                                    <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                                    <span class="uppercase truncate max-w-[100px]">{{ $order->location_text }}</span>
+                                                </span>
+                                            @endif
                                             <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-50 text-orange-800 border border-orange-200 shrink-0 whitespace-nowrap">
                                                 {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
                                             </span>
