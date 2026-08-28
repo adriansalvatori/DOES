@@ -1990,6 +1990,8 @@
     @if($showSlaWarningModal)
         <div 
             class="fixed inset-0 z-[100] overflow-y-auto bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+            @keydown.window.escape.prevent="$wire.closeSlaWarningModal()"
+            @keydown.window.enter.prevent="$wire.closeSlaWarningModal()"
             wire:keydown.escape="closeSlaWarningModal">
             
             <div 

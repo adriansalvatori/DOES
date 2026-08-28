@@ -153,7 +153,11 @@
     @endif
 
     @if($showUnblockModal && $unblockingOrder)
-        <div class="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs" wire:keydown.escape="closeUnblockModal">
+        <div 
+            class="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs" 
+            @keydown.window.escape.prevent="$wire.closeUnblockModal()"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmUnblock()"
+            wire:keydown.escape="closeUnblockModal">
             <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
                 <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
                     <div class="flex items-center gap-2.5">

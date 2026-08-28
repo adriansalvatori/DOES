@@ -324,7 +324,10 @@
 
     <!-- Interactive Sync Summary Report Modal -->
     @if($syncReport['show'])
-        <div class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+            class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+            @keydown.window.escape.prevent="$wire.closeReportModal()"
+            @keydown.window.enter.prevent="$wire.closeReportModal()">
             <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2.5">

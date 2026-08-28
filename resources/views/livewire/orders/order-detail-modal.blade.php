@@ -1513,7 +1513,10 @@
 
     <!-- APPROVAL ACTION MODAL -->
     @if($showApprovalModal)
-        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+            @keydown.window.escape.prevent="$wire.set('showApprovalModal', false)"
+            @keydown.window.enter.prevent="$wire.submitApproval()">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
                 <div>
                     <h3 class="text-base font-semibold text-zinc-900">Confirmación de Aprobación</h3>
@@ -1587,7 +1590,10 @@
 
     <!-- DELAY RESOLUTION MODAL -->
     @if($showDelayModal)
-        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+            @keydown.window.escape.prevent="$wire.set('showDelayModal', false)"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.submitDelayResolution()">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
                 <div>
                     <h3 class="text-base font-semibold text-zinc-900">Resolver Atraso</h3>
@@ -1620,7 +1626,11 @@
 
     <!-- UNBLOCK MODAL -->
     @if($showUnblockModal)
-        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" wire:keydown.escape="closeUnblockModal">
+        <div 
+            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            @keydown.window.escape.prevent="$wire.closeUnblockModal()"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmUnblock()"
+            wire:keydown.escape="closeUnblockModal">
             <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
                 <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
                     <div class="flex items-center gap-2.5">
@@ -1679,7 +1689,11 @@
 
     <!-- BLOCK MODAL -->
     @if($showBlockModal)
-        <div class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" wire:keydown.escape="closeBlockModal">
+        <div 
+            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            @keydown.window.escape.prevent="$wire.closeBlockModal()"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmBlock()"
+            wire:keydown.escape="closeBlockModal">
             <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-lg w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
                 <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
                     <div class="flex items-center gap-2.5">
