@@ -949,88 +949,173 @@
                         </div>
                     @endif
 
-                    <!-- Related Tasks Section -->
-                    <div class="space-y-2.5">
-                        <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                            <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                <x-lucide-check-square class="w-4 h-4 text-zinc-700 shrink-0" /> 
-                                <span>Tareas Vinculadas / Gatilladas</span>
-                                <span class="text-zinc-400 font-mono text-[11px] font-normal">({{ $order->relatedTasks->count() }})</span>
-                            </h4>
-                            <span class="text-[10px] text-zinc-400">Puedes completar o eliminar cualquier tarea gatillada</span>
+                    <!-- Related Subtasks Section -->
+                    @php
+                        $subtasks = $order->relatedTasks;
+                        $totalSubtasks = $subtasks->count();
+                        $doneSubtasks = $subtasks->filter(fn($t) => $t->isDone())->count();
+                        $progressPercent = $totalSubtasks > 0 ? (int) round(($doneSubtasks / $totalSubtasks) * 100) : 0;
+                    @endphp
+
+                    <div class="space-y-3">
+                        <!-- Subtasks Header & Progress Bar -->
+                        <div class="space-y-1.5 border-b border-[#e9e9e7] pb-2.5">
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <x-lucide-check-square class="w-4 h-4 text-zinc-700 shrink-0" /> 
+                                    <span>Subtareas</span>
+                                    <span class="text-zinc-500 font-mono text-[11px] font-normal">({{ $doneSubtasks }}/{{ $totalSubtasks }})</span>
+                                </h4>
+                                @if($totalSubtasks > 0)
+                                    <span class="text-[11px] font-mono font-semibold {{ $progressPercent === 100 ? 'text-emerald-600' : 'text-zinc-500' }}">
+                                        {{ $progressPercent }}%
+                                    </span>
+                                @else
+                                    <span class="text-[10px] text-zinc-400">Organiza y realiza el seguimiento de entregables</span>
+                                @endif
+                            </div>
+
+                            @if($totalSubtasks > 0)
+                                <div class="w-full bg-stone-100 rounded-full h-1.5 overflow-hidden">
+                                    <div 
+                                        class="h-full rounded-full transition-all duration-300 {{ $progressPercent === 100 ? 'bg-emerald-500' : 'bg-zinc-800' }}" 
+                                        style="width: {{ $progressPercent }}%"
+                                    ></div>
+                                </div>
+                            @endif
                         </div>
 
+                        <!-- Subtasks List -->
                         <div class="space-y-1.5">
-                            @forelse($order->relatedTasks as $task)
-                                <div class="bg-[#fbfbfa] hover:bg-stone-50/80 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs">
-                                    <div class="min-w-0 flex-1 space-y-0.5">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <span class="font-bold text-zinc-900 text-xs truncate {{ $task->isDone() ? 'line-through text-zinc-400' : '' }}" title="{{ $task->title }}">
-                                                {{ $task->title }}
-                                            </span>
-                                            @if($task->is_work_task !== false)
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0 flex items-center gap-1">
-                                                    <x-lucide-wrench class="w-2.5 h-2.5 text-blue-600" />
-                                                    <span>Trabajo</span>
+                            @forelse($subtasks as $task)
+                                <div 
+                                    x-data="{ 
+                                        editing: false, 
+                                        title: @js($task->title),
+                                        saveTitle() {
+                                            const trimmed = this.title.trim();
+                                            if (trimmed && trimmed !== @js($task->title)) {
+                                                $wire.updateTaskTitle({{ $task->id }}, trimmed);
+                                            } else {
+                                                this.title = @js($task->title);
+                                            }
+                                            this.editing = false;
+                                        }
+                                    }" 
+                                    class="bg-[#fbfbfa] hover:bg-stone-50/90 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs group"
+                                >
+                                    <!-- Read Mode View -->
+                                    <div x-show="!editing" class="flex items-center justify-between gap-3 w-full min-w-0">
+                                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                            <!-- Status Checkbox Button -->
+                                            <button 
+                                                wire:click="toggleTaskStatus({{ $task->id }})" 
+                                                type="button"
+                                                class="w-4 h-4 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                                title="{{ $task->isDone() ? 'Marcar como pendiente' : 'Marcar como completada' }}">
+                                                <x-lucide-check class="w-3 h-3 stroke-[3]" />
+                                            </button>
+
+                                            <!-- Subtask Title & Tags -->
+                                            <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
+                                                <span 
+                                                    @click="editing = true; $nextTick(() => $refs.editInput.focus())"
+                                                    class="font-semibold text-zinc-900 text-xs break-words cursor-pointer hover:text-zinc-700 transition {{ $task->isDone() ? 'line-through text-zinc-400 font-normal' : '' }}" 
+                                                    title="Haz clic para editar el nombre de la subtarea">
+                                                    {{ $task->title }}
                                                 </span>
-                                            @else
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0 flex items-center gap-1">
-                                                    <x-lucide-clipboard-list class="w-2.5 h-2.5 text-amber-600" />
-                                                    <span>Gestión</span>
-                                                </span>
-                                            @endif
-                                            @if($task->type)
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-stone-100 text-zinc-600 border border-stone-200 shrink-0 uppercase tracking-wider">
-                                                    {{ $task->type->value }}
-                                                </span>
-                                            @endif
+
+                                                <!-- Work vs Admin Badge -->
+                                                @if($task->is_work_task !== false)
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0 flex items-center gap-1">
+                                                        <x-lucide-wrench class="w-2.5 h-2.5 text-blue-600" />
+                                                        <span>Trabajo</span>
+                                                    </span>
+                                                @else
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0 flex items-center gap-1">
+                                                        <x-lucide-clipboard-list class="w-2.5 h-2.5 text-amber-600" />
+                                                        <span>Gestión</span>
+                                                    </span>
+                                                @endif
+
+                                                <!-- Date Badge -->
+                                                @if($task->scheduled_date)
+                                                    <span class="text-[10px] text-zinc-500 font-medium inline-flex items-center gap-1 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 shrink-0" title="Fecha programada">
+                                                        <x-lucide-calendar class="w-2.5 h-2.5 text-zinc-400" />
+                                                        <span>{{ $task->scheduled_date->format('d M') }}</span>
+                                                    </span>
+                                                @endif
+
+                                                <!-- Assignee Badge -->
+                                                @if($task->assignee)
+                                                    <span class="text-[10px] text-zinc-500 font-medium inline-flex items-center gap-1 shrink-0" title="Asignado a">
+                                                        <x-lucide-user class="w-2.5 h-2.5 text-zinc-400" />
+                                                        <span>{{ $task->assignee->name }}</span>
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </div>
 
-                                        <div class="flex flex-wrap items-center gap-3 text-[10px] text-zinc-400 font-mono">
-                                            <span>Origen: <strong class="text-zinc-600 font-sans">{{ $task->trigger_type ?? 'Gatillada' }}</strong></span>
-                                            @if($task->assignee)
-                                                <span>Asignado: <strong class="text-zinc-600 font-sans">{{ $task->assignee->name }}</strong></span>
-                                            @endif
-                                            @if($task->scheduled_date)
-                                                <span>Fecha: <strong class="text-zinc-600 font-sans">{{ $task->scheduled_date->format('d M') }}</strong></span>
-                                            @endif
+                                        <!-- Action Buttons -->
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <!-- Edit Name Button -->
+                                            <button 
+                                                type="button"
+                                                @click="editing = true; $nextTick(() => $refs.editInput.focus())"
+                                                class="p-1.5 rounded-lg bg-white hover:bg-stone-100 text-zinc-400 hover:text-zinc-700 border border-stone-200 transition cursor-pointer" 
+                                                title="Editar nombre de subtarea">
+                                                <x-lucide-pencil class="w-3.5 h-3.5" />
+                                            </button>
+
+                                            <!-- Delete Subtask Button -->
+                                            <button 
+                                                wire:click="deleteTask({{ $task->id }})" 
+                                                wire:confirm="¿Estás seguro de eliminar la subtarea '{{ addslashes($task->title) }}'?" 
+                                                class="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 border border-stone-200 hover:border-rose-200 transition cursor-pointer" 
+                                                title="Eliminar subtarea">
+                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
                                     </div>
 
-                                    <div class="flex items-center gap-2 shrink-0">
+                                    <!-- Edit Mode View -->
+                                    <form 
+                                        x-show="editing" 
+                                        @submit.prevent="saveTitle()" 
+                                        class="flex items-center gap-2 w-full"
+                                        x-cloak
+                                    >
+                                        <input 
+                                            x-ref="editInput"
+                                            type="text" 
+                                            x-model="title"
+                                            @keydown.escape="editing = false; title = @js($task->title)"
+                                            placeholder="Nombre de la subtarea..."
+                                            class="flex-1 bg-white border border-stone-300 rounded-lg px-2.5 py-1 text-xs text-zinc-900 font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-800"
+                                        >
                                         <button 
-                                            wire:click="toggleTaskStatus({{ $task->id }})" 
-                                            class="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition flex items-center gap-1 cursor-pointer {{ $task->isDone() ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100' }}">
-                                            <x-lucide-check-circle-2 class="w-3 h-3 stroke-[2.5]" />
-                                            <span>{{ $task->isDone() ? 'Completada ✓' : 'Pendiente' }}</span>
+                                            type="submit" 
+                                            class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
+                                            <x-lucide-check class="w-3.5 h-3.5" />
+                                            <span>Guardar</span>
                                         </button>
-
                                         <button 
-                                            wire:click="dismissTask({{ $task->id }})" 
-                                            wire:confirm="¿Descartar la subtarea '{{ addslashes($task->title) }}'?" 
-                                            class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-stone-100 hover:bg-rose-50 text-zinc-600 hover:text-rose-700 border border-stone-200 hover:border-rose-200 transition flex items-center gap-1 cursor-pointer"
-                                            title="Descartar subtarea">
-                                            <x-lucide-x-circle class="w-3 h-3 text-zinc-500 hover:text-rose-600 stroke-[2.5]" />
-                                            <span>Descartar</span>
+                                            type="button" 
+                                            @click="editing = false; title = @js($task->title)" 
+                                            class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-200 transition cursor-pointer"
+                                            title="Cancelar">
+                                            <x-lucide-x class="w-3.5 h-3.5" />
                                         </button>
-
-                                        <button 
-                                            wire:click="deleteTask({{ $task->id }})" 
-                                            wire:confirm="¿Estás seguro de eliminar la tarea gatillada '{{ addslashes($task->title) }}'?" 
-                                            class="p-1.5 rounded-lg bg-white hover:bg-red-50 text-zinc-400 hover:text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
-                                            title="Eliminar tarea gatillada">
-                                            <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
+                                    </form>
                                 </div>
                             @empty
                                 <div class="p-4 text-center text-xs text-zinc-400 bg-[#fbfbfa] rounded-xl border border-[#e9e9e7]">
-                                    Sin tareas vinculadas o gatilladas aún.
+                                    Sin subtareas creadas aún.
                                 </div>
                             @endforelse
                         </div>
 
-                        <!-- Add Manual Task Form with Calendar Date & Working/Managing Toggle -->
+                        <!-- Add Manual Subtask Form -->
                         <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs">
                             <div class="flex items-center justify-between gap-2">
                                 <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
@@ -1042,7 +1127,7 @@
                                         type="button" 
                                         wire:click="$set('newTaskIsWork', true)" 
                                         class="px-2 py-1 rounded-md border text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer {{ $newTaskIsWork ? 'bg-blue-50 text-blue-800 border-blue-300 font-bold shadow-2xs' : 'bg-white text-zinc-600 border-stone-200 hover:bg-stone-100' }}"
-                                        title="Trabajo de diseño/producción (mueve a Trabajando Hoy si se agenda para hoy)">
+                                        title="Trabajo de diseño/producción">
                                         <x-lucide-wrench class="w-3 h-3 text-blue-600" />
                                         <span>Trabajo</span>
                                     </button>
@@ -1050,7 +1135,7 @@
                                         type="button" 
                                         wire:click="$set('newTaskIsWork', false)" 
                                         class="px-2 py-1 rounded-md border text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer {{ !$newTaskIsWork ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold shadow-2xs' : 'bg-white text-zinc-600 border-stone-200 hover:bg-stone-100' }}"
-                                        title="Gestión/Seguimiento administrativo (mantiene el estatus actual de la orden)">
+                                        title="Gestión/Seguimiento administrativo">
                                         <x-lucide-clipboard-list class="w-3 h-3 text-amber-600" />
                                         <span>Gestión</span>
                                     </button>
@@ -1070,7 +1155,7 @@
                                         type="date" 
                                         wire:model="newTaskDate" 
                                         class="bg-white border border-[#e9e9e7] rounded-lg px-2 py-1.5 text-xs text-zinc-700 font-medium focus:outline-none focus:border-stone-400 shrink-0">
-                                    <button wire:click="addTask" class="px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                    <button wire:click="addTask" class="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
                                         <x-lucide-plus class="w-3.5 h-3.5" />
                                         <span>Añadir</span>
                                     </button>

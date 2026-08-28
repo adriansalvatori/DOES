@@ -731,6 +731,21 @@ class OrderDetailModal extends Component
         $this->dispatch('order-updated');
     }
 
+    public function updateTaskTitle($taskId, $newTitle)
+    {
+        $newTitle = trim((string) $newTitle);
+        if (empty($newTitle)) {
+            return;
+        }
+
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $task->update(['title' => $newTitle]);
+            $this->dispatch('order-updated');
+            session()->flash('message', 'Subtarea actualizada correctamente.');
+        }
+    }
+
     public function deleteTask($taskId)
     {
         $task = RelatedTask::find($taskId);

@@ -72,4 +72,28 @@ class OrderDetailModalTest extends TestCase
             'id' => $subtask->id,
         ]);
     }
+
+    public function test_can_update_subtask_title_from_modal(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CON SUBTAREA',
+            'task_name' => 'DISENO BROCHURE',
+            'in_workspace' => true,
+        ]);
+
+        $subtask = $order->relatedTasks()->create([
+            'title' => 'Nombre Antiguo de Subtarea',
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('updateTaskTitle', $subtask->id, 'Nuevo Nombre Editado')
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $subtask->id,
+            'title' => 'Nuevo Nombre Editado',
+        ]);
+    }
 }
