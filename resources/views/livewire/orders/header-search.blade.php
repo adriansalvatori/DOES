@@ -85,7 +85,7 @@
         x-transition:leave-end="opacity-0 scale-98 -translate-y-1"
         x-init="resultsCount = {{ count($results) + count($clientResults) }}"
         x-effect="resultsCount = {{ count($results) + count($clientResults) }}"
-        class="absolute left-0 top-full mt-2 bg-white border border-stone-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs max-h-[460px] flex flex-col w-full sm:w-[560px]"
+        class="absolute left-0 top-full mt-2 bg-white border border-stone-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs max-h-[460px] flex flex-col w-full sm:w-[560px] max-w-[calc(100vw-2rem)]"
         style="display: none;"
     >
         <!-- Header status bar inside search dropdown -->
@@ -119,24 +119,23 @@
                             @mouseenter="selectedIndex = {{ $idx }}"
                             class="rounded-md transition"
                         >
-                            <button 
-                                type="button"
+                            <div 
+                                role="button"
+                                tabindex="0"
                                 wire:click="selectClient({{ $client->id }})"
                                 @click="closeSearch()"
-                                class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex items-center justify-between gap-2.5 group cursor-pointer"
+                                @keydown.enter="selectClient({{ $client->id }}); closeSearch();"
+                                class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex flex-nowrap items-center justify-between gap-2.5 group cursor-pointer min-w-0"
                             >
                                 <!-- Left Info Column -->
-                                <div class="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-0.5 min-w-0 flex-1">
-                                    <!-- Col 1, Row 1: CLIENTE Badge -->
-                                    <div class="flex items-center">
+                                <div class="flex-1 min-w-0 space-y-0.5">
+                                    <!-- Row 1: CLIENTE Badge + Client Name + Active Orders -->
+                                    <div class="flex items-center gap-2 truncate min-w-0">
                                         <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0">
                                             CLIENTE
                                         </span>
-                                    </div>
 
-                                    <!-- Col 2, Row 1: Client Name + Active Orders count -->
-                                    <div class="flex items-center gap-2 truncate min-w-0">
-                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs">
+                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none">
                                             {{ $client->name }}
                                         </span>
 
@@ -149,14 +148,7 @@
                                         @endif
                                     </div>
 
-                                    <!-- Col 1, Row 2: Building Icon -->
-                                    <div class="flex items-center min-w-0">
-                                        <span class="truncate flex items-center gap-1 text-[10px] text-zinc-400 font-medium">
-                                            <x-lucide-building-2 class="w-3 h-3 text-zinc-400 shrink-0" />
-                                        </span>
-                                    </div>
-
-                                    <!-- Col 2, Row 2: Contact / Website / Main Location Address -->
+                                    <!-- Row 2: Building icon + Contact / Website / Main Location Address -->
                                     @php
                                         $mainLoc = $client->locations->first(function ($loc) {
                                             $addr = trim($loc->address ?? '');
@@ -169,6 +161,8 @@
                                         }
                                     @endphp
                                     <div class="flex items-center gap-2 text-[10px] text-zinc-500 truncate min-w-0">
+                                        <x-lucide-building-2 class="w-3 h-3 text-zinc-400 shrink-0" />
+
                                         @if($client->primaryContact)
                                             <span class="truncate flex items-center gap-1">
                                                 <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
@@ -243,13 +237,13 @@
                                 </div>
 
                                 <!-- Right Action Badge -->
-                                <div class="shrink-0 flex items-center gap-1">
+                                <div class="shrink-0 flex items-center gap-1 ml-2">
                                     <span class="px-2 py-0.5 rounded text-[9.5px] font-semibold bg-stone-100 text-zinc-700 border border-stone-200 uppercase tracking-tight shrink-0 flex items-center gap-1 group-hover:bg-stone-200">
                                         {{ __('Ver Ficha') }}
                                         <x-lucide-chevron-right class="w-3 h-3 text-zinc-400" />
                                     </span>
                                 </div>
-                            </button>
+                            </div>
                         </div>
                     @endforeach
                 </div>
@@ -273,24 +267,23 @@
                             @mouseenter="selectedIndex = {{ $idx }}"
                             class="rounded-md transition"
                         >
-                            <button 
-                                type="button"
+                            <div 
+                                role="button"
+                                tabindex="0"
                                 wire:click="selectOrder({{ $order->id }})"
                                 @click="closeSearch()"
-                                class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex items-center justify-between gap-2.5 group cursor-pointer"
+                                @keydown.enter="selectOrder({{ $order->id }}); closeSearch();"
+                                class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex flex-nowrap items-center justify-between gap-2.5 group cursor-pointer min-w-0"
                             >
                                 <!-- Left Info Column -->
-                                <div class="grid grid-cols-[auto_1fr] items-center gap-x-2 gap-y-0.5 min-w-0 flex-1">
-                                    <!-- Col 1, Row 1: WO Badge -->
-                                    <div class="flex items-center">
+                                <div class="flex-1 min-w-0 space-y-0.5">
+                                    <!-- Row 1: WO Badge, Company Name, Responsible -->
+                                    <div class="flex items-center gap-2 truncate min-w-0">
                                         @if($order->wo_number)
                                             <x-wo-badge :number="$order->wo_number" variant="outline" prefix="#" />
                                         @endif
-                                    </div>
 
-                                    <!-- Col 2, Row 1: Company Name + Responsible -->
-                                    <div class="flex items-center gap-2 truncate min-w-0">
-                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs">
+                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none">
                                             {{ $order->company_name }}
                                         </span>
 
@@ -303,29 +296,27 @@
                                         @endif
                                     </div>
 
-                                    <!-- Col 1, Row 2: Designer -->
-                                    <div class="flex items-center min-w-0">
+                                    <!-- Row 2: Designer, Order name -->
+                                    <div class="flex items-center gap-2 truncate min-w-0">
                                         @php
                                             $assigned = $order->assigned_designers;
                                         @endphp
                                         @if($assigned->isNotEmpty())
-                                            <span class="truncate flex items-center gap-1 text-[10px] text-zinc-500 font-medium max-w-[110px]">
+                                            <span class="truncate flex items-center gap-1 text-[10px] text-zinc-500 font-medium shrink-0 max-w-[110px]">
                                                 <x-lucide-palette class="w-3 h-3 text-zinc-400 shrink-0" />
                                                 <span class="truncate">{{ $assigned->pluck('name')->join(', ') }}</span>
                                             </span>
+                                            <span class="text-zinc-300 text-[10px] shrink-0">•</span>
                                         @endif
-                                    </div>
 
-                                    <!-- Col 2, Row 2: Order name -->
-                                    <div class="flex items-center min-w-0">
-                                        <span class="text-zinc-600 text-[11px] truncate font-medium">
+                                        <span class="text-zinc-600 text-[11px] truncate font-medium min-w-0">
                                             {{ $order->task_name ?: ($order->trello_title ?: __('Sin título')) }}
                                         </span>
                                     </div>
                                 </div>
 
                                 <!-- Right Badges Column -->
-                                <div class="shrink-0 flex items-center gap-1.5">
+                                <div class="shrink-0 flex items-center gap-1.5 min-w-0 ml-2">
                                     @if($order->substatus === \App\Enums\Substatus::OVERDUE || $order->isOverdue())
                                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-200 shrink-0">
                                             {{ __('ATRASADA') }}
@@ -333,18 +324,18 @@
                                     @endif
 
                                     @if($order->substatus && $order->substatus !== \App\Enums\Substatus::OVERDUE)
-                                        <span class="text-[10px] text-zinc-500 font-medium hidden sm:inline truncate max-w-[110px]">
+                                        <span class="text-[10px] text-zinc-500 font-medium hidden sm:inline truncate max-w-[100px] shrink-0">
                                             {{ $order->substatus->label() }}
                                         </span>
                                     @endif
 
                                     @if($order->core_status)
-                                        <span class="px-2 py-0.5 rounded text-[9.5px] font-semibold bg-stone-100 text-zinc-700 border border-stone-200 uppercase tracking-tight shrink-0">
+                                        <span class="px-2 py-0.5 rounded text-[9.5px] font-semibold bg-stone-100 text-zinc-700 border border-stone-200 uppercase tracking-tight shrink-0 max-w-[140px] truncate" title="{{ $order->core_status->label() }}">
                                             {{ $order->core_status->label() }}
                                         </span>
                                     @endif
                                 </div>
-                            </button>
+                            </div>
                         </div>
                     @endforeach
                 </div>

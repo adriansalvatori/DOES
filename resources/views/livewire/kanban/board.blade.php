@@ -72,34 +72,37 @@
                         </div>
 
                         @forelse($this->searchResults as $result)
-                            <button wire:click="selectSearchResult({{ $result->id }})" 
-                                    @click="open = false"
-                                    class="w-full text-left p-2 rounded-lg hover:bg-stone-100 focus:bg-stone-100 focus:outline-none transition flex items-center justify-between gap-2 group cursor-pointer">
+                            <div role="button"
+                                 tabindex="0"
+                                 wire:click="selectSearchResult({{ $result->id }})" 
+                                 @click="open = false"
+                                 @keydown.enter="selectSearchResult({{ $result->id }}); open = false;"
+                                 class="w-full text-left p-2 rounded-lg hover:bg-stone-100 focus:bg-stone-100 focus:outline-none transition flex flex-nowrap items-center justify-between gap-2 group cursor-pointer min-w-0">
                                 <div class="min-w-0 flex-1">
-                                    <div class="flex items-center gap-1.5">
+                                    <div class="flex items-center gap-1.5 min-w-0">
                                         @if($result->wo_number)
                                             <x-wo-badge :number="$result->wo_number" variant="light" />
                                         @endif
-                                        <span class="font-semibold text-zinc-900 truncate group-hover:text-stone-900 text-xs">
+                                        <span class="font-semibold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink min-w-0">
                                             {{ $result->company_name }}
                                         </span>
                                         @if($result->location_text)
                                             <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="Locación: {{ $result->location_text }}">
                                                 <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                                                <span>{{ $result->location_text }}</span>
+                                                <span class="truncate max-w-[120px]">{{ $result->location_text }}</span>
                                             </span>
                                         @endif
                                     </div>
                                     <p class="text-[11px] text-zinc-500 truncate mt-0.5" title="{{ $result->task_name }}">{{ $result->task_name }}</p>
                                 </div>
 
-                                <div class="flex items-center gap-1.5 shrink-0">
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border bg-stone-50 text-zinc-600 border-stone-200 shrink-0">
+                                <div class="flex items-center gap-1.5 shrink-0 min-w-0">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border bg-stone-50 text-zinc-600 border-stone-200 shrink-0 max-w-[130px] truncate" title="{{ $result->core_status->label() }}">
                                         {{ $result->core_status->label() }}
                                     </span>
                                     <x-lucide-chevron-right class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 transition shrink-0" />
                                 </div>
-                            </button>
+                            </div>
                         @empty
                             <div class="px-3 py-4 text-center text-zinc-400 text-xs">
                                 {{ __('No se encontraron coincidencias para') }} "{{ $search }}"
