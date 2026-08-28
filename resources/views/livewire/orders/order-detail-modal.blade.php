@@ -126,9 +126,7 @@
                     <!-- Left: Clean WO & Creation Timestamp Tag -->
                     <div class="flex items-center gap-2 shrink-0">
                         @if($order->wo_number)
-                            <span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-zinc-900 text-white tracking-wide shadow-2xs">
-                                {{ $order->wo_number }}
-                            </span>
+                            <x-wo-badge :number="$order->wo_number" variant="dark" class="px-2 py-0.5 text-[11px] tracking-wide" show-copy-icon />
                         @else
                             <span class="px-2 py-0.5 rounded font-mono text-[11px] font-semibold bg-stone-100 text-zinc-500 border border-stone-200">
                                 SIN WO
@@ -323,10 +321,10 @@
                                     </span>
                                 </div>
                                 <p class="text-xs text-amber-900 leading-relaxed">
-                                    Se detectó un nuevo número de WO en Trello: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">{{ $order->pending_wo_number }}</strong> <span class="text-[11px] text-amber-800">(Trello card title)</span>.
+                                    Se detectó un nuevo número de WO en Trello: <x-wo-badge :number="$order->pending_wo_number" variant="amber" show-copy-icon /> <span class="text-[11px] text-amber-800">(Trello card title)</span>.
                                 </p>
                                 <p class="text-xs text-amber-900 leading-relaxed">
-                                    El número registrado actualmente en DOES es: <strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">{{ $order->wo_number ?: 'Sin WO / WO 0000' }}</strong> <span class="text-[11px] text-amber-800">(DOES)</span>.
+                                    El número registrado actualmente en DOES es: @if($order->wo_number)<x-wo-badge :number="$order->wo_number" variant="amber" show-copy-icon />@else<strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">Sin WO / WO 0000</strong>@endif <span class="text-[11px] text-amber-800">(DOES)</span>.
                                 </p>
                             </div>
                         </div>

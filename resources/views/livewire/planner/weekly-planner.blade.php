@@ -543,7 +543,7 @@
                                                         Workspace
                                                     </span>
                                                     @if($wOrder->wo_number)
-                                                        <span class="font-mono text-[9px] text-zinc-400">#{{ $wOrder->wo_number }}</span>
+                                                        <x-wo-badge :number="$wOrder->wo_number" variant="outline" prefix="#" class="text-[9px]" />
                                                     @endif
                                                     @if($wOrder->designer)
                                                         <span class="text-[9px] text-zinc-500 font-medium truncate">• {{ $wOrder->designer->name }}</span>
@@ -617,7 +617,7 @@
                                                     Backlog
                                                 </span>
                                                 @if($bOrder->wo_number)
-                                                    <span class="font-mono text-[9px] text-zinc-400">#{{ $bOrder->wo_number }}</span>
+                                                    <x-wo-badge :number="$bOrder->wo_number" variant="outline" prefix="#" class="text-[9px]" />
                                                 @endif
                                                 @if($bOrder->designer)
                                                     <span class="text-[9px] text-zinc-500 font-medium truncate">• {{ $bOrder->designer->name }}</span>

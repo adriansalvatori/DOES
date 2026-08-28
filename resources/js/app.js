@@ -579,3 +579,53 @@ window.addEventListener('toggle-tutorial-mode', () => {
         window.KudosDemoTour.start(0);
     }
 });
+
+window.cleanWoNumber = function(val) {
+    if (!val) return '';
+    let str = String(val).trim();
+    return str.replace(/^(wo|#)[\s#\-:]*/i, '').trim() || str;
+};
+
+window.copyWoToClipboard = function(rawWoNumber, event = null) {
+    if (event) {
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+    }
+    
+    const numberToCopy = window.cleanWoNumber(rawWoNumber);
+    if (!numberToCopy) return;
+
+    const doCopy = () => {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(numberToCopy);
+        } else {
+            return new Promise((resolve, reject) => {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = numberToCopy;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    };
+
+    doCopy().then(() => {
+        window.dispatchEvent(new CustomEvent('toast', {
+            detail: {
+                message: `WO #${numberToCopy} copiado al portapapeles`,
+                type: 'success'
+            }
+        }));
+    }).catch(err => {
+        console.error('Error al copiar WO:', err);
+    });
+};
+

@@ -78,9 +78,7 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-1.5">
                                         @if($result->wo_number)
-                                            <span class="font-mono text-[10px] font-bold px-1.5 py-0.2 rounded bg-stone-200 text-zinc-700 shrink-0">
-                                                {{ $result->wo_number }}
-                                            </span>
+                                            <x-wo-badge :number="$result->wo_number" variant="light" />
                                         @endif
                                         <span class="font-semibold text-zinc-900 truncate group-hover:text-stone-900 text-xs">
                                             {{ $result->company_name }}
@@ -571,9 +569,7 @@
                                             </span>
                                         @endif
                                         @if($order->wo_number)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-stone-900 text-white shrink-0 whitespace-nowrap">
-                                                {{ $order->wo_number }}
-                                            </span>
+                                            <x-wo-badge :number="$order->wo_number" variant="dark" />
                                         @endif
 
                                         <!-- URGENTE Badge (Muted when done_today or isBlocked) -->
@@ -802,7 +798,12 @@
                                     @if($task->order)
                                         <p class="text-[10px] text-violet-700 font-medium truncate mt-0.5 flex items-center gap-1">
                                             <x-lucide-link class="w-3 h-3 text-violet-500 shrink-0" />
-                                            <span>{{ $task->order->wo_number ?? 'Orden' }} • {{ $task->order->company_name }}{{ $task->order->location_text ? ' (' . $task->order->location_text . ')' : '' }}</span>
+                                            @if($task->order && $task->order->wo_number)
+                                                <x-wo-badge :number="$task->order->wo_number" variant="light" />
+                                                <span>• {{ $task->order->company_name }}{{ $task->order->location_text ? ' (' . $task->order->location_text . ')' : '' }}</span>
+                                            @else
+                                                <span>{{ $task->order->wo_number ?? 'Orden' }} • {{ $task->order->company_name }}{{ $task->order->location_text ? ' (' . $task->order->location_text . ')' : '' }}</span>
+                                            @endif
                                         </p>
                                     @endif
                                 </div>
@@ -859,9 +860,7 @@
                                             </span>
                                         @endif
                                         @if($order->wo_number)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-stone-900 text-white shrink-0 whitespace-nowrap">
-                                                {{ $order->wo_number }}
-                                            </span>
+                                            <x-wo-badge :number="$order->wo_number" variant="dark" />
                                         @endif
                                         @if($order->approved && $order->substatus !== \App\Enums\Substatus::PONER_EN_ALTA)
                                             <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-0.5 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-100 text-pink-800 border border-pink-300' }}">

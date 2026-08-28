@@ -384,11 +384,42 @@
     <!-- Global Order Detail Side Flyout Drawer Component -->
     <livewire:orders.order-detail-modal />
 
+    <!-- Global Client Detail Side Flyout Drawer Component -->
+    <livewire:clients.client-flyout-panel />
+
     <!-- Global Create Order Modal Component -->
     <livewire:orders.create-order-modal />
 
     <!-- Global Unsaved Changes Warning Modal -->
     <x-dirty-confirm-modal />
+
+    <!-- Global Toast Notification Banner -->
+    <div 
+        x-data="{ 
+            show: false, 
+            message: '',
+            timeout: null,
+            notify(msg) {
+                this.message = msg;
+                this.show = true;
+                clearTimeout(this.timeout);
+                this.timeout = setTimeout(() => { this.show = false; }, 2500);
+            }
+        }"
+        @toast.window="notify($event.detail.message || $event.detail)"
+        x-show="show"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-2 scale-95"
+        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+        x-transition:leave-end="opacity-0 translate-y-2 scale-95"
+        style="display: none;"
+        class="fixed bottom-5 right-5 z-[9999] bg-stone-900 text-white text-xs font-medium px-3.5 py-2.5 rounded-lg shadow-xl border border-stone-800 flex items-center gap-2 pointer-events-none"
+    >
+        <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-400 shrink-0" />
+        <span x-text="message"></span>
+    </div>
 
     @livewireScripts
     @fluxScripts

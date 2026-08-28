@@ -4,6 +4,7 @@ namespace Tests\Feature\Orders;
 
 use App\Enums\CoreStatus;
 use App\Livewire\Orders\HeaderSearch;
+use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -120,6 +121,23 @@ class HeaderSearchTest extends TestCase
             ->set('search', 'Oscorp')
             ->call('selectOrder', $order->id)
             ->assertDispatched('open-order-detail', orderId: $order->id)
+            ->assertSet('search', '');
+    }
+
+    public function test_searches_client_database_and_dispatches_open_client_flyout_event(): void
+    {
+        $client = Client::create([
+            'name' => 'PORKYS REAL MEXICAN FOOD',
+            'website' => 'https://porkysmexican.com',
+        ]);
+
+        Livewire::test(HeaderSearch::class)
+            ->set('search', 'Porkys Client')
+            ->assertViewHas('clientResults', function ($clients) use ($client) {
+                return $clients->count() === 1 && $clients->first()->id === $client->id;
+            })
+            ->call('selectClient', $client->id)
+            ->assertDispatched('open-client-flyout', clientId: $client->id)
             ->assertSet('search', '');
     }
 }

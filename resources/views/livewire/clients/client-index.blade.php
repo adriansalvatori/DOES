@@ -192,7 +192,4 @@
             <span class="text-zinc-400 text-[10px]">{{ __('Haz clic en cualquier fila para abrir') }}</span>
         </div>
     </div>
-
-    <!-- Slide-over Flyout Panel -->
-    <livewire:clients.client-flyout-panel />
 </div>

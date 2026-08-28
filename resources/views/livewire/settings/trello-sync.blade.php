@@ -265,12 +265,8 @@
                                                             Trello: {{ $chg['trello_data']['task_name'] ?? '' }}
                                                         </span>
                                                     @elseif($field === 'wo_number')
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300 font-mono">
-                                                            Workspace WO: {{ $chg['workspace_data']['wo_number'] ?? '' }}
-                                                        </span>
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300 font-mono">
-                                                            Trello WO: {{ $chg['trello_data']['wo_number'] ?? '' }}
-                                                        </span>
+                                                        <x-wo-badge :number="$chg['workspace_data']['wo_number'] ?? ''" variant="amber" prefix="Workspace WO: " />
+                                                        <x-wo-badge :number="$chg['trello_data']['wo_number'] ?? ''" variant="outline" prefix="Trello WO: " />
                                                     @endif
                                                 @endforeach
                                             </div>
@@ -423,9 +419,11 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
-                                    <p class="font-mono text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
-                                        {{ $selectedConflict['workspace_data']['wo_number'] ?: 'Sin WO' }}
-                                    </p>
+                                     @if(!empty($selectedConflict['workspace_data']['wo_number']))
+                                         <div class="mt-0.5"><x-wo-badge :number="$selectedConflict['workspace_data']['wo_number']" variant="amber" /></div>
+                                     @else
+                                         <p class="font-mono text-zinc-800 p-1.5 rounded mt-0.5 bg-amber-100/40">Sin WO</p>
+                                     @endif
                                 </div>
 
                                 <div>
@@ -491,9 +489,11 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
-                                    <p class="font-mono text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('wo_number', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
-                                        {{ $selectedConflict['trello_data']['wo_number'] ?: 'Sin WO' }}
-                                    </p>
+                                     @if(!empty($selectedConflict['trello_data']['wo_number']))
+                                         <div class="mt-0.5"><x-wo-badge :number="$selectedConflict['trello_data']['wo_number']" variant="outline" /></div>
+                                     @else
+                                         <p class="font-mono text-zinc-800 p-1.5 rounded mt-0.5 bg-blue-100/40">Sin WO</p>
+                                     @endif
                                 </div>
 
                                 <div>

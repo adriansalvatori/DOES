@@ -833,9 +833,7 @@
                                     <div class="min-w-0 pr-2 space-y-1">
                                         <div class="font-semibold text-zinc-900 flex items-center gap-2 truncate">
                                             @if($order->wo_number)
-                                                <span class="px-1.5 py-0.5 rounded font-mono text-[10px] font-bold bg-zinc-900 text-white tracking-wide shrink-0">
-                                                    {{ $order->wo_number }}
-                                                </span>
+                                                <x-wo-badge :number="$order->wo_number" variant="dark" />
                                             @endif
                                             @if($order->designer)
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">

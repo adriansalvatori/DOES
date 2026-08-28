@@ -549,9 +549,7 @@
                                         NUEVA DE TRELLO
                                     </span>
                                     @if($nOrder->wo_number)
-                                        <span class="px-1.5 py-0.2 rounded bg-stone-900 text-white text-[9px] font-mono font-bold">
-                                            {{ $nOrder->wo_number }}
-                                        </span>
+                                        <x-wo-badge :number="$nOrder->wo_number" variant="dark" />
                                     @endif
                                 </div>
                                 <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug" title="{{ $nOrder->company_name }}">{{ $nOrder->company_name }}</h4>
@@ -608,19 +606,12 @@
                             <td class="sticky left-10 z-10 p-3 whitespace-nowrap font-mono text-xs font-bold text-zinc-900 border-r border-[#e9e9e7] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.05)] transition-colors {{ $isSelected ? 'bg-stone-50' : 'bg-white group-hover:bg-[#fcfcfb]' }}">
                                 <div class="flex items-center gap-1.5">
                                     @if($order->wo_number)
-                                        <span class="px-2 py-0.5 rounded bg-stone-900 text-white text-[10px]">{{ $order->wo_number }}</span>
+                                        <x-wo-badge :number="$order->wo_number" variant="dark" />
                                     @else
                                         <span class="text-zinc-400 text-[10px]">—</span>
                                     @endif
                                     @if($order->pending_wo_number)
-                                        <button 
-                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" 
-                                            type="button" 
-                                            class="px-2 py-0.5 rounded bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-bold hover:bg-amber-200 transition flex items-center gap-1 cursor-pointer" 
-                                            title="Trello detectó {{ $order->pending_wo_number }}. Haz clic para decidir actualización en la orden.">
-                                            <span>Trello: {{ $order->pending_wo_number }}</span>
-                                            <x-lucide-alert-circle class="w-3 h-3 text-amber-600 shrink-0" />
-                                        </button>
+                                        <x-wo-badge :number="$order->pending_wo_number" variant="amber" prefix="Trello: " />
                                     @endif
                                     @if($order->trello_url)
                                         <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="p-0.5 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition" title="Abrir en Trello.com">

@@ -59,9 +59,7 @@
                             <!-- Top Row: WO + Date Trashed -->
                             <div class="flex items-center justify-between gap-2">
                                 @if($order->wo_number)
-                                    <span class="font-mono text-[10px] font-bold bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded border border-stone-200">
-                                        {{ $order->wo_number }}
-                                    </span>
+                                    <x-wo-badge :number="$order->wo_number" variant="outline" />
                                 @else
                                     <span class="font-mono text-[10px] text-zinc-400">{{ __('SIN WO') }}</span>
                                 @endif

@@ -353,9 +353,11 @@
                                         <!-- Top Row: WO & Company -->
                                         <div class="flex items-start justify-between gap-2">
                                             <div>
-                                                <span class="text-[10px] font-mono font-bold text-zinc-500 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 inline-block mb-1">
-                                                    {{ $order->wo_number ?? 'WO-N/A' }}
-                                                </span>
+                                                @if($order->wo_number)
+                                                    <x-wo-badge :number="$order->wo_number" variant="outline" />
+                                                @else
+                                                    <span class="text-[10px] font-mono font-bold text-zinc-400 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 inline-block mb-1">WO-N/A</span>
+                                                @endif
                                                 <h4 class="text-xs font-bold text-zinc-900 group-hover:text-indigo-600 transition truncate max-w-[200px]">
                                                     {{ $order->company_name }}
                                                 </h4>
@@ -472,9 +474,11 @@
                                 
                                 <div class="flex items-start justify-between gap-1">
                                     <div>
-                                        <span class="text-[9px] font-mono font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200">
-                                            {{ $order->wo_number ?? 'WO-N/A' }}
-                                        </span>
+                                        @if($order->wo_number)
+                                            <x-wo-badge :number="$order->wo_number" variant="outline" />
+                                        @else
+                                            <span class="text-[9px] font-mono font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200">WO-N/A</span>
+                                        @endif
                                         <h5 class="text-xs font-bold text-zinc-900 truncate mt-1">{{ $order->company_name }}</h5>
                                         <p class="text-[11px] text-zinc-500 line-clamp-1">{{ $order->task_name }}</p>
                                     </div>
