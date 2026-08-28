@@ -540,4 +540,58 @@ class SubtaskWeeklyPlannerTest extends TestCase
                 return $results->pluck('id')->contains($orderWithLocation->id);
             });
     }
+
+    public function test_can_reorder_subtasks_custom_and_persist_sort_order(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+        $order = Order::create([
+            'company_name' => 'REORDER TEST COMPANY',
+            'task_name' => 'Poster',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $dateStr = now()->startOfWeek()->toDateString();
+
+        $subtask1 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Task One',
+            'type' => RelatedTaskType::SUBTASK,
+            'scheduled_date' => $dateStr,
+            'assignee_id' => $designer->id,
+            'sort_order' => 0,
+        ]);
+
+        $subtask2 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Task Two',
+            'type' => RelatedTaskType::SUBTASK,
+            'scheduled_date' => $dateStr,
+            'assignee_id' => $designer->id,
+            'sort_order' => 1,
+        ]);
+
+        // Reorder subtask2 before subtask1
+        Livewire::test(WeeklyPlanner::class)
+            ->call('reorderSubtasks', [$subtask2->id, $subtask1->id], $dateStr);
+
+        $this->assertEquals(0, $subtask2->fresh()->sort_order);
+        $this->assertEquals(1, $subtask1->fresh()->sort_order);
+    }
+
+    public function test_can_change_planner_sort_by_mode(): void
+    {
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSet('plannerSortBy', 'custom')
+            ->call('changePlannerSortBy', 'priority')
+            ->assertSet('plannerSortBy', 'priority')
+            ->assertSessionHas('weekly_planner_sort_by', 'priority')
+            ->call('changePlannerSortBy', 'client')
+            ->assertSet('plannerSortBy', 'client')
+            ->assertSessionHas('weekly_planner_sort_by', 'client')
+            ->call('changePlannerSortBy', 'sla')
+            ->assertSet('plannerSortBy', 'sla')
+            ->assertSessionHas('weekly_planner_sort_by', 'sla');
+    }
 }

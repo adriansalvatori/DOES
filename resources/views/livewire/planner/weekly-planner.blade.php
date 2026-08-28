@@ -442,8 +442,8 @@
             <!-- ROW 2: View Controls, Designer Filters & Unified Search Bar -->
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pt-2 border-t border-[#e9e9e7]">
                 
-                <!-- Left: View Mode Switcher + System Tasks Toggle -->
-                <div class="flex items-center gap-1.5 shrink-0">
+                <!-- Left: View Mode Switcher + System Tasks Toggle + Sort Mode Selector -->
+                <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                     <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-0.5 h-7.5 text-xs font-medium shrink-0">
                         <button 
                             type="button" 
@@ -467,8 +467,45 @@
                         class="px-2.5 py-1 h-7.5 rounded-lg border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shrink-0 {{ $showSystemTasks ? 'bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200' : 'bg-stone-50 hover:bg-stone-100 text-stone-500 border-stone-200' }}"
                         title="{{ $showSystemTasks ? __('Ocultar tareas de sistema') : __('Mostrar tareas de sistema') }}">
                         <x-lucide-cpu class="w-3.5 h-3.5 {{ $showSystemTasks ? 'text-violet-600' : 'text-stone-400' }}" />
-                        <span>{{ __('Sistema') }}</span>
+                        <span>{{ __('Tareas de Sistema') }}</span>
                     </button>
+
+                    <!-- Sort Mode Selector -->
+                    <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-0.5 h-7.5 text-xs font-medium shrink-0">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 pl-1.5 pr-0.5 select-none">{{ __('Orden:') }}</span>
+                        <button 
+                            type="button" 
+                            wire:click="changePlannerSortBy('custom')"
+                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1 {{ $plannerSortBy === 'custom' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}"
+                            title="{{ __('Manual / Arrastrar') }}">
+                            <x-lucide-arrow-up-down class="w-3 h-3" />
+                            <span>{{ __('Manual') }}</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            wire:click="changePlannerSortBy('priority')"
+                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1 {{ $plannerSortBy === 'priority' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}"
+                            title="{{ __('Ordenar por Prioridad') }}">
+                            <x-lucide-flame class="w-3 h-3 text-red-500" />
+                            <span>{{ __('Prioridad') }}</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            wire:click="changePlannerSortBy('client')"
+                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1 {{ $plannerSortBy === 'client' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}"
+                            title="{{ __('Ordenar por Cliente / Empresa') }}">
+                            <x-lucide-building-2 class="w-3 h-3 text-indigo-500" />
+                            <span>{{ __('Cliente') }}</span>
+                        </button>
+                        <button 
+                            type="button" 
+                            wire:click="changePlannerSortBy('sla')"
+                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1 {{ $plannerSortBy === 'sla' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}"
+                            title="{{ __('Ordenar por Fecha Límite SLA') }}">
+                            <x-lucide-clock class="w-3 h-3 text-amber-500" />
+                            <span>{{ __('SLA') }}</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Center: Designer Filter Tabs -->
@@ -684,6 +721,8 @@
                                         $daySubtasks = $daySubtasks->filter(fn($st) => $st->isWorkTask());
                                     }
 
+                                    $daySubtasks = $this->sortSubtaskCollection($daySubtasks);
+
                                     $dayColorClass = match($day['day_name'] ?? '') {
                                         'Lunes' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
                                         'Martes' => 'bg-sky-50 text-sky-700 border-sky-200',
@@ -704,7 +743,13 @@
                                         let rawData = $event.dataTransfer.getData('text/plain');
                                         if (rawData) {
                                             if (rawData.startsWith('subtask:')) {
-                                                $wire.rescheduleSubtask(rawData.replace('subtask:', ''), '{{ $day['date_string'] }}');
+                                                let taskId = parseInt(rawData.replace('subtask:', ''), 10);
+                                                let cards = Array.from($el.querySelectorAll('[data-subtask-id]'));
+                                                let orderedIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
+                                                if (!orderedIds.includes(taskId)) {
+                                                    orderedIds.push(taskId);
+                                                }
+                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}');
                                             } else {
                                                 let id = rawData.replace('order:', '');
                                                 $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
@@ -859,14 +904,36 @@
                                                     @endphp
                                                     <div 
                                                         draggable="true" 
+                                                        data-subtask-id="{{ $stask->id }}"
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                        @dragover.prevent.stop
+                                                        @drop.prevent.stop="
+                                                            let rawData = $event.dataTransfer.getData('text/plain');
+                                                            if (rawData && rawData.startsWith('subtask:')) {
+                                                                let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
+                                                                let targetId = {{ $stask->id }};
+                                                                let cards = Array.from($el.closest('.space-y-2').querySelectorAll('[data-subtask-id]'));
+                                                                let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
+                                                                let filtered = currentIds.filter(id => id !== draggedId);
+                                                                let targetIdx = filtered.indexOf(targetId);
+                                                                if (targetIdx !== -1) {
+                                                                    filtered.splice(targetIdx, 0, draggedId);
+                                                                } else {
+                                                                    filtered.push(draggedId);
+                                                                }
+                                                                $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}');
+                                                            }
+                                                        "
                                                         @if($staskIsNote)
                                                             @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
                                                         @endif
                                                         class="border rounded-lg p-2 space-y-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
                                                         <div class="flex items-center justify-between gap-1 min-w-0">
-                                                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                                            <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                                                                @if(($plannerSortBy ?? '') === 'custom')
+                                                                    <x-lucide-grip-vertical class="w-3 h-3 text-stone-300 group-hover:text-stone-500 transition shrink-0 cursor-grab active:cursor-grabbing" title="{{ __('Arrastrar para reordenar') }}" />
+                                                                @endif
                                                                 <button 
                                                                     @click.stop
                                                                     wire:click="toggleSubtaskComplete({{ $stask->id }})" 
@@ -1030,10 +1097,11 @@
                                             }
                                             return false;
                                         });
-
                                     if (! $showSystemTasks) {
                                         $daySubtasks = $daySubtasks->filter(fn($st) => $st->isWorkTask());
                                     }
+
+                                    $daySubtasks = $this->sortSubtaskCollection($daySubtasks);
 
                                     $dayColorClass = match($day['day_name'] ?? '') {
                                         'Lunes', 'Monday' => 'bg-indigo-50 text-indigo-700 border-indigo-200',
@@ -1218,7 +1286,13 @@
                                         let rawData = $event.dataTransfer.getData('text/plain');
                                         if (rawData) {
                                             if (rawData.startsWith('subtask:')) {
-                                                $wire.rescheduleSubtask(rawData.replace('subtask:', ''), '{{ $day['date_string'] }}');
+                                                let taskId = parseInt(rawData.replace('subtask:', ''), 10);
+                                                let cards = Array.from($el.querySelectorAll('[data-subtask-id]'));
+                                                let orderedIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
+                                                if (!orderedIds.includes(taskId)) {
+                                                    orderedIds.push(taskId);
+                                                }
+                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}');
                                             } else {
                                                 let id = rawData.replace('order:', '');
                                                 $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
@@ -1258,8 +1332,27 @@
                                                         $staskDone = $stask->isDone();
                                                     @endphp
                                                     <div 
-                                                        draggable="true" 
-                                                        @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                         draggable="true" 
+                                                         data-subtask-id="{{ $stask->id }}"
+                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                         @dragover.prevent.stop
+                                                         @drop.prevent.stop="
+                                                             let rawData = $event.dataTransfer.getData('text/plain');
+                                                             if (rawData && rawData.startsWith('subtask:')) {
+                                                                 let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
+                                                                 let targetId = {{ $stask->id }};
+                                                                 let cards = Array.from($el.closest('.space-y-0\\.5').querySelectorAll('[data-subtask-id]'));
+                                                                 let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
+                                                                 let filtered = currentIds.filter(id => id !== draggedId);
+                                                                 let targetIdx = filtered.indexOf(targetId);
+                                                                 if (targetIdx !== -1) {
+                                                                     filtered.splice(targetIdx, 0, draggedId);
+                                                                 } else {
+                                                                     filtered.push(draggedId);
+                                                                 }
+                                                                 $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}');
+                                                             }
+                                                         "
                                                         @if($staskIsNote)
                                                             @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
                                                         @else
@@ -1267,7 +1360,10 @@
                                                         @endif
                                                         class="py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/80 rounded-md transition group {{ $staskIsNote ? 'bg-amber-50/90 border border-amber-200/90 hover:border-amber-300' : '' }} {{ $staskDone ? 'opacity-60' : '' }}">
                                                         
-                                                        <div class="flex items-start gap-2 min-w-0 flex-1 overflow-visible">
+                                                        <div class="flex items-start gap-1.5 min-w-0 flex-1 overflow-visible">
+                                                            @if(($plannerSortBy ?? '') === 'custom')
+                                                                <x-lucide-grip-vertical class="w-3 h-3 text-stone-300 group-hover:text-stone-500 transition shrink-0 cursor-grab active:cursor-grabbing mt-0.5" title="{{ __('Arrastrar para reordenar') }}" />
+                                                            @endif
                                                             <button 
                                                                 @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
                                                                 type="button"

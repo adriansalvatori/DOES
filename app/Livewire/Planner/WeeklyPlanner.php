@@ -21,6 +21,8 @@ class WeeklyPlanner extends Component
 
     public string $viewMode = 'by_day';
 
+    public string $plannerSortBy = 'custom';
+
     public $viewMonth;
 
     public string $unscheduledSearch = '';
@@ -46,7 +48,80 @@ class WeeklyPlanner extends Component
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->viewMonth = now()->format('Y-m');
         $this->viewMode = session('weekly_planner_view_mode', 'by_day');
+        $this->plannerSortBy = session('weekly_planner_sort_by', 'custom');
         $this->showSystemTasks = (bool) session('weekly_planner_show_system_tasks', true);
+    }
+
+    public function updatedPlannerSortBy($value)
+    {
+        if (in_array($value, ['custom', 'priority', 'client', 'sla'])) {
+            session(['weekly_planner_sort_by' => $value]);
+        }
+    }
+
+    public function changePlannerSortBy(string $mode)
+    {
+        if (in_array($mode, ['custom', 'priority', 'client', 'sla'])) {
+            $this->plannerSortBy = $mode;
+            session(['weekly_planner_sort_by' => $mode]);
+        }
+    }
+
+    public function reorderSubtasks(array $orderedTaskIds, ?string $dateString = null)
+    {
+        if (empty($orderedTaskIds)) {
+            return;
+        }
+
+        foreach ($orderedTaskIds as $index => $taskId) {
+            $updateData = ['sort_order' => $index];
+            if (! empty($dateString)) {
+                $updateData['scheduled_date'] = Carbon::parse($dateString)->toDateString();
+            }
+            RelatedTask::where('id', $taskId)->update($updateData);
+        }
+
+        $this->dispatch('order-updated');
+    }
+
+    public function sortSubtaskCollection($subtasksCollection)
+    {
+        return match ($this->plannerSortBy) {
+            'priority' => $subtasksCollection->sortBy(function ($st) {
+                $isDone = $st->isDone() ? 1 : 0;
+                $order = $st->order;
+                $isUrgente = ($order && $order->isUrgente()) || $st->priority === 'high';
+                $isOverdue = $order && ($order->isOverdue() || ($st->scheduled_date && $order->current_due_date && $st->scheduled_date->gt($order->current_due_date)));
+
+                $rank = match (true) {
+                    $isUrgente => 1,
+                    $isOverdue => 2,
+                    ! $isDone && $st->priority !== 'low' => 3,
+                    ! $isDone && $st->priority === 'low' => 4,
+                    default => 5,
+                };
+
+                $dueDateTimestamp = $order?->current_due_date ? $order->current_due_date->timestamp : PHP_INT_MAX;
+
+                return [$rank, $dueDateTimestamp, $st->sort_order ?? 0, $st->id];
+            })->values(),
+
+            'client' => $subtasksCollection->sortBy(function ($st) {
+                $isDone = $st->isDone() ? 1 : 0;
+                $company = mb_strtolower($st->order?->company_name ?? $st->title);
+
+                return [$isDone, $company, $st->sort_order ?? 0, $st->id];
+            })->values(),
+
+            'sla' => $subtasksCollection->sortBy(function ($st) {
+                $isDone = $st->isDone() ? 1 : 0;
+                $dueDateTimestamp = $st->order?->current_due_date ? $st->order->current_due_date->timestamp : PHP_INT_MAX;
+
+                return [$isDone, $dueDateTimestamp, $st->sort_order ?? 0, $st->id];
+            })->values(),
+
+            default => $subtasksCollection->sortBy(fn ($st) => [$st->sort_order ?? 0, $st->id])->values(),
+        };
     }
 
     public function updatedShowSystemTasks($value)

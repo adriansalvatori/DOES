@@ -25,6 +25,7 @@ class RelatedTask extends Model
         'trigger_type',
         'priority',
         'is_work_task',
+        'sort_order',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class RelatedTask extends Model
         'due_date' => 'date',
         'completed_at' => 'datetime',
         'is_work_task' => 'boolean',
+        'sort_order' => 'integer',
     ];
 
     public function order(): BelongsTo
