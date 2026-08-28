@@ -757,11 +757,11 @@
                                                                 <button 
                                                                     wire:click="toggleDoneToday({{ $order->id }})" 
                                                                     type="button"
-                                                                    class="w-3.5 h-3.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer mt-0.5 {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
+                                                                    class="w-3.5 h-3.5 rounded-md border transition flex items-center justify-center shrink-0 cursor-pointer mt-0.5 {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                                 </button>
                                                                 <div class="min-w-0 flex-1">
-                                                                    <h4 class="font-semibold text-[11.5px] text-zinc-900 truncate leading-tight capitalize {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
+                                                                    <h4 class="font-semibold text-[11.5px] text-zinc-900 truncate leading-tight {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
                                                                     <p class="font-normal text-[10px] text-zinc-500 truncate leading-tight mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->task_name }}</p>
                                                                 </div>
                                                             </div>
@@ -854,28 +854,38 @@
 
                                                 <!-- Day Subtask Kanban Cards -->
                                                 @foreach($daySubtasks as $stask)
+                                                    @php
+                                                        $staskIsNote = ! $stask->order;
+                                                    @endphp
                                                     <div 
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
-                                                        class="bg-white border border-stone-200/80 hover:border-stone-300 rounded-lg p-2 space-y-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
+                                                        @if($staskIsNote)
+                                                            @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
+                                                        @endif
+                                                        class="border rounded-lg p-2 space-y-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
                                                         <div class="flex items-center justify-between gap-1 min-w-0">
                                                             <div class="flex items-center gap-2 min-w-0 flex-1">
                                                                 <button 
+                                                                    @click.stop
                                                                     wire:click="toggleSubtaskComplete({{ $stask->id }})" 
                                                                     type="button"
-                                                                    class="w-3.5 h-3.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
+                                                                    class="w-3.5 h-3.5 rounded-md border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                                 </button>
-                                                                <div class="min-w-0 flex-1" @click="if({{ $stask->isNote() ? 'true' : 'false' }}) { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }">
-                                                                    <h5 class="font-semibold text-[11px] truncate leading-tight capitalize {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900') }} {{ $stask->isNote() ? 'cursor-pointer hover:text-amber-700' : '' }}">
+                                                                <div class="min-w-0 flex-1 flex items-center gap-1.5">
+                                                                    @if($staskIsNote)
+                                                                        <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
+                                                                    @endif
+                                                                    <h5 class="font-semibold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : ($staskIsNote ? 'text-amber-950 font-semibold' : 'text-zinc-900')) }}">
                                                                         {{ $stask->title }}
                                                                     </h5>
                                                                 </div>
                                                             </div>
 
                                                             <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button wire:click="deleteSubtask({{ $stask->id }})" class="p-0.5 text-zinc-400 hover:text-red-600 transition" title="Eliminar subtarea">
+                                                                <button @click.stop wire:click="deleteSubtask({{ $stask->id }})" class="p-0.5 text-zinc-400 hover:text-red-600 transition" title="Eliminar subtarea">
                                                                     <x-lucide-x-circle class="w-3 h-3" />
                                                                 </button>
                                                             </div>
@@ -920,16 +930,13 @@
                                                                 @endif
                                                             @endif
                                                         @else
-                                                            <div class="pt-0.5 flex items-center justify-between gap-1 text-[10px]">
+                                                            <div class="pt-1 flex items-center min-w-0">
                                                                 <button 
-                                                                    @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })" 
                                                                     type="button"
-                                                                    class="text-left min-w-0 flex-1 group/link flex items-center gap-1 cursor-pointer">
-                                                                    <span class="inline-flex items-center gap-1 text-[9.5px] font-semibold text-amber-800 bg-amber-50/80 px-1.5 py-0.5 rounded border border-amber-200/80">
-                                                                        <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
-                                                                        <span>{{ __('Nota (Sin Orden)') }}</span>
-                                                                        <span class="text-[9px] text-amber-600 font-normal underline hover:text-amber-900">({{ __('Vincular orden') }})</span>
-                                                                    </span>
+                                                                    @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
+                                                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200/90 border border-amber-200 transition cursor-pointer shadow-2xs">
+                                                                    <x-lucide-plus class="w-3 h-3 text-amber-700 shrink-0" />
+                                                                    <span>{{ __('Agregar a orden') }}</span>
                                                                 </button>
                                                             </div>
                                                         @endif
@@ -1247,19 +1254,24 @@
                                             <div class="space-y-0.5">
                                                 @foreach($daySubtasks as $stask)
                                                     @php
+                                                        $staskIsNote = ! $stask->order;
                                                         $staskDone = $stask->isDone();
                                                     @endphp
                                                     <div 
                                                         draggable="true" 
                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
-                                                        @click.stop="if({{ $stask->order ? 'true' : 'false' }}) { $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} }) } else { $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' }) }"
-                                                        class="py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/80 rounded-md transition group {{ $staskDone ? 'opacity-60' : '' }}">
+                                                        @if($staskIsNote)
+                                                            @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
+                                                        @else
+                                                            @click.stop="$dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
+                                                        @endif
+                                                        class="py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/80 rounded-md transition group {{ $staskIsNote ? 'bg-amber-50/90 border border-amber-200/90 hover:border-amber-300' : '' }} {{ $staskDone ? 'opacity-60' : '' }}">
                                                         
                                                         <div class="flex items-start gap-2 min-w-0 flex-1 overflow-visible">
                                                             <button 
                                                                 @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
                                                                 type="button"
-                                                                class="w-3.5 h-3.5 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $staskDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                                                class="w-3.5 h-3.5 mt-0.5 rounded-md border transition flex items-center justify-center shrink-0 cursor-pointer {{ $staskDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
                                                                 title="{{ $staskDone ? 'Subtarea completada' : 'Marcar subtarea como completada' }}">
                                                                 <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                             </button>
@@ -1315,7 +1327,7 @@
                                                                                 <span class="truncate">{{ $stask->title }}</span>
                                                                             </span>
                                                                         @else
-                                                                            <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] shrink-0 max-w-full truncate {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : ($stask->isSystemTask() ? 'text-violet-800 bg-violet-50 border border-violet-200' : ($stask->isNote() ? 'text-amber-900 bg-amber-50 border border-amber-200/60' : 'text-amber-900 bg-amber-50 border border-amber-200/60')) }}">
+                                                                            <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] shrink-0 max-w-full truncate {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : ($stask->isSystemTask() ? 'text-violet-800 bg-violet-50 border border-violet-200' : 'text-stone-700 bg-stone-100 border border-stone-200') }}">
                                                                                 <span class="truncate">{{ $stask->title }}</span>
                                                                             </span>
                                                                         @endif
@@ -1340,11 +1352,23 @@
                                                                         @endif
                                                                     </div>
                                                                 @else
-                                                                    <!-- Standalone subtask (without order) -->
-                                                                    <div class="flex items-center gap-1 min-w-0">
-                                                                        <span class="font-bold text-[10.5px] truncate leading-tight {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-900') }}">
-                                                                            {{ $stask->title }}
-                                                                        </span>
+                                                                    <!-- Standalone subtask / Note (without order) -->
+                                                                    <div class="flex flex-col gap-1 min-w-0">
+                                                                        <div class="flex items-center gap-1.5 min-w-0">
+                                                                            <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
+                                                                            <span class="font-semibold text-[10.5px] truncate leading-tight {{ $staskDone ? 'line-through text-zinc-400' : 'text-amber-950' }}">
+                                                                                {{ $stask->title }}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="pt-0.5 flex items-center">
+                                                                            <button 
+                                                                                type="button"
+                                                                                @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
+                                                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9.5px] font-semibold text-amber-900 bg-amber-100 hover:bg-amber-200/90 border border-amber-200 transition cursor-pointer shadow-2xs">
+                                                                                <x-lucide-plus class="w-3 h-3 text-amber-700 shrink-0" />
+                                                                                <span>{{ __('Agregar a orden') }}</span>
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 @endif
                                                             </div>
