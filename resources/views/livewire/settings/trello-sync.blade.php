@@ -65,7 +65,7 @@
     </div>
 
     <!-- Animated Fullscreen Loading Overlay during Trello Sync -->
-    <div wire:loading.flex wire:target="runTrelloSync" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div wire:loading.flex wire:target="runTrelloSync" class="fixed inset-0 z-[500] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl p-6 max-w-sm w-full text-center space-y-4 animate-in fade-in zoom-in duration-150">
             <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
                 <div class="absolute inset-0 rounded-full border-4 border-stone-100 animate-ping opacity-75"></div>
@@ -84,8 +84,8 @@
     @if($syncReport['show'])
         <div 
             class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
-            @keydown.window.escape.prevent="$wire.closeReportModal()"
-            @keydown.window.enter.prevent="$wire.closeReportModal()">
+            @keydown.window.escape.prevent="if (!document.querySelector('[data-modal=\'order-detail\']')) $wire.closeReportModal()"
+            @keydown.window.enter.prevent="if (!document.querySelector('[data-modal=\'order-detail\']')) $wire.closeReportModal()">
             <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2.5">
@@ -342,7 +342,7 @@
     @if($selectedConflict)
         <div 
             class="fixed inset-0 z-[200] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
-            @keydown.window.escape.prevent="$wire.closeConflictModal()">
+            @keydown.window.escape.prevent="if (!document.querySelector('[data-modal=\'order-detail\']')) $wire.closeConflictModal()">
             <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-4xl w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto custom-vertical-scrollbar">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2">

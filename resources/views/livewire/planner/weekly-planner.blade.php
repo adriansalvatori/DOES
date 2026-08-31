@@ -12,7 +12,15 @@
     wire:poll.3s 
     @open-subtask-modal.window="openCreateSubtaskModal($event.detail.orderId || '', $event.detail.dateStr || '', $event.detail.designerId || '')"
     @open-link-note-modal.window="openLinkNoteModal($event.detail.taskId || null, $event.detail.noteTitle || '')"
+    @dragend.window="clearDragState()"
+    @drop.window="clearDragState()"
     x-data="{ 
+        activeDragCardId: null,
+        activeDragPosition: null,
+        clearDragState() {
+            this.activeDragCardId = null;
+            this.activeDragPosition = null;
+        },
         calendarOpen: false,
         subtaskModalOpen: false,
         subtaskOrderId: '',
@@ -203,6 +211,7 @@
 
             const handleDragEnd = () => {
                 isDragging = false;
+                this.clearDragState();
                 if (scrollInterval) {
                     cancelAnimationFrame(scrollInterval);
                     scrollInterval = null;
@@ -679,7 +688,7 @@
     <!-- MAIN GRID CONTAINER: TOGGLED BY VIEW MODE -->
     @if($viewMode === 'by_day')
         <!-- Weekly Grid by Day -->
-        <div class="space-y-6 flex-1 min-h-0 max-w-7xl mx-auto w-full">
+        <div class="space-y-6 flex-1 min-h-0 w-full">
             @foreach($designers as $designer)
                 @php
                     $designerSubtasks = $subtasks->filter(function ($st) use ($designer) {
@@ -734,7 +743,11 @@
                                     };
                                 @endphp
                                 <div 
-                                    x-data="{ draggingOver: false }"
+                                    x-data="{ 
+                                        draggingOver: false,
+                                        dragOverCardId: null,
+                                        dragPosition: 'above'
+                                    }"
                                     @dragover.prevent="draggingOver = true"
                                     @dragenter.prevent="draggingOver = true"
                                     @dragleave="if (!$el.contains($event.relatedTarget)) draggingOver = false"
@@ -793,7 +806,7 @@
                                                 @foreach($dayOrders as $order)
                                                     <div 
                                                         draggable="true" 
-                                                        @dragstart="e => e.dataTransfer.setData('text/plain', 'order:{{ $order->id }}')"
+                                                        @dragstart="$event.dataTransfer.setData('text/plain', 'order:{{ $order->id }}')"
                                                         x-data="{ openSub: false, customTitle: '', targetDate: '{{ $day['date_string'] }}' }"
                                                         class="bg-white border rounded-xl p-2.5 space-y-1.5 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $order->done_today ? 'opacity-65 bg-stone-50 border-stone-200' : ($order->isUrgente() ? 'border-red-400 border-l-4 border-l-red-500 bg-red-50/30' : ($order->isOverdue() ? 'border-amber-400 border-l-4 border-l-amber-500 bg-amber-50/20' : 'border-[#e9e9e7] hover:border-stone-400')) }}">
                                                         
@@ -905,14 +918,19 @@
                                                     <div 
                                                         draggable="true" 
                                                         data-subtask-id="{{ $stask->id }}"
-                                                        @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
-                                                        @dragover.prevent.stop
-                                                        @drop.prevent.stop="
+                                                        @dragstart="$event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                        @dragover.prevent.stop="
+                                                             let rect = $el.getBoundingClientRect();
+                                                             activeDragCardId = {{ $stask->id }};
+                                                             activeDragPosition = ($event.clientY < rect.top + rect.height / 2) ? 'above' : 'below';
+                                                         "
+                                                         @dragleave.stop="if (activeDragCardId === {{ $stask->id }}) clearDragState()"
+                                                         @drop.prevent.stop="
                                                             let rawData = $event.dataTransfer.getData('text/plain');
                                                             if (rawData && rawData.startsWith('subtask:')) {
                                                                 let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
                                                                 let targetId = {{ $stask->id }};
-                                                                let cards = Array.from($el.closest('.space-y-2').querySelectorAll('[data-subtask-id]'));
+                                                                let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
                                                                 let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
                                                                 let filtered = currentIds.filter(id => id !== draggedId);
                                                                 let targetIdx = filtered.indexOf(targetId);
@@ -927,13 +945,23 @@
                                                         @if($staskIsNote)
                                                             @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
                                                         @endif
-                                                        class="border rounded-lg p-2 space-y-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
+                                                        :class="{ 'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }} }"
+                                                        class="border rounded-lg p-2 flex flex-col gap-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
+                                                        
+                                                        <!-- Delicate Yellow Top Insertion Line Indicator -->
+                                                        <div 
+                                                            x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'above'"
+                                                            class="absolute -top-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
+                                                        </div>
+
+                                                        <!-- Delicate Yellow Bottom Insertion Line Indicator -->
+                                                        <div 
+                                                            x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'below'"
+                                                            class="absolute -bottom-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
+                                                        </div>
                                                         
                                                         <div class="flex items-center justify-between gap-1 min-w-0">
                                                             <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                                                                @if(($plannerSortBy ?? '') === 'custom')
-                                                                    <x-lucide-grip-vertical class="w-3 h-3 text-stone-300 group-hover:text-stone-500 transition shrink-0 cursor-grab active:cursor-grabbing" title="{{ __('Arrastrar para reordenar') }}" />
-                                                                @endif
                                                                 <button 
                                                                     @click.stop
                                                                     wire:click="toggleSubtaskComplete({{ $stask->id }})" 
@@ -1028,15 +1056,15 @@
             $designerGridList = $designers->reject(fn($d) => str_contains(mb_strtolower($d->name), 'externo'));
             $colCount = max(1, $designerGridList->count());
             $gridColsClass = match($colCount) {
-                1 => 'grid-cols-1 max-w-md',
-                2 => 'grid-cols-1 md:grid-cols-2 max-w-4xl',
-                3 => 'grid-cols-1 md:grid-cols-3 max-w-6xl',
-                4 => 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 max-w-7xl',
-                default => 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5 max-w-7xl',
+                1 => 'grid-cols-1',
+                2 => 'grid-cols-1 md:grid-cols-2',
+                3 => 'grid-cols-1 md:grid-cols-3',
+                4 => 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+                default => 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5',
             };
         @endphp
-        <div class="overflow-x-auto custom-horizontal-scrollbar pb-2 w-full min-h-0 flex-1 flex justify-center">
-            <div class="grid {{ $gridColsClass }} gap-6 items-start divide-x divide-stone-200/60 w-full mx-auto">
+        <div class="overflow-x-auto custom-horizontal-scrollbar pb-2 w-full min-h-0 flex-1">
+            <div class="grid {{ $gridColsClass }} gap-6 items-start divide-x divide-stone-200/60 w-full">
                 @foreach($designerGridList as $designer)
                     @php
                         $designerSubtasks = $subtasks->filter(function ($st) use ($designer) {
@@ -1325,7 +1353,7 @@
 
                                         <!-- Subtasks List for this Day & Designer -->
                                         @if($daySubtasks->isNotEmpty())
-                                            <div class="space-y-0.5">
+                                            <div data-subtask-container class="space-y-0.5">
                                                 @foreach($daySubtasks as $stask)
                                                     @php
                                                         $staskIsNote = ! $stask->order;
@@ -1334,36 +1362,57 @@
                                                     <div 
                                                          draggable="true" 
                                                          data-subtask-id="{{ $stask->id }}"
-                                                         @dragstart="e => e.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
-                                                         @dragover.prevent.stop
+                                                         @dragstart="$event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                         @dragover.prevent.stop="
+                                                             let rect = $el.getBoundingClientRect();
+                                                             activeDragCardId = {{ $stask->id }};
+                                                             activeDragPosition = ($event.clientY < rect.top + rect.height / 2) ? 'above' : 'below';
+                                                         "
+                                                         @dragleave.stop="if (activeDragCardId === {{ $stask->id }}) clearDragState()"
                                                          @drop.prevent.stop="
                                                              let rawData = $event.dataTransfer.getData('text/plain');
+                                                             let pos = activeDragPosition;
+                                                             clearDragState();
                                                              if (rawData && rawData.startsWith('subtask:')) {
                                                                  let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
                                                                  let targetId = {{ $stask->id }};
-                                                                 let cards = Array.from($el.closest('.space-y-0\\.5').querySelectorAll('[data-subtask-id]'));
+                                                                 let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
                                                                  let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
                                                                  let filtered = currentIds.filter(id => id !== draggedId);
                                                                  let targetIdx = filtered.indexOf(targetId);
                                                                  if (targetIdx !== -1) {
-                                                                     filtered.splice(targetIdx, 0, draggedId);
+                                                                     if (pos === 'below') {
+                                                                         filtered.splice(targetIdx + 1, 0, draggedId);
+                                                                     } else {
+                                                                         filtered.splice(targetIdx, 0, draggedId);
+                                                                     }
                                                                  } else {
                                                                      filtered.push(draggedId);
                                                                  }
                                                                  $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}');
                                                              }
                                                          "
-                                                        @if($staskIsNote)
-                                                            @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
-                                                        @else
-                                                            @click.stop="$dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
-                                                        @endif
-                                                        class="py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 cursor-pointer active:cursor-grabbing hover:bg-stone-100/80 rounded-md transition group {{ $staskIsNote ? 'bg-amber-50/90 border border-amber-200/90 hover:border-amber-300' : '' }} {{ $staskDone ? 'opacity-60' : '' }}">
+                                                         @if($staskIsNote)
+                                                             @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
+                                                         @else
+                                                             @click.stop="$dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
+                                                         @endif
+                                                         :class="{ 'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }} }"
+                                                         class="relative py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 border rounded-lg transition group select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $staskDone ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
+                                                        <!-- Delicate Yellow Top Insertion Line Indicator -->
+                                                        <div 
+                                                            x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'above'"
+                                                            class="absolute -top-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
+                                                        </div>
+
+                                                        <!-- Delicate Yellow Bottom Insertion Line Indicator -->
+                                                        <div 
+                                                            x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'below'"
+                                                            class="absolute -bottom-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
+                                                        </div>
+
                                                         <div class="flex items-start gap-1.5 min-w-0 flex-1 overflow-visible">
-                                                            @if(($plannerSortBy ?? '') === 'custom')
-                                                                <x-lucide-grip-vertical class="w-3 h-3 text-stone-300 group-hover:text-stone-500 transition shrink-0 cursor-grab active:cursor-grabbing mt-0.5" title="{{ __('Arrastrar para reordenar') }}" />
-                                                            @endif
                                                             <button 
                                                                 @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
                                                                 type="button"

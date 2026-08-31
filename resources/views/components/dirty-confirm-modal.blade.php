@@ -59,7 +59,7 @@
     @keydown.window.enter.stop.prevent="if (show) save()"
     x-show="show"
     x-cloak
-    class="fixed inset-0 z-[200] flex items-center justify-center p-4 overflow-y-auto"
+    class="fixed inset-0 z-[400] flex items-center justify-center p-4 overflow-y-auto"
 >
     <!-- Smooth Animated Backdrop Overlay -->
     <div 

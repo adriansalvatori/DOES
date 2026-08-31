@@ -110,13 +110,14 @@
                 }
             }"
             @keydown.window.escape="confirmClose(() => $wire.closeModal())"
-            class="fixed inset-0 z-[100] flex"
+            data-modal="order-detail"
+            class="fixed inset-0 z-[300] flex"
         >
             <!-- Backdrop Overlay -->
-            <div @click="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[100] bg-black/30 backdrop-blur-xs transition-opacity"></div>
+            <div @click="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[300] bg-black/30 backdrop-blur-xs transition-opacity"></div>
 
             <!-- Slide-over Right Panel (Fully Responsive Width) -->
-            <div class="fixed inset-y-0 right-0 z-[100] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
+            <div class="fixed inset-y-0 right-0 z-[300] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
             
             <!-- Flyout Header (Notion Page Header) -->
             <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white sticky top-0 z-20 space-y-3">
@@ -1597,7 +1598,7 @@
     <!-- APPROVAL ACTION MODAL -->
     @if($showApprovalModal)
         <div 
-            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+            class="fixed inset-0 z-[350] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
             @keydown.window.escape.prevent="$wire.set('showApprovalModal', false)"
             @keydown.window.enter.prevent="$wire.submitApproval()">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
@@ -1674,7 +1675,7 @@
     <!-- DELAY RESOLUTION MODAL -->
     @if($showDelayModal)
         <div 
-            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
+            class="fixed inset-0 z-[350] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
             @keydown.window.escape.prevent="$wire.set('showDelayModal', false)"
             @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.submitDelayResolution()">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
@@ -1710,7 +1711,7 @@
     <!-- UNBLOCK MODAL -->
     @if($showUnblockModal)
         <div 
-            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            class="fixed inset-0 z-[350] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
             @keydown.window.escape.prevent="$wire.closeUnblockModal()"
             @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmUnblock()"
             wire:keydown.escape="closeUnblockModal">
@@ -1773,7 +1774,7 @@
     <!-- BLOCK MODAL -->
     @if($showBlockModal)
         <div 
-            class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            class="fixed inset-0 z-[350] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
             @keydown.window.escape.prevent="$wire.closeBlockModal()"
             @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmBlock()"
             wire:keydown.escape="closeBlockModal">
