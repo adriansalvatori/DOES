@@ -566,7 +566,7 @@ class WeeklyPlanner extends Component
         $subtasks = RelatedTask::with(['order.clientLocation', 'order.designer', 'order.designers'])
             ->where(function ($q) {
                 $q->whereNull('order_id')
-                    ->orWhereHas('order', fn ($oq) => $oq->inWorkspace());
+                    ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
             })
             ->whereNotNull('scheduled_date')
             ->get();

@@ -262,11 +262,52 @@
 
                 <!-- Clean Property Badges Row -->
                 <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                    <!-- Status Badge -->
-                    <span class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-stone-100 border border-stone-200 text-zinc-800 flex items-center gap-1.5">
-                        <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                        <span>{{ $order->core_status->label() }}</span>
-                    </span>
+                    <!-- Status Badge (Clickable Dropdown Menu) -->
+                    <div class="relative" x-data="{ open: false }" x-dropdown-nav>
+                        <button 
+                            type="button" 
+                            @click="open = !open" 
+                            @click.outside="open = false"
+                            class="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-stone-100 hover:bg-stone-200/80 active:bg-stone-200 border border-stone-200 text-zinc-800 flex items-center gap-1.5 transition cursor-pointer group shadow-2xs"
+                            title="{{ __('Clic para cambiar el estado principal') }}">
+                            <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-700 shrink-0 transition-colors" />
+                            <span>{{ $order->core_status->label() }}</span>
+                            <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 group-hover:text-zinc-600 shrink-0 ml-0.5 transition-transform" ::class="{ 'rotate-180': open }" />
+                        </button>
+
+                        <!-- Core Status Selection Dropdown Menu -->
+                        <div 
+                            x-show="open" 
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0 scale-95"
+                            x-transition:enter-end="opacity-100 scale-100"
+                            x-cloak
+                            class="absolute left-0 top-full mt-1 z-[350] w-60 bg-white border border-[#e9e9e7] rounded-xl shadow-xl py-1 overflow-y-auto max-h-72 divide-y divide-stone-100 text-xs">
+                            
+                            <div class="px-3 py-1.5 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase tracking-wider text-zinc-400 flex items-center justify-between">
+                                <span>{{ __('Cambiar Estado Principal') }}</span>
+                                <x-lucide-layers class="w-3 h-3 text-zinc-400" />
+                            </div>
+
+                            <div class="py-1">
+                                @foreach($coreStatuses as $st)
+                                    <button 
+                                        type="button"
+                                        wire:click="changeCoreStatus('{{ $st->value }}')" 
+                                        @click="open = false"
+                                        class="w-full text-left px-3 py-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between gap-2 {{ $order->core_status === $st ? 'bg-stone-50 text-zinc-900 font-semibold' : '' }}">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $st->dotClass() }}"></span>
+                                            <span class="truncate">{{ $st->label() }}</span>
+                                        </div>
+                                        @if($order->core_status === $st)
+                                            <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
+                                        @endif
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Responsible Contact Badge -->
                     @if($order->responsible_person)

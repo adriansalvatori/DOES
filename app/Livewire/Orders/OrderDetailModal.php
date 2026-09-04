@@ -246,6 +246,75 @@ class OrderDetailModal extends Component
         $this->isEditing = true;
     }
 
+    public function changeCoreStatus(string $statusValue): void
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $newCoreStatus = CoreStatus::tryFrom($statusValue);
+        if (! $newCoreStatus) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+
+        if ($newCoreStatus === CoreStatus::ENTRANTE) {
+            $this->editCoreStatus = CoreStatus::ENTRANTE->value;
+            $this->editSubstatus = Substatus::BLOQUEADA->value;
+            $this->openBlockModal();
+
+            return;
+        }
+
+        $previousStatus = $order->core_status;
+
+        $isDoneStatus = in_array($newCoreStatus, [
+            CoreStatus::ENVIADO_A_CAMILA,
+            CoreStatus::ENVIADO_AL_CLIENTE,
+            CoreStatus::EN_PRODUCCION,
+        ], true);
+
+        $updateData = [
+            'core_status' => $newCoreStatus,
+            'done_today' => $isDoneStatus ? true : $order->done_today,
+        ];
+
+        if ($newCoreStatus === CoreStatus::EN_PRODUCCION && empty($order->substatus)) {
+            $updateData['substatus'] = Substatus::ENVIADO_EN_ALTA;
+        }
+
+        $order->update($updateData);
+
+        $this->editCoreStatus = $newCoreStatus->value;
+        if (isset($updateData['substatus'])) {
+            $this->editSubstatus = $updateData['substatus']->value;
+        }
+
+        if ($previousStatus !== $newCoreStatus) {
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+        }
+
+        app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
+
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
+            try {
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($success) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $this->dispatch('order-updated');
+        session()->flash('message', __("Estado de la orden actualizado a ':status'.", [
+            'status' => $newCoreStatus->label(),
+        ]));
+    }
+
     public function toggleDesigner($id)
     {
         $id = (int) $id;

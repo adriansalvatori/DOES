@@ -251,6 +251,11 @@ class Order extends Model
         return now()->hour < 16;
     }
 
+    public function isArchived(): bool
+    {
+        return $this->core_status === CoreStatus::ARCHIVED;
+    }
+
     public function isSlaExempt(): bool
     {
         if ($this->done_today || ! $this->in_workspace || $this->isPaused()) {

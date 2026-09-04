@@ -594,4 +594,32 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertSet('plannerSortBy', 'sla')
             ->assertSessionHas('weekly_planner_sort_by', 'sla');
     }
+
+    public function test_weekly_planner_includes_subtasks_for_archived_orders(): void
+    {
+        $designer = Designer::create(['name' => 'Carla', 'active' => true]);
+
+        $archivedOrder = Order::create([
+            'company_name' => 'ARCHIVED TAQUERIA',
+            'task_name' => 'Flyer Design',
+            'core_status' => CoreStatus::ARCHIVED,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $todayStr = now()->startOfWeek(Carbon::MONDAY)->toDateString();
+
+        $subtask = RelatedTask::create([
+            'order_id' => $archivedOrder->id,
+            'title' => 'Revision Final Archivo',
+            'scheduled_date' => $todayStr,
+            'assignee_id' => $designer->id,
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSee('Revision Final Archivo')
+            ->assertSee('Archivada');
+    }
 }

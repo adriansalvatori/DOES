@@ -995,6 +995,11 @@
                                                                     <div class="flex items-center gap-1 min-w-0">
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
                                                                         <span class="font-semibold text-[10px] truncate leading-tight capitalize {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
+                                                                        @if($stask->order->isArchived())
+                                                                            <span class="inline-flex items-center px-1 py-0.2 text-[8.5px] font-semibold bg-zinc-100 text-zinc-600 rounded border border-zinc-200/80 shrink-0">
+                                                                                {{ __('Archivada') }}
+                                                                            </span>
+                                                                        @endif
                                                                         @if($stask->order->location_text)
                                                                             <span class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-zinc-700 shrink-0 truncate max-w-[100px]">
                                                                                 <x-lucide-map-pin class="w-2.5 h-2.5 text-red-500 shrink-0 stroke-[2]" />

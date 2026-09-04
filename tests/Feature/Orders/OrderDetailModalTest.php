@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Orders;
 
+use App\Enums\CoreStatus;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -94,6 +95,26 @@ class OrderDetailModalTest extends TestCase
         $this->assertDatabaseHas('related_tasks', [
             'id' => $subtask->id,
             'title' => 'Nuevo Nombre Editado',
+        ]);
+    }
+
+    public function test_can_change_core_status_directly_from_dropdown(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CAMBIO ESTADO',
+            'task_name' => 'DISENO AFICHE',
+            'core_status' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('changeCoreStatus', CoreStatus::EN_PRODUCCION->value)
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'core_status' => CoreStatus::EN_PRODUCCION->value,
         ]);
     }
 }
