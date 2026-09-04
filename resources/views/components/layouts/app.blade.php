@@ -155,12 +155,8 @@
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Archivadas') }}</span>
                 </a>
                 <a href="/planner" title="{{ __('Planificador Semanal') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('planner*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-calendar-days class="w-4 h-4 text-zinc-500 shrink-0" />
+                    <x-lucide-check-circle-2 class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Planificador Semanal') }}</span>
-                </a>
-                <a href="/tasks" title="{{ __('Tareas Vinculadas') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('tasks*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-check-square class="w-4 h-4 text-zinc-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Tareas Vinculadas') }}</span>
                 </a>
                 @php
                     $actionRequiredCount = \App\Models\Order::getActionRequiredCount();
