@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoreStatus;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -43,6 +44,33 @@ class Client extends Model
         }
 
         return false;
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        $search = trim($search ?? '');
+        if ($search === '') {
+            return $query;
+        }
+
+        $words = array_values(array_filter(preg_split('/\s+/', $search), fn ($w) => $w !== ''));
+        if (empty($words)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $term = '%'.addcslashes($word, '%_\\').'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('name', 'like', $term)
+                        ->orWhere('website', 'like', $term)
+                        ->orWhere('notes', 'like', $term)
+                        ->orWhere('aliases', 'like', $term)
+                        ->orWhereHas('contacts', fn ($cq) => $cq->where('name', 'like', $term)->orWhere('email', 'like', $term)->orWhere('phone', 'like', $term))
+                        ->orWhereHas('locations', fn ($lq) => $lq->where('name', 'like', $term)->orWhere('address', 'like', $term));
+                });
+            }
+        });
     }
 
     public function setNameAttribute(string $value): void

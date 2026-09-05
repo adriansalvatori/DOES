@@ -152,13 +152,13 @@ class SubtaskPresets extends Component
     public function render()
     {
         $presets = SubtaskPreset::query()
-            ->when($this->search, fn ($q) => $q->where('title', 'like', '%'.$this->search.'%'))
+            ->when($this->search, fn ($q) => $q->search($this->search))
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
 
         $systemTaskConfigs = SystemTaskConfig::query()
-            ->when($this->search, fn ($q) => $q->where('title', 'like', '%'.$this->search.'%')->orWhere('description', 'like', '%'.$this->search.'%'))
+            ->when($this->search, fn ($q) => $q->search($this->search))
             ->orderBy('category')
             ->orderBy('id')
             ->get();

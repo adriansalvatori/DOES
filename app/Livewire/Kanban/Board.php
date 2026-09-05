@@ -68,12 +68,7 @@ class Board extends Component
 
         return Order::inWorkspace()
             ->with('designer')
-            ->where(function ($q) {
-                $q->where('company_name', 'like', "%{$this->search}%")
-                    ->orWhere('task_name', 'like', "%{$this->search}%")
-                    ->orWhere('wo_number', 'like', "%{$this->search}%")
-                    ->orWhere('responsible_person', 'like', "%{$this->search}%");
-            })
+            ->search($this->search)
             ->take(8)
             ->get();
     }
@@ -351,12 +346,7 @@ class Board extends Component
         $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee', 'clientLocation']);
 
         if (! empty($this->search)) {
-            $query->where(function ($q) {
-                $q->where('company_name', 'like', "%{$this->search}%")
-                    ->orWhere('task_name', 'like', "%{$this->search}%")
-                    ->orWhere('wo_number', 'like', "%{$this->search}%")
-                    ->orWhere('responsible_person', 'like', "%{$this->search}%");
-            });
+            $query->search($this->search);
         }
 
         if ($this->designerFilter !== 'all') {
@@ -392,7 +382,7 @@ class Board extends Component
                 }
             })->with(['order', 'assignee']);
             if (! empty($this->search)) {
-                $tasksQuery->where('title', 'like', "%{$this->search}%");
+                $tasksQuery->search($this->search);
             }
             $relatedTasks = $tasksQuery->get();
         } else {

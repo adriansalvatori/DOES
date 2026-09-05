@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -30,6 +31,28 @@ class Substatus extends Model
     public function getInlineBadgeStyleAttribute(): string
     {
         return "background-color: {$this->bg_color}; color: {$this->text_color}; border-color: {$this->border_color};";
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        $search = trim($search ?? '');
+        if ($search === '') {
+            return $query;
+        }
+
+        $words = array_values(array_filter(preg_split('/\s+/', $search), fn ($w) => $w !== ''));
+        if (empty($words)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $term = '%'.addcslashes($word, '%_\\').'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('name', 'like', $term);
+                });
+            }
+        });
     }
 
     /**

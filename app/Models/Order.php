@@ -107,6 +107,36 @@ class Order extends Model
         return $query->where('core_status', CoreStatus::ARCHIVED);
     }
 
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        $search = trim($search ?? '');
+        if ($search === '') {
+            return $query;
+        }
+
+        $words = array_values(array_filter(preg_split('/\s+/', $search), fn ($w) => $w !== ''));
+        if (empty($words)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $term = '%'.addcslashes($word, '%_\\').'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('company_name', 'like', $term)
+                        ->orWhere('task_name', 'like', $term)
+                        ->orWhere('trello_title', 'like', $term)
+                        ->orWhere('wo_number', 'like', $term)
+                        ->orWhere('responsible_person', 'like', $term)
+                        ->orWhere('location_name', 'like', $term)
+                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', $term))
+                        ->orWhereHas('designer', fn ($dq) => $dq->where('name', 'like', $term))
+                        ->orWhereHas('designers', fn ($dq) => $dq->where('name', 'like', $term));
+                });
+            }
+        });
+    }
+
     public function getCleanTaskNameAttribute(): string
     {
         $task = $this->task_name ?: $this->trello_title ?: '';

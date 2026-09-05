@@ -32,10 +32,7 @@ class TaskList extends Component
         $query = RelatedTask::whereHas('order', fn ($q) => $q->inWorkspace())->with(['order', 'assignee']);
 
         if (! empty($this->search)) {
-            $query->where(function ($q) {
-                $q->where('title', 'like', "%{$this->search}%")
-                    ->orWhereHas('order', fn ($oq) => $oq->where('company_name', 'like', "%{$this->search}%"));
-            });
+            $query->search($this->search);
         }
 
         if ($this->statusFilter !== 'all') {

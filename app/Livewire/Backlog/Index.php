@@ -306,12 +306,7 @@ class Index extends Component
         $query = Order::inBacklog()->prioritizeUrgente()->with(['designer', 'designers']);
 
         if (! empty($this->search)) {
-            $query->where(function ($q) {
-                $q->where('company_name', 'like', "%{$this->search}%")
-                    ->orWhere('task_name', 'like', "%{$this->search}%")
-                    ->orWhere('wo_number', 'like', "%{$this->search}%")
-                    ->orWhere('responsible_person', 'like', "%{$this->search}%");
-            });
+            $query->search($this->search);
         }
 
         if ($this->statusFilter !== 'all') {

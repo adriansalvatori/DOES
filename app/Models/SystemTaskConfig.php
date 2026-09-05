@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -30,5 +31,28 @@ class SystemTaskConfig extends Model
             'Resolver' => 'bg-rose-50 text-rose-700 border-rose-200',
             default => 'bg-stone-100 text-stone-700 border-stone-200',
         };
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        $search = trim($search ?? '');
+        if ($search === '') {
+            return $query;
+        }
+
+        $words = array_values(array_filter(preg_split('/\s+/', $search), fn ($w) => $w !== ''));
+        if (empty($words)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $term = '%'.addcslashes($word, '%_\\').'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('title', 'like', $term)
+                        ->orWhere('description', 'like', $term);
+                });
+            }
+        });
     }
 }

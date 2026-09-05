@@ -90,10 +90,7 @@ class Index extends Component
         }
 
         if (! empty($this->search)) {
-            $query->where(function ($q) {
-                $q->where('company_name', 'like', "%{$this->search}%")
-                    ->orWhere('task_name', 'like', "%{$this->search}%");
-            });
+            $query->search($this->search);
         }
 
         $allOrders = (clone $query)->get();

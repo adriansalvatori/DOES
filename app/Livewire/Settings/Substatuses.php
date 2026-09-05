@@ -135,7 +135,7 @@ class Substatuses extends Component
     public function render()
     {
         $substatuses = Substatus::query()
-            ->when($this->search, fn ($q) => $q->where('name', 'like', '%'.$this->search.'%'))
+            ->when($this->search, fn ($q) => $q->search($this->search))
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();

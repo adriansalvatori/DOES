@@ -140,4 +140,21 @@ class HeaderSearchTest extends TestCase
             ->assertDispatched('open-client-flyout', clientId: $client->id)
             ->assertSet('search', '');
     }
+
+    public function test_searches_with_non_exact_multi_word_tokens(): void
+    {
+        $order = Order::create([
+            'in_workspace' => true,
+            'core_status' => CoreStatus::TO_DO_TODAY->value,
+            'company_name' => 'Talpa Retail',
+            'task_name' => 'talpa 8 mableton signage',
+            'wo_number' => 'WO-7711',
+        ]);
+
+        Livewire::test(HeaderSearch::class)
+            ->set('search', 'talpa mableton')
+            ->assertViewHas('results', function ($results) use ($order) {
+                return $results->count() === 1 && $results->first()->id === $order->id;
+            });
+    }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\RelatedTaskType;
 use App\Services\AutomationEngine;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,6 +46,29 @@ class RelatedTask extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(Designer::class, 'assignee_id');
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        $search = trim($search ?? '');
+        if ($search === '') {
+            return $query;
+        }
+
+        $words = array_values(array_filter(preg_split('/\s+/', $search), fn ($w) => $w !== ''));
+        if (empty($words)) {
+            return $query;
+        }
+
+        return $query->where(function ($q) use ($words) {
+            foreach ($words as $word) {
+                $term = '%'.addcslashes($word, '%_\\').'%';
+                $q->where(function ($sub) use ($term) {
+                    $sub->where('title', 'like', $term)
+                        ->orWhereHas('order', fn ($oq) => $oq->where('company_name', 'like', $term)->orWhere('task_name', 'like', $term)->orWhere('trello_title', 'like', $term));
+                });
+            }
+        });
     }
 
     protected static function booted(): void

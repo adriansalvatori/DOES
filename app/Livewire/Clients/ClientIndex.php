@@ -34,19 +34,7 @@ class ClientIndex extends Component
             ->with(['locations', 'contacts', 'primaryContact']);
 
         if (! empty(trim($this->search))) {
-            $term = mb_strtoupper(trim($this->search), 'UTF-8');
-            $query->where(function ($q) use ($term) {
-                $q->where('name', 'like', "%{$term}%")
-                    ->orWhereHas('locations', function ($lq) use ($term) {
-                        $lq->where('name', 'like', "%{$term}%")
-                            ->orWhere('address', 'like', "%{$term}%");
-                    })
-                    ->orWhereHas('contacts', function ($cq) use ($term) {
-                        $cq->where('name', 'like', "%{$term}%")
-                            ->orWhere('email', 'like', "%{$term}%")
-                            ->orWhere('phone', 'like', "%{$term}%");
-                    });
-            });
+            $query->search($this->search);
         }
 
         $clients = $query->orderBy('name')->get();

@@ -581,15 +581,7 @@ class WeeklyPlanner extends Component
                 });
             })
             ->when(! $this->unscheduledSearch, fn ($q) => $q->whereNull('scheduled_date'))
-            ->when($this->unscheduledSearch, function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('company_name', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhere('task_name', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhere('location_name', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', '%'.$this->unscheduledSearch.'%'))
-                        ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
-                });
-            })
+            ->when($this->unscheduledSearch, fn ($q) => $q->search($this->unscheduledSearch))
             ->orderByRaw('current_due_date IS NULL, current_due_date ASC')
             ->get();
 
@@ -632,14 +624,7 @@ class WeeklyPlanner extends Component
         if (! empty($this->backlogSearch)) {
             $backlogOrders = Order::inBacklog()
                 ->prioritizeUrgente()
-                ->where(function ($sub) {
-                    $sub->where('company_name', 'like', '%'.$this->backlogSearch.'%')
-                        ->orWhere('task_name', 'like', '%'.$this->backlogSearch.'%')
-                        ->orWhere('location_name', 'like', '%'.$this->backlogSearch.'%')
-                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', '%'.$this->backlogSearch.'%'))
-                        ->orWhere('wo_number', 'like', '%'.$this->backlogSearch.'%')
-                        ->orWhere('trello_card_title', 'like', '%'.$this->backlogSearch.'%');
-                })
+                ->search($this->backlogSearch)
                 ->with(['designer', 'designers'])
                 ->limit(15)
                 ->get();
@@ -649,14 +634,7 @@ class WeeklyPlanner extends Component
         if (! empty($this->unscheduledSearch)) {
             $workspaceSearchResults = Order::inWorkspace()
                 ->prioritizeUrgente()
-                ->where(function ($sub) {
-                    $sub->where('company_name', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhere('task_name', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhere('location_name', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhereHas('clientLocation', fn ($lq) => $lq->where('name', 'like', '%'.$this->unscheduledSearch.'%'))
-                        ->orWhere('wo_number', 'like', '%'.$this->unscheduledSearch.'%')
-                        ->orWhere('trello_card_title', 'like', '%'.$this->unscheduledSearch.'%');
-                })
+                ->search($this->unscheduledSearch)
                 ->with(['designer', 'designers'])
                 ->limit(15)
                 ->get();

@@ -41,11 +41,7 @@ class TrashBin extends Component
         $query = Order::onlyTrashed();
 
         if (! empty($this->search)) {
-            $query->where(function ($q) {
-                $q->where('company_name', 'like', "%{$this->search}%")
-                    ->orWhere('task_name', 'like', "%{$this->search}%")
-                    ->orWhere('wo_number', 'like', "%{$this->search}%");
-            });
+            $query->search($this->search);
         }
 
         $trashedOrders = $query->latest('deleted_at')->get();
