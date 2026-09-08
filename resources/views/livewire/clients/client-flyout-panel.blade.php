@@ -229,7 +229,15 @@
                         class="py-3 px-3 border-b-2 font-medium transition cursor-pointer flex items-center gap-2 text-xs {{ $activeTab === 'projects' ? 'border-emerald-600 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
                     >
                         <x-lucide-folder class="w-3.5 h-3.5 {{ $activeTab === 'projects' ? 'text-emerald-600' : 'text-zinc-400' }}" />
-                        <span>{{ __('Proyectos') }} ({{ $currentClient->activeOrders->count() + $currentClient->archivedOrders->count() }})</span>
+                        <span>{{ __('Proyectos') }} ({{ $currentClient->activeOrders->count() }})</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        wire:click="$set('activeTab', 'archived')"
+                        class="py-3 px-3 border-b-2 font-medium transition cursor-pointer flex items-center gap-2 text-xs {{ $activeTab === 'archived' ? 'border-emerald-600 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
+                    >
+                        <x-lucide-archive class="w-3.5 h-3.5 {{ $activeTab === 'archived' ? 'text-emerald-600' : 'text-zinc-400' }}" />
+                        <span>{{ __('Archivados') }} ({{ $currentClient->archivedOrders->count() }})</span>
                     </button>
                 @endif
             </div>
@@ -820,12 +828,24 @@
                 {{-- TAB 3: Proyectos --}}
                 @if($activeTab === 'projects' && $currentClient)
                     <div class="space-y-4">
-                        <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                            {{ __('Historial de Proyectos') }} ({{ $currentClient->orders->count() }})
-                        </h3>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">
+                                {{ __('Proyectos Activos') }} ({{ $currentClient->activeOrders->count() }})
+                            </h3>
+                            @if($currentClient->archivedOrders->count() > 0)
+                                <button 
+                                    type="button" 
+                                    wire:click="$set('activeTab', 'archived')"
+                                    class="text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition flex items-center gap-1 cursor-pointer"
+                                >
+                                    <span>{{ __('Ver archivados') }} ({{ $currentClient->archivedOrders->count() }})</span>
+                                    <x-lucide-arrow-right class="w-3.5 h-3.5" />
+                                </button>
+                            @endif
+                        </div>
 
                         <div class="divide-y divide-zinc-200/60 border-t border-b border-zinc-200/60">
-                            @forelse($currentClient->orders as $order)
+                            @forelse($currentClient->activeOrders as $order)
                                 <div 
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                     class="py-3 px-1 hover:bg-zinc-50 flex items-center justify-between text-xs cursor-pointer transition group"
@@ -869,7 +889,66 @@
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-xs text-zinc-400 italic py-4 text-center">{{ __('No hay proyectos registrados para este cliente.') }}</p>
+                                <p class="text-xs text-zinc-400 italic py-4 text-center">{{ __('No hay proyectos activos registrados para este cliente.') }}</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @endif
+
+                {{-- TAB 4: Archivados --}}
+                @if($activeTab === 'archived' && $currentClient)
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <x-lucide-archive class="w-3.5 h-3.5 text-zinc-500" />
+                                <span>{{ __('Órdenes Archivadas') }} ({{ $currentClient->archivedOrders->count() }})</span>
+                            </h3>
+                        </div>
+
+                        <div class="divide-y divide-zinc-200/60 border-t border-b border-zinc-200/60">
+                            @forelse($currentClient->archivedOrders as $order)
+                                <div 
+                                    wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
+                                    class="py-3 px-1 hover:bg-zinc-50 flex items-center justify-between text-xs cursor-pointer transition group"
+                                >
+                                    <div class="min-w-0 pr-2 space-y-1">
+                                        <div class="font-semibold text-zinc-900 flex items-center gap-2 truncate">
+                                            @if($order->wo_number)
+                                                <x-wo-badge :number="$order->wo_number" variant="dark" />
+                                            @endif
+                                            @if($order->designer)
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">
+                                                    {{ $order->designer->name }}
+                                                </span>
+                                            @endif
+                                            @php
+                                                $locName = $order->location_name ?: $order->clientLocation?->name;
+                                                $cleanTask = $order->clean_task_name;
+                                                $showLocBadge = $locName && mb_strtolower(trim($locName), 'UTF-8') !== mb_strtolower(trim($cleanTask), 'UTF-8');
+                                            @endphp
+                                            @if($showLocBadge)
+                                                <span class="inline-flex items-center gap-1 font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded text-[10px] shrink-0" title="Locación del Cliente">
+                                                    <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
+                                                    <span>{{ $locName }}</span>
+                                                </span>
+                                            @endif
+                                            <span class="group-hover:text-emerald-700 transition truncate text-zinc-600">{{ $cleanTask }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        @if($order->substatus)
+                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                {{ $order->substatus->label() }}
+                                            </span>
+                                        @endif
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-stone-100 text-stone-600 border-stone-200">
+                                            {{ __('Archivado') }}
+                                        </span>
+                                        <x-lucide-panel-right class="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition shrink-0 ml-1" />
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-xs text-zinc-400 italic py-4 text-center">{{ __('No hay órdenes archivadas para este cliente.') }}</p>
                             @endforelse
                         </div>
                     </div>
@@ -877,24 +956,39 @@
             </div>
 
             {{-- Panel Footer --}}
-            <div class="px-6 py-4 border-t border-zinc-100 bg-white flex items-center justify-end gap-2.5 shrink-0">
-                <button 
-                    type="button" 
-                    @click="confirmClose(() => $wire.close())"
-                    class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium rounded-lg cursor-pointer transition"
-                >
-                    {{ __('Cancelar') }}
-                </button>
-                <button 
-                    type="button" 
-                    wire:click="save"
-                    :disabled="!isDirty()"
-                    :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-zinc-200 text-zinc-400 border border-zinc-200 cursor-not-allowed'"
-                    class="px-4 py-2 text-xs font-semibold rounded-lg transition flex items-center gap-1.5"
-                >
-                    <x-lucide-check class="w-3.5 h-3.5" x-show="isDirty()" />
-                    <span>{{ __('Guardar Cliente') }}</span>
-                </button>
+            <div class="px-6 py-4 border-t border-zinc-100 bg-white flex items-center justify-between shrink-0">
+                <div>
+                    @if($clientId)
+                        <button 
+                            type="button" 
+                            wire:click="deleteClient"
+                            wire:confirm="{{ __('¿Estás seguro de eliminar el cliente \":name\"? Esta acción moverá el cliente a la papelera.', ['name' => $name]) }}"
+                            class="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 text-xs font-semibold rounded-lg cursor-pointer transition flex items-center gap-1.5 border border-rose-200/80 shadow-2xs"
+                        >
+                            <x-lucide-trash-2 class="w-3.5 h-3.5 text-rose-600" />
+                            <span>{{ __('Eliminar Cliente') }}</span>
+                        </button>
+                    @endif
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <button 
+                        type="button" 
+                        @click="confirmClose(() => $wire.close())"
+                        class="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium rounded-lg cursor-pointer transition"
+                    >
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button 
+                        type="button" 
+                        wire:click="save"
+                        :disabled="!isDirty()"
+                        :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-zinc-200 text-zinc-400 border border-zinc-200 cursor-not-allowed'"
+                        class="px-4 py-2 text-xs font-semibold rounded-lg transition flex items-center gap-1.5"
+                    >
+                        <x-lucide-check class="w-3.5 h-3.5" x-show="isDirty()" />
+                        <span>{{ __('Guardar Cliente') }}</span>
+                    </button>
+                </div>
             </div>
         </div>
     @endif

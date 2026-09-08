@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CoreStatus;
 use App\Livewire\Backlog\Index;
 use App\Livewire\Clients\ClientFlyoutPanel;
 use App\Livewire\Clients\ClientIndex;
@@ -301,5 +302,69 @@ class ClientDatabaseTest extends TestCase
             ->call('save');
 
         $this->assertDatabaseCount('client_contacts', 1);
+    }
+
+    public function test_can_delete_client_from_client_index(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE TO DELETE LIST']);
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE TO DELETE LIST',
+            'task_name' => 'Task',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(ClientIndex::class)
+            ->call('deleteClient', $client->id)
+            ->assertDispatched('client-updated');
+
+        $this->assertSoftDeleted('clients', ['id' => $client->id]);
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'client_id' => null,
+        ]);
+    }
+
+    public function test_can_delete_client_from_client_flyout_panel(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE TO DELETE FLYOUT']);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->assertSee('Eliminar Cliente')
+            ->call('deleteClient')
+            ->assertSet('isOpen', false)
+            ->assertDispatched('client-updated');
+
+        $this->assertSoftDeleted('clients', ['id' => $client->id]);
+    }
+
+    public function test_client_flyout_displays_active_and_archived_orders_tabs(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE WITH ARCHIVED']);
+
+        Order::create([
+            'company_name' => 'CLIENTE WITH ARCHIVED',
+            'task_name' => 'Active Project Task',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+        ]);
+
+        Order::create([
+            'company_name' => 'CLIENTE WITH ARCHIVED',
+            'task_name' => 'Archived Project Task',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ARCHIVED,
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->assertSee('Proyectos (1)')
+            ->assertSee('Archivados (1)')
+            ->set('activeTab', 'archived')
+            ->assertSee('Archived Project Task');
     }
 }

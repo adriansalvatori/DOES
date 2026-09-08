@@ -561,6 +561,26 @@ class ClientFlyoutPanel extends Component
         );
     }
 
+    public function deleteClient(): void
+    {
+        if (! $this->clientId) {
+            return;
+        }
+
+        $client = Client::find($this->clientId);
+        if ($client) {
+            $name = $client->name;
+            Order::where('client_id', $client->id)->update([
+                'client_id' => null,
+                'client_location_id' => null,
+            ]);
+            $client->delete();
+            session()->flash('message', "Cliente '{$name}' eliminado correctamente.");
+            $this->dispatch('client-updated');
+            $this->close();
+        }
+    }
+
     public function render()
     {
         $currentClient = $this->clientId ? Client::with(['activeOrders', 'archivedOrders', 'locations'])->find($this->clientId) : null;

@@ -65,7 +65,8 @@
                 <thead class="bg-[#f7f7f5] text-zinc-500 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
                     <tr>
                         <th class="py-2 px-3.5">{{ __('Cliente') }}</th>
-                        <th class="py-2 px-3.5 text-right w-36">{{ __('Órdenes Activas') }}</th>
+                        <th class="py-2 px-3.5 text-right whitespace-nowrap">{{ __('Órdenes Activas') }}</th>
+                        <th class="py-2 pr-3.5 pl-1 w-10 text-right"></th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-[#e9e9e7]">
@@ -73,7 +74,7 @@
                         {{-- Clickable Row --}}
                         <tr 
                             wire:click="openClientDetail({{ $client->id }})" 
-                            class="hover:bg-[#f7f7f5] transition cursor-pointer"
+                            class="group hover:bg-[#f7f7f5] transition cursor-pointer"
                         >
                             <td class="py-2.5 px-3.5">
                                 <div class="flex flex-col">
@@ -166,16 +167,27 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="py-2.5 px-3.5 text-right">
+                            <td class="py-2.5 px-3.5 text-right whitespace-nowrap">
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 inline-flex items-center gap-1">
                                     <x-lucide-zap class="w-3 h-3 text-emerald-600" />
                                     <span>{{ $client->active_orders_count }} activas</span>
                                 </span>
                             </td>
+                            <td class="py-2.5 pr-3.5 pl-1 text-right w-10" @click.stop>
+                                <button 
+                                    type="button" 
+                                    wire:click="deleteClient({{ $client->id }})"
+                                    wire:confirm="{{ __('¿Estás seguro de eliminar el cliente \":name\"? Esta acción moverá el cliente a la papelera.', ['name' => $client->name]) }}"
+                                    class="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-100/80 border border-transparent hover:border-rose-200 transition opacity-0 group-hover:opacity-100 sm:opacity-40 flex items-center justify-center cursor-pointer ml-auto"
+                                    title="{{ __('Eliminar cliente') }}"
+                                >
+                                    <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                </button>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="2" class="p-8 text-center text-zinc-400 italic">
+                            <td colspan="3" class="p-8 text-center text-zinc-400 italic">
                                 <div class="flex flex-col items-center gap-1.5">
                                     <x-lucide-building-2 class="w-6 h-6 text-zinc-300" />
                                     <p class="text-xs font-medium text-zinc-600">{{ __('No hay clientes en Workspace.') }}</p>

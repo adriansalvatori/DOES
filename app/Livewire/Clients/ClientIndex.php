@@ -3,6 +3,7 @@
 namespace App\Livewire\Clients;
 
 use App\Models\Client;
+use App\Models\Order;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -25,6 +26,21 @@ class ClientIndex extends Component
     public function openClientDetail(?int $clientId = null): void
     {
         $this->dispatch('open-client-flyout', clientId: $clientId);
+    }
+
+    public function deleteClient(int $clientId): void
+    {
+        $client = Client::find($clientId);
+        if ($client) {
+            $name = $client->name;
+            Order::where('client_id', $client->id)->update([
+                'client_id' => null,
+                'client_location_id' => null,
+            ]);
+            $client->delete();
+            session()->flash('message', "Cliente '{$name}' eliminado correctamente.");
+            $this->dispatch('client-updated');
+        }
     }
 
     public function render()
