@@ -26,6 +26,8 @@ class ClientFlyoutPanel extends Component
 
     public array $aliases = [];
 
+    public array $phones = [];
+
     public string $newAlias = '';
 
     public string $notes = '';
@@ -55,6 +57,24 @@ class ClientFlyoutPanel extends Component
                 $this->aliases = is_array($client->aliases) ? array_values($client->aliases) : [];
                 $this->newAlias = '';
                 $this->notes = $client->notes ?? '';
+
+                $rawPhones = is_array($client->phones) ? $client->phones : [];
+                $this->phones = [];
+                foreach ($rawPhones as $p) {
+                    if (is_array($p)) {
+                        $this->phones[] = [
+                            'label' => $p['label'] ?? '',
+                            'phone' => ClientLocation::formatPhoneNumber($p['phone'] ?? ''),
+                        ];
+                    }
+                }
+                if (empty($this->phones)) {
+                    $fallbackPhone = $client->locations->first()?->phone ?? $client->locations->first()?->manager_phone ?? '';
+                    $this->phones = [
+                        ['label' => '', 'phone' => ClientLocation::formatPhoneNumber($fallbackPhone)],
+                    ];
+                }
+
                 $this->contacts = $client->contacts->map(fn ($c) => [
                     'id' => $c->id,
                     'name' => $c->name,
@@ -106,6 +126,9 @@ class ClientFlyoutPanel extends Component
             $this->name = '';
             $this->website = '';
             $this->aliases = [];
+            $this->phones = [
+                ['label' => '', 'phone' => ''],
+            ];
             $this->newAlias = '';
             $this->notes = '';
             $this->contacts = [
@@ -122,6 +145,27 @@ class ClientFlyoutPanel extends Component
         }
 
         $this->isOpen = true;
+    }
+
+    public function addPhone(): void
+    {
+        $this->phones[] = [
+            'label' => '',
+            'phone' => '',
+        ];
+    }
+
+    public function removePhone(int $index): void
+    {
+        if (isset($this->phones[$index])) {
+            unset($this->phones[$index]);
+            $this->phones = array_values($this->phones);
+        }
+        if (empty($this->phones)) {
+            $this->phones = [
+                ['label' => '', 'phone' => ''],
+            ];
+        }
     }
 
     public function addAlias(): void
@@ -379,6 +423,27 @@ class ClientFlyoutPanel extends Component
             }
         }
 
+        $cleanPhones = [];
+        foreach ($this->phones as $index => $p) {
+            $pPhone = ClientLocation::formatPhoneNumber($p['phone'] ?? '');
+            $pLabel = mb_strtoupper(trim($p['label'] ?? ''), 'UTF-8');
+            if (! empty(trim($p['phone'] ?? '')) && ! ClientLocation::isValidPhoneNumber($p['phone'])) {
+                $this->addError("phones.{$index}.phone", 'El teléfono debe tener 10 dígitos (ej. (770) 864-9359).');
+
+                return;
+            }
+            if (! empty($pPhone) || ! empty($pLabel)) {
+                $cleanPhones[] = [
+                    'label' => $pLabel,
+                    'phone' => $pPhone,
+                ];
+            }
+        }
+
+        if (! empty($cleanPhones[0]['phone']) && empty(trim($this->locations[0]['phone'] ?? ''))) {
+            $this->locations[0]['phone'] = $cleanPhones[0]['phone'];
+        }
+
         if (! empty(trim($this->newAlias))) {
             $this->addAlias();
         }
@@ -393,6 +458,7 @@ class ClientFlyoutPanel extends Component
                 'name' => $cleanName,
                 'website' => $cleanWebsite,
                 'aliases' => $aliasesArray,
+                'phones' => $cleanPhones,
                 'notes' => $this->notes,
             ]);
         } else {
@@ -400,6 +466,7 @@ class ClientFlyoutPanel extends Component
                 'name' => $cleanName,
                 'website' => $cleanWebsite,
                 'aliases' => $aliasesArray,
+                'phones' => $cleanPhones,
                 'notes' => $this->notes,
             ]);
             $this->clientId = $client->id;

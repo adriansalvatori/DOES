@@ -17,12 +17,14 @@ class Client extends Model
     protected $fillable = [
         'name',
         'aliases',
+        'phones',
         'website',
         'notes',
     ];
 
     protected $casts = [
         'aliases' => 'array',
+        'phones' => 'array',
     ];
 
     /**
@@ -66,6 +68,7 @@ class Client extends Model
                         ->orWhere('website', 'like', $term)
                         ->orWhere('notes', 'like', $term)
                         ->orWhere('aliases', 'like', $term)
+                        ->orWhere('phones', 'like', $term)
                         ->orWhereHas('contacts', fn ($cq) => $cq->where('name', 'like', $term)->orWhere('email', 'like', $term)->orWhere('phone', 'like', $term))
                         ->orWhereHas('locations', fn ($lq) => $lq->where('name', 'like', $term)->orWhere('address', 'like', $term));
                 });

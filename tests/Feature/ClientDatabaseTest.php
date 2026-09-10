@@ -367,4 +367,27 @@ class ClientDatabaseTest extends TestCase
             ->set('activeTab', 'archived')
             ->assertSee('Archived Project Task');
     }
+
+    public function test_can_save_multiple_labeled_phone_numbers_in_client_flyout_panel(): void
+    {
+        $client = Client::create(['name' => 'FUERZA LATINA MULTIPHONE']);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->set('phones', [
+                ['label' => 'GA', 'phone' => '(770) 864-9359'],
+                ['label' => 'SC', 'phone' => '(843) 123-4567'],
+                ['label' => 'ALABAMA', 'phone' => '(205) 555-0144'],
+                ['label' => 'TENNESSEE', 'phone' => '(615) 555-0188'],
+            ])
+            ->call('save')
+            ->assertSet('isOpen', false);
+
+        $client->refresh();
+        $this->assertCount(4, $client->phones);
+        $this->assertEquals('GA', $client->phones[0]['label']);
+        $this->assertEquals('(770) 864-9359', $client->phones[0]['phone']);
+        $this->assertEquals('SC', $client->phones[1]['label']);
+        $this->assertEquals('(843) 123-4567', $client->phones[1]['phone']);
+    }
 }

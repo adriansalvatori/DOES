@@ -18,6 +18,10 @@
                 name: ($wire.name || '').trim(),
                 website: ($wire.website || '').trim(),
                 aliases: ($wire.aliases || []).map(a => (a || '').trim()),
+                phones: ($wire.phones || []).map(p => ({
+                    label: (p.label || '').trim(),
+                    phone: (p.phone || '').trim()
+                })),
                 notes: ($wire.notes || '').trim(),
                 locations: ($wire.locations || []).map(l => ({
                     name: (l.name || '').trim(),
@@ -47,6 +51,10 @@
                 name: ($wire.name || '').trim(),
                 website: ($wire.website || '').trim(),
                 aliases: ($wire.aliases || []).map(a => (a || '').trim()),
+                phones: ($wire.phones || []).map(p => ({
+                    label: (p.label || '').trim(),
+                    phone: (p.phone || '').trim()
+                })),
                 notes: ($wire.notes || '').trim(),
                 locations: ($wire.locations || []).map(l => ({
                     name: (l.name || '').trim(),
@@ -324,28 +332,78 @@
                                 @endif
                             </div>
 
-                            {{-- 2. Marketing Phone & Email (Independent from contact cards) --}}
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                <div class="flex items-center gap-2">
-                                    <x-lucide-phone class="w-4 h-4 text-zinc-400 shrink-0" />
-                                    <input 
-                                        type="text" 
-                                        wire:model.blur="locations.0.phone"
-                                        x-on:input="
-                                            let val = $el.value.replace(/\D/g, '');
+                            {{-- 2. General Phones & Email Section (Supports multiple phone numbers with labels & hover '+' button) --}}
+                            <div class="space-y-2 pt-1">
+                                <div 
+                                    x-data="{ 
+                                        hovered: false,
+                                        formatPhone(el) {
+                                            let val = el.value.replace(/\D/g, '');
                                             if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
                                             if (val.length > 10) val = val.substring(0, 10);
-                                            if (val.length === 0) { $el.value = ''; }
-                                            else if (val.length <= 3) { $el.value = '(' + val; }
-                                            else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
-                                            else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
-                                        "
-                                        placeholder="(000) 000-0000"
-                                        class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
-                                    />
+                                            if (val.length === 0) { el.value = ''; }
+                                            else if (val.length <= 3) { el.value = '(' + val; }
+                                            else if (val.length <= 6) { el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
+                                            else { el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
+                                        }
+                                    }" 
+                                    @mouseenter="hovered = true" 
+                                    @mouseleave="hovered = false"
+                                    class="space-y-1.5"
+                                >
+                                    @foreach($phones as $pIndex => $pItem)
+                                        <div class="flex items-center gap-2 group/phone">
+                                            <x-lucide-phone class="w-4 h-4 text-zinc-400 shrink-0" />
+                                            <input 
+                                                type="text" 
+                                                wire:model.live.debounce.150ms="phones.{{ $pIndex }}.label"
+                                                placeholder="{{ __('GA / SC / AL...') }}"
+                                                :size="Math.max(6, ({{ json_encode($pItem['label'] ?? '') }} || 'General').length + 1)"
+                                                class="bg-zinc-100/90 hover:bg-zinc-200/70 focus:bg-white border border-zinc-200/70 focus:border-zinc-300 rounded px-1.5 py-0.5 text-[11px] font-bold text-zinc-700 uppercase tracking-tight focus:outline-none transition shrink-0 max-w-[110px]"
+                                            />
+                                            <input 
+                                                type="text" 
+                                                wire:model.blur="phones.{{ $pIndex }}.phone"
+                                                x-on:input="formatPhone($el)"
+                                                placeholder="(000) 000-0000"
+                                                class="flex-1 bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs text-zinc-800 font-mono focus:outline-none transition min-w-[130px]"
+                                            />
+
+                                            {{-- Plus button (appears on hover over phone section) --}}
+                                            @if($loop->last)
+                                                <button 
+                                                    type="button" 
+                                                    wire:click="addPhone"
+                                                    x-show="hovered"
+                                                    x-transition:enter="transition ease-out duration-100"
+                                                    x-transition:enter-start="opacity-0 scale-90"
+                                                    x-transition:enter-end="opacity-100 scale-100"
+                                                    class="p-1 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 text-xs transition cursor-pointer shrink-0 flex items-center gap-0.5 shadow-2xs"
+                                                    title="{{ __('Agregar otro número de teléfono') }}"
+                                                >
+                                                    <x-lucide-plus class="w-3.5 h-3.5 text-emerald-600" />
+                                                </button>
+                                            @endif
+
+                                            {{-- Delete phone row button --}}
+                                            @if(count($phones) > 1)
+                                                <button 
+                                                    type="button" 
+                                                    wire:click="removePhone({{ $pIndex }})"
+                                                    class="p-1 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-0 group-hover/phone:opacity-100 shrink-0"
+                                                    title="{{ __('Eliminar teléfono') }}"
+                                                >
+                                                    <x-lucide-x class="w-3.5 h-3.5" />
+                                                </button>
+                                            @endif
+                                        </div>
+                                        @error("phones.{$pIndex}.phone")
+                                            <p class="text-[11px] text-rose-500 font-medium pl-6 mt-0.5">{{ $message }}</p>
+                                        @enderror
+                                    @endforeach
                                 </div>
 
-                                <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-2 pt-0.5">
                                     <x-lucide-mail class="w-4 h-4 text-zinc-400 shrink-0" />
                                     <input 
                                         type="email" 
