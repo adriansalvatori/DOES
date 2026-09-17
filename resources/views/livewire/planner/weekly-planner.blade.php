@@ -717,14 +717,31 @@
                                 @php
                                     $isNextWeek = $day['is_next_week'] ?? false;
                                     $isToday = !$isNextWeek && $day['date']->isToday();
+                                    $isFirstDayOfWeek = !$isNextWeek && $loop->first;
                                     
                                     $dayOrders = $isNextWeek
                                         ? $designer->orders->filter(fn($o) => $o->scheduled_date && $o->scheduled_date->gte(Carbon\Carbon::parse($day['date_string'])))
-                                        : $designer->orders->filter(fn($o) => $o->scheduled_date?->toDateString() === $day['date_string']);
+                                        : $designer->orders->filter(function ($o) use ($day, $isFirstDayOfWeek) {
+                                            if ($o->scheduled_date?->toDateString() === $day['date_string']) {
+                                                return true;
+                                            }
+                                            if ($isFirstDayOfWeek && $o->scheduled_date && $o->scheduled_date->lt(Carbon\Carbon::parse($day['date_string'])) && $o->core_status !== \App\Enums\CoreStatus::EN_PRODUCCION && $o->core_status !== \App\Enums\CoreStatus::ARCHIVED) {
+                                                return true;
+                                            }
+                                            return false;
+                                        });
 
                                     $daySubtasks = $isNextWeek
                                         ? $designerSubtasks->filter(fn($st) => $st->scheduled_date && $st->scheduled_date->gte(Carbon\Carbon::parse($day['date_string'])))
-                                        : $designerSubtasks->filter(fn($st) => $st->scheduled_date?->toDateString() === $day['date_string']);
+                                        : $designerSubtasks->filter(function ($st) use ($day, $isFirstDayOfWeek) {
+                                            if ($st->scheduled_date?->toDateString() === $day['date_string']) {
+                                                return true;
+                                            }
+                                            if ($isFirstDayOfWeek && $st->scheduled_date && $st->scheduled_date->lt(Carbon\Carbon::parse($day['date_string'])) && $st->status !== 'done') {
+                                                return true;
+                                            }
+                                            return false;
+                                        });
 
                                     if (! $showSystemTasks) {
                                         $daySubtasks = $daySubtasks->filter(fn($st) => $st->isWorkTask());
@@ -791,6 +808,13 @@
                                             <span class="px-1.5 py-0.5 rounded bg-white text-[9.5px] font-mono text-zinc-600 border border-stone-200 font-semibold shrink-0">
                                                 {{ $dayOrders->count() + $daySubtasks->count() }}
                                             </span>
+                                            <button 
+                                                type="button"
+                                                @click.stop="$dispatch('open-subtask-modal', { dateStr: '{{ $day['date_string'] }}', designerId: '{{ $designer->id }}' })" 
+                                                class="p-0.5 rounded hover:bg-stone-200/80 text-zinc-500 hover:text-zinc-900 transition cursor-pointer"
+                                                title="{{ __('Agregar subtarea a') }} {{ $day['day_name'] }}">
+                                                <x-lucide-plus class="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
                                     </div>
 
@@ -838,12 +862,18 @@
                                                             @php
                                                                 $orderOverSla = ! $order->isSlaExempt() && $order->scheduled_date && $order->scheduled_date->gt($order->current_due_date);
                                                                 $orderOverdue = $order->isOverdue();
+                                                                $orderDueToday = $order->current_due_date->isToday();
                                                             @endphp
                                                             <div class="flex items-center justify-between pt-1 border-t border-stone-100 text-[9px]">
                                                                 @if($orderOverSla || $orderOverdue)
                                                                     <span class="font-semibold text-red-600 inline-flex items-center gap-1 bg-red-50 px-1.5 py-0.2 rounded border border-red-200/60" title="SLA: {{ $order->current_due_date->format('d M, Y') }}">
                                                                         <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
                                                                         <span>SLA Excedido</span>
+                                                                    </span>
+                                                                @elseif($orderDueToday)
+                                                                    <span class="font-bold text-amber-800 inline-flex items-center gap-1 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 shadow-2xs" title="SLA Límite Hoy: {{ $order->current_due_date->format('d M, Y') }}">
+                                                                        <x-lucide-clock class="w-2.5 h-2.5 text-amber-700 shrink-0 stroke-[2.5]" />
+                                                                        <span>SLA HOY</span>
                                                                     </span>
                                                                 @else
                                                                     <span class="text-zinc-400 font-mono">
@@ -1021,11 +1051,19 @@
                                                                 @php
                                                                     $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
                                                                     $staskOverdue = $stask->order->isOverdue();
+                                                                    $staskDueToday = $stask->order->current_due_date->isToday();
                                                                 @endphp
                                                                 @if($staskOverSla || $staskOverdue)
                                                                     <div class="pt-0.5 text-[9px] font-semibold text-red-600 flex items-center gap-1" title="SLA: {{ $stask->order->current_due_date->format('d M, Y') }}">
                                                                         <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
                                                                         <span>SLA Excedido</span>
+                                                                    </div>
+                                                                @elseif($staskDueToday)
+                                                                    <div class="pt-0.5 text-[9px] font-bold text-amber-800 flex items-center gap-1" title="SLA Límite Hoy: {{ $stask->order->current_due_date->format('d M, Y') }}">
+                                                                        <span class="inline-flex items-center gap-1 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 shadow-2xs">
+                                                                            <x-lucide-clock class="w-2.5 h-2.5 text-amber-700 shrink-0 stroke-[2.5]" />
+                                                                            <span>SLA HOY</span>
+                                                                        </span>
                                                                     </div>
                                                                 @endif
                                                             @endif
@@ -1045,6 +1083,17 @@
                                                 @endforeach
                                             </div>
                                         @endif
+
+                                        <!-- Footer Action to Add Subtask from Column -->
+                                        <div class="pt-1.5 mt-auto">
+                                            <button 
+                                                type="button"
+                                                @click.stop="$dispatch('open-subtask-modal', { dateStr: '{{ $day['date_string'] }}', designerId: '{{ $designer->id }}' })"
+                                                class="w-full py-1 px-1.5 rounded-lg border border-dashed border-stone-200 hover:border-stone-300 hover:bg-stone-100/80 text-zinc-400 hover:text-zinc-700 text-[10px] font-medium transition flex items-center justify-center gap-1 cursor-pointer select-none">
+                                                <x-lucide-plus class="w-3 h-3" />
+                                                <span>{{ __('Agregar subtarea') }}</span>
+                                            </button>
+                                        </div>
                                     </div>
 
                                 </div>
@@ -1487,6 +1536,7 @@
                                                                             @php
                                                                                 $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
                                                                                 $staskOverdue = $stask->order->isOverdue();
+                                                                                $staskDueToday = $stask->order->current_due_date->isToday();
                                                                             @endphp
                                                                             @if($staskOverSla || $staskOverdue)
                                                                                 <div class="relative group/tip shrink-0">
@@ -1495,7 +1545,17 @@
                                                                                         <span>SLA</span>
                                                                                     </span>
                                                                                     <div class="absolute bottom-full right-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
-                                                                                        SLA: {{ $stask->order->current_due_date->format('d M, Y') }}
+                                                                                        SLA Excedido ({{ $stask->order->current_due_date->format('d M, Y') }})
+                                                                                    </div>
+                                                                                </div>
+                                                                            @elseif($staskDueToday)
+                                                                                <div class="relative group/tip shrink-0">
+                                                                                    <span class="text-[9px] font-bold text-amber-800 bg-amber-100 px-1 py-0.2 rounded border border-amber-300 shrink-0 inline-flex items-center gap-0.5 shadow-2xs {{ $staskDone ? 'opacity-50' : '' }}">
+                                                                                        <x-lucide-clock class="w-2.5 h-2.5 text-amber-700 shrink-0 stroke-[2.5]" />
+                                                                                        <span>SLA HOY</span>
+                                                                                    </span>
+                                                                                    <div class="absolute bottom-full right-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
+                                                                                        SLA Límite Hoy ({{ $stask->order->current_due_date->format('d M, Y') }})
                                                                                     </div>
                                                                                 </div>
                                                                             @endif

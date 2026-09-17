@@ -622,4 +622,49 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertSee('Revision Final Archivo')
             ->assertSee('Archivada');
     }
+
+    public function test_weekly_planner_synchronizes_past_pending_subtasks_in_both_view_modes(): void
+    {
+        $designer = Designer::create(['name' => 'Marcos', 'active' => true]);
+
+        $pastDateStr = now()->subWeek()->startOfWeek(Carbon::MONDAY)->toDateString();
+
+        $subtaskOverdue = RelatedTask::create([
+            'order_id' => null,
+            'title' => 'Subtarea Pendiente Pasada',
+            'scheduled_date' => $pastDateStr,
+            'assignee_id' => $designer->id,
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        // Assert it appears in by_day view mode
+        Livewire::test(WeeklyPlanner::class)
+            ->call('changeViewMode', 'by_day')
+            ->assertSee('Subtarea Pendiente Pasada');
+
+        // Assert it appears in by_designer view mode
+        Livewire::test(WeeklyPlanner::class)
+            ->call('changeViewMode', 'by_designer')
+            ->assertSee('Subtarea Pendiente Pasada');
+    }
+
+    public function test_weekly_planner_renders_past_scheduled_pending_orders_without_error(): void
+    {
+        $designer = Designer::create(['name' => 'Sara', 'active' => true]);
+        $pastDateStr = now()->subWeek()->startOfWeek(Carbon::MONDAY)->toDateString();
+
+        $pastOrder = Order::create([
+            'company_name' => 'PAST PENDING COMPANY',
+            'task_name' => 'Old Pending Task',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'scheduled_date' => $pastDateStr,
+            'designer_id' => $designer->id,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertOk()
+            ->assertSee('PAST PENDING COMPANY');
+    }
 }
