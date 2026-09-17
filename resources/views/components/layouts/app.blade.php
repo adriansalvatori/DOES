@@ -223,6 +223,13 @@
                         x-transition:enter-end="opacity-100 scale-100"
                         class="mt-1 pl-6 space-y-1 text-xs">
                         <a 
+                            href="/settings/documentation" 
+                            title="{{ __('Guía de Comportamientos') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span class="truncate">{{ __('Guía de Comportamientos') }}</span>
+                        </a>
+                        <a 
                             href="/settings/language" 
                             title="{{ __('Idioma / Language') }}" 
                             class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
@@ -267,6 +274,13 @@
                         x-transition:enter-end="opacity-100 scale-100 translate-x-0"
                         class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
                         <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">{{ __('Configuración') }}</div>
+                        <a 
+                            href="/settings/documentation" 
+                            title="{{ __('Guía de Comportamientos') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span class="truncate">{{ __('Guía Comportamientos') }}</span>
+                        </a>
                         <a 
                             href="/settings/language" 
                             title="{{ __('Idioma / Language') }}" 
