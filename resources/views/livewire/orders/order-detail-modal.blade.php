@@ -1243,6 +1243,15 @@
                                                 {{ $event->getFormattedTitle() }}
                                             </h5>
 
+                                            @if(is_array($event->metadata) && isset($event->metadata['from_list']) && isset($event->metadata['to_list']))
+                                                <div class="mt-1 p-2 rounded-md bg-blue-50 border border-blue-200 text-[11px] text-blue-900 font-medium space-y-0.5">
+                                                    <div class="flex items-center gap-1.5 font-medium text-blue-800">
+                                                        <x-lucide-arrow-right-left class="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                                                        <span>Lista Trello: {{ $event->metadata['from_list'] }} &rarr; <strong>{{ $event->metadata['to_list'] }}</strong></span>
+                                                    </div>
+                                                </div>
+                                            @endif
+
                                             @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])))
                                                 <div class="mt-1 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium space-y-1">
                                                     <div class="flex items-start gap-1.5">

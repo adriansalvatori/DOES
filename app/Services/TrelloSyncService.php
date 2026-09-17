@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CoreStatus;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\OrderEvent;
 use App\Models\TrelloListMapping;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -457,6 +458,23 @@ class TrelloSyncService
         if ($isNew) {
             app(AutomationEngine::class)->handleOrderCreated($order);
         } else {
+            if ($action === 'moved' && $existing && $existing->core_status !== $targetStatus) {
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'STATUS_CHANGED_VIA_TRELLO',
+                    'actor' => 'Sincronización Trello',
+                    'previous_value' => $existing->core_status?->value,
+                    'new_value' => $targetStatus->value,
+                    'metadata' => [
+                        'source' => 'trello_sync',
+                        'from_list' => $existing->core_status?->label() ?? 'Desconocido',
+                        'to_list' => $listName,
+                        'trello_card_id' => $cardData['id'],
+                    ],
+                ]);
+                app(AutomationEngine::class)->handleStatusChanged($order, $existing->core_status, $targetStatus);
+            }
+
             app(SlaEngine::class)->checkOverdue($order);
             if (empty($dueDate) && ! empty($oldDueDateStr)) {
                 app(AutomationEngine::class)->dismissPendingOverdueTasks($order);

@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('db:backup')->daily();
 Schedule::command('orders:run-daily-automations')->dailyAt('07:00');
+Schedule::command('trello:sync')->everyFifteenMinutes();

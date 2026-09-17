@@ -155,6 +155,11 @@ class OrderEvent extends Model
         if (str_contains($type, 'DELAY_RESOLVED')) {
             return __('Atraso resuelto y nueva fecha acordada');
         }
+        if (str_contains($type, 'STATUS_CHANGED_VIA_TRELLO')) {
+            $statusLabel = $this->formatValueIfDate($this->new_value);
+
+            return __('Estatus actualizado desde Trello (:status)', ['status' => $statusLabel]);
+        }
         if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
             $statusLabel = $this->formatValueIfDate($this->new_value);
 
