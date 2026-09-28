@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -12,6 +13,7 @@ class Designer extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'name',
         'trello_member_id',
         'active',
@@ -20,6 +22,11 @@ class Designer extends Model
     protected $casts = [
         'active' => 'boolean',
     ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     public function orders(): BelongsToMany
     {

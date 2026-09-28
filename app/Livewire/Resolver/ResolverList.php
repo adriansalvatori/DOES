@@ -156,6 +156,15 @@ class ResolverList extends Component
                     })
                     ->orWhere(function ($m) {
                         $m->where('approved', true)->where('measures_confirmed', false);
+                    })
+                    ->orWhere(function ($des) {
+                        $des->whereNull('designer_id')
+                            ->whereIn('core_status', [
+                                CoreStatus::TO_DO_TODAY,
+                                CoreStatus::ADRIAN_ORDERS_RECEIVED,
+                                CoreStatus::EURALIZ_ORDERS_RECEIVED,
+                                CoreStatus::CESAR_ORDERS_RECEIVED,
+                            ]);
                     });
             })->get();
 

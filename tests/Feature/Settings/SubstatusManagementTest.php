@@ -4,6 +4,7 @@ namespace Tests\Feature\Settings;
 
 use App\Livewire\Settings\Substatuses;
 use App\Models\Substatus;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -23,7 +24,8 @@ class SubstatusManagementTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $response = $this->get('/settings/substatuses');
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->get('/settings/substatuses');
         $response->assertStatus(200);
         $response->assertSee('Configuración de Subestatus');
         $response->assertSee('PRUEBA SUBESTATUS');

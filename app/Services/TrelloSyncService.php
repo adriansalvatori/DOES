@@ -874,4 +874,111 @@ class TrelloSyncService
 
         return $results;
     }
+
+    /**
+     * Fetch card details (including description) for a given Trello card.
+     */
+    public function getCardDetails(string $cardId, ?string $apiKey = null, ?string $apiToken = null): array
+    {
+        $cardId = trim($cardId);
+        if (empty($cardId)) {
+            return ['success' => false, 'error' => 'No card ID specified.', 'card' => null];
+        }
+
+        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+
+        $params = ['key' => $apiKey];
+        if ($apiToken) {
+            $params['token'] = $apiToken;
+        }
+
+        try {
+            $response = Http::get("{$this->baseUrl}/cards/{$cardId}", $params);
+
+            if ($response->successful()) {
+                return ['success' => true, 'card' => $response->json()];
+            }
+
+            return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'card' => null];
+        } catch (\Exception $e) {
+            Log::error("Trello API error fetching card details for {$cardId}: ".$e->getMessage());
+
+            return ['success' => false, 'status' => 500, 'error' => $e->getMessage(), 'card' => null];
+        }
+    }
+
+    /**
+     * Fetch all attachments for a given Trello card.
+     */
+    public function getCardAttachments(string $cardId, ?string $apiKey = null, ?string $apiToken = null): array
+    {
+        $cardId = trim($cardId);
+        if (empty($cardId)) {
+            return ['success' => false, 'error' => 'No card ID specified.', 'attachments' => []];
+        }
+
+        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+
+        $params = ['key' => $apiKey, 'fields' => 'all'];
+        if ($apiToken) {
+            $params['token'] = $apiToken;
+        }
+
+        try {
+            $response = Http::get("{$this->baseUrl}/cards/{$cardId}/attachments", $params);
+
+            if ($response->successful()) {
+                return ['success' => true, 'attachments' => $response->json()];
+            }
+
+            return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'attachments' => []];
+        } catch (\Exception $e) {
+            Log::error("Trello API error fetching card attachments for {$cardId}: ".$e->getMessage());
+
+            return ['success' => false, 'status' => 500, 'error' => $e->getMessage(), 'attachments' => []];
+        }
+    }
+
+    /**
+     * Proxy/fetch raw content of a Trello attachment or preview URL using stored credentials.
+     */
+    public function proxyAttachment(string $url): array
+    {
+        $url = trim($url);
+        if (empty($url)) {
+            return ['success' => false, 'error' => 'No URL specified.'];
+        }
+
+        $apiKey = config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => "OAuth oauth_consumer_key=\"{$apiKey}\", oauth_token=\"{$apiToken}\"",
+            ])->get($url);
+
+            if (! $response->successful()) {
+                $response = Http::get($url, [
+                    'key' => $apiKey,
+                    'token' => $apiToken,
+                ]);
+            }
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'content' => $response->body(),
+                    'mime' => $response->header('Content-Type') ?: 'application/octet-stream',
+                ];
+            }
+
+            return ['success' => false, 'status' => $response->status(), 'error' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error("Error proxying Trello attachment {$url}: ".$e->getMessage());
+
+            return ['success' => false, 'status' => 500, 'error' => $e->getMessage()];
+        }
+    }
 }

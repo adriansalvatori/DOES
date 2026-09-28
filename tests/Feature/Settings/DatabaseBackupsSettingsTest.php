@@ -3,6 +3,7 @@
 namespace Tests\Feature\Settings;
 
 use App\Livewire\Settings\Backups;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Livewire\Livewire;
@@ -34,7 +35,8 @@ class DatabaseBackupsSettingsTest extends TestCase
 
     public function test_backups_settings_page_renders_successfully(): void
     {
-        $response = $this->get('/settings/backups');
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->get('/settings/backups');
 
         $response->assertStatus(200);
         $response->assertSeeLivewire(Backups::class);

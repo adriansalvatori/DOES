@@ -97,6 +97,24 @@ class OrderDetailModal extends Component
 
     public $trelloCommentError = null;
 
+    // Trello description & attachments state
+    public $trelloDescription = null;
+
+    public $trelloAttachments = [];
+
+    public $isLoadingTrelloDetails = false;
+
+    public $trelloDetailsError = null;
+
+    // In-App Media Preview Modal State
+    public $showMediaPreviewModal = false;
+
+    public $previewMediaUrl = '';
+
+    public $previewMediaTitle = '';
+
+    public $previewMediaType = 'image'; // image, pdf, iframe
+
     public function mount($orderId = null)
     {
         $this->orderId = $orderId;
@@ -121,7 +139,53 @@ class OrderDetailModal extends Component
             $this->isEditing = false;
         }
 
+        $this->refreshTrelloData();
+    }
+
+    public function refreshTrelloData()
+    {
         $this->loadTrelloComments();
+        $this->loadTrelloDetails();
+    }
+
+    public function loadTrelloDetails()
+    {
+        if (! $this->orderId) {
+            $this->trelloDescription = null;
+            $this->trelloAttachments = [];
+
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || ! $order->trello_card_id) {
+            $this->trelloDescription = null;
+            $this->trelloAttachments = [];
+            $this->trelloDetailsError = null;
+
+            return;
+        }
+
+        $this->isLoadingTrelloDetails = true;
+        $this->trelloDetailsError = null;
+
+        $service = app(TrelloSyncService::class);
+        $cardRes = $service->getCardDetails($order->trello_card_id);
+        $attachRes = $service->getCardAttachments($order->trello_card_id);
+
+        $this->isLoadingTrelloDetails = false;
+
+        if ($cardRes['success']) {
+            $this->trelloDescription = $cardRes['card']['desc'] ?? null;
+        } else {
+            $this->trelloDetailsError = $cardRes['error'] ?? 'Error al obtener detalles de la tarjeta de Trello.';
+        }
+
+        if ($attachRes['success']) {
+            $this->trelloAttachments = $attachRes['attachments'] ?? [];
+        } else {
+            $this->trelloAttachments = [];
+        }
     }
 
     public function loadTrelloComments()
@@ -174,7 +238,7 @@ class OrderDetailModal extends Component
             $this->editTrelloCardId = $order->trello_card_id;
             session()->flash('message', 'Tarjeta de Trello creada y vinculada exitosamente.');
             $this->dispatch('order-updated');
-            $this->loadTrelloComments();
+            $this->refreshTrelloData();
         } else {
             session()->flash('error', 'Error al crear la tarjeta en Trello: '.($res['error'] ?? 'Error desconocido'));
         }
@@ -657,11 +721,62 @@ class OrderDetailModal extends Component
         session()->flash('message', "Fecha límite de {$order->company_name} establecida a Ninguna (Sin Fecha).");
     }
 
+    public function openMediaPreview(string $url, string $title = 'Archivo')
+    {
+        $url = trim($url);
+        if (empty($url)) {
+            return;
+        }
+
+        $host = parse_url($url, PHP_URL_HOST);
+        $isTrelloResource = false;
+        if ($host) {
+            $allowedHosts = ['trello.com', 'api.trello.com', 'trello-attachments.s3.amazonaws.com', 'trello-members.s3.amazonaws.com'];
+            foreach ($allowedHosts as $allowed) {
+                if ($host === $allowed || str_ends_with((string) $host, '.'.$allowed)) {
+                    $isTrelloResource = true;
+                    break;
+                }
+            }
+        }
+
+        if ($isTrelloResource) {
+            $finalUrl = route('trello.attachment-proxy', ['url' => $url]);
+        } else {
+            $finalUrl = $url;
+        }
+
+        $cleanPath = parse_url($url, PHP_URL_PATH) ?? '';
+        $extension = strtolower(pathinfo($cleanPath, PATHINFO_EXTENSION));
+
+        if (in_array($extension, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'])) {
+            $type = 'image';
+        } elseif ($extension === 'pdf') {
+            $type = 'pdf';
+        } else {
+            $type = 'iframe';
+        }
+
+        $this->previewMediaUrl = $finalUrl;
+        $this->previewMediaTitle = $title;
+        $this->previewMediaType = $type;
+        $this->showMediaPreviewModal = true;
+    }
+
+    public function closeMediaPreview()
+    {
+        $this->showMediaPreviewModal = false;
+        $this->previewMediaUrl = '';
+        $this->previewMediaTitle = '';
+        $this->previewMediaType = 'image';
+    }
+
     public function closeModal()
     {
         $this->showModal = false;
         $this->showApprovalModal = false;
         $this->showDelayModal = false;
+        $this->showMediaPreviewModal = false;
         $this->isEditing = false;
         $this->newTrelloComment = '';
     }

@@ -1343,22 +1343,17 @@
                     </div>
                 @endif
 
-                <!-- TRELLO COMMENTS SECTION -->
-                <div class="space-y-3 pt-2">
+                <!-- TRELLO INTEGRATION SECTION (DESCRIPTION, ATTACHMENTS & COMMENTS) -->
+                <div class="space-y-4 pt-3 border-t border-[#e9e9e7]">
                     <div class="flex items-center justify-between">
                         <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
                             <span class="w-5 h-5 rounded bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] shadow-2xs">T</span>
-                            <span>Comentarios en Trello</span>
-                            @if(!empty($trelloComments))
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
-                                    {{ count($trelloComments) }}
-                                </span>
-                            @endif
+                            <span>INFORMACIÓN & ARCHIVOS DE TRELLO</span>
                         </h4>
                         @if($order->trello_card_id)
-                            <button wire:click="loadTrelloComments" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer">
-                                <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="loadTrelloComments" class="w-3.5 h-3.5" />
-                                <span>Actualizar</span>
+                            <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="Actualizar datos de Trello">
+                                <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshTrelloData,loadTrelloComments,loadTrelloDetails" class="w-3.5 h-3.5" />
+                                <span>Actualizar Trello</span>
                             </button>
                         @endif
                     </div>
@@ -1382,7 +1377,172 @@
                             </div>
                         </div>
                     @else
+                        <!-- TRELLO DESCRIPTION BLOCK -->
+                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-2 shadow-2xs">
+                            <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
+                                <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                    <x-lucide-align-left class="w-4 h-4 text-sky-600 shrink-0" />
+                                    <span>Descripción de la Tarjeta</span>
+                                </h5>
+                                @if($isLoadingTrelloDetails)
+                                    <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
+                                @endif
+                            </div>
+
+                            @if($isLoadingTrelloDetails)
+                                <div class="py-3 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 font-medium">
+                                    <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
+                                    <span>Cargando descripción desde Trello...</span>
+                                </div>
+                            @elseif($trelloDetailsError)
+                                <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
+                                    <x-lucide-alert-circle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                    <span>{{ $trelloDetailsError }}</span>
+                                </div>
+                            @elseif(!empty(trim($trelloDescription)))
+                                @php
+                                    $formattedDesc = preg_replace_callback('/!\[([^\]]*)\]\(([^\)]+)\)/', function($matches) {
+                                        $url = trim($matches[2]);
+                                        $alt = trim($matches[1]);
+                                        $label = !empty($alt) ? $alt : (basename(parse_url($url, PHP_URL_PATH) ?: 'Archivo'));
+                                        return "[$label]($url)";
+                                    }, $trelloDescription);
+
+                                    $htmlDesc = \Illuminate\Support\Str::markdown($formattedDesc, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+                                    $htmlDesc = preg_replace_callback('/<a\s+(?:[^>]*?\s+)?href=([\'"])(.*?)\1[^>]*>(.*?)<\/a>/i', function($matches) {
+                                        $url = html_entity_decode($matches[2]);
+                                        $rawLabel = strip_tags($matches[3]);
+                                        $label = !empty(trim($rawLabel)) ? trim($rawLabel) : 'Archivo';
+                                        $escapedUrl = addslashes($url);
+                                        $escapedLabel = addslashes($label);
+                                        return '<button type="button" wire:click="openMediaPreview(\'' . $escapedUrl . '\', \'' . $escapedLabel . '\')" class="text-sky-600 font-semibold underline hover:text-sky-800 transition cursor-pointer inline-flex items-center gap-1 my-0.5">' . $matches[3] . ' <svg class="w-3 h-3 inline-block shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>';
+                                    }, $htmlDesc);
+                                @endphp
+                                <div class="text-xs text-zinc-800 leading-relaxed bg-white border border-stone-200/80 rounded-lg p-3 max-h-60 overflow-y-auto prose prose-xs prose-stone max-w-none shadow-2xs [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5">
+                                    {!! $htmlDesc !!}
+                                </div>
+                            @else
+                                <div class="p-3 rounded-lg bg-stone-100/70 border border-stone-200 text-xs text-zinc-400 italic">
+                                    Sin descripción registrada en la tarjeta de Trello.
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- TRELLO ATTACHMENTS BLOCK -->
+                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-3 shadow-2xs">
+                            <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
+                                <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                    <x-lucide-paperclip class="w-4 h-4 text-sky-600 shrink-0" />
+                                    <span>Archivos Adjuntos</span>
+                                    @if(!empty($trelloAttachments))
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+                                            {{ count($trelloAttachments) }}
+                                        </span>
+                                    @endif
+                                </h5>
+                                @if($isLoadingTrelloDetails)
+                                    <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
+                                @endif
+                            </div>
+
+                            @if($isLoadingTrelloDetails)
+                                <div class="py-3 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 font-medium">
+                                    <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
+                                    <span>Cargando archivos adjuntos desde Trello...</span>
+                                </div>
+                            @elseif(empty($trelloAttachments))
+                                <div class="p-3 rounded-lg bg-stone-100/70 border border-stone-200 text-xs text-zinc-400 italic">
+                                    Sin archivos adjuntos en la tarjeta de Trello.
+                                </div>
+                            @else
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                                    @foreach($trelloAttachments as $attachment)
+                                        @php
+                                            $isImage = !empty($attachment['previews']) || (isset($attachment['mimeType']) && str_starts_with($attachment['mimeType'], 'image/')) || preg_match('/\.(jpg|jpeg|png|gif|webp|svg)$/i', $attachment['name'] ?? '');
+                                            $previewUrl = null;
+                                            if ($isImage && !empty($attachment['previews'])) {
+                                                $previewUrl = $attachment['previews'][min(2, count($attachment['previews']) - 1)]['url'] ?? $attachment['url'];
+                                            } elseif ($isImage) {
+                                                $previewUrl = $attachment['url'];
+                                            }
+
+                                            $bytes = $attachment['bytes'] ?? null;
+                                            $sizeFormatted = null;
+                                            if ($bytes && $bytes > 0) {
+                                                $units = ['B', 'KB', 'MB', 'GB'];
+                                                $i = (int) floor(log($bytes, 1024));
+                                                $sizeFormatted = round($bytes / pow(1024, $i), 1) . ' ' . ($units[$i] ?? 'B');
+                                            }
+                                        @endphp
+                                        
+                                        <div 
+                                            wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? 'Archivo') }}')" 
+                                            x-data="{ imgError: false }" 
+                                            class="group border border-[#e9e9e7] hover:border-sky-400 bg-white hover:bg-sky-50/40 rounded-lg p-2.5 flex items-center gap-3 transition shadow-2xs min-w-0 cursor-pointer">
+                                            @if($isImage && $previewUrl)
+                                                @php
+                                                    $proxiedUrl = route('trello.attachment-proxy', ['url' => $previewUrl]);
+                                                @endphp
+                                                <div class="w-11 h-11 rounded-md bg-stone-100 border border-stone-200 overflow-hidden shrink-0 relative group-hover:ring-2 group-hover:ring-sky-400/40 transition flex items-center justify-center">
+                                                    <template x-if="!imgError">
+                                                        <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? 'Adjunto' }}" class="w-full h-full object-cover">
+                                                    </template>
+                                                    <template x-if="imgError">
+                                                        <div class="w-full h-full bg-sky-50 text-sky-600 flex items-center justify-center">
+                                                            <x-lucide-image class="w-5.5 h-5.5" />
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            @elseif(isset($attachment['mimeType']) && str_contains($attachment['mimeType'], 'pdf'))
+                                                <div class="w-11 h-11 rounded-md bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
+                                                    <x-lucide-file-text class="w-5.5 h-5.5" />
+                                                </div>
+                                            @elseif($isImage)
+                                                <div class="w-11 h-11 rounded-md bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center shrink-0">
+                                                    <x-lucide-image class="w-5.5 h-5.5" />
+                                                </div>
+                                            @else
+                                                <div class="w-11 h-11 rounded-md bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center shrink-0">
+                                                    <x-lucide-file class="w-5.5 h-5.5" />
+                                                </div>
+                                            @endif
+
+                                            <div class="min-w-0 flex-1 space-y-0.5">
+                                                <p class="text-xs font-semibold text-zinc-800 group-hover:text-sky-700 truncate" title="{{ $attachment['name'] ?? 'Archivo' }}">
+                                                    {{ $attachment['name'] ?? 'Archivo' }}
+                                                </p>
+                                                <div class="flex items-center gap-2 text-[10px] text-zinc-400">
+                                                    @if($sizeFormatted)
+                                                        <span class="font-mono bg-stone-100 px-1.5 py-0.2 rounded text-zinc-600 font-medium">{{ $sizeFormatted }}</span>
+                                                    @endif
+                                                    @if(!empty($attachment['date']))
+                                                        <span class="truncate">{{ \Carbon\Carbon::parse($attachment['date'])->format('d M, Y') }}</span>
+                                                    @endif
+                                                </div>
+                                            </div>
+
+                                            <div class="p-1 rounded-md text-zinc-400 group-hover:text-sky-600 group-hover:bg-sky-100/60 shrink-0 transition" title="Ver Vista Previa">
+                                                <x-lucide-maximize-2 class="w-3.5 h-3.5" />
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- TRELLO COMMENTS BLOCK -->
                         <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-4 shadow-2xs">
+                            <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
+                                <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                    <x-lucide-message-square class="w-4 h-4 text-sky-600 shrink-0" />
+                                    <span>Comentarios</span>
+                                    @if(!empty($trelloComments))
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+                                            {{ count($trelloComments) }}
+                                        </span>
+                                    @endif
+                                </h5>
+                            </div>
                             <!-- Add Comment Form with Live Inline Preview Inside Typing Box -->
                             <div class="space-y-2" x-data="{
                                 init() {
@@ -1900,4 +2060,46 @@
             </div>
         </div>
     @endif
+
+    <!-- IN-APP MEDIA PREVIEW LIGHTBOX MODAL -->
+    @if($showMediaPreviewModal)
+        <div 
+            class="fixed inset-0 z-[450] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 transition-all animate-in fade-in duration-150"
+            @keydown.window.escape.prevent="$wire.closeMediaPreview()">
+            
+            <!-- Header Bar -->
+            <div class="w-full max-w-5xl bg-zinc-900 border border-zinc-700/80 rounded-t-2xl p-3.5 sm:px-5 flex items-center justify-between gap-3 text-white shadow-2xl">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                        {{ strtoupper($previewMediaType) }}
+                    </span>
+                    <h3 class="font-bold text-xs sm:text-sm text-zinc-100 truncate" title="{{ $previewMediaTitle }}">
+                        {{ $previewMediaTitle }}
+                    </h3>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <a href="{{ $previewMediaUrl }}" download target="_blank" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold border border-zinc-700 transition flex items-center gap-1.5 shadow-2xs">
+                        <x-lucide-download class="w-3.5 h-3.5 text-sky-400" />
+                        <span class="hidden sm:inline">Descargar / Abrir</span>
+                    </a>
+                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center border border-zinc-700 transition cursor-pointer" title="Cerrar (Esc)">
+                        <x-lucide-x class="w-4.5 h-4.5" />
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="w-full max-w-5xl bg-zinc-950 border-x border-b border-zinc-800 rounded-b-2xl p-2 sm:p-4 flex items-center justify-center min-h-[50vh] max-h-[80vh] overflow-auto shadow-2xl relative">
+                @if($previewMediaType === 'image')
+                    <img src="{{ $previewMediaUrl }}" alt="{{ $previewMediaTitle }}" class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-md">
+                @elseif($previewMediaType === 'pdf')
+                    <iframe src="{{ $previewMediaUrl }}" class="w-full h-[75vh] rounded-lg border-0 bg-white"></iframe>
+                @else
+                    <iframe src="{{ $previewMediaUrl }}" class="w-full h-[75vh] rounded-lg border-0 bg-white"></iframe>
+                @endif
+            </div>
+        </div>
+    @endif
 </div>
+

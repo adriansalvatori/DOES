@@ -7,6 +7,7 @@ use App\Livewire\Kanban\Board;
 use App\Livewire\Orders\ArchivedOrders;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -85,7 +86,8 @@ class ArchivedOrdersTest extends TestCase
             'client_revision_count' => 2,
         ]);
 
-        $response = $this->get('/archived');
+        $user = User::factory()->create();
+        $response = $this->actingAs($user)->get('/archived');
         $response->assertStatus(200);
         $response->assertSee('Órdenes Archivadas &amp; Rendimiento', false);
         $response->assertSee('Closed Client');

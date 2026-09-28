@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Livewire\Settings\LanguageSettings;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -13,7 +14,9 @@ class LanguageSettingsTest extends TestCase
 
     public function test_language_settings_page_can_be_rendered(): void
     {
-        $response = $this->get('/settings/language');
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/settings/language');
 
         $response->assertStatus(200);
         $response->assertSee('Idioma / Language');
@@ -62,11 +65,12 @@ class LanguageSettingsTest extends TestCase
 
     public function test_pages_render_in_english_when_locale_is_set(): void
     {
+        $user = User::factory()->create();
         session()->flush();
         $this->withSession(['locale' => 'en']);
         app()->setLocale('en');
 
-        $response = $this->get('/kanban');
+        $response = $this->actingAs($user)->get('/kanban');
         $response->assertStatus(200);
         $response->assertSee('Kanban Board');
         $response->assertSee('Trash');

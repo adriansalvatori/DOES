@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Order;
+use App\Services\ActionRequiredResolverService;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Facades\Log;
 
@@ -13,6 +14,16 @@ class OrderObserver
      */
     public function updated(Order $order): void
     {
+        // 1. Auto-evaluate Action Required & Auto-Resolution
+        if ($order->wasChanged(['measures_confirmed', 'estimate_approved', 'customer_service_required', 'designer_id', 'core_status', 'substatus', 'scheduled_date'])) {
+            try {
+                app(ActionRequiredResolverService::class)->evaluateAndAutoResolve($order);
+            } catch (\Throwable $e) {
+                Log::warning("OrderObserver failed auto-resolution evaluation for order #{$order->id}: ".$e->getMessage());
+            }
+        }
+
+        // 2. Sync changes back to Trello
         if (! $order->in_workspace || ! $order->trello_card_id) {
             return;
         }

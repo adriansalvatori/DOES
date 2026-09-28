@@ -223,6 +223,22 @@
                         x-transition:enter-end="opacity-100 scale-100"
                         class="mt-1 pl-6 space-y-1 text-xs">
                         <a 
+                            href="/settings/profile" 
+                            title="{{ __('Mi Perfil') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/profile*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-user-cog class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Mi Perfil') }}</span>
+                        </a>
+                        @if(auth()->user()?->isAdmin())
+                            <a 
+                                href="/settings/users" 
+                                title="{{ __('Gestión de Usuarios') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                <span class="truncate">{{ __('Usuarios y Roles') }}</span>
+                            </a>
+                        @endif
+                        <a 
                             href="/settings/documentation" 
                             title="{{ __('Guía de Comportamientos') }}" 
                             class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
@@ -333,11 +349,32 @@
             </nav>
         </div>
 
+        <!-- User Profile & Logout Sidebar Footer -->
+        @auth
+            <div class="px-3 py-2 border-t border-[#e9e9e7] bg-[#f7f7f5] flex items-center justify-between gap-2">
+                <a href="{{ route('settings.profile') }}" class="flex items-center gap-2 min-w-0 group hover:opacity-80 transition" title="{{ auth()->user()->name }}">
+                    <div class="w-7 h-7 rounded-full bg-stone-900 text-white font-bold text-[11px] flex items-center justify-center shrink-0">
+                        {{ auth()->user()->initials }}
+                    </div>
+                    <div x-show="sidebarOpen" x-transition.opacity class="min-w-0">
+                        <p class="text-xs font-semibold text-zinc-900 truncate leading-tight group-hover:text-stone-900">{{ auth()->user()->name }}</p>
+                        <span class="text-[10px] text-zinc-500 block truncate">{{ auth()->user()->role?->label() ?? __('Diseñador') }}</span>
+                    </div>
+                </a>
+
+                <form method="POST" action="{{ route('logout') }}" x-show="sidebarOpen">
+                    @csrf
+                    <button type="submit" class="p-1 rounded text-zinc-400 hover:text-red-600 hover:bg-stone-200/60 transition cursor-pointer" title="{{ __('Cerrar Sesión') }}">
+                        <x-lucide-log-out class="w-4 h-4" />
+                    </button>
+                </form>
+            </div>
+        @endauth
+
         <!-- Trello Sync Pause Toggle -->
         <div class="px-3 py-2 border-t border-[#e9e9e7] bg-[#fdfdfc]">
             <livewire:trello-pause-toggle />
         </div>
-
 
     </aside>
 
@@ -368,6 +405,9 @@
                 $overdueCount = \App\Models\Order::inWorkspace()->where('substatus', \App\Enums\Substatus::OVERDUE)->count();
             @endphp
             <div class="flex items-center gap-3 shrink-0">
+                <!-- Livewire Notification Center -->
+                <livewire:notifications.notification-center />
+
                 <button 
                     id="tour-demo-btn"
                     @click="window.dispatchEvent(new CustomEvent('toggle-tutorial-mode'))"

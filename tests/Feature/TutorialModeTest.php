@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,7 +12,9 @@ class TutorialModeTest extends TestCase
 
     public function test_dashboard_renders_demo_tour_trigger_and_elements(): void
     {
-        $response = $this->get('/');
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/');
 
         $response->assertStatus(200);
         $response->assertSee('Modo Demo', false);
@@ -22,6 +25,8 @@ class TutorialModeTest extends TestCase
 
     public function test_all_demo_acts_routes_have_tour_targets(): void
     {
+        $user = User::factory()->create();
+
         $routesWithTargets = [
             '/' => 'tour-dashboard-stats',
             '/trello-sync' => 'tour-trello-sync-header',
@@ -33,7 +38,7 @@ class TutorialModeTest extends TestCase
         ];
 
         foreach ($routesWithTargets as $route => $targetId) {
-            $response = $this->get($route);
+            $response = $this->actingAs($user)->get($route);
             $response->assertStatus(200);
             $response->assertSee($targetId, false);
         }

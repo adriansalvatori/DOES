@@ -5,6 +5,7 @@ namespace Tests\Feature\Dashboard;
 use App\Enums\CoreStatus;
 use App\Livewire\Dashboard\Analytics;
 use App\Models\Order;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -15,13 +16,16 @@ class AnalyticsTest extends TestCase
 
     public function test_analytics_dashboard_renders_successfully(): void
     {
+        $user = User::factory()->create();
+
         Order::create([
             'company_name' => 'EMPRESA ANALYTICS TEST',
             'task_name' => 'DISENO LOGO',
             'in_workspace' => true,
         ]);
 
-        $this->get('/analytics')
+        $this->actingAs($user)
+            ->get('/analytics')
             ->assertStatus(200)
             ->assertSee(__('Analytics Dashboard'))
             ->assertSee(__('Centro de Control'));

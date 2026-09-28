@@ -6,6 +6,7 @@ use App\Enums\RelatedTaskType;
 use App\Livewire\Settings\SubtaskPresets;
 use App\Models\SubtaskPreset;
 use App\Models\SystemTaskConfig;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -24,7 +25,10 @@ class SubtaskPresetsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $this->get('/settings/subtasks')
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/settings/subtasks')
             ->assertStatus(200)
             ->assertSee('Plantillas de Subtareas')
             ->assertSee('Test Subtask Preset');
