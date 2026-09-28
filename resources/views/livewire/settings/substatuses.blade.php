@@ -68,10 +68,17 @@
                     <div class="px-5 py-3.5 bg-stone-50/70 border-b border-[#e9e9e7] flex items-center justify-between gap-3">
                         <div class="flex items-center gap-2.5 min-w-0">
                             <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $coreCase->dotClass() }}"></span>
-                            <span class="px-2.5 py-0.5 rounded text-xs font-bold border {{ $coreCase->badgeStyle() }}">
-                                {{ $coreCase->label() }}
-                            </span>
-                            <span class="text-[11px] text-zinc-400 font-mono hidden sm:inline">({{ $coreCase->value }})</span>
+                            @if(\App\Enums\CoreStatus::isPendingDesign($coreCase))
+                                <span class="px-2.5 py-0.5 rounded text-xs font-bold border bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">
+                                    {{ __('Colas de Diseño (Órdenes Recibidas)') }}
+                                </span>
+                                <span class="text-[11px] text-zinc-400 font-mono hidden sm:inline">({{ __('Aplica automáticamente a todos los diseñadores') }})</span>
+                            @else
+                                <span class="px-2.5 py-0.5 rounded text-xs font-bold border {{ $coreCase->badgeStyle() }}">
+                                    {{ $coreCase->label() }}
+                                </span>
+                                <span class="text-[11px] text-zinc-400 font-mono hidden sm:inline">({{ $coreCase->value }})</span>
+                            @endif
                             <span class="text-xs text-zinc-500 font-medium ml-2">
                                 {{ $assignedSubstatuses->count() }} {{ __($assignedSubstatuses->count() === 1 ? 'subestatus' : 'subestatus') }}
                             </span>
@@ -313,8 +320,14 @@
                                 :disabled="$wire.is_global"
                                 class="w-full px-3 py-2 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-stone-400 focus:outline-none bg-white font-medium disabled:opacity-50 disabled:bg-stone-100">
                                 <option value="">{{ __('-- Seleccionar Core Status --') }}</option>
-                                @foreach($coreStatuses as $statusCase)
-                                    <option value="{{ $statusCase->value }}">{{ $statusCase->label() }} ({{ $statusCase->value }})</option>
+                                @foreach($dropdownStatuses as $statusCase)
+                                    <option value="{{ $statusCase->value }}">
+                                        @if(\App\Enums\CoreStatus::isPendingDesign($statusCase))
+                                            {{ __('Colas de Diseño (Diseñadores: Euralíz, Adrián, César)') }}
+                                        @else
+                                            {{ $statusCase->label() }} ({{ $statusCase->value }})
+                                        @endif
+                                    </option>
                                 @endforeach
                             </select>
                             <span class="text-[10px] text-zinc-400 mt-0.5 block">{{ __('Selecciona el Core Status al cual pertenece este subestatus.') }}</span>

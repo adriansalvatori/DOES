@@ -32,8 +32,13 @@ class StatusTransitionService
         // Query DB substatuses that belong to this core_status OR are marked is_global
         $dbSubstatuses = SubstatusModel::query()
             ->where(function ($q) use ($statusEnum) {
-                $q->where('core_status', $statusEnum->value)
-                    ->orWhere('is_global', true);
+                if (CoreStatus::isPendingDesign($statusEnum)) {
+                    $designerQueueValues = array_map(fn ($s) => $s->value, CoreStatus::designerQueueStatuses());
+                    $q->whereIn('core_status', $designerQueueValues);
+                } else {
+                    $q->where('core_status', $statusEnum->value);
+                }
+                $q->orWhere('is_global', true);
             })
             ->orderBy('sort_order')
             ->get();

@@ -170,16 +170,7 @@ class TrelloSyncService
                     })->first();
 
                     if (! $designer && ! empty($fullName)) {
-                        // Alias and transliterated search to prevent duplicate designer records
-                        $clean = mb_strtolower(preg_replace('/[^a-z0-9]/', '', iconv('UTF-8', 'ASCII//TRANSLIT', $fullName) ?: $fullName));
-
-                        if (str_contains($clean, 'cesar') || str_contains($clean, 'guzman')) {
-                            $designer = Designer::where('name', 'like', '%Cés%')->orWhere('name', 'like', '%Cesar%')->first();
-                        } elseif (str_contains($clean, 'eural') || str_contains($clean, 'bravo')) {
-                            $designer = Designer::where('name', 'like', '%Eural%')->first();
-                        } elseif (str_contains($clean, 'adr') || str_contains($clean, 'reinoza')) {
-                            $designer = Designer::where('name', 'like', '%Adr%')->first();
-                        }
+                        $designer = Designer::findByAliasOrName($fullName) ?? Designer::findByAliasOrName($username);
                     }
 
                     if ($designer) {
@@ -191,10 +182,14 @@ class TrelloSyncService
                     }
 
                     if (! $designer && ! empty($fullName)) {
+                        $slug = Str::slug($fullName);
                         $designer = Designer::create([
                             'name' => ucwords(strtolower($fullName)),
+                            'slug' => $slug,
+                            'color_type' => 'cyan',
                             'trello_member_id' => $mId,
                             'active' => true,
+                            'aliases' => [$slug, mb_strtolower($fullName), mb_strtolower($username)],
                         ]);
                         $designerId = $designer->id;
                         break;
@@ -204,16 +199,8 @@ class TrelloSyncService
         }
 
         if (! $designerId) {
-            $designerName = match ($coreStatus) {
-                CoreStatus::EURALIZ_ORDERS_RECEIVED => 'Euralíz',
-                CoreStatus::CESAR_ORDERS_RECEIVED => 'César',
-                CoreStatus::ADRIAN_ORDERS_RECEIVED => 'Adrián',
-                default => null,
-            };
-            if ($designerName) {
-                $designer = Designer::where('name', $designerName)->first();
-                $designerId = $designer?->id;
-            }
+            $designer = Designer::where('queue_status_value', $coreStatus->value)->first();
+            $designerId = $designer?->id;
         }
 
         $dueDate = ! empty($cardData['due']) ? substr($cardData['due'], 0, 10) : null;

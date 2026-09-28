@@ -389,26 +389,21 @@ class Board extends Component
             $relatedTasks = collect();
         }
 
-        $allColumns = [
-            CoreStatus::ENTRANTE,
-            CoreStatus::EURALIZ_ORDERS_RECEIVED,
-            CoreStatus::ADRIAN_ORDERS_RECEIVED,
-            CoreStatus::CESAR_ORDERS_RECEIVED,
-            CoreStatus::TO_DO_TODAY,
-            CoreStatus::ENVIADO_A_CAMILA,
-            CoreStatus::ENVIADO_AL_CLIENTE,
-            CoreStatus::ON_HOLD,
-            CoreStatus::EN_PRODUCCION,
-            CoreStatus::ARCHIVED,
-        ];
+        $allColumns = array_merge(
+            [CoreStatus::ENTRANTE],
+            CoreStatus::designerQueueStatuses(),
+            [
+                CoreStatus::TO_DO_TODAY,
+                CoreStatus::ENVIADO_A_CAMILA,
+                CoreStatus::ENVIADO_AL_CLIENTE,
+                CoreStatus::ON_HOLD,
+                CoreStatus::EN_PRODUCCION,
+                CoreStatus::ARCHIVED,
+            ]
+        );
 
         $columns = match ($this->columnGroup) {
-            'incoming' => [
-                CoreStatus::ENTRANTE,
-                CoreStatus::EURALIZ_ORDERS_RECEIVED,
-                CoreStatus::ADRIAN_ORDERS_RECEIVED,
-                CoreStatus::CESAR_ORDERS_RECEIVED,
-            ],
+            'incoming' => array_merge([CoreStatus::ENTRANTE], CoreStatus::designerQueueStatuses()),
             'in_progress' => [
                 CoreStatus::TO_DO_TODAY,
                 CoreStatus::ENVIADO_A_CAMILA,

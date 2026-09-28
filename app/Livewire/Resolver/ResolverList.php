@@ -159,12 +159,7 @@ class ResolverList extends Component
                     })
                     ->orWhere(function ($des) {
                         $des->whereNull('designer_id')
-                            ->whereIn('core_status', [
-                                CoreStatus::TO_DO_TODAY,
-                                CoreStatus::ADRIAN_ORDERS_RECEIVED,
-                                CoreStatus::EURALIZ_ORDERS_RECEIVED,
-                                CoreStatus::CESAR_ORDERS_RECEIVED,
-                            ]);
+                            ->whereIn('core_status', array_merge([CoreStatus::TO_DO_TODAY], CoreStatus::designerQueueStatuses()));
                     });
             })->get();
 

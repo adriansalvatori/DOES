@@ -35,13 +35,12 @@ class SlaEngine
             $startDate->addDays(1);
         }
 
+        if (CoreStatus::isPendingDesign($status)) {
+            return $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS);
+        }
+
         return match ($status) {
-            CoreStatus::EURALIZ_ORDERS_RECEIVED,
-            CoreStatus::ADRIAN_ORDERS_RECEIVED,
-            CoreStatus::CESAR_ORDERS_RECEIVED => $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS),
-
             CoreStatus::ENTRANTE => $startDate->addWeekdays(self::MISSING_MEASURES_SLA_DAYS),
-
             default => $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS),
         };
     }

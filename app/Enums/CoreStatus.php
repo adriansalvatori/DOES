@@ -63,13 +63,18 @@ enum CoreStatus: string
         };
     }
 
-    public static function isPendingDesign(self $status): bool
+    public static function designerQueueStatuses(): array
     {
-        return in_array($status, [
+        return [
             self::EURALIZ_ORDERS_RECEIVED,
             self::ADRIAN_ORDERS_RECEIVED,
             self::CESAR_ORDERS_RECEIVED,
-        ]);
+        ];
+    }
+
+    public static function isPendingDesign(self $status): bool
+    {
+        return in_array($status, self::designerQueueStatuses(), true);
     }
 
     public function hexColor(): string

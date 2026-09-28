@@ -236,16 +236,13 @@ class Order extends Model
             // Check if any selected designer is an External Designer
             $hasExternal = Designer::whereIn('id', $cleanIds)
                 ->get()
-                ->contains(fn ($d) => $d->color_type === 'yellow');
+                ->contains(fn ($d) => $d->is_external || $d->color_type === 'yellow' || $d->color_type === 'amber');
 
             if ($hasExternal) {
-                // Find Euralíz designer ID
-                $euralizId = Designer::where('name', 'like', '%Eural%')
-                    ->orWhere('name', 'like', '%Bravo%')
-                    ->value('id') ?? 1;
+                $leadId = Designer::getLeadDesigner()->id;
 
-                if (! in_array($euralizId, $cleanIds)) {
-                    $cleanIds[] = $euralizId;
+                if (! in_array($leadId, $cleanIds)) {
+                    $cleanIds[] = $leadId;
                 }
             }
         }
@@ -338,13 +335,13 @@ class Order extends Model
 
     public function getDesignerOrdersReceivedStatus(): CoreStatus
     {
-        $designerName = $this->designer?->name ?? $this->designers->first()?->name;
+        $designer = $this->designer ?? $this->designers->first(fn ($d) => $d->active);
 
-        return match ($designerName) {
-            'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
-            'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-            default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
-        };
+        if ($designer) {
+            return $designer->getQueueStatus();
+        }
+
+        return Designer::getLeadDesigner()->getQueueStatus();
     }
 
     public function getPrimaryDesignerId(): ?int
@@ -479,11 +476,7 @@ class Order extends Model
             $durationText = $diffInDays === 1 ? __('1 día') : __(':days días', ['days' => $diffInDays]);
         }
 
-        $designerStatus = match ($this->designer?->name) {
-            'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
-            'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-            default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
-        };
+        $designerStatus = $this->getDesignerOrdersReceivedStatus();
 
         $targetStatus = ($this->core_status === CoreStatus::ENTRANTE) ? $designerStatus : ($this->core_status ?? $designerStatus);
 

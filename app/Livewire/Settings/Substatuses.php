@@ -184,22 +184,41 @@ class Substatuses extends Component
             ->orderBy('name')
             ->get();
 
+        $designerQueueValues = array_map(fn ($s) => $s->value, CoreStatus::designerQueueStatuses());
+
         $substatusesByCoreStatus = [];
         foreach (CoreStatus::cases() as $coreCase) {
-            $substatusesByCoreStatus[$coreCase->value] = $allSubstatuses->filter(function ($sub) use ($coreCase) {
-                return ! $sub->is_global && ($sub->core_status?->value ?? $sub->core_status) === $coreCase->value;
-            });
+            if (CoreStatus::isPendingDesign($coreCase)) {
+                $substatusesByCoreStatus[$coreCase->value] = $allSubstatuses->filter(function ($sub) use ($designerQueueValues) {
+                    return ! $sub->is_global && in_array($sub->core_status?->value ?? $sub->core_status, $designerQueueValues, true);
+                });
+            } else {
+                $substatusesByCoreStatus[$coreCase->value] = $allSubstatuses->filter(function ($sub) use ($coreCase) {
+                    return ! $sub->is_global && ($sub->core_status?->value ?? $sub->core_status) === $coreCase->value;
+                });
+            }
         }
 
         $globalSubstatuses = $allSubstatuses->filter(function ($sub) {
             return $sub->is_global || empty($sub->core_status);
         });
 
+        // Display a single unified section for all designer queues instead of separate blocks
+        $coreStatusesForDisplay = collect(CoreStatus::cases())->filter(function ($coreCase) {
+            return $coreCase === CoreStatus::EURALIZ_ORDERS_RECEIVED || ! CoreStatus::isPendingDesign($coreCase);
+        })->values();
+
+        // Select options for dropdown (grouping designer queues)
+        $dropdownStatuses = collect(CoreStatus::cases())->filter(function ($coreCase) {
+            return $coreCase === CoreStatus::EURALIZ_ORDERS_RECEIVED || ! CoreStatus::isPendingDesign($coreCase);
+        })->values();
+
         return view('livewire.settings.substatuses', [
             'substatuses' => $allSubstatuses,
             'substatusesByCoreStatus' => $substatusesByCoreStatus,
             'globalSubstatuses' => $globalSubstatuses,
-            'coreStatuses' => CoreStatus::cases(),
+            'coreStatuses' => $coreStatusesForDisplay,
+            'dropdownStatuses' => $dropdownStatuses,
         ]);
     }
 }

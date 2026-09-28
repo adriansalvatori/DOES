@@ -274,11 +274,7 @@ class AutomationEngine
 
         if ($measuresConfirmed && $estimateApproved) {
             // Fully Approved -> Move to designer Orders Received + PONER EN ALTA
-            $targetStatus = match ($order->designer?->name) {
-                'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
-                'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-                default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
-            };
+            $targetStatus = $order->getDesignerOrdersReceivedStatus();
 
             $order->update([
                 'core_status' => $targetStatus,
@@ -305,11 +301,7 @@ class AutomationEngine
             ]);
         } elseif ($measuresConfirmed && ! $estimateApproved) {
             // Approved but estimate missing -> Move to Orders Received with warning condition
-            $targetStatus = match ($order->designer?->name) {
-                'Adrián' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
-                'César' => CoreStatus::CESAR_ORDERS_RECEIVED,
-                default => CoreStatus::EURALIZ_ORDERS_RECEIVED,
-            };
+            $targetStatus = $order->getDesignerOrdersReceivedStatus();
 
             $order->update([
                 'core_status' => $targetStatus,
@@ -412,12 +404,8 @@ class AutomationEngine
         // Auto-promote orders scheduled for today into TO DO TODAY
         $scheduledForToday = Order::inWorkspace()
             ->whereDate('scheduled_date', '<=', today())
-            ->whereIn('core_status', [
-                CoreStatus::EURALIZ_ORDERS_RECEIVED,
-                CoreStatus::ADRIAN_ORDERS_RECEIVED,
-                CoreStatus::CESAR_ORDERS_RECEIVED,
-                CoreStatus::ENTRANTE,
-            ])->get();
+            ->whereIn('core_status', array_merge(CoreStatus::designerQueueStatuses(), [CoreStatus::ENTRANTE]))
+            ->get();
 
         foreach ($scheduledForToday as $order) {
             $order->update(['core_status' => CoreStatus::TO_DO_TODAY]);
@@ -466,12 +454,7 @@ class AutomationEngine
      */
     public function checkAndCreateOverdueTask(Order $order): void
     {
-        $allowedStatuses = [
-            CoreStatus::EURALIZ_ORDERS_RECEIVED,
-            CoreStatus::ADRIAN_ORDERS_RECEIVED,
-            CoreStatus::CESAR_ORDERS_RECEIVED,
-            CoreStatus::TO_DO_TODAY,
-        ];
+        $allowedStatuses = array_merge(CoreStatus::designerQueueStatuses(), [CoreStatus::TO_DO_TODAY]);
 
         if (! in_array($order->core_status, $allowedStatuses, true)) {
             return;

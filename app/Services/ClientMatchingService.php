@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\ClientContact;
 use App\Models\ClientLink;
 use App\Models\ClientLocation;
+use App\Models\Designer;
 use App\Models\Order;
 use Illuminate\Support\Str;
 
@@ -142,12 +143,15 @@ class ClientMatchingService
 
         // Known designer, status, workflow, product, or location keywords from backlog cards
         $invalidKeywords = [
-            'ALTA', 'CAMILA', 'KIKE', 'EURALIZ', 'CESAR', 'ADRIAN - CS', 'CLIENT NAME',
+            'ALTA', 'CAMILA', 'KIKE', 'CLIENT NAME',
             'MARCA PROPIA', 'CLIENT', 'ENTREGADO', 'UPDATE', 'PERMIT', '4OVER', 'PICASSO',
             'BUSINESS CARDS', 'BOLSO', 'PASAPORTE', 'PORTA', 'LOCACION', 'LOGO', 'DIPSA',
             'MARIETTA', 'CONFIANZA', 'SAVANNAH', 'DORAVILLE', 'BEAVER', 'MI TIERRA',
             'AUTO', 'COMERCIAL', 'BAKERY', 'TAQUERIA', 'RESTAURANT', 'SUPERMERCADOS',
         ];
+
+        $designerKeywords = Designer::where('active', true)->pluck('name')->map(fn ($n) => mb_strtoupper($n))->toArray();
+        $invalidKeywords = array_merge($invalidKeywords, $designerKeywords);
 
         foreach ($invalidKeywords as $kw) {
             if ($cleanUpper === $kw || str_contains($cleanUpper, $kw)) {

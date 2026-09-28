@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Client;
+use App\Models\Designer;
 
 class OrderTitleParserService
 {
@@ -16,19 +17,15 @@ class OrderTitleParserService
         'PENDING',
         'KUDOS-YOLANDA DESK-ALTA',
         'PROCESAR POR GABY',
-        'Cesar',
-        'Adrián',
-        'Euralíz',
-        'Camila',
     ];
 
-    /**
-     * Check if a title string represents a non-order list header.
-     */
     public static function isIncompatibleHeader(string $rawTitle): bool
     {
         $rawTitleClean = trim($rawTitle);
-        foreach (self::$incompatibleHeaderKeywords as $kw) {
+        $designerKeywords = Designer::where('active', true)->pluck('name')->toArray();
+        $keywords = array_merge(self::$incompatibleHeaderKeywords, $designerKeywords);
+
+        foreach ($keywords as $kw) {
             if (strcasecmp($rawTitleClean, $kw) === 0 || (stripos($rawTitleClean, $kw) === 0 && strlen($rawTitleClean) < 30 && ! preg_match('/^wo\s*\d+/i', $rawTitleClean))) {
                 return true;
             }
