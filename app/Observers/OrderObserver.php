@@ -4,11 +4,22 @@ namespace App\Observers;
 
 use App\Models\Order;
 use App\Services\ActionRequiredResolverService;
+use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Facades\Log;
 
 class OrderObserver
 {
+    /**
+     * Handle the Order "updating" event.
+     */
+    public function updating(Order $order): void
+    {
+        if ($order->isDirty('core_status') && ! $order->isDirty('substatus')) {
+            app(StatusTransitionService::class)->normalizeSubstatusOnCoreStatusChange($order, $order->core_status);
+        }
+    }
+
     /**
      * Handle the Order "updated" event.
      */

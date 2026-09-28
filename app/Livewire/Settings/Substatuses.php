@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Settings;
 
+use App\Enums\CoreStatus;
 use App\Models\Substatus;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -29,10 +30,19 @@ class Substatuses extends Component
 
     public string $border_color = '#BFDBFE';
 
+    public ?string $core_status = null;
+
+    public bool $is_default = false;
+
+    public bool $is_global = false;
+
     protected function rules(): array
     {
         return [
             'name' => 'required|string|max:100|unique:substatuses,name,'.$this->editingId,
+            'core_status' => 'nullable|string',
+            'is_default' => 'boolean',
+            'is_global' => 'boolean',
             'main_color' => 'required|string|max:20',
             'style_type' => 'required|string|in:light,solid',
             'bg_color' => 'required|string|max:100',
@@ -73,7 +83,14 @@ class Substatuses extends Component
 
     public function openCreateModal(): void
     {
-        $this->reset(['editingId', 'name', 'main_color', 'style_type', 'bg_color', 'text_color', 'border_color']);
+        $this->openCreateModalForCoreStatus(null);
+    }
+
+    public function openCreateModalForCoreStatus(?string $coreStatus = null): void
+    {
+        $this->reset(['editingId', 'name', 'core_status', 'is_default', 'is_global', 'main_color', 'style_type', 'bg_color', 'text_color', 'border_color']);
+        $this->core_status = $coreStatus;
+        $this->is_global = empty($coreStatus);
         $this->style_type = 'light';
         $this->selectPresetColor('#3B82F6');
         $this->showModal = true;
@@ -84,6 +101,9 @@ class Substatuses extends Component
         $sub = Substatus::findOrFail($id);
         $this->editingId = $sub->id;
         $this->name = $sub->name;
+        $this->core_status = $sub->core_status?->value ?? $sub->core_status;
+        $this->is_default = (bool) $sub->is_default;
+        $this->is_global = (bool) $sub->is_global;
         $this->main_color = $sub->color ?? '#3B82F6';
         $this->style_type = $sub->style_type ?? 'light';
         $this->bg_color = $sub->bg_color;
@@ -92,11 +112,35 @@ class Substatuses extends Component
         $this->showModal = true;
     }
 
+    public function updatedIsGlobal($value): void
+    {
+        if ($value) {
+            $this->core_status = null;
+            $this->is_default = false;
+        }
+    }
+
+    public function updatedCoreStatus($value): void
+    {
+        if (! empty($value)) {
+            $this->is_global = false;
+        }
+    }
+
     public function save(): void
     {
         $validated = $this->validate();
         $validated['color'] = $this->main_color;
         $validated['style_type'] = $this->style_type;
+
+        if ($this->is_global) {
+            $validated['core_status'] = null;
+            $validated['is_default'] = false;
+        }
+
+        if (! empty($validated['core_status']) && $this->is_default) {
+            Substatus::where('core_status', $validated['core_status'])->update(['is_default' => false]);
+        }
 
         if ($this->editingId) {
             $sub = Substatus::findOrFail($this->editingId);
@@ -110,7 +154,7 @@ class Substatuses extends Component
         }
 
         $this->showModal = false;
-        $this->reset(['editingId', 'name', 'main_color', 'style_type', 'bg_color', 'text_color', 'border_color']);
+        $this->reset(['editingId', 'name', 'core_status', 'is_default', 'is_global', 'main_color', 'style_type', 'bg_color', 'text_color', 'border_color']);
     }
 
     public function delete(int $id): void
@@ -134,14 +178,28 @@ class Substatuses extends Component
 
     public function render()
     {
-        $substatuses = Substatus::query()
+        $allSubstatuses = Substatus::query()
             ->when($this->search, fn ($q) => $q->search($this->search))
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
 
+        $substatusesByCoreStatus = [];
+        foreach (CoreStatus::cases() as $coreCase) {
+            $substatusesByCoreStatus[$coreCase->value] = $allSubstatuses->filter(function ($sub) use ($coreCase) {
+                return ! $sub->is_global && ($sub->core_status?->value ?? $sub->core_status) === $coreCase->value;
+            });
+        }
+
+        $globalSubstatuses = $allSubstatuses->filter(function ($sub) {
+            return $sub->is_global || empty($sub->core_status);
+        });
+
         return view('livewire.settings.substatuses', [
-            'substatuses' => $substatuses,
+            'substatuses' => $allSubstatuses,
+            'substatusesByCoreStatus' => $substatusesByCoreStatus,
+            'globalSubstatuses' => $globalSubstatuses,
+            'coreStatuses' => CoreStatus::cases(),
         ]);
     }
 }

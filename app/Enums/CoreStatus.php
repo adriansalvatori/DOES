@@ -103,4 +103,61 @@ enum CoreStatus: string
             self::ARCHIVED => 'bg-slate-400',
         };
     }
+
+    /**
+     * Get the substatuses allowed specifically for this core status.
+     */
+    public function validSubstatuses(): array
+    {
+        return match ($this) {
+            self::ENTRANTE => [
+                Substatus::BLOQUEADA,
+                Substatus::FALTA_APROBACION_ESTIMADO,
+                Substatus::PONER_EN_ALTA,
+            ],
+            self::EURALIZ_ORDERS_RECEIVED, self::ADRIAN_ORDERS_RECEIVED, self::CESAR_ORDERS_RECEIVED => [
+                Substatus::PONER_EN_ALTA,
+                Substatus::AJUSTES_PRODUCCION,
+            ],
+            self::TO_DO_TODAY => [
+                Substatus::CAMBIOS_CLIENTE,
+                Substatus::CAMBIOS_CAMILA,
+                Substatus::AJUSTES_PRODUCCION,
+                Substatus::PONER_EN_ALTA,
+            ],
+            self::ENVIADO_A_CAMILA => [
+                Substatus::CAMBIOS_CAMILA,
+            ],
+            self::ENVIADO_AL_CLIENTE => [
+                Substatus::WAITING_FOR_CLIENT,
+                Substatus::CAMBIOS_CLIENTE,
+                Substatus::NO_RESPUESTA,
+            ],
+            self::ON_HOLD => [
+                Substatus::PAUSADO,
+                Substatus::ESPERANDO_PERMISO,
+                Substatus::CUSTOMER_SERVICE_REQUIRED,
+            ],
+            self::EN_PRODUCCION => [
+                Substatus::ENVIADO_EN_ALTA,
+                Substatus::AJUSTES_PRODUCCION,
+            ],
+            self::ARCHIVED => [],
+        };
+    }
+
+    /**
+     * Get the default substatus auto-assigned upon entering this core status.
+     */
+    public function defaultSubstatus(): ?Substatus
+    {
+        return match ($this) {
+            self::ENTRANTE => Substatus::BLOQUEADA,
+            self::ENVIADO_A_CAMILA => Substatus::CAMBIOS_CAMILA,
+            self::ENVIADO_AL_CLIENTE => Substatus::WAITING_FOR_CLIENT,
+            self::ON_HOLD => Substatus::PAUSADO,
+            self::EN_PRODUCCION => Substatus::ENVIADO_EN_ALTA,
+            default => null,
+        };
+    }
 }

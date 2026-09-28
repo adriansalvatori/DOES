@@ -13,6 +13,7 @@ use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
 use App\Services\OrderTitleParserService;
+use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
@@ -406,10 +407,12 @@ class OrderDetailModal extends Component
 
     public function updatedEditCoreStatus($value)
     {
-        if ($value === CoreStatus::EN_PRODUCCION->value || $value === 'EN PRODUCCIÓN') {
-            $this->editSubstatus = Substatus::ENVIADO_EN_ALTA->value;
-        } elseif ($value === CoreStatus::ENTRANTE->value || $value === 'ENTRANTE' || $value === 'BLOCKED') {
-            $this->editSubstatus = Substatus::BLOQUEADA->value;
+        $defaultSub = app(StatusTransitionService::class)->getDefaultSubstatus($value);
+        if ($defaultSub) {
+            $this->editSubstatus = $defaultSub->value;
+        }
+
+        if ($value === CoreStatus::ENTRANTE->value || $value === 'ENTRANTE' || $value === 'BLOCKED') {
             $this->openBlockModal();
         }
     }
@@ -978,11 +981,13 @@ class OrderDetailModal extends Component
         $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
         $clientContacts = $client ? $client->contacts->pluck('name')->filter()->toArray() : [];
 
+        $validSubstatuses = app(StatusTransitionService::class)->getValidSubstatuses($this->editCoreStatus ?: $order?->core_status);
+
         return view('livewire.orders.order-detail-modal', [
             'order' => $order,
             'designers' => Designer::where('active', true)->get(),
             'coreStatuses' => CoreStatus::cases(),
-            'substatuses' => Substatus::cases(),
+            'substatuses' => $validSubstatuses,
             'existingCompanies' => Order::inWorkspace()
                 ->whereNotNull('company_name')
                 ->where('company_name', '!=', '')

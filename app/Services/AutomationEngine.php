@@ -631,7 +631,10 @@ class AutomationEngine
 
             if ($hasFuturePendingWorkSubtasks && $order->core_status === CoreStatus::TO_DO_TODAY) {
                 $targetStatus = $order->getDesignerOrdersReceivedStatus();
-                $order->update(['core_status' => $targetStatus]);
+                $order->update([
+                    'core_status' => $targetStatus,
+                    'done_today' => true,
+                ]);
 
                 OrderEvent::create([
                     'order_id' => $order->id,

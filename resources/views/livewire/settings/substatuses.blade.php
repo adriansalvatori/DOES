@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto">
+<div class="h-full flex flex-col space-y-6 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto pb-10">
     <!-- Header Card -->
     <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div class="flex items-center gap-3">
@@ -6,8 +6,8 @@
                 <x-lucide-settings-2 class="w-5 h-5" />
             </div>
             <div>
-                <h1 class="text-lg font-bold text-zinc-900 tracking-tight">{{ __('Configuración de Subestatus') }}</h1>
-                <p class="text-xs text-zinc-500 mt-0.5">{{ __('Crea, personaliza y asigna códigos de color para los subestatus de las órdenes.') }}</p>
+                <h1 class="text-lg font-bold text-zinc-900 tracking-tight">{{ __('Configuración de Estados y Subestatus') }}</h1>
+                <p class="text-xs text-zinc-500 mt-0.5">{{ __('Crea, personaliza y organiza la pertenencia de subestatus por Core Status y gestiona los subestatus transversales globales.') }}</p>
             </div>
         </div>
 
@@ -43,66 +43,189 @@
         </div>
     @endif
 
-    <!-- Substatuses Table List -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden">
-        <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50">
-            <h2 class="font-bold text-xs text-zinc-800 uppercase tracking-wider">{{ __('Lista de Subestatus') }} ({{ $substatuses->count() }})</h2>
-            <span class="text-[11px] text-zinc-400">{{ __('Los cambios se aplican automáticamente en todas las vistas') }}</span>
+    <!-- SECCIÓN 1: SUBESTATUS POR CORE STATUS (ORGANIZACIÓN POR PROCESO) -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
+            <div>
+                <h2 class="font-bold text-sm text-zinc-900 flex items-center gap-2">
+                    <x-lucide-workflow class="w-4 h-4 text-indigo-600" />
+                    <span>{{ __('Subestatus por Core Status (Proceso)') }}</span>
+                </h2>
+                <p class="text-xs text-zinc-500 mt-0.5">{{ __('Subestatus específicos que corresponden al flujo de cada fase operativa.') }}</p>
+            </div>
+            <span class="text-xs font-semibold text-zinc-400 bg-stone-100 px-2.5 py-1 rounded-lg">
+                {{ count($coreStatuses) }} {{ __('Core Statuses') }}
+            </span>
         </div>
 
-        @if($substatuses->isEmpty())
-            <div class="p-12 text-center text-zinc-400">
-                <x-lucide-tag class="w-10 h-10 mx-auto text-zinc-300 mb-2" />
-                <p class="text-xs">{{ __('No se encontraron subestatus que coincidan con la búsqueda.') }}</p>
-            </div>
-        @else
-            <div class="divide-y divide-stone-100">
-                @foreach($substatuses as $sub)
-                    <div class="px-5 py-3.5 flex items-center justify-between hover:bg-stone-50/60 transition gap-4">
-                        <!-- Substatus Badge Preview -->
-                        <div class="flex items-center gap-3 min-w-0 flex-1">
-                            <span 
-                                class="px-3 py-1 rounded-md text-xs font-bold border shrink-0 shadow-2xs"
-                                style="background-color: {{ $sub->bg_color }}; color: {{ $sub->text_color }}; border-color: {{ $sub->border_color }};">
-                                {{ __($sub->name) }}
+        <div class="grid grid-cols-1 gap-4">
+            @foreach($coreStatuses as $coreCase)
+                @php
+                    $assignedSubstatuses = $substatusesByCoreStatus[$coreCase->value] ?? collect();
+                @endphp
+                <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden">
+                    <!-- Core Status Section Header -->
+                    <div class="px-5 py-3.5 bg-stone-50/70 border-b border-[#e9e9e7] flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $coreCase->dotClass() }}"></span>
+                            <span class="px-2.5 py-0.5 rounded text-xs font-bold border {{ $coreCase->badgeStyle() }}">
+                                {{ $coreCase->label() }}
                             </span>
-                            @if($sub->is_system)
-                                <span class="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-medium shrink-0">
-                                    {{ __('Sistema') }}
-                                </span>
-                            @endif
-                        </div>
-
-                        <!-- Style Type Indicator -->
-                        <div class="hidden sm:flex items-center gap-2 shrink-0">
-                            <span class="text-[10px] px-2 py-0.5 rounded border font-medium {{ $sub->style_type === 'solid' ? 'bg-stone-800 text-white border-stone-900' : 'bg-stone-100 text-zinc-600 border-stone-200' }}">
-                                {{ $sub->style_type === 'solid' ? __('Color Sólido') : __('Fondo Claro') }}
+                            <span class="text-[11px] text-zinc-400 font-mono hidden sm:inline">({{ $coreCase->value }})</span>
+                            <span class="text-xs text-zinc-500 font-medium ml-2">
+                                {{ $assignedSubstatuses->count() }} {{ __($assignedSubstatuses->count() === 1 ? 'subestatus' : 'subestatus') }}
                             </span>
                         </div>
 
-                        <!-- Actions -->
-                        <div class="flex items-center gap-2 shrink-0">
-                            <button 
-                                wire:click="openEditModal({{ $sub->id }})" 
-                                class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition flex items-center gap-1 cursor-pointer">
-                                <x-lucide-pencil class="w-3.5 h-3.5" />
-                                <span>{{ __('Editar') }}</span>
-                            </button>
-
-                            @if(!$sub->is_system)
-                                <button 
-                                    wire:click="delete({{ $sub->id }})" 
-                                    wire:confirm="{{ __('¿Estás seguro de eliminar el subestatus ":name"?', ['name' => $sub->name]) }}" 
-                                    class="p-1 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
-                                    title="{{ __('Eliminar Subestatus') }}">
-                                    <x-lucide-trash-2 class="w-4 h-4" />
-                                </button>
-                            @endif
-                        </div>
+                        <button 
+                            wire:click="openCreateModalForCoreStatus('{{ $coreCase->value }}')" 
+                            class="px-2.5 py-1 rounded-lg bg-white hover:bg-stone-100 text-zinc-700 text-xs font-semibold border border-stone-200 shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                            <x-lucide-plus class="w-3.5 h-3.5 text-stone-600" />
+                            <span>{{ __('Agregar Subestatus') }}</span>
+                        </button>
                     </div>
-                @endforeach
+
+                    <!-- Substatuses List under this Core Status -->
+                    @if($assignedSubstatuses->isEmpty())
+                        <div class="px-5 py-4 text-xs text-zinc-400 italic">
+                            {{ __('Sin subestatus específicos asignados a este Core Status.') }}
+                        </div>
+                    @else
+                        <div class="divide-y divide-stone-100">
+                            @foreach($assignedSubstatuses as $sub)
+                                <div class="px-5 py-3 flex items-center justify-between hover:bg-stone-50/60 transition gap-4">
+                                    <!-- Substatus Badge Preview & Badges -->
+                                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <span 
+                                            class="px-3 py-1 rounded-md text-xs font-bold border shrink-0 shadow-2xs"
+                                            style="background-color: {{ $sub->bg_color }}; color: {{ $sub->text_color }}; border-color: {{ $sub->border_color }};">
+                                            {{ __($sub->name) }}
+                                        </span>
+
+                                        @if($sub->is_default)
+                                            <span class="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-bold flex items-center gap-1 shrink-0">
+                                                <x-lucide-check-circle-2 class="w-3 h-3 text-emerald-600" />
+                                                <span>{{ __('Por Defecto') }}</span>
+                                            </span>
+                                        @endif
+
+                                        @if($sub->is_system)
+                                            <span class="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-medium shrink-0">
+                                                {{ __('Sistema') }}
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    <!-- Style Type Indicator -->
+                                    <div class="hidden sm:flex items-center gap-2 shrink-0">
+                                        <span class="text-[10px] px-2 py-0.5 rounded border font-medium {{ $sub->style_type === 'solid' ? 'bg-stone-800 text-white border-stone-900' : 'bg-stone-100 text-zinc-600 border-stone-200' }}">
+                                            {{ $sub->style_type === 'solid' ? __('Color Sólido') : __('Fondo Claro') }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <button 
+                                            wire:click="openEditModal({{ $sub->id }})" 
+                                            class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition flex items-center gap-1 cursor-pointer">
+                                            <x-lucide-pencil class="w-3.5 h-3.5" />
+                                            <span>{{ __('Editar') }}</span>
+                                        </button>
+
+                                        @if(!$sub->is_system)
+                                            <button 
+                                                wire:click="delete({{ $sub->id }})" 
+                                                wire:confirm="{{ __('¿Estás seguro de eliminar el subestatus ":name"?', ['name' => $sub->name]) }}" 
+                                                class="p-1 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
+                                                title="{{ __('Eliminar Subestatus') }}">
+                                                <x-lucide-trash-2 class="w-4 h-4" />
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: SUBESTATUS TRANSVERSALES Y ALERTAS GLOBALES -->
+    <div class="space-y-4 pt-4">
+        <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
+            <div>
+                <h2 class="font-bold text-sm text-zinc-900 flex items-center gap-2">
+                    <x-lucide-layers class="w-4 h-4 text-purple-600" />
+                    <span>{{ __('Subestatus Transversales y Alertas Globales') }}</span>
+                </h2>
+                <p class="text-xs text-zinc-500 mt-0.5">{{ __('Subestatus aplicables a cualquier fase de la orden (ej. Ticket, Cliente Potencial, Urgente) y alertas automáticas por tiempo SLA.') }}</p>
             </div>
-        @endif
+            <span class="text-xs font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                {{ $globalSubstatuses->count() }} {{ __('Subestatus Globales') }}
+            </span>
+        </div>
+
+        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden">
+            @if($globalSubstatuses->isEmpty())
+                <div class="p-8 text-center text-zinc-400 text-xs">
+                    {{ __('No hay subestatus transversales globales registrados.') }}
+                </div>
+            @else
+                <div class="divide-y divide-stone-100">
+                    @foreach($globalSubstatuses as $sub)
+                        <div class="px-5 py-3.5 flex items-center justify-between hover:bg-stone-50/60 transition gap-4">
+                            <!-- Substatus Badge Preview -->
+                            <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <span 
+                                    class="px-3 py-1 rounded-md text-xs font-bold border shrink-0 shadow-2xs"
+                                    style="background-color: {{ $sub->bg_color }}; color: {{ $sub->text_color }}; border-color: {{ $sub->border_color }};">
+                                    {{ __($sub->name) }}
+                                </span>
+
+                                <span class="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded font-bold flex items-center gap-1 shrink-0">
+                                    <x-lucide-globe class="w-3 h-3 text-purple-600" />
+                                    <span>{{ __('Transversal Global') }}</span>
+                                </span>
+
+                                @if($sub->is_system)
+                                    <span class="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded border border-stone-200 font-medium shrink-0">
+                                        {{ __('Sistema') }}
+                                    </span>
+                                @endif
+                            </div>
+
+                            <!-- Style Type Indicator -->
+                            <div class="hidden sm:flex items-center gap-2 shrink-0">
+                                <span class="text-[10px] px-2 py-0.5 rounded border font-medium {{ $sub->style_type === 'solid' ? 'bg-stone-800 text-white border-stone-900' : 'bg-stone-100 text-zinc-600 border-stone-200' }}">
+                                    {{ $sub->style_type === 'solid' ? __('Color Sólido') : __('Fondo Claro') }}
+                                </span>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button 
+                                    wire:click="openEditModal({{ $sub->id }})" 
+                                    class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition flex items-center gap-1 cursor-pointer">
+                                    <x-lucide-pencil class="w-3.5 h-3.5" />
+                                    <span>{{ __('Editar') }}</span>
+                                </button>
+
+                                @if(!$sub->is_system)
+                                    <button 
+                                        wire:click="delete({{ $sub->id }})" 
+                                        wire:confirm="{{ __('¿Estás seguro de eliminar el subestatus ":name"?', ['name' => $sub->name]) }}" 
+                                        class="p-1 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
+                                        title="{{ __('Eliminar Subestatus') }}">
+                                        <x-lucide-trash-2 class="w-4 h-4" />
+                                    </button>
+                                @endif
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
     </div>
 
     <!-- Create / Edit Substatus Modal -->
@@ -176,6 +299,42 @@
                         @error('name') <span class="text-[11px] text-red-600 mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
+                    <!-- Core Status / Global Assignment -->
+                    <div class="grid grid-cols-1 gap-3 p-3 bg-stone-50 border border-stone-200 rounded-xl">
+                        <div>
+                            <label class="block text-xs font-medium text-zinc-700 mb-1 flex items-center justify-between">
+                                <span>{{ __('Core Status Asociado') }}</span>
+                                @if($is_global)
+                                    <span class="text-[10px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ __('Modo Transversal Activo') }}</span>
+                                @endif
+                            </label>
+                            <select 
+                                wire:model.live="core_status" 
+                                :disabled="$wire.is_global"
+                                class="w-full px-3 py-2 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-stone-400 focus:outline-none bg-white font-medium disabled:opacity-50 disabled:bg-stone-100">
+                                <option value="">{{ __('-- Seleccionar Core Status --') }}</option>
+                                @foreach($coreStatuses as $statusCase)
+                                    <option value="{{ $statusCase->value }}">{{ $statusCase->label() }} ({{ $statusCase->value }})</option>
+                                @endforeach
+                            </select>
+                            <span class="text-[10px] text-zinc-400 mt-0.5 block">{{ __('Selecciona el Core Status al cual pertenece este subestatus.') }}</span>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1 border-t border-stone-200/60">
+                            <label class="flex items-center gap-2 text-xs font-medium text-zinc-700 cursor-pointer">
+                                <input type="checkbox" wire:model.live="is_global" class="rounded border-stone-300 text-stone-900 focus:ring-stone-400">
+                                <span class="font-semibold text-purple-900">{{ __('Es Subestatus Transversal / Global') }}</span>
+                            </label>
+
+                            @if(!$is_global && !empty($core_status))
+                                <label class="flex items-center gap-2 text-xs font-medium text-zinc-700 cursor-pointer">
+                                    <input type="checkbox" wire:model="is_default" class="rounded border-stone-300 text-stone-900 focus:ring-stone-400">
+                                    <span class="font-semibold text-emerald-900">{{ __('Por Defecto') }}</span>
+                                </label>
+                            @endif
+                        </div>
+                    </div>
+
                     <!-- Style Type Selector: Light vs Solid -->
                     <div class="space-y-1.5">
                         <label class="block text-xs font-medium text-zinc-700">{{ __('Estilo de Fondo') }}</label>
@@ -247,7 +406,7 @@
 
                     <!-- Live Badge Preview -->
                     <div class="p-4 bg-stone-50 border border-stone-200 rounded-xl space-y-1.5">
-                        <span class="text-[10px] text-zinc-400 uppercase font-semibold block">{{ __('Vista Previa') }}</span>
+                        <span class="text-[10px] text-zinc-400 uppercase font-semibold block">{{ __('Vista Previa del Badge') }}</span>
                         <div class="pt-0.5">
                             <span 
                                 class="px-3.5 py-1.5 rounded-lg text-xs font-bold border shadow-2xs inline-block"

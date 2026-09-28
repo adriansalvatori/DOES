@@ -10,6 +10,7 @@ use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
+use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -138,8 +139,9 @@ class CreateOrderModal extends Component
 
     public function updatedCoreStatus($value)
     {
-        if ($value === CoreStatus::EN_PRODUCCION->value || $value === 'EN PRODUCCIÓN') {
-            $this->substatus = Substatus::ENVIADO_EN_ALTA->value;
+        $defaultSub = app(StatusTransitionService::class)->getDefaultSubstatus($value);
+        if ($defaultSub) {
+            $this->substatus = $defaultSub->value;
         }
     }
 
@@ -230,10 +232,12 @@ class CreateOrderModal extends Component
         $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
         $clientContacts = $client ? $client->contacts->pluck('name')->filter()->toArray() : [];
 
+        $validSubstatuses = app(StatusTransitionService::class)->getValidSubstatuses($this->coreStatus);
+
         return view('livewire.orders.create-order-modal', [
             'designers' => Designer::where('active', true)->get(),
             'coreStatuses' => CoreStatus::cases(),
-            'substatuses' => Substatus::cases(),
+            'substatuses' => $validSubstatuses,
             'existingCompanies' => Order::inWorkspace()
                 ->whereNotNull('company_name')
                 ->where('company_name', '!=', '')

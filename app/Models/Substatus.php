@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CoreStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +15,9 @@ class Substatus extends Model
 
     protected $fillable = [
         'name',
+        'core_status',
+        'is_default',
+        'is_global',
         'color',
         'style_type',
         'bg_color',
@@ -24,13 +28,51 @@ class Substatus extends Model
     ];
 
     protected $casts = [
+        'core_status' => CoreStatus::class,
+        'is_default' => 'boolean',
+        'is_global' => 'boolean',
         'is_system' => 'boolean',
         'sort_order' => 'integer',
     ];
 
+    public function scopeForCoreStatus(Builder $query, CoreStatus|string $coreStatus): Builder
+    {
+        $statusValue = $coreStatus instanceof CoreStatus ? $coreStatus->value : $coreStatus;
+
+        return $query->where(function ($q) use ($statusValue) {
+            $q->where('core_status', $statusValue)
+                ->orWhere('is_global', true);
+        });
+    }
+
+    public function scopeDefault(Builder $query): Builder
+    {
+        return $query->where('is_default', true);
+    }
+
+    public function scopeGlobal(Builder $query): Builder
+    {
+        return $query->where('is_global', true);
+    }
+
     public function getInlineBadgeStyleAttribute(): string
     {
         return "background-color: {$this->bg_color}; color: {$this->text_color}; border-color: {$this->border_color};";
+    }
+
+    public function getValueAttribute(): string
+    {
+        return $this->name;
+    }
+
+    public function badgeStyle(): string
+    {
+        $enum = \App\Enums\Substatus::tryFrom($this->name);
+        if ($enum) {
+            return $enum->badgeStyle();
+        }
+
+        return "background-color: {$this->bg_color}; color: {$this->text_color}; border-color: {$this->border_color}; font-weight: 500;";
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder

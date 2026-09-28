@@ -1457,6 +1457,9 @@
                             @else
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
                                     @foreach($trelloAttachments as $attachment)
+                                        @if(!is_array($attachment))
+                                            @continue
+                                        @endif
                                         @php
                                             $isImage = !empty($attachment['previews']) || (isset($attachment['mimeType']) && str_starts_with($attachment['mimeType'], 'image/')) || preg_match('/\.(jpg|jpeg|png|gif|webp|svg)$/i', $attachment['name'] ?? '');
                                             $previewUrl = null;
