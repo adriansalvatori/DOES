@@ -57,6 +57,14 @@ class Order extends Model
         'is_missing_from_trello',
         'pending_wo_number',
         'archived_at',
+        'manual_creation_date',
+        'production_sent_at',
+        'production_note',
+        'estimate_invoice_number',
+        'review_status',
+        'installation_type',
+        'overview_checked',
+        'delivery_note',
     ];
 
     protected $casts = [
@@ -68,6 +76,8 @@ class Order extends Model
         'original_due_date' => 'date',
         'current_due_date' => 'date',
         'scheduled_date' => 'date',
+        'manual_creation_date' => 'date',
+        'production_sent_at' => 'datetime',
         'last_meaningful_update' => 'datetime',
         'client_last_response' => 'datetime',
         'last_sent_to_client_at' => 'datetime',
@@ -79,6 +89,7 @@ class Order extends Model
         'in_workspace' => 'boolean',
         'is_new_from_trello' => 'boolean',
         'is_missing_from_trello' => 'boolean',
+        'overview_checked' => 'boolean',
         'client_revision_count' => 'integer',
         'internal_revision_count' => 'integer',
         'archived_at' => 'datetime',

@@ -8,6 +8,7 @@ use App\Livewire\Dashboard\Index;
 use App\Livewire\Kanban\Board;
 use App\Livewire\Orders\ArchivedOrders;
 use App\Livewire\Orders\TrashBin;
+use App\Livewire\Overview\OverviewIndex;
 use App\Livewire\Planner\WeeklyPlanner;
 use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
@@ -33,6 +34,7 @@ Route::middleware(['guest'])->group(function () {
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
     Route::get('/', Index::class)->name('dashboard');
+    Route::get('/overview', OverviewIndex::class)->name('overview');
     Route::get('/clients', ClientIndex::class)->name('clients');
     Route::get('/analytics', Analytics::class)->name('analytics');
     Route::get('/backlog', BacklogIndex::class)->name('backlog');

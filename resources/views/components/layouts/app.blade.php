@@ -142,6 +142,10 @@
                     </div>
                 </div>
 
+                <a href="/overview" title="{{ __('Overview Operativo') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('overview*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-table-properties class="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Overview') }}</span>
+                </a>
                 <a href="/kanban" title="{{ __('Kanban Board') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-kanban class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Kanban Board') }}</span>
