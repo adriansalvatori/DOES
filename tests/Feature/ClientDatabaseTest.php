@@ -365,7 +365,7 @@ class ClientDatabaseTest extends TestCase
             ->assertSee('Proyectos (1)')
             ->assertSee('Archivados (1)')
             ->set('activeTab', 'archived')
-            ->assertSee('Archived Project Task');
+            ->assertSee('ARCHIVED PROJECT TASK');
     }
 
     public function test_can_save_multiple_labeled_phone_numbers_in_client_flyout_panel(): void

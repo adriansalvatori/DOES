@@ -9,6 +9,7 @@ use App\Enums\Substatus;
 use App\Services\AutomationEngine;
 use App\Services\TrelloSyncService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -152,6 +153,22 @@ class Order extends Model
         });
     }
 
+    protected function companyName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value !== null ? mb_strtoupper($value, 'UTF-8') : null,
+            set: fn (?string $value) => $value !== null ? mb_strtoupper($value, 'UTF-8') : null,
+        );
+    }
+
+    protected function taskName(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value !== null ? mb_strtoupper($value, 'UTF-8') : null,
+            set: fn (?string $value) => $value !== null ? mb_strtoupper($value, 'UTF-8') : null,
+        );
+    }
+
     public function getCleanTaskNameAttribute(): string
     {
         $task = $this->task_name ?: $this->trello_title ?: '';
@@ -163,10 +180,10 @@ class Order extends Model
         }
 
         if (empty($task)) {
-            return $this->location_name ?: ($this->task_name ?: __('Proyecto sin nombre'));
+            $task = $this->location_name ?: ($this->task_name ?: __('Proyecto sin nombre'));
         }
 
-        return $task;
+        return mb_strtoupper($task, 'UTF-8');
     }
 
     public function getLocationTextAttribute(): ?string

@@ -262,6 +262,7 @@
                                 <input 
                                     type="text" 
                                     wire:model="name"
+                                    x-on:input="$event.target.value = $event.target.value.toUpperCase()"
                                     placeholder="{{ __('NOMBRE DEL CLIENTE / EMPRESA') }}"
                                     class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-sm text-zinc-900 uppercase font-bold focus:outline-none transition"
                                 />

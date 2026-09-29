@@ -228,7 +228,7 @@
                     <div class="space-y-1 min-w-0 flex-1">
                         <div class="flex items-center justify-between gap-2 flex-wrap">
                             <div class="flex items-center gap-2 flex-wrap min-w-0">
-                                <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
+                                <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
                                     {{ $order->company_name }}
                                 </h2>
 
@@ -253,7 +253,7 @@
                         </div>
 
                         @if($order->task_name)
-                            <p class="text-xs text-zinc-500 font-normal leading-relaxed break-words {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
+                            <p class="text-xs text-zinc-500 font-normal leading-relaxed break-words uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
                                 {{ $order->task_name }}
                             </p>
                         @endif
@@ -583,7 +583,8 @@
                                         @click.outside="open = false"
                                         autocomplete="off"
                                         placeholder="Ej: TAQUERIA LA CHULA..." 
-                                        class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full pr-7 font-semibold">
+                                        class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full pr-7 font-semibold"
+                                        x-on:input="$event.target.value = $event.target.value.toUpperCase()">
                                     
                                     <button 
                                         type="button" 
@@ -697,7 +698,7 @@
                             <!-- Tarea -->
                             <div class="space-y-1">
                                 <label class="font-medium text-zinc-700 block">Tarea de Diseño / Trabajo:</label>
-                                <input type="text" wire:model="editTaskName" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full">
+                                <input type="text" wire:model="editTaskName" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full" x-on:input="$event.target.value = $event.target.value.toUpperCase()">
                             </div>
 
                             <!-- Diseñadores -->
@@ -1936,7 +1937,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-sm text-zinc-900">{{ __('Desbloquear Orden') }}</h3>
-                            <p class="text-xs text-zinc-500">{{ $order->company_name }} &mdash; {{ $order->task_name }}</p>
+                            <p class="text-xs text-zinc-500 uppercase">{{ $order->company_name }} &mdash; {{ $order->task_name }}</p>
                         </div>
                     </div>
                     <button wire:click="closeUnblockModal" class="text-zinc-400 hover:text-zinc-600 transition">
@@ -1999,7 +2000,7 @@
                         </div>
                         <div>
                             <h3 class="font-bold text-sm text-zinc-900">{{ __('Bloquear Orden') }}</h3>
-                            <p class="text-xs text-zinc-500">{{ $order->company_name ?? '' }} &mdash; {{ $order->task_name ?? '' }}</p>
+                            <p class="text-xs text-zinc-500 uppercase">{{ $order->company_name ?? '' }} &mdash; {{ $order->task_name ?? '' }}</p>
                         </div>
                     </div>
                     <button wire:click="closeBlockModal" class="text-zinc-400 hover:text-zinc-600 transition">

@@ -172,7 +172,7 @@
                             <td class="p-3 font-medium text-zinc-900">
                                 {{ __($task->title) }}
                             </td>
-                            <td class="p-3 font-normal text-zinc-600">
+                            <td class="p-3 font-normal text-zinc-600 uppercase">
                                 {{ $task->order?->company_name }}
                             </td>
                             <td class="p-3">

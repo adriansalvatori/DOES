@@ -155,6 +155,9 @@ class OrderTitleParserService
             }
         }
 
+        $companyName = ! empty($companyName) ? mb_strtoupper($companyName, 'UTF-8') : '';
+        $taskName = ! empty($taskName) ? mb_strtoupper($taskName, 'UTF-8') : '';
+
         return [
             'wo_number' => $woNumber,
             'company_name' => $companyName,

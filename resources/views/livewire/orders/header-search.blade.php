@@ -135,7 +135,7 @@
                                             CLIENTE
                                         </span>
 
-                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none">
+                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none uppercase">
                                             {{ $client->name }}
                                         </span>
 
@@ -283,7 +283,7 @@
                                             <x-wo-badge :number="$order->wo_number" variant="outline" prefix="#" />
                                         @endif
 
-                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none">
+                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none uppercase">
                                             {{ $order->company_name }}
                                         </span>
 
@@ -309,7 +309,7 @@
                                             <span class="text-zinc-300 text-[10px] shrink-0">•</span>
                                         @endif
 
-                                        <span class="text-zinc-600 text-[11px] truncate font-medium min-w-0">
+                                        <span class="text-zinc-600 text-[11px] truncate font-medium min-w-0 uppercase">
                                             {{ $order->task_name ?: ($order->trello_title ?: __('Sin título')) }}
                                         </span>
                                     </div>

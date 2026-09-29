@@ -246,7 +246,7 @@
                                                 <h4 class="font-bold text-xs text-zinc-900 truncate" title="{{ $tTask->title }}">{{ $tTask->title }}</h4>
                                             </div>
                                             @if($tTask->order)
-                                                <p class="text-[11px] text-violet-800 font-medium truncate mt-0.5" title="{{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}">
+                                                <p class="text-[11px] text-violet-800 font-medium truncate mt-0.5 uppercase" title="{{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}">
                                                     {{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}
                                                 </p>
                                             @endif
@@ -280,14 +280,14 @@
                                         </button>
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2 min-w-0">
-                                                <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
                                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
                                             </div>
-                                            <p class="font-normal text-[11px] text-zinc-500 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                            <p class="font-normal text-[11px] text-zinc-500 truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                         </div>
                                     </div>
 
@@ -326,12 +326,12 @@
                                      @if(!$order->isUrgente()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" @endif>
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                             <span class="px-1.5 py-0.2 rounded bg-red-100 text-red-800 text-[9px] font-mono font-bold shrink-0">
                                                 {{ $order->current_due_date ? $order->current_due_date->format('d M') : 'VENCIDO' }}
                                             </span>
                                         </div>
-                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-red-100 border border-red-200 text-[10px] font-medium text-red-800 transition flex items-center gap-1">
@@ -364,7 +364,7 @@
                                 <div class="bg-purple-50/40 border border-purple-200 rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-purple-300 transition">
                                     <div class="min-w-0 flex-1">
                                         <span class="font-bold text-purple-950 block text-xs truncate">{{ $task->title }}</span>
-                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
+                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5 uppercase">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         @if($task->order)
@@ -402,7 +402,7 @@
                                 <div class="rounded-xl p-3 flex items-center justify-between gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-orange-200' }}">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                             @if($order->location_text)
                                                 <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $order->location_text }}">
                                                     <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
@@ -413,7 +413,7 @@
                                                 {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
                                             </span>
                                         </div>
-                                        <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
 
                                     <div class="shrink-0">
@@ -465,7 +465,7 @@
                                                 <h4 class="font-bold text-xs text-zinc-900 truncate" title="{{ $tTask->title }}">{{ $tTask->title }}</h4>
                                             </div>
                                             @if($tTask->order)
-                                                <p class="text-[11px] text-violet-800 font-medium truncate mt-0.5" title="{{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}">
+                                                <p class="text-[11px] text-violet-800 font-medium truncate mt-0.5 uppercase" title="{{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}">
                                                     {{ $tTask->order->company_name }} — {{ $tTask->order->task_name }}
                                                 </p>
                                             @endif
@@ -499,14 +499,14 @@
                                         </button>
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2 min-w-0">
-                                                <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
                                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
                                             </div>
-                                            <p class="font-normal text-[11px] text-zinc-500 truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                            <p class="font-normal text-[11px] text-zinc-500 truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                         </div>
                                     </div>
 
@@ -545,12 +545,12 @@
                                      @if(!$order->isUrgente()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" @endif>
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                             <span class="px-1.5 py-0.2 rounded bg-red-100 text-red-800 text-[9px] font-mono font-bold shrink-0">
                                                 {{ $order->current_due_date ? $order->current_due_date->format('d M') : 'VENCIDO' }}
                                             </span>
                                         </div>
-                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-red-100 border border-red-200 text-[10px] font-medium text-red-800 transition flex items-center gap-1">
@@ -583,7 +583,7 @@
                                 <div class="bg-purple-50/40 border border-purple-200 rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-purple-300 transition">
                                     <div class="min-w-0 flex-1">
                                         <span class="font-bold text-purple-950 block text-xs truncate">{{ $task->title }}</span>
-                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
+                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5 uppercase">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         @if($task->order)
@@ -621,7 +621,7 @@
                                 <div class="rounded-xl p-3 flex items-center justify-between gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-orange-200' }}">
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center gap-2 min-w-0">
-                                            <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                            <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                             @if($order->location_text)
                                                 <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $order->location_text }}">
                                                     <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
@@ -632,7 +632,7 @@
                                                 {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
                                             </span>
                                         </div>
-                                        <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
 
                                     <div class="shrink-0">
@@ -665,8 +665,8 @@
                             @foreach($readyForAltaOrders as $order)
                                 <div class="rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-emerald-200' }}">
                                     <div class="min-w-0 flex-1">
-                                        <h4 class="font-normal text-xs text-zinc-500 truncate" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                        <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-semibold border border-emerald-300 whitespace-nowrap">
@@ -706,14 +706,14 @@
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2 min-w-0">
-                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
                                                     <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
                                             </div>
-                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                            <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                         </div>
                                     </div>
 
@@ -769,7 +769,7 @@
                                         </div>
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-2 min-w-0 mb-0.5">
-                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 <span class="px-1.5 py-0.2 rounded bg-sky-100 text-sky-800 text-[9px] font-bold uppercase tracking-wider border border-sky-300 shrink-0">
                                                     NUEVA
                                                 </span>
@@ -780,7 +780,7 @@
                                                     </a>
                                                 @endif
                                             </div>
-                                            <p class="font-bold text-xs text-zinc-900 truncate" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                            <p class="font-bold text-xs text-zinc-900 truncate uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                         </div>
                                     </div>
 
@@ -819,7 +819,7 @@
                                 <div class="bg-sky-50/40 border border-sky-200 rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-sky-300 transition">
                                     <div class="min-w-0 flex-1">
                                         <span class="font-bold text-sky-950 block text-xs truncate">{{ $task->title }}</span>
-                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
+                                        <span class="text-zinc-500 text-[11px] truncate block mt-0.5 uppercase">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         @if($task->order)

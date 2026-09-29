@@ -71,10 +71,10 @@
 
                             <!-- Company + Task Name -->
                             <div>
-                                <h4 class="font-semibold text-xs text-zinc-800 truncate" title="{{ $order->company_name }}">
+                                <h4 class="font-semibold text-xs text-zinc-800 truncate uppercase" title="{{ $order->company_name }}">
                                     {{ $order->company_name }}
                                 </h4>
-                                <p class="text-[11px] text-zinc-500 truncate mt-0.5" title="{{ $order->task_name }}">
+                                <p class="text-[11px] text-zinc-500 truncate mt-0.5 uppercase" title="{{ $order->task_name }}">
                                     {{ $order->task_name }}
                                 </p>
                             </div>

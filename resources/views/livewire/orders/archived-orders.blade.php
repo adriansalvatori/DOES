@@ -358,10 +358,10 @@
                                                 @else
                                                     <span class="text-[10px] font-mono font-bold text-zinc-400 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 inline-block mb-1">WO-N/A</span>
                                                 @endif
-                                                <h4 class="text-xs font-bold text-zinc-900 group-hover:text-indigo-600 transition truncate max-w-[200px]">
+                                                <h4 class="text-xs font-bold text-zinc-900 group-hover:text-indigo-600 transition truncate max-w-[200px] uppercase">
                                                     {{ $order->company_name }}
                                                 </h4>
-                                                <p class="text-[11px] text-zinc-600 line-clamp-1">{{ $order->task_name }}</p>
+                                                <p class="text-[11px] text-zinc-600 line-clamp-1 uppercase">{{ $order->task_name }}</p>
                                             </div>
 
                                             <button 
@@ -479,8 +479,8 @@
                                         @else
                                             <span class="text-[9px] font-mono font-bold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded border border-pink-200">WO-N/A</span>
                                         @endif
-                                        <h5 class="text-xs font-bold text-zinc-900 truncate mt-1">{{ $order->company_name }}</h5>
-                                        <p class="text-[11px] text-zinc-500 line-clamp-1">{{ $order->task_name }}</p>
+                                        <h5 class="text-xs font-bold text-zinc-900 truncate mt-1 uppercase">{{ $order->company_name }}</h5>
+                                        <p class="text-[11px] text-zinc-500 line-clamp-1 uppercase">{{ $order->task_name }}</p>
                                     </div>
                                     
                                     <button 

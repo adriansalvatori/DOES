@@ -98,7 +98,7 @@ class CreateOrderModal extends Component
         $this->trelloCardId = $original->trello_card_id ?? '';
         $this->companyName = $original->company_name ?? '';
         $this->locationName = $original->location_name ?? '';
-        $this->taskName = ($original->task_name ?? '').' (Copia)';
+        $this->taskName = mb_strtoupper(($original->task_name ?? '').' (COPIA)', 'UTF-8');
         $this->responsiblePerson = $original->responsible_person ?? '';
         $this->designerId = $original->designer_id;
         $this->designerIds = $original->designers->pluck('id')->toArray();
@@ -130,6 +130,16 @@ class CreateOrderModal extends Component
         $this->designerIds = [];
     }
 
+    public function updatedCompanyName($value)
+    {
+        $this->companyName = mb_strtoupper($value ?? '', 'UTF-8');
+    }
+
+    public function updatedTaskName($value)
+    {
+        $this->taskName = mb_strtoupper($value ?? '', 'UTF-8');
+    }
+
     public function updatedSubstatus($value)
     {
         if ($value === Substatus::ENVIADO_EN_ALTA->value || $value === 'ENVIADO EN ALTA') {
@@ -147,6 +157,9 @@ class CreateOrderModal extends Component
 
     public function save()
     {
+        $this->companyName = mb_strtoupper(trim($this->companyName ?? ''), 'UTF-8');
+        $this->taskName = mb_strtoupper(trim($this->taskName ?? ''), 'UTF-8');
+
         $this->validate();
 
         if ($this->substatus === Substatus::ENVIADO_EN_ALTA->value || $this->substatus === 'ENVIADO EN ALTA') {
@@ -167,7 +180,7 @@ class CreateOrderModal extends Component
         }
 
         $cleanLocation = ! empty($this->locationName) ? mb_strtoupper(trim($this->locationName), 'UTF-8') : null;
-        $cleanCompany = trim($this->companyName);
+        $cleanCompany = mb_strtoupper(trim($this->companyName), 'UTF-8');
 
         $matched = app(ClientMatchingService::class)->matchOrCreate(
             $cleanCompany.($cleanLocation ? ' REF '.$cleanLocation : ''),
@@ -181,7 +194,7 @@ class CreateOrderModal extends Component
             'location_name' => $cleanLocation,
             'client_id' => $matched['client']?->id,
             'client_location_id' => $matched['location']?->id,
-            'task_name' => trim($this->taskName),
+            'task_name' => mb_strtoupper(trim($this->taskName), 'UTF-8'),
             'responsible_person' => ! empty($this->responsiblePerson) ? trim($this->responsiblePerson) : null,
             'designer_id' => ! empty($this->designerIds) ? reset($this->designerIds) : null,
             'core_status' => $statusEnum,

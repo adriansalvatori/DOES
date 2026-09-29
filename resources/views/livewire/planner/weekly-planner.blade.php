@@ -591,8 +591,8 @@
                                                         <span class="text-[9px] text-zinc-500 font-medium truncate">• {{ $wOrder->designer->name }}</span>
                                                     @endif
                                                 </div>
-                                                <h4 class="font-bold text-xs text-zinc-900 truncate group-hover:text-stone-900 transition">{{ $wOrder->company_name }}</h4>
-                                                <p class="text-[11px] text-zinc-500 truncate mt-0.2">{{ $wOrder->task_name }}</p>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate group-hover:text-stone-900 transition uppercase">{{ $wOrder->company_name }}</h4>
+                                                <p class="text-[11px] text-zinc-500 truncate mt-0.2 uppercase">{{ $wOrder->task_name }}</p>
                                             </div>
                                             <div class="flex items-center gap-1 shrink-0">
                                                 <x-lucide-panel-right class="w-4 h-4 text-zinc-400 group-hover:text-stone-700 transition" />
@@ -663,8 +663,8 @@
                                                         <span class="text-[9px] text-zinc-500 font-medium truncate">• {{ $bOrder->designer->name }}</span>
                                                     @endif
                                                 </div>
-                                                <h4 class="font-bold text-xs text-zinc-900 truncate group-hover:text-stone-900 transition">{{ $bOrder->company_name }}</h4>
-                                                <p class="text-[11px] text-zinc-500 truncate mt-0.2">{{ $bOrder->task_name }}</p>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate group-hover:text-stone-900 transition uppercase">{{ $bOrder->company_name }}</h4>
+                                                <p class="text-[11px] text-zinc-500 truncate mt-0.2 uppercase">{{ $bOrder->task_name }}</p>
                                             </div>
                                             <div class="flex items-center gap-1 shrink-0">
                                                 <x-lucide-panel-right class="w-4 h-4 text-zinc-400 group-hover:text-stone-700 transition" />
@@ -843,8 +843,8 @@
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                                                 </button>
                                                                 <div class="min-w-0 flex-1">
-                                                                    <h4 class="font-semibold text-[11.5px] text-zinc-900 truncate leading-tight {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
-                                                                    <p class="font-normal text-[10px] text-zinc-500 truncate leading-tight mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->task_name }}</p>
+                                                                    <h4 class="font-semibold text-[11.5px] text-zinc-900 truncate leading-tight uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
+                                                                    <p class="font-normal text-[10px] text-zinc-500 truncate leading-tight mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->task_name }}</p>
                                                                 </div>
                                                             </div>
 
@@ -1024,7 +1024,7 @@
                                                                     class="text-left min-w-0 flex-1 hover:underline group/link">
                                                                     <div class="flex items-center gap-1 min-w-0">
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
-                                                                        <span class="font-semibold text-[10px] truncate leading-tight capitalize {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
+                                                                        <span class="font-semibold text-[10px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
                                                                         @if($stask->order->isArchived())
                                                                             <span class="inline-flex items-center px-1 py-0.2 text-[8.5px] font-semibold bg-zinc-100 text-zinc-600 rounded border border-zinc-200/80 shrink-0">
                                                                                 {{ __('Archivada') }}
@@ -1037,7 +1037,7 @@
                                                                             </span>
                                                                         @endif
                                                                         @if($stask->order->task_name)
-                                                                            <span class="text-[9.5px] truncate leading-tight {{ $stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500' }}">• {{ $stask->order->task_name }}</span>
+                                                                            <span class="text-[9.5px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500' }}">• {{ $stask->order->task_name }}</span>
                                                                         @endif
                                                                     </div>
                                                                 </button>
@@ -1481,7 +1481,7 @@
                                                                     <div class="flex items-center gap-1 text-[10.5px] leading-tight min-w-0">
                                                                          <!-- Company Name with Instant Tooltip -->
                                                                         <div class="relative group/tip min-w-0 shrink">
-                                                                            <span class="capitalize tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900 font-semibold') }}">
+                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900 font-semibold') }}">
                                                                                 {{ $stask->order->company_name }}
                                                                             </span>
                                                                             <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -1505,7 +1505,7 @@
                                                                         @if($stask->order->task_name)
                                                                             <!-- Order Name with Instant Tooltip -->
                                                                             <div class="relative group/tip min-w-0 flex-1">
-                                                                                <span class="block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }} text-[10px]">
+                                                                                <span class="block truncate uppercase {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }} text-[10px]">
                                                                                     • {{ $stask->order->task_name }}
                                                                                 </span>
                                                                                 <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -2250,8 +2250,8 @@
                 <div class="p-5 space-y-3.5 text-xs text-zinc-700 max-h-96 overflow-y-auto custom-vertical-scrollbar">
                     @if(!empty($slaWarningDetails))
                         <div class="p-3 bg-amber-50/90 border border-amber-200 rounded-lg space-y-1">
-                            <span class="font-bold text-zinc-900 block text-xs">{{ $slaWarningDetails['company_name'] ?? '' }}</span>
-                            <span class="text-[11px] text-zinc-600 block">{{ $slaWarningDetails['task_name'] ?? '' }}</span>
+                            <span class="font-bold text-zinc-900 block text-xs uppercase">{{ $slaWarningDetails['company_name'] ?? '' }}</span>
+                            <span class="text-[11px] text-zinc-600 block uppercase">{{ $slaWarningDetails['task_name'] ?? '' }}</span>
                         </div>
 
                         <p class="leading-relaxed">
@@ -2270,9 +2270,9 @@
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? 'bg-violet-600 text-white border border-violet-700' : 'bg-violet-100 text-violet-800 border border-violet-200') : 'bg-stone-200 text-zinc-800 border border-stone-300' }}">
                                                     {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? __('Sistema') : __('Subtarea')) : __('Orden') }}
                                                 </span>
-                                                <h4 class="font-bold text-xs text-zinc-900 truncate">{{ $item['company_name'] }}</h4>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate uppercase">{{ $item['company_name'] }}</h4>
                                             </div>
-                                            <p class="text-[11px] text-zinc-600 truncate">{{ $item['task_name'] }}</p>
+                                            <p class="text-[11px] text-zinc-600 truncate uppercase">{{ $item['task_name'] }}</p>
                                         </div>
                                         <div class="text-right shrink-0">
                                             <span class="text-rose-600 font-bold text-xs block">

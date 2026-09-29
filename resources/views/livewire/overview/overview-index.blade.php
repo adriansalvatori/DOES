@@ -1,38 +1,46 @@
 <div 
     x-data="{
-        colWidths: Object.assign({
-            created_at: 95,
-            prod_date: 115,
-            email_date: 105,
-            wo: 85,
-            client: 170,
-            name: 240,
-            designer: 95,
-            prod_note: 200,
-            invoice: 115,
-            installation: 120,
-            check: 55,
-            deliv_note: 230,
-            substatus: 140,
-            b_created: 95,
-            b_wo: 85,
-            b_company: 180,
-            b_task: 250,
-            b_actions: 140
-        }, JSON.parse(localStorage.getItem('overview_col_widths') || '{}')),
+        colWidths: (() => {
+            const defaults = {
+                created_at: 6,
+                prod_date: 6,
+                wo: 6,
+                client: 12,
+                name: 14,
+                designer: 7.5,
+                prod_note: 12,
+                invoice: 7,
+                email_date: 6,
+                installation: 6,
+                check: 3.5,
+                deliv_note: 7,
+                substatus: 7
+            };
+            try {
+                localStorage.removeItem('overview_col_widths');
+                const saved = JSON.parse(localStorage.getItem('overview_col_widths_pct') || '{}');
+                for (let k in saved) {
+                    if (saved[k] > 40) return defaults;
+                }
+                return Object.assign(defaults, saved);
+            } catch (err) {
+                return defaults;
+            }
+        })(),
         resizingCol: null,
         startX: 0,
         startWidth: 0,
         initResize(e, colKey) {
             this.resizingCol = colKey;
             this.startX = e.pageX;
-            let currentW = this.colWidths[colKey] || 140;
-            this.startWidth = currentW;
+            const tableWidth = this.$refs.ordersTable ? this.$refs.ordersTable.getBoundingClientRect().width : (window.innerWidth - 300);
+            this.startWidth = this.colWidths[colKey] || 7;
             let onMove = (mv) => {
                 if (!this.resizingCol) return;
-                let newW = Math.max(45, this.startWidth + (mv.pageX - this.startX));
-                this.colWidths[this.resizingCol] = newW;
-                localStorage.setItem('overview_col_widths', JSON.stringify(this.colWidths));
+                let deltaPct = ((mv.pageX - this.startX) / tableWidth) * 100;
+                let newPct = Math.max(2.5, this.startWidth + deltaPct);
+                this.colWidths[this.resizingCol] = Math.round(newPct * 10) / 10;
+                localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
             };
             let onUp = () => {
                 setTimeout(() => { this.resizingCol = null; }, 50);
@@ -308,215 +316,215 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto w-full pb-16">
-            <table class="text-left text-xs border-collapse min-w-full w-max">
+        <div class="w-full overflow-x-hidden pb-16">
+            <table x-ref="ordersTable" class="w-full table-fixed text-left text-xs border-collapse">
                 <thead>
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
                         <!-- 1. Fecha Creación -->
                         <th 
-                            :style="'width: ' + (colWidths['created_at'] || 95) + 'px; min-width: ' + (colWidths['created_at'] || 95) + 'px; max-width: ' + (colWidths['created_at'] || 95) + 'px;'"
-                            class="relative py-1.5 px-2 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['created_at'] || 6) + '%;'"
+                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('created_at')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Creación</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Creación">Creación</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'created_at')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 2. Fecha Enviado a Producción -->
                         <th 
-                            :style="'width: ' + (colWidths['prod_date'] || 115) + 'px; min-width: ' + (colWidths['prod_date'] || 115) + 'px; max-width: ' + (colWidths['prod_date'] || 115) + 'px;'"
-                            class="relative py-1.5 px-2 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['prod_date'] || 6) + '%;'"
+                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('production_sent_at')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Env. Producción</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Enviado a Producción">Env. Prod.</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'prod_date')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 3. WO # -->
                         <th 
-                            :style="'width: ' + (colWidths['wo'] || 85) + 'px; min-width: ' + (colWidths['wo'] || 85) + 'px; max-width: ' + (colWidths['wo'] || 85) + 'px;'"
-                            class="relative py-1.5 px-2 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['wo'] || 6) + '%;'"
+                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('wo_number')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">WO #</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="WO #">WO #</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'wo')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 4. Client -->
                         <th 
-                            :style="'width: ' + (colWidths['client'] || 170) + 'px; min-width: ' + (colWidths['client'] || 170) + 'px; max-width: ' + (colWidths['client'] || 170) + 'px;'"
-                            class="relative py-1.5 px-2.5 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['client'] || 12) + '%;'"
+                            class="relative py-2 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('company_name')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Cliente</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Cliente">Cliente</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'client')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 5. Order Name -->
                         <th 
-                            :style="'width: ' + (colWidths['name'] || 240) + 'px; min-width: ' + (colWidths['name'] || 240) + 'px; max-width: ' + (colWidths['name'] || 240) + 'px;'"
-                            class="relative py-1.5 px-2.5 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['name'] || 14) + '%;'"
+                            class="relative py-2 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('task_name')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Nombre de Orden</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Nombre de Orden">Nombre de Orden</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'name')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 6. Designer -->
                         <th 
-                            :style="'width: ' + (colWidths['designer'] || 95) + 'px; min-width: ' + (colWidths['designer'] || 95) + 'px; max-width: ' + (colWidths['designer'] || 95) + 'px;'"
-                            class="relative py-1.5 px-2 select-none group/col">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Diseñador</span>
+                            :style="'width: ' + (colWidths['designer'] || 7.5) + '%;'"
+                            class="relative py-2 px-1 select-none group/col">
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Diseñador">Diseñador</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'designer')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 7. Nota Producción / Instalación -->
                         <th 
-                            :style="'width: ' + (colWidths['prod_note'] || 200) + 'px; min-width: ' + (colWidths['prod_note'] || 200) + 'px; max-width: ' + (colWidths['prod_note'] || 200) + 'px;'"
-                            class="relative py-1.5 px-2.5 select-none group/col">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Nota Producción/Inst.</span>
+                            :style="'width: ' + (colWidths['prod_note'] || 12) + '%;'"
+                            class="relative py-2 px-1.5 select-none group/col">
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Nota Producción/Instalación">Nota Prod./Inst.</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'prod_note')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 8. Estimado / Invoice -->
                         <th 
-                            :style="'width: ' + (colWidths['invoice'] || 115) + 'px; min-width: ' + (colWidths['invoice'] || 115) + 'px; max-width: ' + (colWidths['invoice'] || 115) + 'px;'"
-                            class="relative py-1.5 px-2 select-none group/col">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Estimado / Invoice</span>
+                            :style="'width: ' + (colWidths['invoice'] || 7) + '%;'"
+                            class="relative py-2 px-1 select-none group/col">
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Estimado / Invoice">Est. / Inv.</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'invoice')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 8.5. Fecha Email -->
                         <th 
-                            :style="'width: ' + (colWidths['email_date'] || 105) + 'px; min-width: ' + (colWidths['email_date'] || 105) + 'px; max-width: ' + (colWidths['email_date'] || 105) + 'px;'"
-                            class="relative py-1.5 px-2 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['email_date'] || 6) + '%;'"
+                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('email_date')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Fecha Email</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Fecha Email">Email</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'email_date')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 9. Instalación -->
                         <th 
-                            :style="'width: ' + (colWidths['installation'] || 120) + 'px; min-width: ' + (colWidths['installation'] || 120) + 'px; max-width: ' + (colWidths['installation'] || 120) + 'px;'"
-                            class="relative py-1.5 px-2.5 select-none group/col">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Instalación</span>
+                            :style="'width: ' + (colWidths['installation'] || 6) + '%;'"
+                            class="relative py-2 px-1 select-none group/col">
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Instalación">Instalación</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'installation')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 10. CHECK MARK -->
                         <th 
-                            :style="'width: ' + (colWidths['check'] || 55) + 'px; min-width: ' + (colWidths['check'] || 55) + 'px; max-width: ' + (colWidths['check'] || 55) + 'px;'"
-                            class="relative py-1.5 px-1 text-center select-none group/col">
-                            <div class="flex items-center justify-center gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Check</span>
+                            :style="'width: ' + (colWidths['check'] || 3.5) + '%;'"
+                            class="relative py-2 px-0.5 text-center select-none group/col">
+                            <div class="flex items-center justify-center gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate">✓</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'check')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 11. Nota de Entrega -->
                         <th 
-                            :style="'width: ' + (colWidths['deliv_note'] || 230) + 'px; min-width: ' + (colWidths['deliv_note'] || 230) + 'px; max-width: ' + (colWidths['deliv_note'] || 230) + 'px;'"
-                            class="relative py-1.5 px-2.5 select-none group/col">
-                            <div class="flex items-center justify-between gap-1 w-full pointer-events-none">
-                                <span class="whitespace-nowrap font-bold">Nota de Entrega</span>
+                            :style="'width: ' + (colWidths['deliv_note'] || 7) + '%;'"
+                            class="relative py-2 px-1.5 select-none group/col">
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Nota de Entrega">Entrega</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'deliv_note')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 12. Subestatus -->
                         <th 
-                            :style="'width: ' + (colWidths['substatus'] || 140) + 'px; min-width: ' + (colWidths['substatus'] || 140) + 'px; max-width: ' + (colWidths['substatus'] || 140) + 'px;'"
-                            class="relative py-1.5 pl-2.5 pr-6 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            :style="'width: ' + (colWidths['substatus'] || 7) + '%;'"
+                            class="relative py-2 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col"
                             wire:click="sortByColumn('substatus')">
-                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
-                                <span class="truncate">Subestatus</span>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Subestatus">Subestatus</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'substatus')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
@@ -544,9 +552,7 @@
                         @endphp
                         <tr class="transition group relative {{ $rowStyle }}">
                             <!-- 1. Fecha Creación -->
-                            <td 
-                                :style="'width: ' + (colWidths['created_at'] || 95) + 'px; min-width: ' + (colWidths['created_at'] || 95) + 'px; max-width: ' + (colWidths['created_at'] || 95) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 @if($editingOrderId === $order->id && $editingField === 'manual_creation_date')
                                     <input 
                                         type="date" 
@@ -555,22 +561,20 @@
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
                                         autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
                                     >
                                 @else
                                     <div 
                                         wire:click="startEdit({{ $order->id }}, 'manual_creation_date')"
-                                        class="cursor-pointer hover:underline text-stone-600 truncate"
-                                        title="Clic para editar fecha de creación">
+                                        class="cursor-pointer hover:underline text-stone-600 truncate text-[10.5px]"
+                                        title="{{ $order->manual_creation_date ? $order->manual_creation_date->format('d/m/Y') : ($order->created_at ? $order->created_at->format('d/m/Y') : 'Sin fecha') }} (Clic para editar)">
                                         {{ $order->manual_creation_date ? $order->manual_creation_date->format('d/m/Y') : ($order->created_at ? $order->created_at->format('d/m/Y') : '—') }}
                                     </div>
                                 @endif
                             </td>
 
                             <!-- 2. Fecha Enviado a Producción -->
-                            <td 
-                                :style="'width: ' + (colWidths['prod_date'] || 115) + 'px; min-width: ' + (colWidths['prod_date'] || 115) + 'px; max-width: ' + (colWidths['prod_date'] || 115) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 @if($editingOrderId === $order->id && $editingField === 'production_sent_at')
                                     <input 
                                         type="date" 
@@ -579,23 +583,21 @@
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
                                         autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
                                     >
                                 @else
                                     <div 
                                         wire:click="startEdit({{ $order->id }}, 'production_sent_at')"
-                                        class="cursor-pointer hover:underline text-stone-600 truncate"
-                                        title="Clic para editar fecha env. producción">
+                                        class="cursor-pointer hover:underline text-stone-600 truncate text-[10.5px]"
+                                        title="{{ $order->production_sent_at ? $order->production_sent_at->format('d/m/Y') : 'Sin fecha' }} (Clic para editar)">
                                         {{ $order->production_sent_at ? $order->production_sent_at->format('d/m/Y') : '—' }}
                                     </div>
                                 @endif
                             </td>
 
                             <!-- 3. WO # (Click opens modal if exists + Backlog pill if in_workspace is false) -->
-                            <td 
-                                :style="'width: ' + (colWidths['wo'] || 85) + 'px; min-width: ' + (colWidths['wo'] || 85) + 'px; max-width: ' + (colWidths['wo'] || 85) + 'px;'"
-                                class="py-1 px-2.5 truncate">
-                                <div class="flex items-center gap-1 overflow-hidden">
+                            <td class="py-1 px-1.5 truncate">
+                                <div class="flex items-center gap-1 overflow-hidden truncate">
                                     @if(! $order->in_workspace)
                                         <button 
                                             wire:click="moveToWorkspace({{ $order->id }})"
@@ -613,24 +615,24 @@
                                                 wire:keydown.enter="saveEdit"
                                                 wire:blur="saveEdit"
                                                 wire:keydown.escape="cancelEdit"
-                                                placeholder="Ingresar WO..."
+                                                placeholder="WO..."
                                                 autofocus
-                                                class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] font-mono font-bold w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                                class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] font-mono font-bold w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
                                             >
                                         @else
                                             <div 
                                                 wire:click="startEdit({{ $order->id }}, 'wo_number')"
-                                                class="cursor-pointer inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse truncate"
+                                                class="cursor-pointer inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse truncate"
                                                 title="Sin WO - Clic para agregar">
-                                                <x-lucide-alert-circle class="w-3 h-3 shrink-0" />
-                                                Sin WO
+                                                <x-lucide-alert-circle class="w-2.5 h-2.5 shrink-0" />
+                                                <span class="truncate">Sin WO</span>
                                             </div>
                                         @endif
                                     @else
                                         <button 
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                            class="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left"
-                                            title="Ver Detalle de Orden">
+                                            class="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left block"
+                                            title="{{ $order->wo_number }} - Ver Detalle">
                                             {{ $order->wo_number }}
                                         </button>
                                     @endif
@@ -638,34 +640,28 @@
                             </td>
 
                             <!-- 4. Cliente (Click opens modal) -->
-                            <td 
-                                :style="'width: ' + (colWidths['client'] || 170) + 'px; min-width: ' + (colWidths['client'] || 170) + 'px; max-width: ' + (colWidths['client'] || 170) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 <button 
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                    class="font-semibold text-stone-800 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-full"
-                                    title="Ver Detalle de Orden">
+                                    class="font-semibold text-stone-800 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-full block uppercase"
+                                    title="{{ $order->company_name ?: ($order->client?->name ?? '—') }}">
                                     {{ $order->company_name ?: ($order->client?->name ?? '—') }}
                                 </button>
                             </td>
 
                             <!-- 5. Order Name (Click opens modal) -->
-                            <td 
-                                :style="'width: ' + (colWidths['name'] || 240) + 'px; min-width: ' + (colWidths['name'] || 240) + 'px; max-width: ' + (colWidths['name'] || 240) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 <button 
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                    class="text-stone-700 font-medium hover:text-stone-900 hover:underline truncate cursor-pointer text-left w-full"
-                                    title="Ver Detalle de Orden">
+                                    class="text-stone-700 font-medium hover:text-stone-900 hover:underline truncate cursor-pointer text-left w-full block uppercase"
+                                    title="{{ $order->clean_task_name }}">
                                     {{ $order->clean_task_name }}
                                 </button>
                             </td>
 
                             <!-- 6. Designer (Full Color Badge, No Dot) -->
-                            <td 
-                                :style="'width: ' + (colWidths['designer'] || 95) + 'px; min-width: ' + (colWidths['designer'] || 95) + 'px; max-width: ' + (colWidths['designer'] || 95) + 'px;'"
-                                class="py-1 px-2">
-                                <div class="relative" 
+                            <td class="py-1 px-1 truncate">
+                                <div class="relative w-full" 
                                     x-data="{ 
                                         openDes: false,
                                         dropStyle: '',
@@ -692,8 +688,9 @@
                                     @scroll.window.passive="openDes = false">
                                     <button 
                                         @click.stop="toggleDes($el)"
-                                        class="px-2 py-0.5 rounded-sm border text-[11px] font-semibold cursor-pointer max-w-full truncate transition w-full text-center {{ $getDesignerBadgeStyle($order->designer?->name) }}">
-                                        <span class="truncate">{{ $order->designer?->name ?? 'Sin Asignar' }}</span>
+                                        class="px-1 py-0.5 rounded-sm border text-[10px] font-semibold cursor-pointer truncate transition w-full text-center block {{ $getDesignerBadgeStyle($order->designer?->name) }}"
+                                        title="{{ $order->designer?->name ?? 'Sin Asignar' }}">
+                                        <span class="truncate block">{{ $order->designer?->name ?? 'Sin Asignar' }}</span>
                                     </button>
 
                                     <!-- Designer Selector Popover -->
@@ -725,9 +722,7 @@
                             </td>
 
                             <!-- 7. Nota Producción / Instalación -->
-                            <td 
-                                :style="'width: ' + (colWidths['prod_note'] || 200) + 'px; min-width: ' + (colWidths['prod_note'] || 200) + 'px; max-width: ' + (colWidths['prod_note'] || 200) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 @if($editingOrderId === $order->id && $editingField === 'production_note')
                                     <input 
                                         type="text" 
@@ -737,13 +732,13 @@
                                         wire:keydown.escape="cancelEdit"
                                         placeholder="Nota producción..."
                                         autofocus
-                                        class="px-1.5 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
                                     >
                                 @else
                                     <div 
                                         wire:click="startEdit({{ $order->id }}, 'production_note')"
-                                        class="cursor-pointer hover:bg-stone-100 rounded px-1.5 py-0.5 text-stone-600 italic truncate min-h-[22px] flex items-center"
-                                        title="Clic para editar nota de producción">
+                                        class="cursor-pointer hover:bg-stone-100 rounded px-1 py-0.5 text-stone-600 italic truncate min-h-[22px] flex items-center"
+                                        title="{{ $order->production_note ?: 'Clic para editar nota de producción' }}">
                                         {{ $order->production_note ?: '—' }}
                                     </div>
                                 @endif
@@ -768,10 +763,8 @@
                                     default => 'text-stone-400 hover:text-stone-800',
                                 };
                             @endphp
-                            <td 
-                                :style="'width: ' + (colWidths['invoice'] || 115) + 'px; min-width: ' + (colWidths['invoice'] || 115) + 'px; max-width: ' + (colWidths['invoice'] || 115) + 'px;'"
-                                class="py-1 px-2.5 transition {{ $cellBg }}">
-                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" 
+                            <td class="py-1 px-1 truncate transition {{ $cellBg }}">
+                                <div class="relative flex items-center justify-between gap-0.5 w-full py-0.5 truncate" 
                                     x-data="{ 
                                         openRev: false,
                                         dropStyle: '',
@@ -805,13 +798,13 @@
                                             wire:keydown.escape="cancelEdit"
                                             placeholder="N°..."
                                             autofocus
-                                            class="px-1.5 py-0.5 bg-white border border-stone-400 text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900 font-mono font-bold text-stone-900"
+                                            class="px-1 py-0.5 bg-white border border-stone-400 text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900 font-mono font-bold text-stone-900"
                                         >
                                     @else
                                         <span 
                                             wire:click="startEdit({{ $order->id }}, 'estimate_invoice_number')"
-                                            class="cursor-pointer font-bold font-mono text-[11px] truncate"
-                                            title="Clic para editar número">
+                                            class="cursor-pointer font-bold font-mono text-[10px] truncate block"
+                                            title="{{ $displayText }} (Clic para editar)">
                                             {{ $displayText }}
                                         </span>
                                     @endif
@@ -820,7 +813,7 @@
                                         @click.stop="toggleRev($el)"
                                         class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none {{ $checkIconColor }}"
                                         title="Cambiar estado de revisión">
-                                        <x-lucide-check-square class="w-4 h-4" />
+                                        <x-lucide-check-square class="w-3.5 h-3.5" />
                                     </button>
 
                                     <!-- Review Status Popover Selector -->
@@ -856,9 +849,7 @@
                             </td>
 
                             <!-- 8.5. Fecha Email -->
-                            <td 
-                                :style="'width: ' + (colWidths['email_date'] || 105) + 'px; min-width: ' + (colWidths['email_date'] || 105) + 'px; max-width: ' + (colWidths['email_date'] || 105) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 @if($editingOrderId === $order->id && $editingField === 'email_date')
                                     <input 
                                         type="date" 
@@ -867,13 +858,13 @@
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
                                         autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
                                     >
                                 @else
                                     <div 
                                         wire:click="startEdit({{ $order->id }}, 'email_date')"
-                                        class="cursor-pointer hover:underline text-stone-600 truncate"
-                                        title="Clic para editar fecha de email">
+                                        class="cursor-pointer hover:underline text-stone-600 truncate text-[10.5px]"
+                                        title="{{ $order->email_date ? $order->email_date->format('d/m/Y') : 'Sin fecha' }} (Clic para editar)">
                                         {{ $order->email_date ? $order->email_date->format('d/m/Y') : '—' }}
                                     </div>
                                 @endif
@@ -896,10 +887,8 @@
                                     default => '—',
                                 };
                             @endphp
-                            <td 
-                                :style="'width: ' + (colWidths['installation'] || 120) + 'px; min-width: ' + (colWidths['installation'] || 120) + 'px; max-width: ' + (colWidths['installation'] || 120) + 'px;'"
-                                class="py-1 px-2.5 transition {{ $instCellBg }}">
-                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" 
+                            <td class="py-1 px-1 truncate transition {{ $instCellBg }}">
+                                <div class="relative flex items-center justify-between gap-0.5 w-full py-0.5 truncate" 
                                     x-data="{ 
                                         openInst: false,
                                         dropStyle: '',
@@ -926,10 +915,10 @@
                                     @scroll.window.passive="openInst = false">
                                     <button 
                                         @click.stop="toggleInst($el)"
-                                        class="w-full text-left cursor-pointer flex items-center justify-between gap-1 border-none bg-transparent py-0.5"
-                                        title="Clic para cambiar instalación">
-                                        <span class="truncate font-bold text-[11px]">{{ $instDisplayText }}</span>
-                                        <x-lucide-chevron-down class="w-3 h-3 text-stone-500 shrink-0" />
+                                        class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
+                                        title="Clic para cambiar instalación: {{ $instDisplayText }}">
+                                        <span class="truncate font-bold text-[10px] block">{{ $instDisplayText }}</span>
+                                        <x-lucide-chevron-down class="w-2.5 h-2.5 text-stone-500 shrink-0" />
                                     </button>
 
                                     <!-- Installation Dropdown Popover -->
@@ -978,21 +967,17 @@
                             </td>
 
                             <!-- 10. CHECK MARK (Standalone Toggle Checkbox) -->
-                            <td 
-                                :style="'width: ' + (colWidths['check'] || 55) + 'px; min-width: ' + (colWidths['check'] || 55) + 'px; max-width: ' + (colWidths['check'] || 55) + 'px;'"
-                                class="py-1 px-1 text-center">
+                            <td class="py-1 px-0.5 text-center">
                                 <input 
                                     type="checkbox" 
                                     wire:click="toggleOverviewChecked({{ $order->id }})"
                                     {{ $order->overview_checked ? 'checked' : '' }}
-                                    class="w-4 h-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900 cursor-pointer"
+                                    class="w-3.5 h-3.5 rounded border-stone-300 text-stone-900 focus:ring-stone-900 cursor-pointer"
                                 >
                             </td>
 
                             <!-- 11. Nota de Entrega -->
-                            <td 
-                                :style="'width: ' + (colWidths['deliv_note'] || 230) + 'px; min-width: ' + (colWidths['deliv_note'] || 230) + 'px; max-width: ' + (colWidths['deliv_note'] || 230) + 'px;'"
-                                class="py-1 px-2.5 truncate">
+                            <td class="py-1 px-1.5 truncate">
                                 @if($editingOrderId === $order->id && $editingField === 'delivery_note')
                                     <input 
                                         type="text" 
@@ -1002,13 +987,13 @@
                                         wire:keydown.escape="cancelEdit"
                                         placeholder="Nota entrega..."
                                         autofocus
-                                        class="px-1.5 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
                                     >
                                 @else
                                     <div 
                                         wire:click="startEdit({{ $order->id }}, 'delivery_note')"
-                                        class="cursor-pointer hover:bg-stone-100 rounded px-1.5 py-0.5 text-stone-600 italic truncate min-h-[22px] flex items-center"
-                                        title="Clic para editar nota de entrega">
+                                        class="cursor-pointer hover:bg-stone-100 rounded px-1 py-0.5 text-stone-600 italic truncate min-h-[22px] flex items-center"
+                                        title="{{ $order->delivery_note ?: 'Clic para editar nota de entrega' }}">
                                         {{ $order->delivery_note ?: '—' }}
                                     </div>
                                 @endif
@@ -1050,10 +1035,9 @@
                                 };
                             @endphp
                             <td 
-                                :style="'width: ' + (colWidths['substatus'] || 140) + 'px; min-width: ' + (colWidths['substatus'] || 140) + 'px; max-width: ' + (colWidths['substatus'] || 140) + 'px;'"
                                 @if(!empty($subInlineStyle)) style="{{ $subInlineStyle }}" @endif
-                                class="py-1 pl-2.5 pr-6 transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
-                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" 
+                                class="py-1 px-1.5 truncate transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
+                                <div class="relative flex items-center justify-between gap-0.5 w-full py-0.5 truncate" 
                                     x-data="{ 
                                         openSub: false,
                                         dropStyle: '',
@@ -1080,14 +1064,14 @@
                                     @scroll.window.passive="openSub = false">
                                     <button 
                                         @click.stop="toggleSub($el)"
-                                        class="w-full text-left cursor-pointer flex items-center justify-between gap-1 border-none bg-transparent py-0.5"
-                                        title="Clic para cambiar subestatus / banderas">
-                                        <div class="flex items-center gap-1 overflow-hidden flex-wrap">
-                                            <span class="truncate font-bold text-[11px]">{{ $subLabel }}</span>
+                                        class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
+                                        title="Clic para cambiar subestatus / banderas: {{ $subLabel }}">
+                                        <div class="flex items-center gap-0.5 overflow-hidden truncate">
+                                            <span class="truncate font-bold text-[10px] block">{{ $subLabel }}</span>
                                             @if($order->isOverdue())
-                                                <span class="px-1 py-0.2 rounded text-[9px] font-extrabold bg-red-600 text-white uppercase shrink-0">Vencida</span>
+                                                <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold bg-red-600 text-white uppercase shrink-0">!</span>
                                             @elseif($order->isDueToday())
-                                                <span class="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500 text-amber-950 uppercase shrink-0">Por Vencer</span>
+                                                <span class="px-0.5 py-0.2 rounded text-[8px] font-bold bg-amber-500 text-amber-950 uppercase shrink-0">PV</span>
                                             @endif
                                             @if(!empty($order->flags))
                                                 @foreach($order->flags as $fName)
@@ -1096,12 +1080,12 @@
                                                         $fLabel = $fEnum?->label() ?? $fName;
                                                     @endphp
                                                     @if($fName !== 'OVERDUE' && $fName !== 'ALMOST OVERDUE')
-                                                        <span class="px-1 py-0.2 rounded text-[9px] font-extrabold bg-purple-600 text-white uppercase shrink-0" title="Flag {{ $fLabel }}">{{ $fLabel }}</span>
+                                                        <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold bg-purple-600 text-white uppercase shrink-0" title="Flag {{ $fLabel }}">{{ Str::limit($fLabel, 3, '') }}</span>
                                                     @endif
                                                 @endforeach
                                             @endif
                                         </div>
-                                        <x-lucide-chevron-down class="w-3 h-3 opacity-60 shrink-0" />
+                                        <x-lucide-chevron-down class="w-2.5 h-2.5 opacity-60 shrink-0" />
                                     </button>
 
                                     <!-- Substatus & Flags Dynamic Dropdown Popover -->
@@ -1205,7 +1189,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="py-8 text-center text-stone-400 font-medium">
+                            <td colspan="13" class="py-8 text-center text-stone-400 font-medium">
                                 {{ __('No se encontraron órdenes para la vista seleccionada.') }}
                             </td>
                         </tr>

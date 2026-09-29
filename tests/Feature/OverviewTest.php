@@ -60,8 +60,8 @@ class OverviewTest extends TestCase
 
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
-            ->assertSee('Workspace Order Test')
-            ->assertSee('Backlog Order Test')
+            ->assertSee('WORKSPACE ORDER TEST')
+            ->assertSee('BACKLOG ORDER TEST')
             ->assertViewHas('orders', function ($orders) use ($workspaceOrder, $backlogOrder) {
                 return $orders->contains($workspaceOrder) && $orders->contains($backlogOrder);
             });
@@ -88,14 +88,14 @@ class OverviewTest extends TestCase
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
             ->set('activeTab', 'all')
-            ->assertSee('Workspace Order Tab Test')
-            ->assertSee('Backlog Order Tab Test')
+            ->assertSee('WORKSPACE ORDER TAB TEST')
+            ->assertSee('BACKLOG ORDER TAB TEST')
             ->set('activeTab', 'workspace')
-            ->assertSee('Workspace Order Tab Test')
-            ->assertDontSee('Backlog Order Tab Test')
+            ->assertSee('WORKSPACE ORDER TAB TEST')
+            ->assertDontSee('BACKLOG ORDER TAB TEST')
             ->set('activeTab', 'backlog')
-            ->assertSee('Backlog Order Tab Test')
-            ->assertDontSee('Workspace Order Tab Test');
+            ->assertSee('BACKLOG ORDER TAB TEST')
+            ->assertDontSee('WORKSPACE ORDER TAB TEST');
     }
 
     public function test_overview_can_toggle_section_visibility(): void
@@ -209,12 +209,12 @@ class OverviewTest extends TestCase
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
             ->set('search', 'Alpha')
-            ->assertSee('Unique Alpha Task')
-            ->assertDontSee('Unique Beta Task')
+            ->assertSee('UNIQUE ALPHA TASK')
+            ->assertDontSee('UNIQUE BETA TASK')
             ->set('search', '')
             ->set('filterWo', '88888')
-            ->assertSee('Unique Beta Task')
-            ->assertDontSee('Unique Alpha Task');
+            ->assertSee('UNIQUE BETA TASK')
+            ->assertDontSee('UNIQUE ALPHA TASK');
     }
 
     public function test_overview_file_caching_and_unpaginated_display(): void
@@ -230,7 +230,7 @@ class OverviewTest extends TestCase
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
             ->assertSet('perPage', 0)
-            ->assertSee('Cached Order Test')
+            ->assertSee('CACHED ORDER TEST')
             ->assertSee('Sin paginación • File Cached')
             ->call('refreshCache')
             ->assertDispatched('toast');

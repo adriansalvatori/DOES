@@ -113,15 +113,15 @@ class AutocompleteAndFilterTest extends TestCase
         Livewire::test(CreateOrderModal::class)
             ->dispatch('open-duplicate-order', orderId: $order->id)
             ->assertSet('companyName', 'TAQUERIA LA CHULA')
-            ->assertSet('taskName', 'Menu Board (Copia)')
+            ->assertSet('taskName', 'MENU BOARD (COPIA)')
             ->assertSet('isDuplicating', true)
-            ->set('taskName', 'Menu Board (Copia Modificada)')
+            ->set('taskName', 'MENU BOARD (COPIA MODIFICADA)')
             ->call('save')
             ->assertDispatched('order-updated');
 
         $this->assertDatabaseHas('orders', [
             'company_name' => 'TAQUERIA LA CHULA',
-            'task_name' => 'Menu Board (Copia Modificada)',
+            'task_name' => 'MENU BOARD (COPIA MODIFICADA)',
             'in_workspace' => true,
         ]);
     }

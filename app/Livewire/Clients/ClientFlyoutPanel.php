@@ -386,8 +386,15 @@ class ClientFlyoutPanel extends Component
         }
     }
 
+    public function updatedName($value): void
+    {
+        $this->name = mb_strtoupper((string) $value, 'UTF-8');
+    }
+
     public function save(): void
     {
+        $this->name = mb_strtoupper(trim($this->name), 'UTF-8');
+
         $this->validate([
             'name' => [
                 'required',

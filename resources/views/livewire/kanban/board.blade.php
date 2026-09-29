@@ -83,7 +83,7 @@
                                         @if($result->wo_number)
                                             <x-wo-badge :number="$result->wo_number" variant="light" />
                                         @endif
-                                        <span class="font-semibold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink min-w-0">
+                                        <span class="font-semibold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink min-w-0 uppercase">
                                             {{ $result->company_name }}
                                         </span>
                                         @if($result->location_text)
@@ -93,7 +93,7 @@
                                             </span>
                                         @endif
                                     </div>
-                                    <p class="text-[11px] text-zinc-500 truncate mt-0.5" title="{{ $result->task_name }}">{{ $result->task_name }}</p>
+                                    <p class="text-[11px] text-zinc-500 truncate mt-0.5 uppercase" title="{{ $result->task_name }}">{{ $result->task_name }}</p>
                                 </div>
 
                                 <div class="flex items-center gap-1.5 shrink-0 min-w-0">
@@ -640,7 +640,7 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center justify-between gap-1.5 min-w-0">
                                             <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <h4 class="font-normal text-[11px] text-zinc-600 truncate leading-snug min-w-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-normal text-[11px] text-zinc-600 truncate leading-snug min-w-0 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->location_text)
                                                     <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="Locación: {{ $order->location_text }}">
                                                         <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
@@ -660,7 +660,7 @@
                                                 </button>
                                             @endif
                                         </div>
-                                        <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
                                 </div>
 
@@ -799,7 +799,7 @@
                                         {{ $task->title }}
                                     </h4>
                                     @if($task->order)
-                                        <p class="text-[10px] text-violet-700 font-medium truncate mt-0.5 flex items-center gap-1">
+                                        <p class="text-[10px] text-violet-700 font-medium truncate mt-0.5 flex items-center gap-1 uppercase">
                                             <x-lucide-link class="w-3 h-3 text-violet-500 shrink-0" />
                                             @if($task->order && $task->order->wo_number)
                                                 <x-wo-badge :number="$task->order->wo_number" variant="light" />
@@ -921,7 +921,7 @@
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center justify-between gap-1.5 min-w-0">
                                             <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug min-w-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug min-w-0 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->location_text)
                                                     <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="Locación: {{ $order->location_text }}">
                                                         <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
@@ -941,7 +941,7 @@
                                                 </button>
                                             @endif
                                         </div>
-                                        <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                     </div>
                                 </div>
 

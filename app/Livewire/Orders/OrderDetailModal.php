@@ -551,6 +551,16 @@ class OrderDetailModal extends Component
         $this->dispatch('order-updated');
     }
 
+    public function updatedEditCompanyName($value)
+    {
+        $this->editCompanyName = mb_strtoupper($value ?? '', 'UTF-8');
+    }
+
+    public function updatedEditTaskName($value)
+    {
+        $this->editTaskName = mb_strtoupper($value ?? '', 'UTF-8');
+    }
+
     public function saveOrder($addToWorkspace = false)
     {
         if (! $this->orderId) {
@@ -565,6 +575,9 @@ class OrderDetailModal extends Component
         if (preg_match('/trello\.com\/c\/([^\/]+)/i', $cleanTrelloId, $matches)) {
             $cleanTrelloId = $matches[1];
         }
+
+        $this->editCompanyName = mb_strtoupper(trim($this->editCompanyName ?? ''), 'UTF-8');
+        $this->editTaskName = mb_strtoupper(trim($this->editTaskName ?? ''), 'UTF-8');
 
         if ($this->editSubstatus === Substatus::ENVIADO_EN_ALTA->value || $this->editSubstatus === 'ENVIADO EN ALTA') {
             $this->editCoreStatus = CoreStatus::EN_PRODUCCION->value;

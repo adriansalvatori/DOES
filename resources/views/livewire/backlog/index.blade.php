@@ -552,8 +552,8 @@
                                         <x-wo-badge :number="$nOrder->wo_number" variant="dark" />
                                     @endif
                                 </div>
-                                <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug" title="{{ $nOrder->company_name }}">{{ $nOrder->company_name }}</h4>
-                                <p class="font-bold text-xs text-zinc-900 truncate mt-0.5" title="{{ $nOrder->task_name }}">{{ $nOrder->task_name }}</p>
+                                <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug uppercase" title="{{ $nOrder->company_name }}">{{ $nOrder->company_name }}</h4>
+                                <p class="font-bold text-xs text-zinc-900 truncate mt-0.5 uppercase" title="{{ $nOrder->task_name }}">{{ $nOrder->task_name }}</p>
                             </div>
                             
                             <button wire:click="addToWorkspace({{ $nOrder->id }})" class="px-2.5 py-1 rounded bg-sky-600 hover:bg-sky-700 text-white text-[10px] font-medium transition shrink-0 flex items-center gap-1 shadow-2xs">
@@ -621,7 +621,7 @@
                                 </div>
                             </td>
                             <td class="p-3 font-semibold text-zinc-900 min-w-0">
-                                <span class="truncate block max-w-xs {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
+                                <span class="truncate block max-w-xs uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
                             </td>
                             <td class="p-3 whitespace-nowrap">
                                 @if($order->responsible_person)
@@ -633,7 +633,7 @@
                                 @endif
                             </td>
                             <td class="p-3 text-zinc-600 min-w-0">
-                                <span class="truncate block max-w-sm" title="{{ $order->task_name }}">{{ $order->task_name }}</span>
+                                <span class="truncate block max-w-sm uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</span>
                             </td>
                             <td class="p-3 font-mono text-[11px] text-zinc-600 whitespace-nowrap">
                                 {{ $order->trello_created_at ? $order->trello_created_at->format('d M, Y (H:i)') : 'N/A' }}
