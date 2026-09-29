@@ -180,6 +180,7 @@ class OverviewIndex extends Component
             'designer_id' => $order->designer_id,
             'manual_creation_date' => $order->manual_creation_date ? $order->manual_creation_date->format('Y-m-d') : ($order->created_at ? $order->created_at->format('Y-m-d') : ''),
             'production_sent_at' => $order->production_sent_at ? $order->production_sent_at->format('Y-m-d') : '',
+            'email_date' => $order->email_date ? $order->email_date->format('Y-m-d') : '',
             'production_note' => $order->production_note,
             'estimate_invoice_number' => $order->estimate_invoice_number,
             'review_status' => $order->review_status,
@@ -237,6 +238,10 @@ class OverviewIndex extends Component
                 $order->update(['production_sent_at' => ! empty($value) ? $value : null]);
                 break;
 
+            case 'email_date':
+                $order->update(['email_date' => ! empty($value) ? $value : null]);
+                break;
+
             case 'production_note':
                 $order->update(['production_note' => trim((string) $value)]);
                 break;
@@ -290,13 +295,34 @@ class OverviewIndex extends Component
         }
 
         $substatus = $substatusValue ? (Substatus::tryFrom($substatusValue) ?? $substatusValue) : null;
-        $order->update(['substatus' => $substatus]);
 
-        $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
+        if ($substatus instanceof Substatus && $substatus->isGlobal()) {
+            $order->toggleFlag($substatus);
+            $order->save();
+            $label = $substatus->label();
+            $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', 'Bandera actualizada: '.$label);
+        } else {
+            $order->update(['substatus' => $substatus]);
+            $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
+            $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label);
+        }
 
-        $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label);
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Subestatus actualizado.'));
+        $this->dispatch('toast', message: __('Subestatus / Bandera actualizada.'));
+    }
+
+    public function toggleFlag(int $orderId, string $flagName): void
+    {
+        $order = Order::find($orderId);
+        if (! $order) {
+            return;
+        }
+
+        $order->toggleFlag($flagName);
+        $order->save();
+
+        $this->dispatch('order-updated');
+        $this->dispatch('toast', message: __('Bandera actualizada.'));
     }
 
     public function toggleOverviewChecked(int $orderId): void
@@ -437,6 +463,7 @@ class OverviewIndex extends Component
             'created_at',
             'manual_creation_date',
             'production_sent_at',
+            'email_date',
             'wo_number',
             'company_name',
             'task_name',

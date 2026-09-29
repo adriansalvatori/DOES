@@ -37,7 +37,7 @@ class TimeBasedOverdueTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals(Substatus::ALMOST_OVERDUE, $order->substatus);
+        $this->assertTrue($order->hasFlag(Substatus::ALMOST_OVERDUE));
         $this->assertDatabaseMissing('related_tasks', [
             'order_id' => $order->id,
             'type' => RelatedTaskType::CORREO_ATRASO->value,
@@ -64,7 +64,7 @@ class TimeBasedOverdueTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals(Substatus::ALMOST_OVERDUE, $order->substatus);
+        $this->assertTrue($order->hasFlag(Substatus::ALMOST_OVERDUE));
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
             'type' => RelatedTaskType::CORREO_ATRASO->value,
@@ -92,7 +92,7 @@ class TimeBasedOverdueTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals(Substatus::OVERDUE, $order->substatus);
+        $this->assertTrue($order->hasFlag(Substatus::OVERDUE));
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
             'type' => RelatedTaskType::CORREO_ATRASO->value,

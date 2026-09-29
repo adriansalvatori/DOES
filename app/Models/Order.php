@@ -35,12 +35,14 @@ class Order extends Model
         'designer_id',
         'core_status',
         'substatus',
+        'flags',
         'blocking_reason',
         'blocking_reason_other',
         'start_date',
         'original_due_date',
         'current_due_date',
         'scheduled_date',
+        'email_date',
         'last_meaningful_update',
         'client_last_response',
         'last_sent_to_client_at',
@@ -71,11 +73,13 @@ class Order extends Model
         'trello_created_at' => 'datetime',
         'core_status' => CoreStatus::class,
         'substatus' => Substatus::class,
+        'flags' => 'array',
         'blocking_reason' => BlockingReason::class,
         'start_date' => 'date',
         'original_due_date' => 'date',
         'current_due_date' => 'date',
         'scheduled_date' => 'date',
+        'email_date' => 'date',
         'manual_creation_date' => 'date',
         'production_sent_at' => 'datetime',
         'last_meaningful_update' => 'datetime',
@@ -522,7 +526,9 @@ class Order extends Model
 
     public function isUrgente(): bool
     {
-        return $this->substatus === Substatus::URGENTE || (is_string($this->substatus) ? $this->substatus === 'URGENTE' : $this->substatus?->value === 'URGENTE');
+        return $this->hasFlag(Substatus::URGENTE)
+            || $this->substatus === Substatus::URGENTE
+            || (is_string($this->substatus) ? $this->substatus === 'URGENTE' : $this->substatus?->value === 'URGENTE');
     }
 
     public function getSubstatusInlineStyleAttribute(): string
@@ -637,5 +643,48 @@ class Order extends Model
             ])->count();
 
         return $blockedOrdersCount + $resolverTasksCount;
+    }
+
+    public function hasFlag(Substatus|string $flag): bool
+    {
+        $val = $flag instanceof Substatus ? $flag->value : $flag;
+        $flags = $this->flags ?? [];
+
+        return in_array($val, $flags, true);
+    }
+
+    public function addFlag(Substatus|string $flag): void
+    {
+        $val = $flag instanceof Substatus ? $flag->value : $flag;
+        $flags = $this->flags ?? [];
+        if (! in_array($val, $flags, true)) {
+            $flags[] = $val;
+            $this->flags = array_values($flags);
+        }
+    }
+
+    public function removeFlag(Substatus|string $flag): void
+    {
+        $val = $flag instanceof Substatus ? $flag->value : $flag;
+        $flags = $this->flags ?? [];
+        if (in_array($val, $flags, true)) {
+            $this->flags = array_values(array_filter($flags, fn ($f) => $f !== $val));
+        }
+    }
+
+    public function toggleFlag(Substatus|string $flag): void
+    {
+        if ($this->hasFlag($flag)) {
+            $this->removeFlag($flag);
+        } else {
+            $this->addFlag($flag);
+        }
+    }
+
+    public function scopeWithFlag(Builder $query, Substatus|string $flag): Builder
+    {
+        $val = $flag instanceof Substatus ? $flag->value : $flag;
+
+        return $query->whereJsonContains('flags', $val);
     }
 }

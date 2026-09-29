@@ -150,15 +150,19 @@ class OverviewTest extends TestCase
             ->call('saveEdit')
             ->call('startEdit', $order->id, 'delivery_note')
             ->set('editingValue', 'Entregar por la tarde')
+            ->call('saveEdit')
+            ->call('startEdit', $order->id, 'email_date')
+            ->set('editingValue', '2026-09-28')
             ->call('saveEdit');
 
         $fresh = $order->fresh();
         $this->assertEquals('CS', $fresh->review_status);
         $this->assertEquals('Kudos', $fresh->installation_type);
-        $this->assertEquals(Substatus::URGENTE, $fresh->substatus);
+        $this->assertTrue($fresh->hasFlag(Substatus::URGENTE));
         $this->assertTrue((bool) $fresh->overview_checked);
         $this->assertEquals('Revision de medidas requerida', $fresh->production_note);
         $this->assertEquals('Entregar por la tarde', $fresh->delivery_note);
+        $this->assertEquals('2026-09-28', $fresh->email_date?->format('Y-m-d'));
     }
 
     public function test_overview_can_move_order_between_backlog_and_workspace(): void

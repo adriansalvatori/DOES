@@ -3,6 +3,7 @@
         colWidths: Object.assign({
             created_at: 95,
             prod_date: 115,
+            email_date: 105,
             wo: 85,
             client: 170,
             name: 240,
@@ -427,6 +428,23 @@
                             </div>
                         </th>
 
+                        <!-- 8.5. Fecha Email -->
+                        <th 
+                            :style="'width: ' + (colWidths['email_date'] || 105) + 'px; min-width: ' + (colWidths['email_date'] || 105) + 'px; max-width: ' + (colWidths['email_date'] || 105) + 'px;'"
+                            class="relative py-1.5 px-2 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            wire:click="sortByColumn('email_date')">
+                            <div class="flex items-center justify-between gap-1 w-full truncate pointer-events-none">
+                                <span class="truncate">Fecha Email</span>
+                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                            </div>
+                            <div 
+                                @mousedown.stop.prevent="initResize($event, 'email_date')"
+                                @click.stop.prevent
+                                class="absolute right-0 top-0 bottom-0 w-3.5 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                title="Arrastrar para redimensionar">
+                            </div>
+                        </th>
+
                         <!-- 9. Instalación -->
                         <th 
                             :style="'width: ' + (colWidths['installation'] || 120) + 'px; min-width: ' + (colWidths['installation'] || 120) + 'px; max-width: ' + (colWidths['installation'] || 120) + 'px;'"
@@ -633,34 +651,62 @@
                             <td 
                                 :style="'width: ' + (colWidths['designer'] || 95) + 'px; min-width: ' + (colWidths['designer'] || 95) + 'px; max-width: ' + (colWidths['designer'] || 95) + 'px;'"
                                 class="py-1 px-2">
-                                <div class="relative" x-data="{ openDes: false }" @click.outside="openDes = false" :class="openDes ? 'z-50 relative' : ''">
+                                <div class="relative" 
+                                    x-data="{ 
+                                        openDes: false,
+                                        dropStyle: '',
+                                        toggleDes(el) {
+                                            if (this.openDes) {
+                                                this.openDes = false;
+                                                return;
+                                            }
+                                            const rect = el.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const menuHeight = 220;
+                                            const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+                                            const left = Math.min(Math.max(10, rect.left), window.innerWidth - 170);
+                                            if (openUp) {
+                                                const bottom = window.innerHeight - rect.top + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; bottom: ${bottom}px; max-height: ${Math.min(260, rect.top - 20)}px; z-index: 99999;`;
+                                            } else {
+                                                const top = rect.bottom + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; top: ${top}px; max-height: ${Math.min(260, spaceBelow - 20)}px; z-index: 99999;`;
+                                            }
+                                            this.openDes = true;
+                                        }
+                                    }"
+                                    @scroll.window.passive="openDes = false">
                                     <button 
-                                        @click="openDes = !openDes"
+                                        @click.stop="toggleDes($el)"
                                         class="px-2 py-0.5 rounded-sm border text-[11px] font-semibold cursor-pointer max-w-full truncate transition w-full text-center {{ $getDesignerBadgeStyle($order->designer?->name) }}">
                                         <span class="truncate">{{ $order->designer?->name ?? 'Sin Asignar' }}</span>
                                     </button>
 
                                     <!-- Designer Selector Popover -->
-                                    <div 
-                                        x-show="openDes" 
-                                        x-transition
-                                        class="absolute left-0 top-full mt-1 z-[100] bg-white shadow-2xl border border-stone-200 rounded-lg p-1 min-w-[150px] space-y-0.5">
-                                        <div class="px-2 py-1 text-[10px] font-bold text-stone-400 uppercase">Seleccionar Diseñador</div>
-                                        <button 
-                                            wire:click="updateDesigner({{ $order->id }}, null)"
-                                            @click="openDes = false"
-                                            class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 text-stone-500">
-                                            -- Sin Asignar --
-                                        </button>
-                                        @foreach($designers as $d)
+                                    <template x-teleport="body">
+                                        <div 
+                                            x-show="openDes" 
+                                            x-transition
+                                            @click.outside="openDes = false"
+                                            :style="dropStyle"
+                                            class="bg-white shadow-2xl border border-stone-200 rounded-lg p-1 min-w-[150px] space-y-0.5 text-stone-900 overflow-y-auto">
+                                            <div class="px-2 py-1 text-[10px] font-bold text-stone-400 uppercase">Seleccionar Diseñador</div>
                                             <button 
-                                                wire:click="updateDesigner({{ $order->id }}, {{ $d->id }})"
+                                                wire:click="updateDesigner({{ $order->id }}, null)"
                                                 @click="openDes = false"
-                                                class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800">
-                                                <span>{{ $d->name }}</span>
+                                                class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 text-stone-500">
+                                                -- Sin Asignar --
                                             </button>
-                                        @endforeach
-                                    </div>
+                                            @foreach($designers as $d)
+                                                <button 
+                                                    wire:click="updateDesigner({{ $order->id }}, {{ $d->id }})"
+                                                    @click="openDes = false"
+                                                    class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800">
+                                                    <span>{{ $d->name }}</span>
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </template>
                                 </div>
                             </td>
 
@@ -711,7 +757,31 @@
                             <td 
                                 :style="'width: ' + (colWidths['invoice'] || 115) + 'px; min-width: ' + (colWidths['invoice'] || 115) + 'px; max-width: ' + (colWidths['invoice'] || 115) + 'px;'"
                                 class="py-1 px-2.5 transition {{ $cellBg }}">
-                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" x-data="{ openRev: false }" @click.outside="openRev = false" :class="openRev ? 'z-50 relative' : ''">
+                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" 
+                                    x-data="{ 
+                                        openRev: false,
+                                        dropStyle: '',
+                                        toggleRev(el) {
+                                            if (this.openRev) {
+                                                this.openRev = false;
+                                                return;
+                                            }
+                                            const rect = el.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const menuHeight = 180;
+                                            const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+                                            const left = Math.min(Math.max(10, rect.left), window.innerWidth - 210);
+                                            if (openUp) {
+                                                const bottom = window.innerHeight - rect.top + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; bottom: ${bottom}px; z-index: 99999;`;
+                                            } else {
+                                                const top = rect.bottom + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; top: ${top}px; z-index: 99999;`;
+                                            }
+                                            this.openRev = true;
+                                        }
+                                    }"
+                                    @scroll.window.passive="openRev = false">
                                     @if($editingOrderId === $order->id && $editingField === 'estimate_invoice_number')
                                         <input 
                                             type="text" 
@@ -733,38 +803,66 @@
                                     @endif
 
                                     <button 
-                                        @click="openRev = !openRev"
+                                        @click.stop="toggleRev($el)"
                                         class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none {{ $checkIconColor }}"
                                         title="Cambiar estado de revisión">
                                         <x-lucide-check-square class="w-4 h-4" />
                                     </button>
 
                                     <!-- Review Status Popover Selector -->
-                                    <div 
-                                        x-show="openRev" 
-                                        x-transition
-                                        class="absolute left-0 top-full mt-1 z-[100] bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[190px] space-y-1">
-                                        <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Revisión</div>
-                                        <button 
-                                            wire:click="updateReviewStatus({{ $order->id }}, 'CS')"
-                                            @click="openRev = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-pink-100 text-pink-900 font-semibold hover:bg-pink-200 transition">
-                                            Revisado por CS (Rosado)
-                                        </button>
-                                        <button 
-                                            wire:click="updateReviewStatus({{ $order->id }}, 'CAMILA')"
-                                            @click="openRev = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-yellow-100 text-yellow-950 font-semibold hover:bg-yellow-200 transition">
-                                            Revisado por Camila (Amarillo)
-                                        </button>
-                                        <button 
-                                            wire:click="updateReviewStatus({{ $order->id }}, null)"
-                                            @click="openRev = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition">
-                                            Sin revisión (Blanco / EST)
-                                        </button>
-                                    </div>
+                                    <template x-teleport="body">
+                                        <div 
+                                            x-show="openRev" 
+                                            x-transition
+                                            @click.outside="openRev = false"
+                                            :style="dropStyle"
+                                            class="bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[190px] space-y-1 text-stone-900">
+                                            <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Revisión</div>
+                                            <button 
+                                                wire:click="updateReviewStatus({{ $order->id }}, 'CS')"
+                                                @click="openRev = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-pink-100 text-pink-900 font-semibold hover:bg-pink-200 transition">
+                                                Revisado por CS (Rosado)
+                                            </button>
+                                            <button 
+                                                wire:click="updateReviewStatus({{ $order->id }}, 'CAMILA')"
+                                                @click="openRev = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-yellow-100 text-yellow-950 font-semibold hover:bg-yellow-200 transition">
+                                                Revisado por Camila (Amarillo)
+                                            </button>
+                                            <button 
+                                                wire:click="updateReviewStatus({{ $order->id }}, null)"
+                                                @click="openRev = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition">
+                                                Sin revisión (Blanco / EST)
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
+                            </td>
+
+                            <!-- 8.5. Fecha Email -->
+                            <td 
+                                :style="'width: ' + (colWidths['email_date'] || 105) + 'px; min-width: ' + (colWidths['email_date'] || 105) + 'px; max-width: ' + (colWidths['email_date'] || 105) + 'px;'"
+                                class="py-1 px-2.5 truncate">
+                                @if($editingOrderId === $order->id && $editingField === 'email_date')
+                                    <input 
+                                        type="date" 
+                                        wire:model="editingValue"
+                                        wire:change="saveEdit"
+                                        wire:blur="saveEdit"
+                                        wire:keydown.escape="cancelEdit"
+                                        autofocus
+                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
+                                    >
+                                @else
+                                    <div 
+                                        wire:click="startEdit({{ $order->id }}, 'email_date')"
+                                        class="cursor-pointer hover:underline text-stone-600 truncate"
+                                        title="Clic para editar fecha de email">
+                                        {{ $order->email_date ? $order->email_date->format('d/m/Y') : '—' }}
+                                    </div>
+                                @endif
                             </td>
 
                             <!-- 9. Instalación -->
@@ -787,9 +885,33 @@
                             <td 
                                 :style="'width: ' + (colWidths['installation'] || 120) + 'px; min-width: ' + (colWidths['installation'] || 120) + 'px; max-width: ' + (colWidths['installation'] || 120) + 'px;'"
                                 class="py-1 px-2.5 transition {{ $instCellBg }}">
-                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" x-data="{ openInst: false }" @click.outside="openInst = false" :class="openInst ? 'z-50 relative' : ''">
+                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" 
+                                    x-data="{ 
+                                        openInst: false,
+                                        dropStyle: '',
+                                        toggleInst(el) {
+                                            if (this.openInst) {
+                                                this.openInst = false;
+                                                return;
+                                            }
+                                            const rect = el.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const menuHeight = 200;
+                                            const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+                                            const left = Math.min(Math.max(10, rect.left), window.innerWidth - 210);
+                                            if (openUp) {
+                                                const bottom = window.innerHeight - rect.top + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; bottom: ${bottom}px; z-index: 99999;`;
+                                            } else {
+                                                const top = rect.bottom + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; top: ${top}px; z-index: 99999;`;
+                                            }
+                                            this.openInst = true;
+                                        }
+                                    }"
+                                    @scroll.window.passive="openInst = false">
                                     <button 
-                                        @click="openInst = !openInst"
+                                        @click.stop="toggleInst($el)"
                                         class="w-full text-left cursor-pointer flex items-center justify-between gap-1 border-none bg-transparent py-0.5"
                                         title="Clic para cambiar instalación">
                                         <span class="truncate font-bold text-[11px]">{{ $instDisplayText }}</span>
@@ -797,43 +919,47 @@
                                     </button>
 
                                     <!-- Installation Dropdown Popover -->
-                                    <div 
-                                        x-show="openInst" 
-                                        x-transition
-                                        class="absolute left-0 top-full mt-1 z-[100] bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[190px] space-y-1 text-stone-900">
-                                        <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Instalación</div>
-                                        
-                                        <button 
-                                            wire:click="updateInstallationType({{ $order->id }}, 'Kudos')"
-                                            @click="openInst = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs hover:bg-stone-100 text-stone-800 font-semibold transition flex items-center justify-between">
-                                            <span>Kudos</span>
-                                            <span class="text-[10px] text-stone-400 font-normal">(Orden Lista)</span>
-                                        </button>
-                                        
-                                        <button 
-                                            wire:click="updateInstallationType({{ $order->id }}, 'Kudos (Entregado)')"
-                                            @click="openInst = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-emerald-100 text-emerald-950 font-bold hover:bg-emerald-200 transition flex items-center justify-between">
-                                            <span>Kudos</span>
-                                            <span class="text-[10px] text-emerald-800 font-semibold">(Verde - Entregado)</span>
-                                        </button>
-                                        
-                                        <button 
-                                            wire:click="updateInstallationType({{ $order->id }}, 'Debe')"
-                                            @click="openInst = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-red-100 text-red-950 font-bold hover:bg-red-200 transition flex items-center justify-between">
-                                            <span>Debe</span>
-                                            <span class="text-[10px] text-red-800 font-semibold">(Rojo - Atrasado)</span>
-                                        </button>
-                                        
-                                        <button 
-                                            wire:click="updateInstallationType({{ $order->id }}, null)"
-                                            @click="openInst = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition">
-                                            Vacío (Sin información)
-                                        </button>
-                                    </div>
+                                    <template x-teleport="body">
+                                        <div 
+                                            x-show="openInst" 
+                                            x-transition
+                                            @click.outside="openInst = false"
+                                            :style="dropStyle"
+                                            class="bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[190px] space-y-1 text-stone-900">
+                                            <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Instalación</div>
+                                            
+                                            <button 
+                                                wire:click="updateInstallationType({{ $order->id }}, 'Kudos')"
+                                                @click="openInst = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs hover:bg-stone-100 text-stone-800 font-semibold transition flex items-center justify-between">
+                                                <span>Kudos</span>
+                                                <span class="text-[10px] text-stone-400 font-normal">(Orden Lista)</span>
+                                            </button>
+                                            
+                                            <button 
+                                                wire:click="updateInstallationType({{ $order->id }}, 'Kudos (Entregado)')"
+                                                @click="openInst = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-emerald-100 text-emerald-950 font-bold hover:bg-emerald-200 transition flex items-center justify-between">
+                                                <span>Kudos</span>
+                                                <span class="text-[10px] text-emerald-800 font-semibold">(Verde - Entregado)</span>
+                                            </button>
+                                            
+                                            <button 
+                                                wire:click="updateInstallationType({{ $order->id }}, 'Debe')"
+                                                @click="openInst = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-red-100 text-red-950 font-bold hover:bg-red-200 transition flex items-center justify-between">
+                                                <span>Debe</span>
+                                                <span class="text-[10px] text-red-800 font-semibold">(Rojo - Atrasado)</span>
+                                            </button>
+                                            
+                                            <button 
+                                                wire:click="updateInstallationType({{ $order->id }}, null)"
+                                                @click="openInst = false"
+                                                class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition">
+                                                Vacío (Sin información)
+                                            </button>
+                                        </div>
+                                    </template>
                                 </div>
                             </td>
 
@@ -913,77 +1039,153 @@
                                 :style="'width: ' + (colWidths['substatus'] || 140) + 'px; min-width: ' + (colWidths['substatus'] || 140) + 'px; max-width: ' + (colWidths['substatus'] || 140) + 'px;'"
                                 @if(!empty($subInlineStyle)) style="{{ $subInlineStyle }}" @endif
                                 class="py-1 pl-2.5 pr-6 transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
-                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" x-data="{ openSub: false }" @click.outside="openSub = false" :class="openSub ? 'z-50 relative' : ''">
+                                <div class="relative flex items-center justify-between gap-1 w-full py-0.5" 
+                                    x-data="{ 
+                                        openSub: false,
+                                        dropStyle: '',
+                                        toggleSub(el) {
+                                            if (this.openSub) {
+                                                this.openSub = false;
+                                                return;
+                                            }
+                                            const rect = el.getBoundingClientRect();
+                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                            const menuHeight = 300;
+                                            const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
+                                            const left = Math.min(Math.max(10, rect.right - 220), window.innerWidth - 235);
+                                            if (openUp) {
+                                                const bottom = window.innerHeight - rect.top + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; bottom: ${bottom}px; max-height: ${Math.min(320, rect.top - 20)}px; z-index: 99999;`;
+                                            } else {
+                                                const top = rect.bottom + 4;
+                                                this.dropStyle = `position: fixed; left: ${left}px; top: ${top}px; max-height: ${Math.min(320, spaceBelow - 20)}px; z-index: 99999;`;
+                                            }
+                                            this.openSub = true;
+                                        }
+                                    }"
+                                    @scroll.window.passive="openSub = false">
                                     <button 
-                                        @click="openSub = !openSub"
+                                        @click.stop="toggleSub($el)"
                                         class="w-full text-left cursor-pointer flex items-center justify-between gap-1 border-none bg-transparent py-0.5"
-                                        title="Clic para cambiar subestatus">
-                                        <span class="truncate font-bold text-[11px]">{{ $subLabel }}</span>
+                                        title="Clic para cambiar subestatus / banderas">
+                                        <div class="flex items-center gap-1 overflow-hidden flex-wrap">
+                                            <span class="truncate font-bold text-[11px]">{{ $subLabel }}</span>
+                                            @if($order->isOverdue())
+                                                <span class="px-1 py-0.2 rounded text-[9px] font-extrabold bg-red-600 text-white uppercase shrink-0">Vencida</span>
+                                            @elseif($order->isDueToday())
+                                                <span class="px-1 py-0.2 rounded text-[9px] font-bold bg-amber-500 text-amber-950 uppercase shrink-0">Por Vencer</span>
+                                            @endif
+                                            @if(!empty($order->flags))
+                                                @foreach($order->flags as $fName)
+                                                    @php
+                                                        $fEnum = \App\Enums\Substatus::tryFrom($fName);
+                                                        $fLabel = $fEnum?->label() ?? $fName;
+                                                    @endphp
+                                                    @if($fName !== 'OVERDUE' && $fName !== 'ALMOST OVERDUE')
+                                                        <span class="px-1 py-0.2 rounded text-[9px] font-extrabold bg-purple-600 text-white uppercase shrink-0" title="Flag {{ $fLabel }}">{{ $fLabel }}</span>
+                                                    @endif
+                                                @endforeach
+                                            @endif
+                                        </div>
                                         <x-lucide-chevron-down class="w-3 h-3 opacity-60 shrink-0" />
                                     </button>
 
-                                    <!-- Substatus Dynamic Dropdown Popover -->
-                                    <div 
-                                        x-show="openSub" 
-                                        x-transition
-                                        class="absolute right-0 top-full mt-1 z-[100] bg-white shadow-2xl border border-stone-200 rounded-xl p-1.5 min-w-[220px] max-h-[320px] overflow-y-auto space-y-1 text-stone-900 scrollbar-thin">
-                                        <div class="px-2 py-1 text-[10px] font-bold text-stone-400 uppercase tracking-wider sticky top-0 bg-white z-10 border-b border-stone-100 pb-1">
-                                            {{ __('Seleccionar Subestatus') }}
-                                        </div>
-                                        
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, null)"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
-                                            <span>-- {{ __('Sin Subestatus (Vacío)') }} --</span>
-                                            @if(empty($subVal))
-                                                <x-lucide-check class="w-3.5 h-3.5 text-stone-600 stroke-[3]" />
-                                            @endif
-                                        </button>
-
-                                        @foreach($substatuses as $subItem)
-                                            @php
-                                                $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
-                                                $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
-                                                $itemLabel = $itemEnum?->label() ?? $itemValue;
-                                                $isSelected = ($subVal === $itemValue);
-                                                
-                                                if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
-                                                    $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
-                                                } else {
-                                                    $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
-                                                }
-
-                                                $itemFallbackClass = match($itemValue) {
-                                                    'URGENTE' => 'bg-red-600 text-white font-extrabold',
-                                                    'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
-                                                    'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
-                                                    'OVERDUE' => 'bg-red-500 text-white font-extrabold',
-                                                    'ALMOST OVERDUE' => 'bg-amber-400 text-amber-950 font-bold',
-                                                    'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
-                                                    'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
-                                                    'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
-                                                    'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
-                                                    'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
-                                                    'TICKET' => 'bg-rose-500 text-white font-extrabold',
-                                                    'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
-                                                    'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
-                                                    default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
-                                                };
-                                            @endphp
+                                    <!-- Substatus & Flags Dynamic Dropdown Popover -->
+                                    <template x-teleport="body">
+                                        <div 
+                                            x-show="openSub" 
+                                            x-transition
+                                            @click.outside="openSub = false"
+                                            :style="dropStyle"
+                                            class="bg-white shadow-2xl border border-stone-200 rounded-xl p-1.5 min-w-[240px] overflow-y-auto space-y-1.5 text-stone-900 scrollbar-thin">
+                                            
+                                            <!-- Section 1: Classification Substatus -->
+                                            <div class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1">
+                                                {{ __('Clasificación de Proceso (1 Selección)') }}
+                                            </div>
                                             
                                             <button 
-                                                wire:click="updateSubstatus({{ $order->id }}, '{{ addslashes($itemValue) }}')"
+                                                wire:click="updateSubstatus({{ $order->id }}, null)"
                                                 @click="openSub = false"
-                                                @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
-                                                class="w-full text-left px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
-                                                <span class="truncate">{{ $itemLabel }}</span>
-                                                @if($isSelected)
-                                                    <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
+                                                class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
+                                                <span>-- {{ __('Sin Subestatus') }} --</span>
+                                                @if(empty($subVal))
+                                                    <x-lucide-check class="w-3.5 h-3.5 text-stone-600 stroke-[3]" />
                                                 @endif
                                             </button>
-                                        @endforeach
-                                    </div>
+
+                                            @foreach($substatuses as $subItem)
+                                                @php
+                                                    $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                                                    $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
+                                                    if ($itemEnum && $itemEnum->isGlobal()) {
+                                                        continue;
+                                                    }
+                                                    if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) {
+                                                        continue;
+                                                    }
+                                                    $itemLabel = $itemEnum?->label() ?? $itemValue;
+                                                    $isSelected = ($subVal === $itemValue);
+                                                    
+                                                    if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
+                                                        $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
+                                                    } else {
+                                                        $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
+                                                    }
+
+                                                    $itemFallbackClass = match($itemValue) {
+                                                        'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
+                                                        'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
+                                                        'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
+                                                        'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
+                                                        'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
+                                                        'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
+                                                        'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
+                                                        'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
+                                                        'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
+                                                        default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
+                                                    };
+                                                @endphp
+                                                
+                                                <button 
+                                                    wire:click="updateSubstatus({{ $order->id }}, '{{ addslashes($itemValue) }}')"
+                                                    @click="openSub = false"
+                                                    @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
+                                                    class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
+                                                    <span class="truncate">{{ $itemLabel }}</span>
+                                                    @if($isSelected)
+                                                        <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
+                                                    @endif
+                                                </button>
+                                            @endforeach
+
+                                            <!-- Section 2: Global Flags -->
+                                            <div class="px-2 pt-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-t border-stone-100 mt-1">
+                                                {{ __('Banderas / Flags Globales (Coexistentes)') }}
+                                            </div>
+
+                                            @php
+                                                $globalFlags = [
+                                                    \App\Enums\Substatus::URGENTE,
+                                                    \App\Enums\Substatus::TICKET,
+                                                    \App\Enums\Substatus::POTENTIAL_CUSTOMER,
+                                                ];
+                                            @endphp
+                                            @foreach($globalFlags as $flagEnum)
+                                                @php
+                                                    $hasF = $order->hasFlag($flagEnum);
+                                                @endphp
+                                                <button 
+                                                    wire:click="toggleFlag({{ $order->id }}, '{{ $flagEnum->value }}')"
+                                                    class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ $hasF ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100' }}">
+                                                    <span>🚩 {{ $flagEnum->label() }}</span>
+                                                    @if($hasF)
+                                                        <x-lucide-check class="w-3.5 h-3.5 text-white shrink-0 ml-1 stroke-[3]" />
+                                                    @endif
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                    </template>
                                 </div>
                             </td>
                         </tr>

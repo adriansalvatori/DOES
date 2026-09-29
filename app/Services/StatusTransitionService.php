@@ -121,4 +121,48 @@ class StatusTransitionService
             $order->substatus = $defaultSub;
         }
     }
+
+    /**
+     * Infer and update an order's core_status when its substatus changes.
+     */
+    public function updateCoreStatusFromSubstatus(Order $order, SubstatusEnum|string|null $substatus): void
+    {
+        if (! $substatus) {
+            return;
+        }
+
+        $subName = $substatus instanceof SubstatusEnum ? $substatus->value : $substatus;
+        $subEnum = $substatus instanceof SubstatusEnum ? $substatus : SubstatusEnum::tryFrom($substatus);
+
+        // Do not change core_status if the substatus is global (flag)
+        if ($subEnum && $subEnum->isGlobal()) {
+            return;
+        }
+
+        $dbSub = SubstatusModel::where('name', $subName)->first();
+        if ($dbSub && $dbSub->is_global) {
+            return;
+        }
+
+        $targetCoreStatus = null;
+
+        if ($dbSub && $dbSub->core_status) {
+            $targetCoreStatus = $dbSub->core_status;
+        } elseif ($subEnum && ($enumDefaultCore = $subEnum->defaultCoreStatus())) {
+            $targetCoreStatus = $enumDefaultCore;
+        }
+
+        if (! $targetCoreStatus) {
+            return;
+        }
+
+        // If order is currently in a designer queue and new substatus is PONER EN ALTA or AJUSTES DE PRODUCCION, keep current designer queue
+        if ($order->core_status && CoreStatus::isPendingDesign($order->core_status) && in_array($subName, ['PONER EN ALTA', 'AJUSTES DE PRODUCCIÓN', SubstatusEnum::PONER_EN_ALTA->value, SubstatusEnum::AJUSTES_PRODUCCION->value], true)) {
+            return;
+        }
+
+        if ($order->core_status !== $targetCoreStatus) {
+            $order->core_status = $targetCoreStatus;
+        }
+    }
 }

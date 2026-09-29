@@ -17,6 +17,8 @@ class OrderObserver
     {
         if ($order->isDirty('core_status') && ! $order->isDirty('substatus')) {
             app(StatusTransitionService::class)->normalizeSubstatusOnCoreStatusChange($order, $order->core_status);
+        } elseif ($order->isDirty('substatus') && ! $order->isDirty('core_status')) {
+            app(StatusTransitionService::class)->updateCoreStatusFromSubstatus($order, $order->substatus);
         }
     }
 

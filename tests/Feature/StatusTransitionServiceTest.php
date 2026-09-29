@@ -79,4 +79,21 @@ class StatusTransitionServiceTest extends TestCase
 
         $this->assertEquals(SubstatusEnum::TICKET, $order->fresh()->substatus);
     }
+
+    public function test_updates_core_status_when_substatus_changes(): void
+    {
+        $order = Order::create([
+            'company_name' => 'Empresa Test 3',
+            'task_name' => 'Tarea Test 3',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => null,
+            'in_workspace' => true,
+        ]);
+
+        $order->update([
+            'substatus' => SubstatusEnum::ENVIADO_EN_ALTA,
+        ]);
+
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $order->fresh()->core_status);
+    }
 }
