@@ -45,8 +45,11 @@ class OverviewIndex extends Component
 
     public string $sortDirection = 'desc';
 
-    // Active View Tab (all, workspace, backlog)
+    // Active View Tab (all, workspace, backlog, archived)
     public string $activeTab = 'all';
+
+    // Pagination
+    public int $perPage = 25;
 
     // Section Visibility Toggles
     public bool $showWorkspace = true;
@@ -62,6 +65,7 @@ class OverviewIndex extends Component
 
     protected $queryString = [
         'activeTab' => ['except' => 'all'],
+        'perPage' => ['except' => 25],
         'search' => ['except' => ''],
         'filterWo' => ['except' => ''],
         'filterClient' => ['except' => ''],
@@ -108,6 +112,11 @@ class OverviewIndex extends Component
         $this->resetPage();
     }
 
+    public function updatingPerPage(): void
+    {
+        $this->resetPage();
+    }
+
     public function sortByColumn(string $column): void
     {
         if ($this->sortBy === $column) {
@@ -120,8 +129,9 @@ class OverviewIndex extends Component
 
     public function setTab(string $tab): void
     {
-        if (in_array($tab, ['all', 'workspace', 'backlog'], true)) {
+        if (in_array($tab, ['all', 'workspace', 'backlog', 'archived'], true)) {
             $this->activeTab = $tab;
+            $this->resetPage();
         }
     }
 
@@ -146,6 +156,7 @@ class OverviewIndex extends Component
             'filterDateRange',
             'sortBy',
             'sortDirection',
+            'perPage',
         ]);
         $this->resetPage();
     }
@@ -241,6 +252,7 @@ class OverviewIndex extends Component
 
         $this->syncTrelloAndLog($order, 'ORDER_UPDATED', "Campo {$field} actualizado a: {$value}");
         $this->cancelEdit();
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden actualizada exitosamente.'));
     }
 
@@ -253,6 +265,7 @@ class OverviewIndex extends Component
 
         $order->update(['review_status' => $status]);
         $this->syncTrelloAndLog($order, 'REVIEW_STATUS_CHANGED', 'Revisión actualizada: '.($status ?? 'Ninguna'));
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Estado de revisión actualizado.'));
     }
 
@@ -265,6 +278,7 @@ class OverviewIndex extends Component
 
         $order->update(['installation_type' => $type]);
         $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Tipo de instalación actualizado: '.($type ?? 'Vacío'));
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Instalación actualizada.'));
     }
 
@@ -275,10 +289,13 @@ class OverviewIndex extends Component
             return;
         }
 
-        $substatus = $substatusValue ? Substatus::tryFrom($substatusValue) : null;
+        $substatus = $substatusValue ? (Substatus::tryFrom($substatusValue) ?? $substatusValue) : null;
         $order->update(['substatus' => $substatus]);
 
-        $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.($substatus?->label() ?? 'Ninguno'));
+        $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
+
+        $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label);
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Subestatus actualizado.'));
     }
 
@@ -291,6 +308,7 @@ class OverviewIndex extends Component
 
         $newVal = ! (bool) $order->overview_checked;
         $order->update(['overview_checked' => $newVal]);
+        $this->dispatch('order-updated');
     }
 
     public function updateDesigner(int $orderId, ?int $designerId): void
@@ -308,6 +326,7 @@ class OverviewIndex extends Component
         }
 
         $this->syncTrelloAndLog($order, 'DESIGNER_ASSIGNED', 'Diseñador asignado actualizado');
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Diseñador actualizado.'));
     }
 
@@ -320,6 +339,7 @@ class OverviewIndex extends Component
 
         $order->update(['in_workspace' => true]);
         $this->syncTrelloAndLog($order, 'MOVED_TO_WORKSPACE', 'Orden movida al workspace activo');
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden movida al Workspace activo.'));
     }
 
@@ -332,6 +352,7 @@ class OverviewIndex extends Component
 
         $order->update(['in_workspace' => false]);
         $this->syncTrelloAndLog($order, 'MOVED_TO_BACKLOG', 'Orden movida al backlog');
+        $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden movida al Backlog.'));
     }
 
@@ -421,6 +442,7 @@ class OverviewIndex extends Component
             'task_name',
             'review_status',
             'installation_type',
+            'substatus',
         ];
         $sortCol = in_array($this->sortBy, $allowedColumns, true) ? $this->sortBy : 'created_at';
         $dir = strtolower($this->sortDirection) === 'asc' ? 'asc' : 'desc';
@@ -430,46 +452,48 @@ class OverviewIndex extends Component
 
     public function render()
     {
-        // Eager load relations
-        $workspaceQuery = Order::query()
-            ->with(['client', 'designer', 'designers', 'clientLocation'])
-            ->inWorkspace();
-
-        $backlogQuery = Order::query()
-            ->with(['client', 'designer', 'designers', 'clientLocation'])
-            ->inBacklog();
-
-        $allQuery = Order::query()
-            ->with(['client', 'designer', 'designers', 'clientLocation'])
-            ->where('core_status', '!=', CoreStatus::ARCHIVED);
-
-        $workspaceOrders = $this->applyFilters($workspaceQuery)->get();
-        $backlogOrders = $this->applyFilters($backlogQuery)->get();
-
-        $orders = match ($this->activeTab) {
-            'workspace' => $workspaceOrders,
-            'backlog' => $backlogOrders,
-            default => $this->applyFilters($allQuery)->get(),
+        // Build query exclusively for the active tab (lazy loading)
+        $baseQuery = match ($this->activeTab) {
+            'workspace' => Order::query()->inWorkspace(),
+            'backlog' => Order::query()->inBacklog(),
+            'archived' => Order::query()->archived(),
+            default => Order::query(),
         };
+
+        $baseQuery->with(['client', 'designer', 'designers', 'clientLocation']);
+        $filteredQuery = $this->applyFilters($baseQuery);
+
+        $orders = ($this->perPage > 0)
+            ? $filteredQuery->paginate($this->perPage)
+            : $filteredQuery->paginate(500);
 
         $clients = Client::orderBy('name')->get();
         $designers = Designer::where('active', true)->orderBy('name')->get();
+        $substatuses = \App\Models\Substatus::orderBy('sort_order')->get();
+        if ($substatuses->isEmpty()) {
+            $substatuses = collect(Substatus::cases());
+        }
 
-        // Metrics counters
+        // Metrics counters - Direct fast SQL queries
         $totalWorkspaceCount = Order::inWorkspace()->count();
         $totalBacklogCount = Order::inBacklog()->count();
-        $missingWoCount = Order::inWorkspace()->get()->filter(fn ($o) => $o->hasNoWo())->count();
+        $totalArchivedCount = Order::archived()->count();
+        $missingWoCount = Order::inWorkspace()->where(function ($q) {
+            $q->whereNull('wo_number')
+                ->orWhere('wo_number', '')
+                ->orWhere('wo_number', 'like', 'WO 00%');
+        })->count();
         $inProductionCount = Order::inWorkspace()->where('core_status', CoreStatus::EN_PRODUCCION)->count();
         $doneTodayCount = Order::inWorkspace()->where('done_today', true)->count();
 
         return view('livewire.overview.overview-index', [
             'orders' => $orders,
-            'workspaceOrders' => $workspaceOrders,
-            'backlogOrders' => $backlogOrders,
             'clients' => $clients,
             'designers' => $designers,
+            'substatuses' => $substatuses,
             'totalWorkspaceCount' => $totalWorkspaceCount,
             'totalBacklogCount' => $totalBacklogCount,
+            'totalArchivedCount' => $totalArchivedCount,
             'missingWoCount' => $missingWoCount,
             'inProductionCount' => $inProductionCount,
             'doneTodayCount' => $doneTodayCount,

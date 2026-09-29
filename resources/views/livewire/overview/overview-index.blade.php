@@ -108,7 +108,7 @@
                     <h2 class="font-bold text-sm text-stone-900">{{ __('Overview Operativo') }}</h2>
                 </div>
 
-                <!-- View Mode Tabs (TODAS | WORKSPACE | BACKLOG) -->
+                <!-- View Mode Tabs (TODAS | WORKSPACE | BACKLOG | ARCHIVADAS) -->
                 <div class="inline-flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
                     <button 
                         wire:click="setTab('all')"
@@ -127,11 +127,30 @@
                         <span>📦 {{ __('BACKLOG') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-extrabold">{{ $totalBacklogCount }}</span>
                     </button>
+                    <button 
+                        wire:click="setTab('archived')"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'archived' ? 'bg-white text-cyan-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        <span>🗄️ {{ __('ARCHIVADAS') }}</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-cyan-100 text-cyan-800 font-extrabold">{{ $totalArchivedCount }}</span>
+                    </button>
                 </div>
             </div>
 
-            <!-- Global Search & Reset Buttons -->
+            <!-- Global Search, Per Page & Reset Buttons -->
             <div class="flex items-center gap-2">
+                <!-- Per Page Selector -->
+                <div class="flex items-center gap-1.5 text-xs text-stone-500 font-semibold bg-stone-50 px-2 py-1.5 rounded-lg border border-stone-200">
+                    <span class="hidden sm:inline text-stone-400 font-medium">{{ __('Mostrar:') }}</span>
+                    <select 
+                        wire:model.live="perPage" 
+                        class="bg-transparent text-xs font-bold text-stone-800 focus:outline-none cursor-pointer">
+                        <option value="25">25 / pág</option>
+                        <option value="50">50 / pág</option>
+                        <option value="100">100 / pág</option>
+                        <option value="250">250 / pág</option>
+                    </select>
+                </div>
+
                 <div class="relative w-64">
                     <x-lucide-search class="w-4 h-4 text-stone-400 absolute left-2.5 top-2.5" />
                     <input 
@@ -241,6 +260,7 @@
                 <div class="w-7 h-7 rounded-lg bg-stone-900 text-white flex items-center justify-center font-bold text-xs">
                     @if($activeTab === 'workspace') ⚡
                     @elseif($activeTab === 'backlog') 📦
+                    @elseif($activeTab === 'archived') 🗄️
                     @else 📋
                     @endif
                 </div>
@@ -249,12 +269,14 @@
                         {{ __('Órdenes en Workspace') }}
                     @elseif($activeTab === 'backlog')
                         {{ __('Órdenes en Backlog') }}
+                    @elseif($activeTab === 'archived')
+                        {{ __('Órdenes Archivadas') }}
                     @else
-                        {{ __('Todas las Órdenes (Workspace + Backlog)') }}
+                        {{ __('Todas las Órdenes (Workspace + Backlog + Archivadas)') }}
                     @endif
                 </h3>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
-                    {{ $orders->count() }}
+                    {{ $orders->total() }}
                 </span>
             </div>
 
@@ -264,6 +286,8 @@
                         <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold">⚡ {{ $totalWorkspaceCount }} {{ __('Workspace') }}</span>
                         <span>•</span>
                         <span class="inline-flex items-center gap-1 text-amber-700 font-semibold">📦 {{ $totalBacklogCount }} {{ __('Backlog') }}</span>
+                        <span>•</span>
+                        <span class="inline-flex items-center gap-1 text-cyan-700 font-semibold">🗄️ {{ $totalArchivedCount }} {{ __('Archivadas') }}</span>
                     </span>
                 @endif
             </div>
@@ -478,9 +502,11 @@
                                 || ($order->core_status === 'ARCHIVED')
                                 || !empty($order->archived_at);
 
+                            $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
+
                             $rowStyle = match(true) {
-                                $isProd => 'bg-orange-100/90 hover:bg-orange-200/90 text-orange-950 font-semibold',
                                 $isArchived => 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold',
+                                $isProd => 'bg-orange-200/90 hover:bg-orange-300/90 text-orange-950 font-semibold',
                                 default => 'hover:bg-stone-50/80',
                             };
                         @endphp
@@ -492,7 +518,7 @@
                                 @if($editingOrderId === $order->id && $editingField === 'manual_creation_date')
                                     <input 
                                         type="date" 
-                                        wire:model.defer="editingValue"
+                                        wire:model="editingValue"
                                         wire:change="saveEdit"
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
@@ -516,7 +542,7 @@
                                 @if($editingOrderId === $order->id && $editingField === 'production_sent_at')
                                     <input 
                                         type="date" 
-                                        wire:model.defer="editingValue"
+                                        wire:model="editingValue"
                                         wire:change="saveEdit"
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
@@ -551,7 +577,7 @@
                                         @if($editingOrderId === $order->id && $editingField === 'wo_number')
                                             <input 
                                                 type="text" 
-                                                wire:model.defer="editingValue"
+                                                wire:model="editingValue"
                                                 wire:keydown.enter="saveEdit"
                                                 wire:blur="saveEdit"
                                                 wire:keydown.escape="cancelEdit"
@@ -645,7 +671,7 @@
                                 @if($editingOrderId === $order->id && $editingField === 'production_note')
                                     <input 
                                         type="text" 
-                                        wire:model.defer="editingValue"
+                                        wire:model="editingValue"
                                         wire:keydown.enter="saveEdit"
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
@@ -689,7 +715,7 @@
                                     @if($editingOrderId === $order->id && $editingField === 'estimate_invoice_number')
                                         <input 
                                             type="text" 
-                                            wire:model.defer="editingValue"
+                                            wire:model="editingValue"
                                             wire:keydown.enter="saveEdit"
                                             wire:blur="saveEdit"
                                             wire:keydown.escape="cancelEdit"
@@ -830,7 +856,7 @@
                                 @if($editingOrderId === $order->id && $editingField === 'delivery_note')
                                     <input 
                                         type="text" 
-                                        wire:model.defer="editingValue"
+                                        wire:model="editingValue"
                                         wire:keydown.enter="saveEdit"
                                         wire:blur="saveEdit"
                                         wire:keydown.escape="cancelEdit"
@@ -850,7 +876,19 @@
 
                             <!-- 12. Subestatus -->
                             @php
-                                $subCellBg = match($order->substatus?->value ?? $order->substatus) {
+                                $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
+                                $subEnum = $subVal ? \App\Enums\Substatus::tryFrom($subVal) : null;
+                                $subModel = ($subVal && ($substatuses->first() instanceof \App\Models\Substatus)) ? $substatuses->firstWhere('name', $subVal) : null;
+                                $subLabel = $subEnum?->label() ?? ($subVal ?: '—');
+                                
+                                $subInlineStyle = '';
+                                if ($subModel && !empty($subModel->bg_color) && !empty($subModel->text_color)) {
+                                    $subInlineStyle = "background-color: {$subModel->bg_color}; color: {$subModel->text_color}; border-color: {$subModel->border_color};";
+                                } elseif ($subEnum) {
+                                    $subInlineStyle = $subEnum->customBadgeStyle() ?? '';
+                                }
+
+                                $subFallbackClass = match($subVal) {
                                     'URGENTE', \App\Enums\Substatus::URGENTE->value => 'bg-red-600 text-white font-extrabold shadow-2xs',
                                     'BLOQUEADA', \App\Enums\Substatus::BLOQUEADA->value => 'bg-amber-500 text-amber-950 font-extrabold',
                                     'CUSTOMER SERVICE REQUIRED', \App\Enums\Substatus::CUSTOMER_SERVICE_REQUIRED->value => 'bg-amber-400 text-amber-950 font-extrabold',
@@ -864,14 +902,17 @@
                                     'TICKET', \App\Enums\Substatus::TICKET->value => 'bg-rose-500 text-white font-extrabold',
                                     'PONER EN ALTA', \App\Enums\Substatus::PONER_EN_ALTA->value, 'ENVIADO EN ALTA', \App\Enums\Substatus::ENVIADO_EN_ALTA->value => 'bg-pink-500 text-white font-extrabold',
                                     'AJUSTES DE PRODUCCIÓN', \App\Enums\Substatus::AJUSTES_PRODUCCION->value => 'bg-fuchsia-600 text-white font-extrabold',
+                                    'ESPERANDO PERMISO', \App\Enums\Substatus::ESPERANDO_PERMISO->value => 'bg-yellow-500 text-yellow-950 font-bold',
+                                    'NO RESPUESTA', \App\Enums\Substatus::NO_RESPUESTA->value => 'bg-stone-500 text-white font-semibold',
+                                    'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => 'bg-emerald-600 text-white font-extrabold',
                                     null, '' => 'bg-transparent text-stone-400 font-normal',
                                     default => 'bg-amber-400 text-amber-950 font-bold',
                                 };
-                                $subLabel = $order->substatus?->label() ?? ($order->substatus ? (string) $order->substatus : '—');
                             @endphp
                             <td 
                                 :style="'width: ' + (colWidths['substatus'] || 140) + 'px; min-width: ' + (colWidths['substatus'] || 140) + 'px; max-width: ' + (colWidths['substatus'] || 140) + 'px;'"
-                                class="py-1 pl-2.5 pr-6 transition {{ $subCellBg }}">
+                                @if(!empty($subInlineStyle)) style="{{ $subInlineStyle }}" @endif
+                                class="py-1 pl-2.5 pr-6 transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
                                 <div class="relative flex items-center justify-between gap-1 w-full py-0.5" x-data="{ openSub: false }" @click.outside="openSub = false" :class="openSub ? 'z-50 relative' : ''">
                                     <button 
                                         @click="openSub = !openSub"
@@ -881,82 +922,67 @@
                                         <x-lucide-chevron-down class="w-3 h-3 opacity-60 shrink-0" />
                                     </button>
 
-                                    <!-- Substatus Dropdown Popover -->
+                                    <!-- Substatus Dynamic Dropdown Popover -->
                                     <div 
                                         x-show="openSub" 
                                         x-transition
-                                        class="absolute right-0 top-full mt-1 z-[100] bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[210px] space-y-1 text-stone-900">
-                                        <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Seleccionar Subestatus</div>
+                                        class="absolute right-0 top-full mt-1 z-[100] bg-white shadow-2xl border border-stone-200 rounded-xl p-1.5 min-w-[220px] max-h-[320px] overflow-y-auto space-y-1 text-stone-900 scrollbar-thin">
+                                        <div class="px-2 py-1 text-[10px] font-bold text-stone-400 uppercase tracking-wider sticky top-0 bg-white z-10 border-b border-stone-100 pb-1">
+                                            {{ __('Seleccionar Subestatus') }}
+                                        </div>
                                         
                                         <button 
                                             wire:click="updateSubstatus({{ $order->id }}, null)"
                                             @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition">
-                                            -- Sin Subestatus (Vacío) --
+                                            class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
+                                            <span>-- {{ __('Sin Subestatus (Vacío)') }} --</span>
+                                            @if(empty($subVal))
+                                                <x-lucide-check class="w-3.5 h-3.5 text-stone-600 stroke-[3]" />
+                                            @endif
                                         </button>
 
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'URGENTE')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-red-600 text-white font-extrabold hover:bg-red-700 transition flex items-center justify-between">
-                                            <span>🚨 {{ __('Urgente') }}</span>
-                                        </button>
+                                        @foreach($substatuses as $subItem)
+                                            @php
+                                                $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                                                $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
+                                                $itemLabel = $itemEnum?->label() ?? $itemValue;
+                                                $isSelected = ($subVal === $itemValue);
+                                                
+                                                if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
+                                                    $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
+                                                } else {
+                                                    $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
+                                                }
 
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'BLOQUEADA')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-amber-500 text-amber-950 font-extrabold hover:bg-amber-600 transition flex items-center justify-between">
-                                            <span>🔒 {{ __('Bloqueada') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'FALTA APROBACIÓN DE ESTIMADO')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-orange-500 text-white font-extrabold hover:bg-orange-600 transition flex items-center justify-between">
-                                            <span>📄 {{ __('Falta Aprobación Estimado') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'CAMBIOS CAMILA')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-purple-600 text-white font-extrabold hover:bg-purple-700 transition flex items-center justify-between">
-                                            <span>✏️ {{ __('Cambios Camila') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'CAMBIOS CLIENTE')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-sky-500 text-white font-extrabold hover:bg-sky-600 transition flex items-center justify-between">
-                                            <span>👤 {{ __('Cambios Cliente') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'WAITING FOR CLIENT')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-sky-400 text-sky-950 font-extrabold hover:bg-sky-500 transition flex items-center justify-between">
-                                            <span>⏳ {{ __('Esperando Cliente') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'CUSTOMER SERVICE REQUIRED')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-amber-400 text-amber-950 font-extrabold hover:bg-amber-500 transition flex items-center justify-between">
-                                            <span>💬 {{ __('Atención CS Requerida') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'PAUSADO')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-400 text-stone-950 font-bold hover:bg-stone-500 transition flex items-center justify-between">
-                                            <span>⏸️ {{ __('Pausado') }}</span>
-                                        </button>
-
-                                        <button 
-                                            wire:click="updateSubstatus({{ $order->id }}, 'TICKET')"
-                                            @click="openSub = false"
-                                            class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-rose-500 text-white font-extrabold hover:bg-rose-600 transition flex items-center justify-between">
-                                            <span>🎟️ {{ __('Ticket') }}</span>
-                                        </button>
+                                                $itemFallbackClass = match($itemValue) {
+                                                    'URGENTE' => 'bg-red-600 text-white font-extrabold',
+                                                    'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
+                                                    'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
+                                                    'OVERDUE' => 'bg-red-500 text-white font-extrabold',
+                                                    'ALMOST OVERDUE' => 'bg-amber-400 text-amber-950 font-bold',
+                                                    'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
+                                                    'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
+                                                    'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
+                                                    'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
+                                                    'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
+                                                    'TICKET' => 'bg-rose-500 text-white font-extrabold',
+                                                    'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
+                                                    'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
+                                                    default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
+                                                };
+                                            @endphp
+                                            
+                                            <button 
+                                                wire:click="updateSubstatus({{ $order->id }}, '{{ addslashes($itemValue) }}')"
+                                                @click="openSub = false"
+                                                @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
+                                                class="w-full text-left px-2.5 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
+                                                <span class="truncate">{{ $itemLabel }}</span>
+                                                @if($isSelected)
+                                                    <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
+                                                @endif
+                                            </button>
+                                        @endforeach
                                     </div>
                                 </div>
                             </td>
@@ -971,5 +997,17 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Links Bar -->
+        @if($orders->hasPages())
+            <div class="px-4 py-3 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3 rounded-b-xl">
+                <div class="text-xs text-stone-500 font-medium">
+                    {{ __('Mostrando') }} <span class="font-bold text-stone-900">{{ $orders->firstItem() }}</span> {{ __('a') }} <span class="font-bold text-stone-900">{{ $orders->lastItem() }}</span> {{ __('de') }} <span class="font-bold text-stone-900">{{ $orders->total() }}</span> {{ __('órdenes') }}
+                </div>
+                <div>
+                    {{ $orders->links() }}
+                </div>
+            </div>
+        @endif
     </div>
 </div>

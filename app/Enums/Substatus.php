@@ -21,6 +21,13 @@ enum Substatus: string
     case TICKET = 'TICKET';
     case POTENTIAL_CUSTOMER = 'POTENTIAL CUSTOMER';
     case ESPERANDO_PERMISO = 'ESPERANDO PERMISO';
+    case MAKE_PERMIT_SIGN = 'MAKE PERMIT SIGN';
+    case FALTA_INFORMACION = 'FALTA INFORMACIÓN';
+    case ESPERANDO_RESPUESTA = 'ESPERANDO RESPUESTA';
+    case PROCESO_DE_PERMISO = 'PROCESO DE PERMISO';
+    case CANCELADA_POR_CLIENTE = 'CANCELADA POR CLIENTE';
+    case CANCELADA_POR_CAMILA = 'CANCELADA POR CAMILA';
+    case FINALIZADA = 'FINALIZADA !';
 
     public function label(): string
     {
@@ -42,6 +49,13 @@ enum Substatus: string
             self::ENVIADO_EN_ALTA => __('Enviado en Alta'),
             self::TICKET => __('Ticket'),
             self::POTENTIAL_CUSTOMER => __('Cliente Potencial'),
+            self::MAKE_PERMIT_SIGN => __('Permiso de Firma'),
+            self::FALTA_INFORMACION => __('Falta Información'),
+            self::ESPERANDO_RESPUESTA => __('Esperando Respuesta'),
+            self::PROCESO_DE_PERMISO => __('Proceso de Permiso'),
+            self::CANCELADA_POR_CLIENTE => __('Cancelada por Cliente'),
+            self::CANCELADA_POR_CAMILA => __('Cancelada por Camila'),
+            self::FINALIZADA => __('Finalizada'),
         };
     }
 
@@ -88,6 +102,13 @@ enum Substatus: string
             self::ENVIADO_EN_ALTA => 'bg-pink-50 text-pink-700 border-pink-200 font-medium',
             self::TICKET => 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
             self::POTENTIAL_CUSTOMER => 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
+            self::MAKE_PERMIT_SIGN => 'bg-amber-100 text-amber-800 border-amber-300 font-medium',
+            self::FALTA_INFORMACION => 'bg-amber-50 text-amber-700 border-amber-200 font-medium',
+            self::ESPERANDO_RESPUESTA => 'bg-sky-50 text-sky-700 border-sky-200 font-medium',
+            self::PROCESO_DE_PERMISO => 'bg-amber-100 text-amber-800 border-amber-300 font-medium',
+            self::CANCELADA_POR_CLIENTE => 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+            self::CANCELADA_POR_CAMILA => 'bg-red-50 text-red-700 border-red-200 font-medium',
+            self::FINALIZADA => 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
         };
     }
 
