@@ -9,6 +9,8 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Facades\Cache;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -17,12 +19,47 @@ class OverviewIndex extends Component
 {
     use WithPagination;
 
+    #[Computed]
+    public function metrics(): array
+    {
+        $version = Cache::store('file')->get('overview_cache_version', 1);
+
+        return Cache::store('file')->remember("overview_metrics_v{$version}", now()->addMinutes(30), function () {
+            return [
+                'totalWorkspaceCount' => Order::inWorkspace()->count(),
+                'totalBacklogCount' => Order::inBacklog()->count(),
+                'totalArchivedCount' => Order::archived()->count(),
+                'missingWoCount' => Order::inWorkspace()->where(function ($q) {
+                    $q->whereNull('wo_number')
+                        ->orWhere('wo_number', '')
+                        ->orWhere('wo_number', 'like', 'WO 00%');
+                })->count(),
+                'inProductionCount' => Order::inWorkspace()->where('core_status', CoreStatus::EN_PRODUCCION)->count(),
+                'doneTodayCount' => Order::inWorkspace()->where('done_today', true)->count(),
+            ];
+        });
+    }
+
     #[On('order-updated')]
     #[On('order-created')]
     #[On('order-deleted')]
     public function handleOrderUpdated(): void
     {
-        // Automatically re-renders the overview grid when an order is updated
+        $this->clearOverviewCache();
+    }
+
+    public function clearOverviewCache(): void
+    {
+        if (! Cache::store('file')->has('overview_cache_version')) {
+            Cache::store('file')->forever('overview_cache_version', 1);
+        }
+        Cache::store('file')->increment('overview_cache_version');
+    }
+
+    public function refreshCache(): void
+    {
+        $this->clearOverviewCache();
+        $this->dispatch('toast', message: __('Caché en disco renovado exitosamente.'));
     }
 
     // Filters
@@ -48,8 +85,8 @@ class OverviewIndex extends Component
     // Active View Tab (all, workspace, backlog, archived)
     public string $activeTab = 'all';
 
-    // Pagination
-    public int $perPage = 25;
+    // Pagination (0 = Sin paginación / Carga completa con File Cache)
+    public int $perPage = 0;
 
     // Section Visibility Toggles
     public bool $showWorkspace = true;
@@ -65,7 +102,7 @@ class OverviewIndex extends Component
 
     protected $queryString = [
         'activeTab' => ['except' => 'all'],
-        'perPage' => ['except' => 25],
+        'perPage' => ['except' => 0],
         'search' => ['except' => ''],
         'filterWo' => ['except' => ''],
         'filterClient' => ['except' => ''],
@@ -256,6 +293,7 @@ class OverviewIndex extends Component
         }
 
         $this->syncTrelloAndLog($order, 'ORDER_UPDATED', "Campo {$field} actualizado a: {$value}");
+        $this->clearOverviewCache();
         $this->cancelEdit();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden actualizada exitosamente.'));
@@ -269,6 +307,7 @@ class OverviewIndex extends Component
         }
 
         $order->update(['review_status' => $status]);
+        $this->clearOverviewCache();
         $this->syncTrelloAndLog($order, 'REVIEW_STATUS_CHANGED', 'Revisión actualizada: '.($status ?? 'Ninguna'));
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Estado de revisión actualizado.'));
@@ -282,6 +321,7 @@ class OverviewIndex extends Component
         }
 
         $order->update(['installation_type' => $type]);
+        $this->clearOverviewCache();
         $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Tipo de instalación actualizado: '.($type ?? 'Vacío'));
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Instalación actualizada.'));
@@ -307,6 +347,7 @@ class OverviewIndex extends Component
             $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label);
         }
 
+        $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Subestatus / Bandera actualizada.'));
     }
@@ -334,6 +375,7 @@ class OverviewIndex extends Component
 
         $newVal = ! (bool) $order->overview_checked;
         $order->update(['overview_checked' => $newVal]);
+        $this->clearOverviewCache();
         $this->dispatch('order-updated');
     }
 
@@ -479,6 +521,10 @@ class OverviewIndex extends Component
 
     public function render()
     {
+        $version = app()->environment('testing')
+            ? 'test_'.uniqid('', true)
+            : Cache::store('file')->get('overview_cache_version', 1);
+
         // Build query exclusively for the active tab (lazy loading)
         $baseQuery = match ($this->activeTab) {
             'workspace' => Order::query()->inWorkspace(),
@@ -490,9 +536,38 @@ class OverviewIndex extends Component
         $baseQuery->with(['client', 'designer', 'designers', 'clientLocation']);
         $filteredQuery = $this->applyFilters($baseQuery);
 
+        $cacheKey = "overview_v{$version}_{$this->activeTab}_".md5(json_encode([
+            $this->search,
+            $this->filterWo,
+            $this->filterClient,
+            $this->filterDesigner,
+            $this->filterReviewStatus,
+            $this->filterInstallation,
+            $this->filterDateRange,
+            $this->sortBy,
+            $this->sortDirection,
+            $this->perPage,
+        ]));
+
         $orders = ($this->perPage > 0)
             ? $filteredQuery->paginate($this->perPage)
-            : $filteredQuery->paginate(500);
+            : (function () use ($cacheKey, $filteredQuery) {
+                $orderIds = Cache::store('file')->remember($cacheKey, now()->addMinutes(30), function () use ($filteredQuery) {
+                    return $filteredQuery->pluck('orders.id')->toArray();
+                });
+
+                if (empty($orderIds)) {
+                    return collect();
+                }
+
+                $collection = Order::with(['client', 'designer', 'designers', 'clientLocation'])
+                    ->whereIn('id', $orderIds)
+                    ->get();
+
+                $idOrder = array_flip($orderIds);
+
+                return $collection->sortBy(fn ($o) => $idOrder[$o->id] ?? 999999)->values();
+            })();
 
         $clients = Client::orderBy('name')->get();
         $designers = Designer::where('active', true)->orderBy('name')->get();
@@ -501,29 +576,11 @@ class OverviewIndex extends Component
             $substatuses = collect(Substatus::cases());
         }
 
-        // Metrics counters - Direct fast SQL queries
-        $totalWorkspaceCount = Order::inWorkspace()->count();
-        $totalBacklogCount = Order::inBacklog()->count();
-        $totalArchivedCount = Order::archived()->count();
-        $missingWoCount = Order::inWorkspace()->where(function ($q) {
-            $q->whereNull('wo_number')
-                ->orWhere('wo_number', '')
-                ->orWhere('wo_number', 'like', 'WO 00%');
-        })->count();
-        $inProductionCount = Order::inWorkspace()->where('core_status', CoreStatus::EN_PRODUCCION)->count();
-        $doneTodayCount = Order::inWorkspace()->where('done_today', true)->count();
-
-        return view('livewire.overview.overview-index', [
+        return view('livewire.overview.overview-index', array_merge([
             'orders' => $orders,
             'clients' => $clients,
             'designers' => $designers,
             'substatuses' => $substatuses,
-            'totalWorkspaceCount' => $totalWorkspaceCount,
-            'totalBacklogCount' => $totalBacklogCount,
-            'totalArchivedCount' => $totalArchivedCount,
-            'missingWoCount' => $missingWoCount,
-            'inProductionCount' => $inProductionCount,
-            'doneTodayCount' => $doneTodayCount,
-        ])->layout('components.layouts.app', ['title' => 'Overview Operativo']);
+        ], $this->metrics))->layout('components.layouts.app', ['title' => 'Overview Operativo']);
     }
 }

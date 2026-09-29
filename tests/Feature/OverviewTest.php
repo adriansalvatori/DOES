@@ -216,4 +216,23 @@ class OverviewTest extends TestCase
             ->assertSee('Unique Beta Task')
             ->assertDontSee('Unique Alpha Task');
     }
+
+    public function test_overview_file_caching_and_unpaginated_display(): void
+    {
+        Order::create([
+            'wo_number' => 'WO 33333',
+            'task_name' => 'Cached Order Test',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSet('perPage', 0)
+            ->assertSee('Cached Order Test')
+            ->assertSee('Sin paginación • File Cached')
+            ->call('refreshCache')
+            ->assertDispatched('toast');
+    }
 }

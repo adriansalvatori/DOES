@@ -27,6 +27,8 @@ enum Substatus: string
     case PROCESO_DE_PERMISO = 'PROCESO DE PERMISO';
     case CANCELADA_POR_CLIENTE = 'CANCELADA POR CLIENTE';
     case CANCELADA_POR_CAMILA = 'CANCELADA POR CAMILA';
+    case CANCELADA = 'CANCELADA';
+    case NO_REALIZADA_TRANSFERIDA = 'NO REALIZADA / TRANSFERIDA';
     case FINALIZADA = 'FINALIZADA !';
 
     public function label(): string
@@ -55,6 +57,8 @@ enum Substatus: string
             self::PROCESO_DE_PERMISO => __('Proceso de Permiso'),
             self::CANCELADA_POR_CLIENTE => __('Cancelada por Cliente'),
             self::CANCELADA_POR_CAMILA => __('Cancelada por Camila'),
+            self::CANCELADA => __('Cancelada'),
+            self::NO_REALIZADA_TRANSFERIDA => __('No realizada / Transferida'),
             self::FINALIZADA => __('Finalizada'),
         };
     }
@@ -100,7 +104,7 @@ enum Substatus: string
             self::WAITING_FOR_CLIENT => 'bg-sky-50 text-sky-700 border-sky-200 font-medium',
             self::CUSTOMER_SERVICE_REQUIRED => 'bg-orange-50 text-orange-700 border-orange-200 font-bold',
             self::ENVIADO_EN_ALTA => 'bg-pink-50 text-pink-700 border-pink-200 font-medium',
-            self::TICKET => 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
+            self::TICKET => 'bg-[#EAD1DC] text-purple-950 border-[#D5B8C6] font-bold',
             self::POTENTIAL_CUSTOMER => 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
             self::MAKE_PERMIT_SIGN => 'bg-amber-100 text-amber-800 border-amber-300 font-medium',
             self::FALTA_INFORMACION => 'bg-amber-50 text-amber-700 border-amber-200 font-medium',
@@ -108,6 +112,8 @@ enum Substatus: string
             self::PROCESO_DE_PERMISO => 'bg-amber-100 text-amber-800 border-amber-300 font-medium',
             self::CANCELADA_POR_CLIENTE => 'bg-rose-100 text-rose-800 border-rose-300 font-bold',
             self::CANCELADA_POR_CAMILA => 'bg-red-50 text-red-700 border-red-200 font-medium',
+            self::CANCELADA => 'bg-red-100 text-red-800 border-red-300 font-bold',
+            self::NO_REALIZADA_TRANSFERIDA => 'bg-stone-200 text-stone-700 border-stone-300 font-medium',
             self::FINALIZADA => 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
         };
     }
@@ -128,6 +134,7 @@ enum Substatus: string
             self::WAITING_FOR_CLIENT, self::CAMBIOS_CLIENTE, self::NO_RESPUESTA => CoreStatus::ENVIADO_AL_CLIENTE,
             self::PAUSADO, self::ESPERANDO_PERMISO, self::CUSTOMER_SERVICE_REQUIRED => CoreStatus::ON_HOLD,
             self::ENVIADO_EN_ALTA => CoreStatus::EN_PRODUCCION,
+            self::CANCELADA, self::NO_REALIZADA_TRANSFERIDA => CoreStatus::ARCHIVED,
             default => null,
         };
     }

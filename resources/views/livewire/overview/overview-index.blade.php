@@ -46,11 +46,12 @@
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
     <!-- Top Summary Metrics Cards Bar (Full Screen Width) -->
+    @island(name: 'overview-metrics')
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 w-full">
         <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
             <div>
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Workspace Activas') }}</span>
-                <span class="text-xl font-extrabold text-stone-900">{{ $totalWorkspaceCount }}</span>
+                <span class="text-xl font-extrabold text-stone-900">{{ $this->metrics['totalWorkspaceCount'] }}</span>
             </div>
             <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
                 <x-lucide-activity class="w-5 h-5" />
@@ -60,7 +61,7 @@
         <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
             <div>
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Backlog') }}</span>
-                <span class="text-xl font-extrabold text-amber-600">{{ $totalBacklogCount }}</span>
+                <span class="text-xl font-extrabold text-amber-600">{{ $this->metrics['totalBacklogCount'] }}</span>
             </div>
             <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
                 <x-lucide-box class="w-5 h-5" />
@@ -70,7 +71,7 @@
         <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
             <div>
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Sin WO') }}</span>
-                <span class="text-xl font-extrabold {{ $missingWoCount > 0 ? 'text-red-600' : 'text-stone-700' }}">{{ $missingWoCount }}</span>
+                <span class="text-xl font-extrabold {{ $this->metrics['missingWoCount'] > 0 ? 'text-red-600' : 'text-stone-700' }}">{{ $this->metrics['missingWoCount'] }}</span>
             </div>
             <div class="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
                 <x-lucide-alert-circle class="w-5 h-5" />
@@ -80,7 +81,7 @@
         <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
             <div>
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('En Producción') }}</span>
-                <span class="text-xl font-extrabold text-pink-600">{{ $inProductionCount }}</span>
+                <span class="text-xl font-extrabold text-pink-600">{{ $this->metrics['inProductionCount'] }}</span>
             </div>
             <div class="w-9 h-9 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center font-bold">
                 <x-lucide-layers class="w-5 h-5" />
@@ -90,13 +91,14 @@
         <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
             <div>
                 <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Listas Hoy') }}</span>
-                <span class="text-xl font-extrabold text-blue-600">{{ $doneTodayCount }}</span>
+                <span class="text-xl font-extrabold text-blue-600">{{ $this->metrics['doneTodayCount'] }}</span>
             </div>
             <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
                 <x-lucide-check-circle-2 class="w-5 h-5" />
             </div>
         </div>
     </div>
+    @endisland
 
     <!-- Toolbar Filters Bar -->
     <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
@@ -139,12 +141,24 @@
 
             <!-- Global Search, Per Page & Reset Buttons -->
             <div class="flex items-center gap-2">
+                <!-- Cache Status & Refresh Button -->
+                <button 
+                    type="button"
+                    wire:click="refreshCache"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
+                    title="{{ __('Caché en disco activo. Clic para forzar recarga.') }}">
+                    <x-lucide-zap class="w-3.5 h-3.5 text-emerald-600" />
+                    <span class="hidden md:inline">{{ __('Caché Disco') }}</span>
+                    <x-lucide-refresh-cw class="w-3 h-3 text-emerald-500 hover:rotate-180 transition-transform" />
+                </button>
+
                 <!-- Per Page Selector -->
                 <div class="flex items-center gap-1.5 text-xs text-stone-500 font-semibold bg-stone-50 px-2 py-1.5 rounded-lg border border-stone-200">
                     <span class="hidden sm:inline text-stone-400 font-medium">{{ __('Mostrar:') }}</span>
                     <select 
                         wire:model.live="perPage" 
                         class="bg-transparent text-xs font-bold text-stone-800 focus:outline-none cursor-pointer">
+                        <option value="0">⚡ Todas (Sin paginación)</option>
                         <option value="25">25 / pág</option>
                         <option value="50">50 / pág</option>
                         <option value="100">100 / pág</option>
@@ -194,7 +208,7 @@
                     class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
                     <option value="">{{ __('Todos los clientes') }}</option>
                     @foreach($clients as $c)
-                        <option value="{{ $c->id }}">{{ $c->name }}</option>
+                        <option value="{{ is_object($c) ? $c->id : $c }}">{{ is_object($c) ? $c->name : $c }}</option>
                     @endforeach
                 </select>
             </div>
@@ -207,7 +221,7 @@
                     class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
                     <option value="">{{ __('Todos') }}</option>
                     @foreach($designers as $d)
-                        <option value="{{ $d->id }}">{{ $d->name }}</option>
+                        <option value="{{ is_object($d) ? $d->id : $d }}">{{ is_object($d) ? $d->name : $d }}</option>
                     @endforeach
                 </select>
             </div>
@@ -277,7 +291,7 @@
                     @endif
                 </h3>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
-                    {{ $orders->total() }}
+                    {{ method_exists($orders, 'total') ? $orders->total() : count($orders) }}
                 </span>
             </div>
 
@@ -699,10 +713,10 @@
                                             </button>
                                             @foreach($designers as $d)
                                                 <button 
-                                                    wire:click="updateDesigner({{ $order->id }}, {{ $d->id }})"
+                                                    wire:click="updateDesigner({{ $order->id }}, {{ is_object($d) ? $d->id : $d }})"
                                                     @click="openDes = false"
                                                     class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800">
-                                                    <span>{{ $d->name }}</span>
+                                                    <span>{{ is_object($d) ? $d->name : $d }}</span>
                                                 </button>
                                             @endforeach
                                         </div>
@@ -1200,14 +1214,26 @@
             </table>
         </div>
 
-        <!-- Pagination Links Bar -->
-        @if($orders->hasPages())
+        <!-- Pagination Links Bar or All Loaded Status -->
+        @if(method_exists($orders, 'hasPages') && $orders->hasPages())
             <div class="px-4 py-3 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3 rounded-b-xl">
                 <div class="text-xs text-stone-500 font-medium">
                     {{ __('Mostrando') }} <span class="font-bold text-stone-900">{{ $orders->firstItem() }}</span> {{ __('a') }} <span class="font-bold text-stone-900">{{ $orders->lastItem() }}</span> {{ __('de') }} <span class="font-bold text-stone-900">{{ $orders->total() }}</span> {{ __('órdenes') }}
                 </div>
                 <div>
                     {{ $orders->links() }}
+                </div>
+            </div>
+        @else
+            <div class="px-4 py-2.5 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3 rounded-b-xl">
+                <div class="text-xs text-stone-600 font-medium flex items-center gap-2">
+                    <span>{{ __('Mostrando todas las') }} <strong class="text-stone-900 font-bold">{{ count($orders) }}</strong> {{ __('órdenes en vista completa') }}</span>
+                    <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                        <x-lucide-zap class="w-3 h-3 text-emerald-600" /> {{ __('Sin paginación • File Cached') }}
+                    </span>
+                </div>
+                <div class="text-[11px] text-stone-400">
+                    {{ __('Los cambios se sincronizan y actualizan el caché en tiempo real') }}
                 </div>
             </div>
         @endif
