@@ -16,6 +16,7 @@ use App\Services\OrderTitleParserService;
 use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -814,6 +815,11 @@ class OrderDetailModal extends Component
     {
         if (! $this->orderId) {
             return;
+        }
+
+        $user = Auth::user();
+        if ($user && ($user->isDesigner() || $user->isSales())) {
+            abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
         }
 
         $order = Order::findOrFail($this->orderId);

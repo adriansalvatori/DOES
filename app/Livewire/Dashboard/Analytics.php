@@ -8,11 +8,22 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Models\Substatus as SubstatusModel;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class Analytics extends Component
 {
+    public function mount(): mixed
+    {
+        $user = Auth::user();
+        if ($user && $user->isDesigner()) {
+            return redirect()->route('kanban');
+        }
+
+        return null;
+    }
+
     public function render()
     {
         // Executive KPIs (Active Workspace Design Orders - Excludes Backlog & En Producción)
@@ -123,6 +134,6 @@ class Analytics extends Component
             'totalRelatedTasks' => $totalRelatedTasks,
             'pendingRelatedTasks' => $pendingRelatedTasks,
             'completedRelatedTasks' => $completedRelatedTasks,
-        ])->layout('components.layouts.app', ['title' => 'Analytics Dashboard - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Analytics Dashboard - ').config('app.name')]);
     }
 }

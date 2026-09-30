@@ -361,6 +361,6 @@ class Index extends Component
                 ->distinct()
                 ->orderBy('responsible_person')
                 ->pluck('responsible_person'),
-        ])->layout('components.layouts.app', ['title' => 'Backlog de Órdenes - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Backlog de Órdenes - ').config('app.name')]);
     }
 }

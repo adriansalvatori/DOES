@@ -12,6 +12,7 @@ use App\Services\AutomationEngine;
 use App\Services\OrderTitleParserService;
 use App\Services\SlaEngine;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -54,6 +55,14 @@ class Board extends Component
     public string $unblockReason = '';
 
     public bool $showStandaloneTaskCards = false;
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if ($user && $user->isDesigner() && $user->designer) {
+            $this->designerFilter = (string) $user->designer->id;
+        }
+    }
 
     public function toggleStandaloneTaskCards(): void
     {
@@ -284,6 +293,11 @@ class Board extends Component
 
     public function trashOrder($orderId)
     {
+        $user = Auth::user();
+        if ($user && ($user->isDesigner() || $user->isSales())) {
+            abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
+        }
+
         $order = Order::findOrFail($orderId);
         $order->delete(); // soft delete
 
@@ -436,6 +450,6 @@ class Board extends Component
                 ->distinct()
                 ->orderBy('responsible_person')
                 ->pluck('responsible_person'),
-        ])->layout('components.layouts.app', ['title' => 'Kanban Board - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Kanban Board - ').config('app.name')]);
     }
 }

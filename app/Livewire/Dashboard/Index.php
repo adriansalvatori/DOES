@@ -9,6 +9,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -42,6 +43,11 @@ class Index extends Component
 
     public function setActiveTab($tab)
     {
+        $user = Auth::user();
+        if ($user && $user->isDesigner() && $tab === 'resolver') {
+            return;
+        }
+
         if ($this->activeTab === $tab) {
             $this->activeTab = 'all';
         } else {
@@ -145,6 +151,6 @@ class Index extends Component
             'pronosticoAltaOrders' => $pronosticoAltaOrders,
             'newTrelloOrders' => $newTrelloOrders,
             'designers' => Designer::where('active', true)->get(),
-        ])->layout('components.layouts.app', ['title' => 'Dashboard Operativo - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Dashboard Operativo - ').config('app.name')]);
     }
 }

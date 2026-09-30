@@ -5,12 +5,11 @@ namespace App\Livewire\Settings;
 use App\Enums\CoreStatus;
 use App\Models\TrelloListMapping;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-#[Title('Mapeo de Listas Trello - Kudos Design Ops')]
 class TrelloMapping extends Component
 {
     public string $boardId = '';
@@ -25,6 +24,11 @@ class TrelloMapping extends Component
 
     public function mount(): void
     {
+        $user = Auth::user();
+        if ($user && ! $user->isAdmin()) {
+            abort(403, __('No tiene permisos para acceder a esta sección.'));
+        }
+
         $this->apiKey = config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $this->userToken = config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET', '')));
         $this->boardId = config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
@@ -127,6 +131,6 @@ class TrelloMapping extends Component
     {
         return view('livewire.settings.trello-mapping', [
             'statuses' => CoreStatus::cases(),
-        ]);
+        ])->layout('components.layouts.app', ['title' => __('Mapeo de Listas Trello - ').config('app.name')]);
     }
 }

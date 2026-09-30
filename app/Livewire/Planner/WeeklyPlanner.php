@@ -11,6 +11,7 @@ use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Models\SubtaskPreset;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class WeeklyPlanner extends Component
@@ -50,6 +51,11 @@ class WeeklyPlanner extends Component
         $this->viewMode = session('weekly_planner_view_mode', 'by_day');
         $this->plannerSortBy = session('weekly_planner_sort_by', 'custom');
         $this->showSystemTasks = (bool) session('weekly_planner_show_system_tasks', true);
+
+        $user = Auth::user();
+        if ($user && $user->isDesigner() && $user->designer) {
+            $this->selectedDesignerFilter = (string) $user->designer->id;
+        }
     }
 
     public function updatedPlannerSortBy($value)
@@ -696,7 +702,7 @@ class WeeklyPlanner extends Component
             'backlogOrders' => $backlogOrders,
             'slaBreachedList' => $slaBreachedList,
             'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
-        ])->layout('components.layouts.app', ['title' => 'Planificador Semanal - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Planificador Semanal - ').config('app.name')]);
     }
 
     public function openAllSlaWarningsModal()

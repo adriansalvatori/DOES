@@ -10,6 +10,7 @@ use App\Livewire\Orders\ArchivedOrders;
 use App\Livewire\Orders\TrashBin;
 use App\Livewire\Overview\OverviewIndex;
 use App\Livewire\Planner\WeeklyPlanner;
+use App\Livewire\Portal\ClientPortal;
 use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\Documentation;
@@ -21,15 +22,52 @@ use App\Livewire\Settings\TrelloMapping;
 use App\Livewire\Settings\TrelloSync;
 use App\Livewire\Settings\UserManagement;
 use App\Livewire\Tasks\TaskList;
+use App\Models\User;
+use App\Services\DemoEnvironmentService;
 use App\Services\TrelloSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// Public Client Portal Routes (Auto-authenticated via unique QR token)
+Route::get('/c/{token}', ClientPortal::class)->name('client.portal');
+Route::get('/portal/{token}', function (string $token) {
+    return redirect()->route('client.portal', ['token' => $token]);
+});
+
 // Guest Routes
 Route::middleware(['guest'])->group(function () {
     Route::get('/login', Login::class)->name('login');
+    Route::get('/reset-password/{token}', function (Request $request, string $token) {
+        return redirect()->route('login')->with('status', __('Enlace de recuperación validado.'));
+    })->name('password.reset');
 });
+
+// Demo Fast Switch / Login (Accessible directly from login buttons without guest-check redirect loops)
+Route::get('/demo-login/{role}', function (string $role) {
+    $emailMap = [
+        'admin' => 'admin@kudos.com',
+        'manager' => 'camila@kudos.com',
+        'designer' => 'adrian@kudos.com',
+        'comercial' => 'ventas@kudos.com',
+    ];
+
+    $email = $emailMap[strtolower(trim($role))] ?? 'admin@kudos.com';
+    $demoService = app(DemoEnvironmentService::class);
+    $demoService->enableDemo();
+
+    $user = User::on('demo')->where('email', $email)->first();
+    if ($user) {
+        Auth::login($user);
+        $user->update(['last_login_at' => now()]);
+        session()->regenerate();
+        session()->put(DemoEnvironmentService::DEMO_SESSION_KEY, true);
+        session()->save();
+        cookie()->queue(cookie()->forever('kudos_demo_mode', '1'));
+    }
+
+    return redirect()->route('dashboard');
+})->name('demo.direct-login');
 
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
@@ -87,6 +125,7 @@ Route::middleware(['auth'])->group(function () {
     })->name('trello.attachment-proxy');
 
     Route::post('/logout', function () {
+        app(DemoEnvironmentService::class)->disableDemo();
         Auth::logout();
         session()->invalidate();
         session()->regenerateToken();

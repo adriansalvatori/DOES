@@ -18,8 +18,17 @@ class TrelloSyncService
 
     protected string $baseUrl = 'https://api.trello.com/1';
 
+    public function isDemoMode(): bool
+    {
+        return app(DemoEnvironmentService::class)->isDemo();
+    }
+
     public function isPaused(): bool
     {
+        if ($this->isDemoMode()) {
+            return true;
+        }
+
         return (bool) Cache::get(self::PAUSE_CACHE_KEY, false);
     }
 
@@ -88,6 +97,10 @@ class TrelloSyncService
      */
     public function getBoardLists(string $boardId, string $apiKey, ?string $apiToken = null): array
     {
+        if ($this->isDemoMode()) {
+            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.'];
+        }
+
         $boardId = $this->extractBoardId($boardId);
         $params = ['key' => $apiKey];
         if ($apiToken) {
@@ -114,6 +127,10 @@ class TrelloSyncService
      */
     public function getBoardCards(string $boardId, string $apiKey, ?string $apiToken = null): array
     {
+        if ($this->isDemoMode()) {
+            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.'];
+        }
+
         $boardId = $this->extractBoardId($boardId);
         $params = [
             'key' => $apiKey,

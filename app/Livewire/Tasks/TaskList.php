@@ -48,6 +48,6 @@ class TaskList extends Component
         return view('livewire.tasks.task-list', [
             'tasks' => $tasks,
             'taskTypes' => RelatedTaskType::cases(),
-        ])->layout('components.layouts.app', ['title' => 'Tareas Vinculadas - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Tareas Vinculadas - ').config('app.name')]);
     }
 }

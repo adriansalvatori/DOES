@@ -10,6 +10,7 @@ use App\Models\RelatedTask;
 use App\Services\ClientMatchingService;
 use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
@@ -25,6 +26,11 @@ class TrelloSync extends Component
 
     public function mount()
     {
+        $user = Auth::user();
+        if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
+            abort(403, __('No tiene permisos para acceder a esta sección.'));
+        }
+
         $this->apiKey = env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f');
         $this->userToken = env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET', ''));
         $this->boardId = env('TRELLO_BOARD_ID', '');
@@ -386,6 +392,6 @@ class TrelloSync extends Component
     public function render()
     {
         return view('livewire.settings.trello-sync')
-            ->layout('components.layouts.app', ['title' => 'Configuración de Trello Sync - Kudos Design Ops']);
+            ->layout('components.layouts.app', ['title' => __('Configuración de Trello Sync - ').config('app.name')]);
     }
 }

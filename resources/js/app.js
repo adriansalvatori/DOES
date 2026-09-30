@@ -1,5 +1,6 @@
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import './qr-card.js';
 
 // Kudos Design Ops - Global Dirty Guard Manager
 
@@ -250,8 +251,14 @@ window.KudosDemoTour = {
             route: '/',
             element: '#tour-demo-btn',
             title: 'Paso 1: Bienvenida al Tour Interactivo',
-            description: 'Bienvenido al Walkthrough Interactivo de Kudos Design Ops. Esta guia te mostrara paso a paso todas las capacidades clave, la gestion de SLA y la automatizacion del flujo de diseno.',
-            talkingPoint: 'Hoy veremos como Kudos Design Ops convierte la actividad sin estructurar de Trello en un flujo ordenado y gobernado por SLA.',
+            get description() {
+                const appName = document.querySelector('meta[name="app-name"]')?.getAttribute('content') || window.appName || 'Kudos DOES™';
+                return `Bienvenido al Walkthrough Interactivo de ${appName}. Esta guia te mostrara paso a paso todas las capacidades clave, la gestion de SLA y la automatizacion del flujo de diseno.`;
+            },
+            get talkingPoint() {
+                const appName = document.querySelector('meta[name="app-name"]')?.getAttribute('content') || window.appName || 'Kudos DOES™';
+                return `Hoy veremos como ${appName} convierte la actividad sin estructurar de Trello en un flujo ordenado y gobernado por SLA.`;
+            },
             wow: 'Claridad Operativa Total',
             popoverPosition: 'bottom'
         },

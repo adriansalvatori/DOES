@@ -197,16 +197,18 @@
                             </button>
                         @endif
 
-                        <!-- Move to Trashcan Button -->
-                        <button 
-                            wire:click="deleteOrder" 
-                            wire:confirm="¿Estás seguro de mover la orden '{{ $order->company_name }}' a la Papelera de Reciclaje?" 
-                            class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs border border-rose-200 transition flex items-center gap-1.5 shrink-0 cursor-pointer" 
-                            title="Mover a la Papelera de Reciclaje">
-                            <x-lucide-trash-2 class="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                            <span class="hidden sm:inline">Enviar a Papelera</span>
-                            <span class="sm:hidden">Papelera</span>
-                        </button>
+                        <!-- Move to Trashcan Button (Admin & Coordinator only) -->
+                        @if(!auth()->user()?->isDesigner() && !auth()->user()?->isSales())
+                            <button 
+                                wire:click="deleteOrder" 
+                                wire:confirm="¿Estás seguro de mover la orden '{{ $order->company_name }}' a la Papelera de Reciclaje?" 
+                                class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs border border-rose-200 transition flex items-center gap-1.5 shrink-0 cursor-pointer" 
+                                title="Mover a la Papelera de Reciclaje">
+                                <x-lucide-trash-2 class="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                                <span class="hidden sm:inline">Enviar a Papelera</span>
+                                <span class="sm:hidden">Papelera</span>
+                            </button>
+                        @endif
 
                         <div class="h-4 w-px bg-stone-200 mx-0.5 hidden sm:block"></div>
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoreStatus;
+use App\Services\QrCodeService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class Client extends Model
 {
@@ -21,6 +23,7 @@ class Client extends Model
         'phones',
         'website',
         'notes',
+        'portal_token',
     ];
 
     protected $casts = [
@@ -92,6 +95,12 @@ class Client extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Client $client) {
+            if (empty($client->portal_token)) {
+                $client->portal_token = Str::random(32);
+            }
+        });
+
         static::deleting(function (Client $client) {
             if ($client->isForceDeleting()) {
                 return;
@@ -102,6 +111,21 @@ class Client extends Model
                 $client->saveQuietly();
             }
         });
+    }
+
+    public function getPortalUrlAttribute(): string
+    {
+        if (empty($this->portal_token)) {
+            $this->portal_token = Str::random(32);
+            $this->saveQuietly();
+        }
+
+        return route('client.portal', ['token' => $this->portal_token]);
+    }
+
+    public function getQrSvg(int $size = 240): string
+    {
+        return app(QrCodeService::class)->generateSvg($this->portal_url, $size);
     }
 
     public function locations(): HasMany

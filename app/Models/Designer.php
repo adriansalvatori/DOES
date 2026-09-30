@@ -26,6 +26,7 @@ class Designer extends Model
         'is_external',
         'queue_status_value',
         'aliases',
+        'phone',
     ];
 
     protected $casts = [
@@ -34,6 +35,11 @@ class Designer extends Model
         'is_external' => 'boolean',
         'aliases' => 'array',
     ];
+
+    public function getContactPhoneAttribute(): ?string
+    {
+        return $this->phone ?: $this->user?->phone;
+    }
 
     public function user(): BelongsTo
     {

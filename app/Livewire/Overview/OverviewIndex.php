@@ -9,6 +9,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -18,6 +19,16 @@ use Livewire\WithPagination;
 class OverviewIndex extends Component
 {
     use WithPagination;
+
+    public function mount(): mixed
+    {
+        $user = Auth::user();
+        if ($user && $user->isDesigner()) {
+            return redirect()->route('kanban');
+        }
+
+        return null;
+    }
 
     #[Computed]
     public function metrics(): array

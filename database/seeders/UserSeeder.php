@@ -43,16 +43,25 @@ class UserSeeder extends Seeder
             $camilaDesigner->update(['user_id' => $coordinator->id]);
         }
 
-        // 3. Euralíz (Designer)
-        $euraliz = User::firstOrCreate(
-            ['email' => 'euraliz@kudos.com'],
-            [
+        // 3. Euralíz (Admin & Designer)
+        $euraliz = User::where('email', 'euraliz.jbg@gmail.com')
+            ->orWhere('email', 'euraliz@kudos.com')
+            ->first();
+
+        if ($euraliz) {
+            $euraliz->update([
+                'role' => UserRole::ADMIN,
+                'email' => 'euraliz.jbg@gmail.com',
+            ]);
+        } else {
+            $euraliz = User::create([
                 'name' => 'Euralíz Bravo',
+                'email' => 'euraliz.jbg@gmail.com',
                 'password' => $password,
-                'role' => UserRole::DESIGNER,
+                'role' => UserRole::ADMIN,
                 'active' => true,
-            ]
-        );
+            ]);
+        }
         $euralizDesigner = Designer::find(1) ?? Designer::where('name', 'LIKE', '%Eural%')->first();
         if ($euralizDesigner) {
             $euralizDesigner->update(['user_id' => $euraliz->id]);

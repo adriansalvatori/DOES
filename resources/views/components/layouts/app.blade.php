@@ -3,14 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'Kudos Design Ops - Trello Workflow Manager' }}</title>
+    <title>{{ $title ?? (config('app.name') . ' - Trello Workflow Manager') }}</title>
     
     <!-- PWA & Favicon / App Icon -->
     <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Kudos DOES">
+    <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
+    <meta name="app-name" content="{{ config('app.name') }}">
     <meta name="theme-color" content="#fbfbfa">
     
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
@@ -42,14 +43,11 @@
 <body 
     x-data="{ 
         sidebarOpen: localStorage.getItem('sidebar_open') !== 'false',
-        dashboardOpen: localStorage.getItem('dashboard_open') !== 'false',
-        dashboardPopover: false,
         configOpen: localStorage.getItem('config_open') !== 'false',
         configPopover: false 
     }"
     x-init="
         $watch('sidebarOpen', val => localStorage.setItem('sidebar_open', val));
-        $watch('dashboardOpen', val => localStorage.setItem('dashboard_open', val));
         $watch('configOpen', val => localStorage.setItem('config_open', val));
     "
     class="h-full bg-[#fbfbfa] text-zinc-800 flex antialiased selection:bg-stone-200">
@@ -59,13 +57,15 @@
         :class="sidebarOpen ? 'w-64' : 'w-16'"
         class="fixed inset-y-0 left-0 bg-[#f7f7f5] border-r border-[#e9e9e7] flex flex-col justify-between z-40 select-none transition-all duration-200 ease-in-out">
         
-        <div class="p-3 space-y-4">
-            <!-- Workspace / Brand Header & Collapse Toggle -->
+        <!-- Workspace / Brand Header & Collapse Toggle (Pinned Top) -->
+        <div class="p-3 pb-0 shrink-0">
             <div :class="sidebarOpen ? 'justify-between' : 'justify-center'" class="flex items-center pb-3 border-b border-[#e9e9e7]">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 min-w-0 group cursor-pointer" title="Ir al Dashboard">
-                    <img src="{{ asset('favicon.png') }}" alt="Kudos Icon" class="w-7 h-7 rounded-md object-contain shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                    <div class="w-7 h-7 rounded-lg bg-[#eda621] flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                        <img src="{{ asset('images/kudos-hand-white.svg') }}" alt="{{ config('app.name') }}" class="w-4.5 h-4.5 object-contain">
+                    </div>
                     <div x-show="sidebarOpen" x-transition.opacity class="min-w-0">
-                        <h1 class="font-semibold text-xs text-zinc-900 tracking-tight truncate group-hover:text-stone-900">Kudos Design Ops</h1>
+                        <h1 class="font-semibold text-xs text-zinc-900 tracking-tight truncate group-hover:text-stone-900">{{ config('app.name') }}</h1>
                         <span class="text-[10px] text-zinc-500 font-normal block truncate">Trello Workflow Layer</span>
                     </div>
                 </a>
@@ -75,136 +75,129 @@
                     <x-lucide-panel-left-open x-show="!sidebarOpen" class="w-4 h-4" />
                 </button>
             </div>
+        </div>
 
+        <!-- Scrollable Navigation Area -->
+        <div class="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden p-3 pt-2 custom-vertical-scrollbar">
             <!-- Operational Navigation Links (Notion Sidebar Item Style) -->
             <nav class="space-y-1 text-xs">
-                <!-- Dashboard Item with Submenu Dropdown -->
-                <div class="relative" @click.outside="dashboardPopover = false">
-                    <button 
-                        @click="sidebarOpen ? (dashboardOpen = !dashboardOpen) : (dashboardPopover = !dashboardPopover)" 
-                        title="{{ __('Dashboard') }}" 
-                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ (request()->is('/') || request()->is('analytics*')) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <x-lucide-layout-dashboard class="w-4 h-4 text-zinc-500 shrink-0" />
-                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Dashboard') }}</span>
-                        </div>
-                        <x-lucide-chevron-down 
-                            x-show="sidebarOpen" 
-                            class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
-                            x-bind:class="dashboardOpen ? 'rotate-180' : ''" />
-                    </button>
-
-                    <!-- Expanded Sub-menu when Sidebar is Open -->
-                    <div 
-                        x-show="dashboardOpen && sidebarOpen" 
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 scale-95"
-                        x-transition:enter-end="opacity-100 scale-100"
-                        class="mt-1 pl-6 space-y-1 text-xs">
-                        <a 
-                            href="/" 
-                            title="{{ __('Centro de Control Operativo') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('/') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-activity class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Centro de Control') }}</span>
-                        </a>
-                        <a 
-                            href="/analytics" 
-                            title="{{ __('Analytics Dashboard') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('analytics*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-bar-chart-3 class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Analytics') }}</span>
-                        </a>
-                    </div>
-
-                    <!-- Floating Popover Sub-menu when Sidebar is Collapsed -->
-                    <div 
-                        x-show="dashboardPopover && !sidebarOpen" 
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
-                        x-transition:enter-end="opacity-100 scale-100 translate-x-0"
-                        class="absolute left-14 top-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[180px] space-y-1 text-xs">
-                        <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">{{ __('Dashboard') }}</div>
-                        <a 
-                            href="/" 
-                            title="{{ __('Centro de Control Operativo') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('/') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-activity class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Centro de Control') }}</span>
-                        </a>
-                        <a 
-                            href="/analytics" 
-                            title="{{ __('Analytics Dashboard') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('analytics*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-bar-chart-3 class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Analytics') }}</span>
-                        </a>
-                    </div>
-                </div>
-
-                <a href="/overview" title="{{ __('Overview Operativo') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('overview*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-table-properties class="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Overview') }}</span>
+                <!-- Control Center -->
+                <a 
+                    href="/" 
+                    title="{{ __('Centro de Control Operativo') }}" 
+                    class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('/') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-activity class="w-4 h-4 text-zinc-500 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Centro de Control') }}</span>
                 </a>
-                <a href="/kanban" title="{{ __('Kanban Board') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+
+                <!-- Analytics -->
+                @if(!auth()->user()?->isDesigner())
+                    <a 
+                        href="/analytics" 
+                        title="{{ __('Analytics Dashboard') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('analytics*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-bar-chart-3 class="w-4 h-4 text-zinc-500 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Analytics') }}</span>
+                    </a>
+                @endif
+
+                <!-- (separador) -->
+                <div class="my-2 border-t border-[#e9e9e7]"></div>
+
+                <!-- Kanban Board -->
+                <a href="/kanban" title="{{ __('Kanban Board') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-kanban class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Kanban Board') }}</span>
                 </a>
-                <a href="/clients" title="{{ __('Clientes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('clients*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-building-2 class="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Clientes') }}</span>
-                </a>
-                <a href="/archived" title="{{ __('Órdenes Archivadas') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('archived*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-archive class="w-4 h-4 text-slate-600 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Archivadas') }}</span>
-                </a>
-                <a href="/planner" title="{{ __('Planificador Semanal') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('planner*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+
+                <!-- Weekly Planner -->
+                <a href="/planner" title="{{ __('Planificador Semanal') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('planner*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-check-circle-2 class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Planificador Semanal') }}</span>
                 </a>
-                @php
-                    $actionRequiredCount = \App\Models\Order::getActionRequiredCount();
-                    $hasActionRequired = $actionRequiredCount > 0;
-                @endphp
-                <a href="/resolver" title="{{ __('Action Required') }}" class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition text-xs {{ request()->is('resolver*') ? 'bg-[#ebebeb] font-semibold' : '' }} {{ $hasActionRequired ? (request()->is('resolver*') ? 'text-orange-600 bg-orange-50/80 border border-orange-200/80' : 'text-orange-600 hover:bg-orange-50/60 hover:text-orange-700 font-medium') : (request()->is('resolver*') ? 'text-zinc-700' : 'text-zinc-400 hover:bg-[#efefed] hover:text-zinc-600 font-medium') }}">
-                    <x-lucide-alert-triangle class="w-4 h-4 shrink-0 {{ $hasActionRequired ? 'text-orange-500' : 'text-zinc-400' }}" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate flex-1">{{ __('Action Required') }}</span>
-                    @if($hasActionRequired)
-                        <span x-show="sidebarOpen" x-transition.opacity class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 shrink-0">
-                            {{ $actionRequiredCount }}
-                        </span>
-                    @endif
-                </a>
-                <a href="/trash" title="{{ __('Papelera de Reciclaje') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('trash*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-trash-2 class="w-4 h-4 text-red-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Papelera') }}</span>
+
+                <!-- Overview -->
+                @if(!auth()->user()?->isDesigner())
+                    <a href="/overview" title="{{ __('Overview Operativo') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('overview*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-table-properties class="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Overview') }}</span>
+                    </a>
+                @endif
+
+                <!-- Acciones requeridas -->
+                @if(!auth()->user()?->isDesigner())
+                    @php
+                        $actionRequiredCount = \App\Models\Order::getActionRequiredCount();
+                        $hasActionRequired = $actionRequiredCount > 0;
+                    @endphp
+                    <a href="/resolver" title="{{ __('Acción Requerida') }}" class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition text-xs {{ request()->is('resolver*') ? 'bg-[#ebebeb] font-semibold' : '' }} {{ $hasActionRequired ? (request()->is('resolver*') ? 'text-orange-600 bg-orange-50/80 border border-orange-200/80' : 'text-orange-600 hover:bg-orange-50/60 hover:text-orange-700 font-medium') : (request()->is('resolver*') ? 'text-zinc-700' : 'text-zinc-400 hover:bg-[#efefed] hover:text-zinc-600 font-medium') }}">
+                        <x-lucide-alert-triangle class="w-4 h-4 shrink-0 {{ $hasActionRequired ? 'text-orange-500' : 'text-zinc-400' }}" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate flex-1">{{ __('Acción Requerida') }}</span>
+                        @if($hasActionRequired)
+                            <span x-show="sidebarOpen" x-transition.opacity class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 shrink-0">
+                                {{ $actionRequiredCount }}
+                            </span>
+                        @endif
+                    </a>
+                @endif
+
+                <!-- (separador) -->
+                <div class="my-2 border-t border-[#e9e9e7]"></div>
+
+                <!-- Clientes -->
+                <a href="/clients" title="{{ __('Clientes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('clients*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-building-2 class="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Clientes') }}</span>
                 </a>
 
+                <!-- Archivadas -->
+                <a href="/archived" title="{{ __('Órdenes Archivadas') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('archived*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-archive class="w-4 h-4 text-slate-600 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Archivadas') }}</span>
+                </a>
+
+                <!-- Papelera -->
+                @if(!auth()->user()?->isDesigner() && !auth()->user()?->isSales())
+                    <a href="/trash" title="{{ __('Papelera de Reciclaje') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('trash*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-trash-2 class="w-4 h-4 text-red-500 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Papelera') }}</span>
+                    </a>
+                @endif
+
+                <!-- (separador) -->
+                <div class="my-2 border-t border-[#e9e9e7]"></div>
+
                 <!-- Team Designers List -->
-                <div id="tour-designer-colors" class="pt-3 border-t border-[#e9e9e7] space-y-1.5">
-                    <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2">{{ __('Diseñadores') }}</span>
-                    <div class="space-y-1.5 text-[11px] text-zinc-600 font-medium px-2">
-                        <div class="flex items-center gap-2" title="Euralíz (Magenta)">
+                <div id="tour-designer-colors" class="space-y-2">
+                    <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2.5 mb-1">{{ __('Diseñadores') }}</span>
+                    <div class="space-y-2 text-[11px] text-zinc-600 font-medium px-2.5">
+                        <div class="flex items-center gap-2.5 py-0.5" title="Euralíz (Magenta)">
                             <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">Euralíz</span>
                         </div>
-                        <div class="flex items-center gap-2" title="César (Cyan)">
+                        <div class="flex items-center gap-2.5 py-0.5" title="César (Cyan)">
                             <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
                         </div>
-                        <div class="flex items-center gap-2" title="Adrián (Verde)">
+                        <div class="flex items-center gap-2.5 py-0.5" title="Adrián (Verde)">
                             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">Adrián</span>
                         </div>
-                        <div class="flex items-center gap-2" title="Diseñador Externo (Amarillo)">
+                        <div class="flex items-center gap-2.5 py-0.5" title="Diseñador Externo (Amarillo)">
                             <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Externo') }}</span>
                         </div>
                     </div>
                 </div>
+            </nav>
 
-                <!-- Single Configuración Item with Context Dropdown Menu -->
-                <div class="pt-3 border-t border-[#e9e9e7] relative" @click.outside="configPopover = false">
+            <!-- Bottom-aligned Navigation Links -->
+            <div class="mt-auto shrink-0 pt-2 space-y-1 text-xs">
+                <!-- (separador) -->
+                <div class="my-2 border-t border-[#e9e9e7]"></div>
+
+                <!-- Settings Item with Context Dropdown Menu -->
+                <div class="relative" @click.outside="configPopover = false">
                     <button 
                         @click="sidebarOpen ? (configOpen = !configOpen) : (configPopover = !configPopover)" 
                         title="{{ __('Configuración') }}" 
@@ -256,34 +249,38 @@
                             <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span class="truncate">{{ __('Idioma') }}</span>
                         </a>
-                        <a 
-                            href="/settings/substatuses" 
-                            title="{{ __('Configuración de Subestatus') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Subestatus') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/subtasks" 
-                            title="{{ __('Plantillas de Subtareas') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/trello-mapping" 
-                            title="{{ __('Mapeo de Listas Trello') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/backups" 
-                            title="{{ __('Respaldos de Base de Datos') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Respaldos') }}</span>
-                        </a>
+                        @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                            <a 
+                                href="/settings/substatuses" 
+                                title="{{ __('Configuración de Subestatus') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Subestatus') }}</span>
+                            </a>
+                            <a 
+                                href="/settings/subtasks" 
+                                title="{{ __('Plantillas de Subtareas') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
+                            </a>
+                        @endif
+                        @if(auth()->user()?->isAdmin())
+                            <a 
+                                href="/settings/trello-mapping" 
+                                title="{{ __('Mapeo de Listas Trello') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
+                            </a>
+                            <a 
+                                href="/settings/backups" 
+                                title="{{ __('Respaldos de Base de Datos') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Respaldos') }}</span>
+                            </a>
+                        @endif
                     </div>
 
                     <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
@@ -294,6 +291,15 @@
                         x-transition:enter-end="opacity-100 scale-100 translate-x-0"
                         class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
                         <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">{{ __('Configuración') }}</div>
+                        @if(auth()->user()?->isAdmin())
+                            <a 
+                                href="/settings/users" 
+                                title="{{ __('Gestión de Usuarios') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                <span class="truncate">{{ __('Usuarios y Roles') }}</span>
+                            </a>
+                        @endif
                         <a 
                             href="/settings/documentation" 
                             title="{{ __('Guía de Comportamientos') }}" 
@@ -308,64 +314,127 @@
                             <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span class="truncate">{{ __('Idioma') }}</span>
                         </a>
-                        <a 
-                            href="/settings/substatuses" 
-                            title="{{ __('Configuración de Subestatus') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Subestatus') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/subtasks" 
-                            title="{{ __('Plantillas de Subtareas') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/trello-mapping" 
-                            title="{{ __('Mapeo de Listas Trello') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/backups" 
-                            title="{{ __('Respaldos de Base de Datos') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Respaldos') }}</span>
-                        </a>
+                        @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                            <a 
+                                href="/settings/substatuses" 
+                                title="{{ __('Configuración de Subestatus') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Subestatus') }}</span>
+                            </a>
+                            <a 
+                                href="/settings/subtasks" 
+                                title="{{ __('Plantillas de Subtareas') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
+                            </a>
+                        @endif
+                        @if(auth()->user()?->isAdmin())
+                            <a 
+                                href="/settings/trello-mapping" 
+                                title="{{ __('Mapeo de Listas Trello') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
+                            </a>
+                            <a 
+                                href="/settings/backups" 
+                                title="{{ __('Respaldos de Base de Datos') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Respaldos') }}</span>
+                            </a>
+                        @endif
                     </div>
                 </div>
 
-                <!-- Backlog Link Below Configuración -->
-                <a href="/backlog" title="{{ __('Backlog de Órdenes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                <!-- Backlog -->
+                <a href="/backlog" title="{{ __('Backlog de Órdenes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Backlog') }}</span>
                 </a>
 
-                <!-- Trello Sync Settings Link Below Backlog -->
-                <a href="/trello-sync" title="{{ __('Sincronización Trello') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition {{ request()->is('trello-sync*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-refresh-cw class="w-4 h-4 text-blue-600 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Sincronización Trello') }}</span>
-                </a>
-            </nav>
+                <!-- Sincronización -->
+                @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                    <a href="/trello-sync" title="{{ __('Sincronización Trello') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('trello-sync*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-refresh-cw class="w-4 h-4 text-blue-600 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Sincronización') }}</span>
+                    </a>
+                @endif
+            </div>
         </div>
 
         <!-- User Profile & Logout Sidebar Footer -->
         @auth
-            <div class="px-3 py-2 border-t border-[#e9e9e7] bg-[#f7f7f5] flex items-center justify-between gap-2">
-                <a href="{{ route('settings.profile') }}" class="flex items-center gap-2 min-w-0 group hover:opacity-80 transition" title="{{ auth()->user()->name }}">
-                    <div class="w-7 h-7 rounded-full bg-stone-900 text-white font-bold text-[11px] flex items-center justify-center shrink-0">
-                        {{ auth()->user()->initials }}
-                    </div>
-                    <div x-show="sidebarOpen" x-transition.opacity class="min-w-0">
+            <div 
+                x-data="{ userMenuOpen: false }"
+                class="relative px-3 py-2 border-t border-[#e9e9e7] bg-[#f7f7f5] flex items-center justify-between gap-2 shrink-0">
+                
+                <a 
+                    x-show="sidebarOpen"
+                    href="{{ route('settings.profile') }}" 
+                    class="flex items-center gap-2 min-w-0 group hover:opacity-80 transition" 
+                    title="{{ auth()->user()->name }}">
+                    @if(auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 rounded-full object-cover shrink-0 shadow-2xs border border-stone-200" />
+                    @else
+                        <div class="w-7 h-7 rounded-full bg-stone-900 text-white font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
+                            {{ auth()->user()->initials }}
+                        </div>
+                    @endif
+                    <div class="min-w-0">
                         <p class="text-xs font-semibold text-zinc-900 truncate leading-tight group-hover:text-stone-900">{{ auth()->user()->name }}</p>
                         <span class="text-[10px] text-zinc-500 block truncate">{{ auth()->user()->role?->label() ?? __('Diseñador') }}</span>
                     </div>
                 </a>
 
+                <!-- Collapsed Avatar Button with Popover -->
+                <button 
+                    x-show="!sidebarOpen"
+                    @click="userMenuOpen = !userMenuOpen"
+                    type="button"
+                    class="w-7 h-7 mx-auto rounded-full overflow-hidden flex items-center justify-center shrink-0 hover:ring-2 hover:ring-stone-400 transition cursor-pointer shadow-2xs {{ auth()->user()->avatar_url ? 'border border-stone-200' : 'bg-stone-900 text-white font-bold text-[11px]' }}"
+                    title="{{ auth()->user()->name }}">
+                    @if(auth()->user()->avatar_url)
+                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover" />
+                    @else
+                        {{ auth()->user()->initials }}
+                    @endif
+                </button>
+
+                <!-- Floating Popover when Sidebar is Collapsed -->
+                <div 
+                    x-show="userMenuOpen && !sidebarOpen" 
+                    @click.outside="userMenuOpen = false"
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 scale-95 translate-y-1"
+                    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                    class="absolute left-14 bottom-2 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-2 min-w-[200px] space-y-1 text-xs"
+                    style="display: none;">
+                    <div class="px-2 py-1.5 border-b border-stone-100">
+                        <p class="font-semibold text-zinc-900 truncate">{{ auth()->user()->name }}</p>
+                        <span class="text-[10px] text-zinc-500 block truncate">{{ auth()->user()->role?->label() ?? __('Diseñador') }}</span>
+                    </div>
+                    <a href="{{ route('settings.profile') }}" class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
+                        <x-lucide-user class="w-3.5 h-3.5 text-zinc-500" />
+                        <span>{{ __('Mi Perfil') }}</span>
+                    </a>
+                    <a href="/settings/language" class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
+                        <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500" />
+                        <span>{{ __('Idioma') }}</span>
+                    </a>
+                    <div class="border-t border-stone-100 my-1"></div>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-red-600 hover:bg-red-50 transition cursor-pointer text-left">
+                            <x-lucide-log-out class="w-3.5 h-3.5" />
+                            <span>{{ __('Cerrar Sesión') }}</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Expanded Logout Icon Button -->
                 <form method="POST" action="{{ route('logout') }}" x-show="sidebarOpen">
                     @csrf
                     <button type="submit" class="p-1 rounded text-zinc-400 hover:text-red-600 hover:bg-stone-200/60 transition cursor-pointer" title="{{ __('Cerrar Sesión') }}">
@@ -375,11 +444,6 @@
             </div>
         @endauth
 
-        <!-- Trello Sync Pause Toggle -->
-        <div class="px-3 py-2 border-t border-[#e9e9e7] bg-[#fdfdfc]">
-            <livewire:trello-pause-toggle />
-        </div>
-
     </aside>
 
     <!-- Main Content Container (Dynamic Padding for Collapsible Sidebar) -->
@@ -387,6 +451,27 @@
         :class="sidebarOpen ? 'pl-64' : 'pl-16'"
         class="flex-1 h-screen max-h-screen flex flex-col w-full bg-[#fbfbfa] transition-all duration-200 ease-in-out overflow-hidden">
         
+        <!-- Demo Environment Notification Banner -->
+        @if(app(\App\Services\DemoEnvironmentService::class)->isDemo())
+            <div class="bg-amber-500/10 border-b border-amber-500/25 px-6 py-1.5 flex items-center justify-between text-xs text-amber-900 shrink-0 select-none">
+                <div class="flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 font-bold tracking-wider bg-amber-500/20 text-amber-900 px-2 py-0.5 rounded text-[10px] uppercase">
+                        <x-lucide-database class="w-3 h-3 text-amber-700" />
+                        {{ __('Modo Demostración') }}
+                    </span>
+                    <span class="text-[11px] text-amber-800">
+                        {{ __('Base de datos aislada (demo.database.sqlite) — Desconectado de Trello') }}
+                    </span>
+                </div>
+                <form method="POST" action="{{ route('logout') }}" class="inline">
+                    @csrf
+                    <button type="submit" class="text-[11px] font-medium text-amber-900 hover:text-amber-950 underline cursor-pointer">
+                        {{ __('Salir de Demo') }}
+                    </button>
+                </form>
+            </div>
+        @endif
+
         <!-- Top Utility Bar -->
         <header class="h-11 border-b border-[#e9e9e7] bg-[#fbfbfa] px-6 flex items-center justify-between text-xs text-zinc-500 sticky top-0 z-50 backdrop-blur-xs shrink-0 gap-4">
             <div class="flex items-center gap-2.5 shrink-0">
@@ -394,8 +479,10 @@
                     <x-lucide-panel-left class="w-4 h-4" />
                 </button>
                 <span class="font-medium text-zinc-700 hidden sm:flex items-center gap-1.5">
-                    <img src="{{ asset('favicon.png') }}" alt="Kudos" class="w-4 h-4 rounded-xs shrink-0">
-                    Kudos Design Ops
+                    <div class="w-4 h-4 rounded-sm bg-[#eda621] flex items-center justify-center shrink-0">
+                        <img src="{{ asset('images/kudos-hand-white.svg') }}" alt="{{ config('app.name') }}" class="w-2.5 h-2.5 object-contain">
+                    </div>
+                    {{ config('app.name') }}
                 </span>
                 <span class="hidden sm:inline">/</span>
                 <span class="text-zinc-500 font-normal truncate max-w-[120px] sm:max-w-none">{{ __($title ?? 'Dashboard') }}</span>
@@ -426,6 +513,69 @@
                         {{ $overdueCount }} {{ __('Atrasadas') }}
                     </span>
                 @endif
+
+                @auth
+                    <!-- Header User Profile & Logout Dropdown -->
+                    <div class="relative shrink-0 border-l border-[#e9e9e7] pl-2.5 ml-0.5" x-data="{ open: false }">
+                        <button 
+                            @click="open = !open" 
+                            type="button" 
+                            class="flex items-center gap-1.5 p-1 rounded-lg hover:bg-stone-200/60 transition cursor-pointer"
+                            title="{{ auth()->user()->name }} ({{ auth()->user()->role?->label() }})">
+                            @if(auth()->user()->avatar_url)
+                                <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-6 h-6 rounded-full object-cover shrink-0 shadow-2xs border border-stone-200" />
+                            @else
+                                <div class="w-6 h-6 rounded-full bg-stone-900 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
+                                    {{ auth()->user()->initials }}
+                                </div>
+                            @endif
+                            <x-lucide-chevron-down class="w-3 h-3 text-zinc-400" />
+                        </button>
+
+                        <div 
+                            x-show="open" 
+                            @click.outside="open = false"
+                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="transform opacity-0 scale-95"
+                            x-transition:enter-end="transform opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="transform opacity-100 scale-100"
+                            x-transition:leave-end="transform opacity-0 scale-95"
+                            class="absolute right-0 mt-2 w-56 bg-white border border-stone-200 rounded-xl shadow-lg py-1 z-50 text-xs"
+                            style="display: none;">
+                            
+                            <div class="px-3 py-2 border-b border-stone-100">
+                                <p class="font-semibold text-zinc-900 truncate">{{ auth()->user()->name }}</p>
+                                <p class="text-[11px] text-zinc-500 truncate">{{ auth()->user()->email }}</p>
+                                <div class="mt-1">
+                                    <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold border {{ auth()->user()->role?->badgeStyle() ?? 'bg-emerald-100 text-emerald-800 border-emerald-300' }}">
+                                        {{ auth()->user()->role?->label() ?? __('Diseñador') }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <a href="{{ route('settings.profile') }}" class="flex items-center gap-2 px-3 py-2 text-zinc-700 hover:bg-stone-50 transition">
+                                <x-lucide-user class="w-3.5 h-3.5 text-zinc-400" />
+                                <span>{{ __('Mi Perfil y Configuración') }}</span>
+                            </a>
+
+                            <a href="/settings/language" class="flex items-center gap-2 px-3 py-2 text-zinc-700 hover:bg-stone-50 transition">
+                                <x-lucide-languages class="w-3.5 h-3.5 text-zinc-400" />
+                                <span>{{ __('Idioma') }}</span>
+                            </a>
+
+                            <div class="border-t border-stone-100 my-1"></div>
+
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 transition cursor-pointer text-left">
+                                    <x-lucide-log-out class="w-3.5 h-3.5" />
+                                    <span>{{ __('Cerrar Sesión') }}</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @endauth
             </div>
         </header>
 

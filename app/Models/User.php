@@ -21,6 +21,7 @@ class User extends Authenticatable
         'password',
         'role',
         'phone',
+        'preferences',
         'avatar_url',
         'active',
         'last_login_at',
@@ -42,6 +43,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'preferences' => 'array',
             'active' => 'boolean',
             'last_login_at' => 'datetime',
         ];
@@ -91,5 +93,17 @@ class User extends Authenticatable
         }
 
         return mb_strtoupper(mb_substr($initials, 0, 2)) ?: 'US';
+    }
+
+    public function getPreference(string $key, mixed $default = null): mixed
+    {
+        return data_get($this->preferences ?? [], $key, $default);
+    }
+
+    public function setPreference(string $key, mixed $value): void
+    {
+        $prefs = $this->preferences ?? [];
+        data_set($prefs, $key, $value);
+        $this->update(['preferences' => $prefs]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Enums\CoreStatus;
 use App\Models\Substatus;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -35,6 +36,14 @@ class Substatuses extends Component
     public bool $is_default = false;
 
     public bool $is_global = false;
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
+            abort(403, __('No tiene permisos para acceder a esta sección.'));
+        }
+    }
 
     protected function rules(): array
     {

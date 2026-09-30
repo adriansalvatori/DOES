@@ -8,6 +8,7 @@ use App\Models\ClientLink;
 use App\Models\ClientLocation;
 use App\Models\Order;
 use App\Services\ClientMatchingService;
+use App\Services\QrCodeService;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -658,9 +659,14 @@ class ClientFlyoutPanel extends Component
     public function render()
     {
         $currentClient = $this->clientId ? Client::with(['activeOrders', 'archivedOrders', 'locations'])->find($this->clientId) : null;
+        $qrService = app(QrCodeService::class);
+        $currentClientQrSvg = ($currentClient && $currentClient->portal_url) ? $qrService->generateSvg($currentClient->portal_url, 260) : '';
+        $currentClientQrDataUri = ($currentClient && $currentClient->portal_url) ? $qrService->generateDataUri($currentClient->portal_url, 340) : '';
 
         return view('livewire.clients.client-flyout-panel', [
             'currentClient' => $currentClient,
+            'currentClientQrSvg' => $currentClientQrSvg,
+            'currentClientQrDataUri' => $currentClientQrDataUri,
         ]);
     }
 }

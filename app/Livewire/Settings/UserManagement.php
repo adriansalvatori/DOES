@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Enums\UserRole;
 use App\Models\Designer;
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -23,6 +24,8 @@ class UserManagement extends Component
 
     public string $email = '';
 
+    public string $phone = '';
+
     public string $role = 'designer';
 
     public ?int $designer_id = null;
@@ -31,7 +34,11 @@ class UserManagement extends Component
 
     public string $password = '';
 
+    public bool $changePassword = false;
+
     public string $search = '';
+
+    public string $cs_whatsapp_phone = '';
 
     public function mount()
     {
@@ -39,13 +46,26 @@ class UserManagement extends Component
         if (! $user || ! $user->isAdmin()) {
             abort(403, __('No tiene permisos para acceder a esta sección.'));
         }
+
+        $this->cs_whatsapp_phone = Setting::get('cs_whatsapp_phone', '+16783580594');
+    }
+
+    public function saveCsWhatsapp(): void
+    {
+        $this->validate([
+            'cs_whatsapp_phone' => 'required|string|max:50',
+        ]);
+
+        Setting::set('cs_whatsapp_phone', trim($this->cs_whatsapp_phone));
+        session()->flash('success_cs', __('Número de WhatsApp de Atención al Cliente actualizado exitosamente.'));
     }
 
     public function openCreateModal()
     {
-        $this->reset(['editingUserId', 'name', 'email', 'role', 'designer_id', 'password', 'active']);
+        $this->reset(['editingUserId', 'name', 'email', 'phone', 'role', 'designer_id', 'password', 'active']);
         $this->role = UserRole::DESIGNER->value;
         $this->active = true;
+        $this->changePassword = true;
         $this->showModal = true;
     }
 
@@ -55,10 +75,12 @@ class UserManagement extends Component
         $this->editingUserId = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
+        $this->phone = $user->phone ?? ($user->designer?->phone ?? '');
         $this->role = $user->role->value;
         $this->active = $user->active;
         $this->designer_id = $user->designer?->id;
         $this->password = '';
+        $this->changePassword = false;
         $this->showModal = true;
     }
 
@@ -67,45 +89,53 @@ class UserManagement extends Component
         $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$this->editingUserId,
+            'phone' => 'nullable|string|max:50',
             'role' => 'required|string',
             'active' => 'boolean',
             'designer_id' => 'nullable|integer|exists:designers,id',
         ];
 
-        if (! $this->editingUserId) {
+        if (! $this->editingUserId || $this->changePassword) {
             $rules['password'] = 'required|string|min:8';
         }
 
         $this->validate($rules);
+
+        $cleanPhone = $this->phone ? trim($this->phone) : null;
 
         if ($this->editingUserId) {
             $user = User::findOrFail($this->editingUserId);
             $user->update([
                 'name' => $this->name,
                 'email' => $this->email,
+                'phone' => $cleanPhone,
                 'role' => $this->role,
                 'active' => $this->active,
             ]);
 
-            if (! empty($this->password)) {
+            if ($this->changePassword && ! empty($this->password)) {
                 $user->update(['password' => Hash::make($this->password)]);
             }
         } else {
             $user = User::create([
                 'name' => $this->name,
                 'email' => $this->email,
+                'phone' => $cleanPhone,
                 'password' => Hash::make($this->password),
                 'role' => $this->role,
                 'active' => $this->active,
             ]);
         }
 
-        // Handle Designer linking
+        // Handle Designer linking & phone sync
         Designer::where('user_id', $user->id)->update(['user_id' => null]);
         if ($this->designer_id) {
             $designer = Designer::find($this->designer_id);
             if ($designer) {
-                $designer->update(['user_id' => $user->id]);
+                $designer->update([
+                    'user_id' => $user->id,
+                    'phone' => $cleanPhone ?: $designer->phone,
+                ]);
             }
         }
 
@@ -135,6 +165,6 @@ class UserManagement extends Component
             'users' => $users,
             'designers' => $designers,
             'roles' => UserRole::cases(),
-        ])->layout('components.layouts.app', ['title' => __('Gestión de Usuarios - Kudos Design Ops')]);
+        ])->layout('components.layouts.app', ['title' => __('Gestión de Usuarios - ').config('app.name')]);
     }
 }

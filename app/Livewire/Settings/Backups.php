@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -14,6 +15,14 @@ class Backups extends Component
     public ?string $successMessage = null;
 
     public ?string $errorMessage = null;
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if ($user && ! $user->isAdmin()) {
+            abort(403, __('No tiene permisos para acceder a esta sección.'));
+        }
+    }
 
     public function createBackup(): void
     {

@@ -4,6 +4,7 @@ namespace App\Livewire\Settings;
 
 use App\Models\SubtaskPreset;
 use App\Models\SystemTaskConfig;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -29,6 +30,14 @@ class SubtaskPresets extends Component
     public bool $is_active = true;
 
     public bool $is_work_task = true;
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
+            abort(403, __('No tiene permisos para acceder a esta sección.'));
+        }
+    }
 
     protected function rules(): array
     {

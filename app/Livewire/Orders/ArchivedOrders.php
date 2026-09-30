@@ -134,6 +134,6 @@ class ArchivedOrders extends Component
             'inProductionOrders' => $inProductionOrders,
             'designers' => $designers,
             'globalAvgTurnaround' => $globalAvgTurnaround,
-        ])->layout('components.layouts.app', ['title' => 'Órdenes Archivadas & Rendimiento - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Órdenes Archivadas & Rendimiento - ').config('app.name')]);
     }
 }

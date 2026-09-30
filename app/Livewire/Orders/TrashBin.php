@@ -4,11 +4,20 @@ namespace App\Livewire\Orders;
 
 use App\Models\Order;
 use App\Models\OrderEvent;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class TrashBin extends Component
 {
     public string $search = '';
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
+            abort(403, __('No tiene permisos para acceder a la papelera.'));
+        }
+    }
 
     public function restoreOrder(int $orderId): void
     {
@@ -48,6 +57,6 @@ class TrashBin extends Component
 
         return view('livewire.orders.trash-bin', [
             'trashedOrders' => $trashedOrders,
-        ])->layout('components.layouts.app', ['title' => 'Papelera — Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Papelera — ').config('app.name')]);
     }
 }

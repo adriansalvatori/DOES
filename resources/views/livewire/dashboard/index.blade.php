@@ -154,16 +154,18 @@
         </button>
 
         <!-- 4. RESOLVER -->
-        <button 
-            id="tour-stats-resolver"
-            wire:click="setActiveTab('resolver')" 
-            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'resolver' ? 'bg-orange-50/70 border-2 border-orange-500 ring-4 ring-orange-300/40 shadow-xs' : 'bg-white border-orange-200/80 hover:border-orange-300 hover:bg-orange-50/30' }}">
-            <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-orange-900 truncate">{{ __('Action Required') }}</span>
-                <x-lucide-shield-alert class="w-3.5 h-3.5 text-orange-600 shrink-0 ml-1" />
-            </div>
-            <span class="text-xl font-bold text-orange-700 font-mono leading-none">{{ $resolverOrders->count() }}</span>
-        </button>
+        @if(!auth()->user()?->isDesigner())
+            <button 
+                id="tour-stats-resolver"
+                wire:click="setActiveTab('resolver')" 
+                class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'resolver' ? 'bg-orange-50/70 border-2 border-orange-500 ring-4 ring-orange-300/40 shadow-xs' : 'bg-white border-orange-200/80 hover:border-orange-300 hover:bg-orange-50/30' }}">
+                <div class="flex items-center justify-between text-xs min-w-0">
+                    <span class="font-bold text-xs text-orange-900 truncate">{{ __('Action Required') }}</span>
+                    <x-lucide-shield-alert class="w-3.5 h-3.5 text-orange-600 shrink-0 ml-1" />
+                </div>
+                <span class="text-xl font-bold text-orange-700 font-mono leading-none">{{ $resolverOrders->count() }}</span>
+            </button>
+        @endif
 
         <!-- 5. LISTO ALTA -->
         <button 
@@ -213,7 +215,7 @@
     <!-- Main Content Area: Default Overview 4 Cards vs Single Full-Width Card -->
     @if($activeTab === 'all')
         <!-- DEFAULT OVERVIEW: 2x2 GRID OF ALL 4 CORE CARDS -->
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 {{ auth()->user()?->isDesigner() ? 'xl:grid-cols-3' : 'xl:grid-cols-2' }} gap-4">
             
             <!-- 1. SECTION: PARA HOY -->
             <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
@@ -385,49 +387,51 @@
             </div>
 
             <!-- 4. SECTION: RESOLVER -->
-            <div class="bg-white border border-orange-200/80 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
-                <div class="space-y-3">
-                    <div class="h-8 flex items-center justify-between border-b border-orange-100">
-                        <h3 class="h-8 font-bold text-xs text-orange-800 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> {{ __('Action Required') }} ({{ $resolverOrders->count() }})
-                        </h3>
-                        <span class="text-[10px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Bloqueos</span>
-                    </div>
-
-                    @if($resolverOrders->isEmpty())
-                        <p class="text-xs text-zinc-400 text-center py-12">{{ __('Nothing here to be done') }}</p>
-                    @else
-                        <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
-                            @foreach($resolverOrders as $order)
-                                <div class="rounded-xl p-3 flex items-center justify-between gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-orange-200' }}">
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center gap-2 min-w-0">
-                                            <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                            @if($order->location_text)
-                                                <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $order->location_text }}">
-                                                    <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                                                    <span class="uppercase truncate max-w-[100px]">{{ $order->location_text }}</span>
-                                                </span>
-                                            @endif
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-50 text-orange-800 border border-orange-200 shrink-0 whitespace-nowrap">
-                                                {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
-                                            </span>
-                                        </div>
-                                        <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
-                                    </div>
-
-                                    <div class="shrink-0">
-                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
-                                            <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                            <span>Detalle</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            @endforeach
+            @if(!auth()->user()?->isDesigner())
+                <div class="bg-white border border-orange-200/80 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="h-8 flex items-center justify-between border-b border-orange-100">
+                            <h3 class="h-8 font-bold text-xs text-orange-800 uppercase tracking-wider flex items-center gap-2">
+                                <x-lucide-shield-alert class="w-4 h-4 text-orange-600" /> {{ __('Action Required') }} ({{ $resolverOrders->count() }})
+                            </h3>
+                            <span class="text-[10px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Bloqueos</span>
                         </div>
-                    @endif
+
+                        @if($resolverOrders->isEmpty())
+                            <p class="text-xs text-zinc-400 text-center py-12">{{ __('Nothing here to be done') }}</p>
+                        @else
+                            <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                                @foreach($resolverOrders as $order)
+                                    <div class="rounded-xl p-3 flex items-center justify-between gap-3 min-w-0 {{ $order->isUrgente() ? ($order->done_today ? 'bg-[#fafaf9] border border-stone-200 opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') : 'bg-[#fcfcfb] border border-orange-200' }}">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <h4 class="font-normal text-xs text-zinc-500 truncate uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+                                                @if($order->location_text)
+                                                    <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0" title="{{ __('Locación') }}: {{ $order->location_text }}">
+                                                        <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
+                                                        <span class="uppercase truncate max-w-[100px]">{{ $order->location_text }}</span>
+                                                    </span>
+                                                @endif
+                                                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-orange-50 text-orange-800 border border-orange-200 shrink-0 whitespace-nowrap">
+                                                    {{ $order->blocking_reason?->value ?? ($order->substatus ? $order->substatus->value : 'BLOQUEADA') }}
+                                                </span>
+                                            </div>
+                                            <p class="font-bold text-xs text-zinc-900 mt-0.5 truncate uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+                                        </div>
+
+                                        <div class="shrink-0">
+                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1">
+                                                <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
+                                                <span>Detalle</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
                 </div>
-            </div>
+            @endif
 
         </div>
     @else
@@ -604,7 +608,7 @@
             @endif
 
             <!-- 4. FULL-WIDTH: RESOLVER -->
-            @if($activeTab === 'resolver')
+            @if(!auth()->user()?->isDesigner() && $activeTab === 'resolver')
                 <div class="space-y-3">
                     <div class="h-8 flex items-center justify-between border-b border-orange-100">
                         <h3 class="h-8 font-bold text-xs text-orange-800 uppercase tracking-wider flex items-center gap-2">

@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -21,6 +22,16 @@ class ResolverList extends Component
     public string $unblockReason = '';
 
     public ?Order $unblockingOrder = null;
+
+    public function mount(): mixed
+    {
+        $user = Auth::user();
+        if ($user && $user->isDesigner()) {
+            return redirect()->route('kanban');
+        }
+
+        return null;
+    }
 
     #[On('order-updated')]
     public function refreshList(): void
@@ -183,6 +194,6 @@ class ResolverList extends Component
         return view('livewire.resolver.resolver-list', [
             'blockedOrders' => $blockedOrders,
             'resolverTasks' => $resolverTasks,
-        ])->layout('components.layouts.app', ['title' => 'Action Required - Kudos Design Ops']);
+        ])->layout('components.layouts.app', ['title' => __('Action Required - ').config('app.name')]);
     }
 }
