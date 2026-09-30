@@ -14,7 +14,7 @@ class DatabaseBackupCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'db:backup {--keep=7 : Number of daily backup files to keep}';
+    protected $signature = 'db:backup {--keep=30 : Number of daily backup files to keep (0 to keep all)}';
 
     /**
      * The console command description.
@@ -37,7 +37,7 @@ class DatabaseBackupCommand extends Command
             return self::FAILURE;
         }
 
-        $backupDir = storage_path('app/backups');
+        $backupDir = config('database.backup_path', storage_path('app/backups'));
         File::ensureDirectoryExists($backupDir);
 
         $driver = $dbConfig['driver'] ?? 'sqlite';

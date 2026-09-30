@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Orders;
 
+use App\Contracts\WorkOrderNumberGenerator;
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Models\Client;
@@ -128,6 +129,16 @@ class CreateOrderModal extends Component
         $this->isDuplicating = false;
         $this->originalOrderId = null;
         $this->designerIds = [];
+    }
+
+    public function generateWoNumber(?WorkOrderNumberGenerator $generator = null): void
+    {
+        $generator ??= app(WorkOrderNumberGenerator::class);
+
+        $this->woNumber = $generator->generateNextDigits([
+            'company_name' => $this->companyName,
+            'task_name' => $this->taskName,
+        ]);
     }
 
     public function updatedCompanyName($value)

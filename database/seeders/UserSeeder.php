@@ -50,8 +50,11 @@ class UserSeeder extends Seeder
 
         if ($euraliz) {
             $euraliz->update([
+                'name' => 'Euralíz Bravo',
                 'role' => UserRole::ADMIN,
                 'email' => 'euraliz.jbg@gmail.com',
+                'password' => $password,
+                'active' => true,
             ]);
         } else {
             $euraliz = User::create([

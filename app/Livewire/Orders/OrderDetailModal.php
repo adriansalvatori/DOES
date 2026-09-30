@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Orders;
 
+use App\Contracts\WorkOrderNumberGenerator;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
@@ -117,6 +118,38 @@ class OrderDetailModal extends Component
 
     public $previewMediaType = 'image'; // image, pdf, iframe
 
+    public string $activeOrdersSortField = 'wo';
+
+    public string $activeOrdersSortDirection = 'asc';
+
+    public function sortByActiveOrders(string $field): void
+    {
+        if ($this->activeOrdersSortField === $field) {
+            $this->activeOrdersSortDirection = $this->activeOrdersSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->activeOrdersSortField = $field;
+            $this->activeOrdersSortDirection = 'asc';
+        }
+    }
+
+    public function sortOrdersCollection($orders, string $field, string $direction)
+    {
+        $desc = $direction === 'desc';
+
+        return $orders->sortBy(function ($order) use ($field) {
+            return match ($field) {
+                'wo' => (int) preg_replace('/\D/', '', (string) ($order->wo_number ?? 0)),
+                'designer' => mb_strtolower($order->designer?->name ?? 'zzz'),
+                'location' => mb_strtolower($order->location_name ?: ($order->clientLocation?->name ?? 'zzz')),
+                'core_status' => mb_strtolower($order->core_status?->label() ?? 'zzz'),
+                'task' => mb_strtolower($order->clean_task_name ?: ($order->task_name ?? 'zzz')),
+                'substatus' => mb_strtolower($order->substatus?->label() ?? 'zzz'),
+                'due_date' => $order->current_due_date ? $order->current_due_date->timestamp : 0,
+                default => $order->id,
+            };
+        }, SORT_REGULAR, $desc)->values();
+    }
+
     public function mount($orderId = null)
     {
         $this->orderId = $orderId;
@@ -142,6 +175,56 @@ class OrderDetailModal extends Component
         }
 
         $this->refreshTrelloData();
+    }
+
+    #[On('client-updated')]
+    public function onClientUpdated(): void
+    {
+        // Re-render when client information is updated
+    }
+
+    public function openClientDetail(?int $clientId = null): void
+    {
+        if ($clientId) {
+            $this->dispatch('open-client-flyout', clientId: $clientId);
+
+            return;
+        }
+
+        $targetClientId = null;
+        if ($this->orderId) {
+            $order = Order::find($this->orderId);
+            if ($order) {
+                if ($order->client_id) {
+                    $targetClientId = $order->client_id;
+                } else {
+                    $companyNameToMatch = ! empty($order->company_name)
+                        ? $order->company_name
+                        : ($this->isEditing && ! empty($this->editCompanyName) ? $this->editCompanyName : null);
+
+                    if ($companyNameToMatch) {
+                        $locationNameToMatch = $order->location_name ?: ($this->isEditing ? $this->editLocationName : null);
+                        $rawMatch = $companyNameToMatch.($locationNameToMatch ? ' REF '.$locationNameToMatch : '');
+                        $matched = app(ClientMatchingService::class)->matchOrCreate(
+                            $rawMatch,
+                            $order->responsible_person ?: ($this->isEditing ? $this->editResponsiblePerson : null),
+                            createIfMissing: true
+                        );
+
+                        if (! empty($matched['client'])) {
+                            $targetClientId = $matched['client']->id;
+                            $updateData = ['client_id' => $targetClientId];
+                            if (! empty($matched['location'])) {
+                                $updateData['client_location_id'] = $matched['location']->id;
+                            }
+                            $order->update($updateData);
+                        }
+                    }
+                }
+            }
+        }
+
+        $this->dispatch('open-client-flyout', clientId: $targetClientId);
     }
 
     public function refreshTrelloData()
@@ -310,6 +393,16 @@ class OrderDetailModal extends Component
         $this->editInternalRevisionCount = $order->internal_revision_count ?? 0;
 
         $this->isEditing = true;
+    }
+
+    public function generateWoNumber(?WorkOrderNumberGenerator $generator = null): void
+    {
+        $generator ??= app(WorkOrderNumberGenerator::class);
+
+        $this->editWoNumber = $generator->generateNextDigits([
+            'company_name' => $this->editCompanyName,
+            'task_name' => $this->editTaskName,
+        ]);
     }
 
     public function changeCoreStatus(string $statusValue): void
@@ -1002,8 +1095,20 @@ class OrderDetailModal extends Component
 
         $validSubstatuses = app(StatusTransitionService::class)->getValidSubstatuses($this->editCoreStatus ?: $order?->core_status);
 
+        $clientOtherActiveOrders = collect();
+        if ($order && $order->client_id) {
+            $rawOtherOrders = Order::where('client_id', $order->client_id)
+                ->where('id', '!=', $order->id)
+                ->where('in_workspace', true)
+                ->where('core_status', '!=', CoreStatus::ARCHIVED)
+                ->with(['designer', 'clientLocation'])
+                ->get();
+            $clientOtherActiveOrders = $this->sortOrdersCollection($rawOtherOrders, $this->activeOrdersSortField, $this->activeOrdersSortDirection);
+        }
+
         return view('livewire.orders.order-detail-modal', [
             'order' => $order,
+            'clientOtherActiveOrders' => $clientOtherActiveOrders,
             'designers' => Designer::where('active', true)->get(),
             'coreStatuses' => CoreStatus::cases(),
             'substatuses' => $validSubstatuses,

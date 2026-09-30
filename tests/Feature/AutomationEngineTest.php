@@ -9,7 +9,9 @@ use App\Enums\Substatus;
 use App\Models\Designer;
 use App\Models\DueDateHistory;
 use App\Models\Order;
+use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -44,6 +46,82 @@ class AutomationEngineTest extends TestCase
         ]);
 
         $this->assertNotNull($order->fresh()->current_due_date);
+    }
+
+    public function test_welcome_email_scheduled_for_today_if_created_before_cutoff(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-30 14:00:00')); // Wednesday 2:00 PM
+        $designer = Designer::first();
+        $order = Order::create([
+            'company_name' => 'Before Cutoff Corp',
+            'task_name' => 'Web Banner',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        app(AutomationEngine::class)->handleOrderCreated($order);
+
+        $task = RelatedTask::where('order_id', $order->id)->where('type', RelatedTaskType::BIENVENIDA)->first();
+        $this->assertNotNull($task);
+        $this->assertEquals('2026-09-30', $task->scheduled_date->toDateString());
+        $this->assertEquals('2026-09-30', $task->due_date->toDateString());
+    }
+
+    public function test_welcome_email_scheduled_for_next_weekday_if_created_after_cutoff(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-30 16:35:00')); // Wednesday 4:35 PM
+        $designer = Designer::first();
+        $order = Order::create([
+            'company_name' => 'After Cutoff Corp',
+            'task_name' => 'Web Banner',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        app(AutomationEngine::class)->handleOrderCreated($order);
+
+        $task = RelatedTask::where('order_id', $order->id)->where('type', RelatedTaskType::BIENVENIDA)->first();
+        $this->assertNotNull($task);
+        $this->assertEquals('2026-10-01', $task->scheduled_date->toDateString()); // Thursday
+        $this->assertEquals('2026-10-01', $task->due_date->toDateString());
+    }
+
+    public function test_welcome_email_scheduled_for_monday_if_created_friday_after_cutoff(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-02 17:00:00')); // Friday 5:00 PM
+        $designer = Designer::first();
+        $order = Order::create([
+            'company_name' => 'Friday Evening Corp',
+            'task_name' => 'Brochure',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        app(AutomationEngine::class)->handleOrderCreated($order);
+
+        $task = RelatedTask::where('order_id', $order->id)->where('type', RelatedTaskType::BIENVENIDA)->first();
+        $this->assertNotNull($task);
+        $this->assertEquals('2026-10-05', $task->scheduled_date->toDateString()); // Monday
+        $this->assertEquals('2026-10-05', $task->due_date->toDateString());
+    }
+
+    public function test_welcome_email_scheduled_for_monday_if_created_on_weekend(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-10-03 11:00:00')); // Saturday 11:00 AM
+        $designer = Designer::first();
+        $order = Order::create([
+            'company_name' => 'Weekend Corp',
+            'task_name' => 'Flyer',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        app(AutomationEngine::class)->handleOrderCreated($order);
+
+        $task = RelatedTask::where('order_id', $order->id)->where('type', RelatedTaskType::BIENVENIDA)->first();
+        $this->assertNotNull($task);
+        $this->assertEquals('2026-10-05', $task->scheduled_date->toDateString()); // Monday
+        $this->assertEquals('2026-10-05', $task->due_date->toDateString());
     }
 
     public function test_approval_flow_with_missing_measures_moves_to_entrante_and_creates_resolver_task()

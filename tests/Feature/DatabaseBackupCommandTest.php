@@ -14,15 +14,15 @@ class DatabaseBackupCommandTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->backupDir = storage_path('app/backups');
+        $this->backupDir = storage_path('framework/testing/backups');
+        config(['database.backup_path' => $this->backupDir]);
+        File::ensureDirectoryExists($this->backupDir);
     }
 
     protected function tearDown(): void
     {
-        foreach ($this->createdTestFiles as $file) {
-            if (File::exists($file)) {
-                File::delete($file);
-            }
+        if (File::exists($this->backupDir)) {
+            File::cleanDirectory($this->backupDir);
         }
         parent::tearDown();
     }

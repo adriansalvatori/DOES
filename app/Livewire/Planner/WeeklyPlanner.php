@@ -574,8 +574,20 @@ class WeeklyPlanner extends Component
                 $q->whereNull('order_id')
                     ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
             })
-            ->whereNotNull('scheduled_date')
+            ->where(function ($q) {
+                $q->whereNotNull('scheduled_date')
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('scheduled_date')
+                            ->whereNotNull('due_date');
+                    });
+            })
             ->get();
+
+        foreach ($subtasks as $st) {
+            if (! $st->scheduled_date && $st->due_date) {
+                $st->scheduled_date = $st->due_date;
+            }
+        }
 
         $unscheduledOrders = Order::inWorkspace()
             ->prioritizeUrgente()
@@ -648,6 +660,9 @@ class WeeklyPlanner extends Component
 
         $slaBreachedList = collect();
         foreach ($subtasks as $st) {
+            if (! $this->showSystemTasks && ! $st->isWorkTask()) {
+                continue;
+            }
             if ($st->order && $st->order->current_due_date && $st->scheduled_date && ! $st->isFollowUp() && ! $st->order->isSlaExempt()) {
                 if ($st->scheduled_date->gt($st->order->current_due_date) || $st->order->isOverdue()) {
                     $daysOverdue = (int) max(1, $st->order->current_due_date->diffInDays($st->scheduled_date));

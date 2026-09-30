@@ -107,10 +107,22 @@
                     <!-- Row 1: WO Number, Trello ID & Responsible Person -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                         <div>
-                            <label class="font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-hash class="w-3 h-3 text-zinc-400" />
-                                <span>WO (Opcional)</span>
-                            </label>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="font-medium text-zinc-700 flex items-center gap-1">
+                                    <x-lucide-hash class="w-3 h-3 text-zinc-400" />
+                                    <span>WO (Opcional)</span>
+                                </label>
+                                <button 
+                                    type="button" 
+                                    wire:click="generateWoNumber" 
+                                    wire:loading.attr="disabled"
+                                    class="text-[11px] font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition select-none disabled:opacity-50"
+                                    title="Crear siguiente número de WO automáticamente">
+                                    <x-lucide-sparkles class="w-3 h-3 text-amber-500" wire:loading.remove wire:target="generateWoNumber" />
+                                    <x-lucide-loader-2 class="w-3 h-3 animate-spin text-zinc-400" wire:loading wire:target="generateWoNumber" />
+                                    <span>Crear WO</span>
+                                </button>
+                            </div>
                             <div class="flex rounded-md shadow-2xs">
                                 <span class="inline-flex items-center px-2 rounded-l-md border border-r-0 border-[#e9e9e7] bg-stone-100 text-zinc-600 font-mono font-bold text-xs select-none">
                                     WO

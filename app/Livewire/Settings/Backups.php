@@ -2,19 +2,27 @@
 
 namespace App\Livewire\Settings;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
+use Livewire\WithPagination;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class Backups extends Component
 {
+    use WithPagination;
+
     public ?string $successMessage = null;
 
     public ?string $errorMessage = null;
+
+    public string $search = '';
+
+    public int $perPage = 10;
 
     public function mount(): void
     {
@@ -22,6 +30,21 @@ class Backups extends Component
         if ($user && ! $user->isAdmin()) {
             abort(403, __('No tiene permisos para acceder a esta sección.'));
         }
+    }
+
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingPerPage(): void
+    {
+        $this->resetPage();
+    }
+
+    public function getBackupDirectory(): string
+    {
+        return config('database.backup_path', storage_path('app/backups'));
     }
 
     public function createBackup(): void
@@ -33,6 +56,7 @@ class Backups extends Component
 
             if ($exitCode === 0) {
                 $this->successMessage = __('Respaldo generado exitosamente.');
+                $this->resetPage();
             } else {
                 $output = trim(Artisan::output());
                 $this->errorMessage = __('Ocurrió un error al generar el respaldo.').($output ? " ({$output})" : '');
@@ -46,7 +70,7 @@ class Backups extends Component
     {
         $this->resetMessages();
         $safeFilename = basename($filename);
-        $filePath = storage_path('app/backups/'.$safeFilename);
+        $filePath = $this->getBackupDirectory().'/'.$safeFilename;
 
         if (! File::exists($filePath)) {
             $this->errorMessage = __('El archivo de respaldo no existe.');
@@ -61,7 +85,7 @@ class Backups extends Component
     {
         $this->resetMessages();
         $safeFilename = basename($filename);
-        $filePath = storage_path('app/backups/'.$safeFilename);
+        $filePath = $this->getBackupDirectory().'/'.$safeFilename;
 
         if (File::exists($filePath)) {
             File::delete($filePath);
@@ -78,9 +102,9 @@ class Backups extends Component
     }
 
     #[Computed]
-    public function backups(): array
+    public function allBackups(): array
     {
-        $backupDir = storage_path('app/backups');
+        $backupDir = $this->getBackupDirectory();
 
         if (! File::exists($backupDir)) {
             return [];
@@ -133,10 +157,50 @@ class Backups extends Component
 
     public function render()
     {
+        $all = $this->allBackups;
+        $search = trim($this->search);
+
+        if ($search !== '') {
+            $searchLower = mb_strtolower($search);
+            $filtered = array_values(array_filter($all, function (array $backup) use ($searchLower) {
+                return str_contains(mb_strtolower($backup['filename']), $searchLower)
+                    || str_contains(mb_strtolower($backup['driver']), $searchLower)
+                    || str_contains(mb_strtolower($backup['created_at']), $searchLower)
+                    || str_contains(mb_strtolower($backup['created_at_human']), $searchLower);
+            }));
+        } else {
+            $filtered = $all;
+        }
+
+        $perPage = max(1, (int) $this->perPage);
+        $total = count($filtered);
+        $currentPage = $this->getPage();
+        $lastPage = max(1, (int) ceil($total / $perPage));
+
+        if ($currentPage > $lastPage) {
+            $currentPage = 1;
+            $this->setPage(1);
+        }
+
+        $offset = ($currentPage - 1) * $perPage;
+        $items = array_slice($filtered, $offset, $perPage);
+
+        $paginated = new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $currentPage,
+            ['path' => LengthAwarePaginator::resolveCurrentPath(), 'pageName' => 'page']
+        );
+
         return view('livewire.settings.backups', [
-            'backups' => $this->backups,
+            'backups' => $paginated,
+            'allBackups' => $all,
+            'totalBackups' => count($all),
+            'filteredCount' => $total,
             'nextBackupTime' => $this->nextBackupTime,
-            'totalStorageSize' => array_sum(array_column($this->backups, 'size_bytes')),
+            'totalStorageSize' => array_sum(array_column($all, 'size_bytes')),
+            'latestBackup' => $all[0] ?? null,
         ])->layout('components.layouts.app', ['title' => __('Respaldos de Base de Datos')]);
     }
 }

@@ -22,11 +22,20 @@ class EnsureDemoDatabase
         $hasSession = $request->hasSession();
         $sessionDemo = $hasSession ? $request->session()->get(DemoEnvironmentService::DEMO_SESSION_KEY, false) : null;
         $cookieDemo = $request->cookie('kudos_demo_mode');
-        $isDemo = ($hasSession && $sessionDemo === true) || $cookieDemo === '1';
+
+        // Do not let a stale guest cookie hijack the login page or lock regular login into demo DB
+        $isLoginPage = $request->is('login');
+        $isDemoRoute = $request->is('demo-login*');
+
+        $isDemo = $isDemoRoute
+            || ($hasSession && $sessionDemo === true)
+            || (! $isLoginPage && $cookieDemo === '1');
 
         if ($isDemo) {
             $this->demoService->enableDemo();
             Auth::forgetGuards();
+        } elseif ($isLoginPage && $sessionDemo !== true) {
+            $this->demoService->disableDemo();
         }
 
         return $next($request);

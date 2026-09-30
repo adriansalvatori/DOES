@@ -12,6 +12,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Models\SubtaskPreset;
+use App\Services\AutomationEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Livewire\Livewire;
@@ -515,6 +516,41 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertSee('Diseño Banner');
 
         $this->assertEquals(false, session('weekly_planner_show_system_tasks'));
+    }
+
+    public function test_weekly_planner_displays_system_tasks_generated_by_automation_engine(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-09-28 10:00:00')); // Monday morning
+        $designer = Designer::create(['name' => 'Adrián', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'Auto Engine Corp',
+            'task_name' => 'Branding Kit',
+            'core_status' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+            'current_due_date' => '2026-09-28',
+        ]);
+
+        // Triggers welcome email
+        app(AutomationEngine::class)->handleOrderCreated($order);
+
+        // Advance to 14:35 and evaluate overdue alert with due date today
+        Carbon::setTestNow(Carbon::parse('2026-09-28 14:35:00'));
+        $order->update(['current_due_date' => '2026-09-28']);
+        app(AutomationEngine::class)->checkAndCreateOverdueTask($order);
+
+        session(['weekly_planner_show_system_tasks' => true]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->set('selectedWeekStart', '2026-09-28')
+            ->assertSet('showSystemTasks', true)
+            ->assertSee('Enviar correo de bienvenida')
+            ->assertSee('Enviar correo de atraso preventivo')
+            ->call('toggleShowSystemTasks')
+            ->assertSet('showSystemTasks', false)
+            ->assertDontSee('Enviar correo de bienvenida')
+            ->assertDontSee('Enviar correo de atraso preventivo');
     }
 
     public function test_weekly_planner_workspace_orders_list_includes_and_searches_locations(): void

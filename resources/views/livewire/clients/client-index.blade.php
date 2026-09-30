@@ -65,7 +65,7 @@
                 <thead class="bg-[#f7f7f5] text-zinc-500 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
                     <tr>
                         <th class="py-2 px-3.5">{{ __('Cliente') }}</th>
-                        <th class="py-2 px-3.5 text-right whitespace-nowrap">{{ __('Órdenes Activas') }}</th>
+                        <th class="py-2 px-3.5 text-right whitespace-nowrap">{{ __('Órdenes') }}</th>
                         <th class="py-2 pr-3.5 pl-1 w-10 text-right"></th>
                     </tr>
                 </thead>
@@ -168,10 +168,26 @@
                                 </div>
                             </td>
                             <td class="py-2.5 px-3.5 text-right whitespace-nowrap">
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 inline-flex items-center gap-1">
-                                    <x-lucide-zap class="w-3 h-3 text-emerald-600" />
-                                    <span>{{ $client->active_orders_count }} activas</span>
-                                </span>
+                                <div class="inline-flex items-center gap-1.5 justify-end">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $client->active_orders_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' : 'bg-stone-100/70 text-zinc-400 border-stone-200/60' }} border inline-flex items-center gap-1 shrink-0">
+                                        <x-lucide-zap class="w-3 h-3 {{ $client->active_orders_count > 0 ? 'text-emerald-600' : 'text-zinc-400' }}" />
+                                        <span>{{ $client->active_orders_count }} activas</span>
+                                    </span>
+
+                                    @if($client->archived_orders_count > 0)
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-100/80 text-zinc-500 border border-stone-200/60 inline-flex items-center gap-1 shrink-0" title="{{ $client->archived_orders_count }} {{ __('órdenes archivadas') }}">
+                                            <x-lucide-archive class="w-2.5 h-2.5 text-zinc-400" />
+                                            <span>{{ $client->archived_orders_count }} arch.</span>
+                                        </span>
+                                    @endif
+
+                                    @if($client->backlog_orders_count > 0)
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-100/80 text-zinc-500 border border-stone-200/60 inline-flex items-center gap-1 shrink-0" title="{{ $client->backlog_orders_count }} {{ __('órdenes en backlog') }}">
+                                            <x-lucide-inbox class="w-2.5 h-2.5 text-zinc-400" />
+                                            <span>{{ $client->backlog_orders_count }} backlog</span>
+                                        </span>
+                                    @endif
+                                </div>
                             </td>
                             <td class="py-2.5 pr-3.5 pl-1 text-right w-10" @click.stop>
                                 <button 

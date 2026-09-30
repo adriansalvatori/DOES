@@ -43,6 +43,38 @@ class ClientFlyoutPanel extends Component
 
     public string $activeTab = 'general';
 
+    public string $activeOrdersSortField = 'wo';
+
+    public string $activeOrdersSortDirection = 'asc';
+
+    public function sortByActiveOrders(string $field): void
+    {
+        if ($this->activeOrdersSortField === $field) {
+            $this->activeOrdersSortDirection = $this->activeOrdersSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->activeOrdersSortField = $field;
+            $this->activeOrdersSortDirection = 'asc';
+        }
+    }
+
+    public function sortOrdersCollection($orders, string $field, string $direction)
+    {
+        $desc = $direction === 'desc';
+
+        return $orders->sortBy(function ($order) use ($field) {
+            return match ($field) {
+                'wo' => (int) preg_replace('/\D/', '', (string) ($order->wo_number ?? 0)),
+                'designer' => mb_strtolower($order->designer?->name ?? 'zzz'),
+                'location' => mb_strtolower($order->location_name ?: ($order->clientLocation?->name ?? 'zzz')),
+                'core_status' => mb_strtolower($order->core_status?->label() ?? 'zzz'),
+                'task' => mb_strtolower($order->clean_task_name ?: ($order->task_name ?? 'zzz')),
+                'substatus' => mb_strtolower($order->substatus?->label() ?? 'zzz'),
+                'due_date' => $order->current_due_date ? $order->current_due_date->timestamp : 0,
+                default => $order->id,
+            };
+        }, SORT_REGULAR, $desc)->values();
+    }
+
     #[On('open-client-flyout')]
     public function open(?int $clientId = null): void
     {
@@ -658,13 +690,17 @@ class ClientFlyoutPanel extends Component
 
     public function render()
     {
-        $currentClient = $this->clientId ? Client::with(['activeOrders', 'archivedOrders', 'locations'])->find($this->clientId) : null;
+        $currentClient = $this->clientId ? Client::with(['activeOrders.designer', 'activeOrders.clientLocation', 'archivedOrders.designer', 'archivedOrders.clientLocation', 'locations'])->find($this->clientId) : null;
+        $sortedActiveOrders = $currentClient
+            ? $this->sortOrdersCollection($currentClient->activeOrders, $this->activeOrdersSortField, $this->activeOrdersSortDirection)
+            : collect();
         $qrService = app(QrCodeService::class);
         $currentClientQrSvg = ($currentClient && $currentClient->portal_url) ? $qrService->generateSvg($currentClient->portal_url, 260) : '';
         $currentClientQrDataUri = ($currentClient && $currentClient->portal_url) ? $qrService->generateDataUri($currentClient->portal_url, 340) : '';
 
         return view('livewire.clients.client-flyout-panel', [
             'currentClient' => $currentClient,
+            'sortedActiveOrders' => $sortedActiveOrders,
             'currentClientQrSvg' => $currentClientQrSvg,
             'currentClientQrDataUri' => $currentClientQrDataUri,
         ]);

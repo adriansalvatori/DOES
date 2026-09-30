@@ -105,17 +105,17 @@
             }
         }
     }"
-    @keydown.window.escape="if ($wire.isOpen && !window.KudosDirtyGuard.isConfirmModalOpen) confirmClose(() => $wire.close())"
+    @keydown.window.escape.stop="if ($wire.isOpen && !window.KudosDirtyGuard.isConfirmModalOpen) confirmClose(() => $wire.close())"
 >
     @if($isOpen)
         {{-- Backdrop --}}
         <div 
-            class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs z-40 transition-opacity"
+            class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs z-[360] transition-opacity"
             @click="confirmClose(() => $wire.close())"
         ></div>
 
         {{-- Slide-over Flyout Panel (Proportioned max-w-2xl ~ 672px width) --}}
-        <div class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 flex flex-col border-l border-zinc-200 transform transition-transform duration-200">
+        <div id="client-flyout-panel" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-[370] flex flex-col border-l border-zinc-200 transform transition-transform duration-200">
             
             {{-- Panel Header --}}
             <div class="px-6 py-4 border-b border-zinc-100 bg-white flex items-center justify-between shrink-0">
@@ -1223,8 +1223,104 @@
                             @endif
                         </div>
 
+                        @if($currentClient->activeOrders->count() > 1)
+                            <div class="flex items-center gap-1.5 flex-wrap bg-stone-50/80 p-2 rounded-lg border border-stone-200/60 text-xs">
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 mr-1">{{ __('Ordenar:') }}</span>
+
+                                <button type="button" wire:click="sortByActiveOrders('wo')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'wo' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-white hover:bg-stone-100 text-zinc-700 border border-stone-200/80' }}" title="{{ __('Ordenar por WO') }}">
+                                    <span>WO</span>
+                                    @if($activeOrdersSortField === 'wo')
+                                        @if($activeOrdersSortDirection === 'asc')
+                                            <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @else
+                                            <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @endif
+                                    @endif
+                                </button>
+
+                                <button type="button" wire:click="sortByActiveOrders('designer')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'designer' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-white hover:bg-stone-100 text-zinc-700 border border-stone-200/80' }}" title="{{ __('Ordenar por Diseñador') }}">
+                                    <span>{{ __('Diseñador') }}</span>
+                                    @if($activeOrdersSortField === 'designer')
+                                        @if($activeOrdersSortDirection === 'asc')
+                                            <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @else
+                                            <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @endif
+                                    @endif
+                                </button>
+
+                                <button type="button" wire:click="sortByActiveOrders('location')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'location' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-white hover:bg-stone-100 text-zinc-700 border border-stone-200/80' }}" title="{{ __('Ordenar por Locación') }}">
+                                    <span>{{ __('Locación') }}</span>
+                                    @if($activeOrdersSortField === 'location')
+                                        @if($activeOrdersSortDirection === 'asc')
+                                            <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @else
+                                            <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @endif
+                                    @endif
+                                </button>
+
+                                <button type="button" wire:click="sortByActiveOrders('core_status')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'core_status' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-white hover:bg-stone-100 text-zinc-700 border border-stone-200/80' }}" title="{{ __('Ordenar por Estado') }}">
+                                    <span>{{ __('Estado') }}</span>
+                                    @if($activeOrdersSortField === 'core_status')
+                                        @if($activeOrdersSortDirection === 'asc')
+                                            <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @else
+                                            <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @endif
+                                    @endif
+                                </button>
+
+                                <button type="button" wire:click="sortByActiveOrders('task')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'task' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-white hover:bg-stone-100 text-zinc-700 border border-stone-200/80' }}" title="{{ __('Ordenar por Tarea') }}">
+                                    <span>{{ __('Tarea') }}</span>
+                                    @if($activeOrdersSortField === 'task')
+                                        @if($activeOrdersSortDirection === 'asc')
+                                            <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @else
+                                            <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                        @endif
+                                    @endif
+                                </button>
+                            </div>
+                        @endif
+
                         <div class="divide-y divide-zinc-200/60 border-t border-b border-zinc-200/60">
-                            @forelse($currentClient->activeOrders as $order)
+                            @php $previousGroup = null; @endphp
+                            @forelse($sortedActiveOrders as $order)
+                                @php
+                                    $currentGroup = match($activeOrdersSortField) {
+                                        'designer' => $order->designer?->name ?: __('Sin Diseñador Asignado'),
+                                        'location' => $order->location_name ?: ($order->clientLocation?->name ?: __('Sin Locación')),
+                                        'core_status' => $order->core_status?->label() ?: __('Sin Estado'),
+                                        default => null,
+                                    };
+                                @endphp
+
+                                @if($currentGroup !== null && $currentGroup !== $previousGroup)
+                                    @php 
+                                        $previousGroup = $currentGroup; 
+                                        $groupCount = match($activeOrdersSortField) {
+                                            'designer' => $sortedActiveOrders->filter(fn($o) => ($o->designer?->name ?: __('Sin Diseñador Asignado')) === $currentGroup)->count(),
+                                            'location' => $sortedActiveOrders->filter(fn($o) => ($o->location_name ?: ($o->clientLocation?->name ?: __('Sin Locación'))) === $currentGroup)->count(),
+                                            'core_status' => $sortedActiveOrders->filter(fn($o) => ($o->core_status?->label() ?: __('Sin Estado')) === $currentGroup)->count(),
+                                            default => 0,
+                                        };
+                                    @endphp
+                                    <div class="px-3 py-1.5 bg-[#f7f7f5] text-[10px] font-bold text-zinc-600 uppercase tracking-wider flex items-center justify-between border-y border-zinc-200/80 first:border-t-0 select-none">
+                                        <div class="flex items-center gap-1.5">
+                                            @if($activeOrdersSortField === 'designer')
+                                                <x-lucide-user class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                            @elseif($activeOrdersSortField === 'location')
+                                                <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                            @elseif($activeOrdersSortField === 'core_status')
+                                                <x-lucide-layers class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                            @endif
+                                            <span>{{ $currentGroup }}</span>
+                                        </div>
+                                        <span class="text-[9px] font-mono text-zinc-400 font-semibold">({{ $groupCount }})</span>
+                                    </div>
+                                @endif
+
                                 <div 
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                     class="py-3 px-1 hover:bg-zinc-50 flex items-center justify-between text-xs cursor-pointer transition group"

@@ -28,13 +28,16 @@ class AutomationEngine
         $isOlderThanWeek = $trelloCreatedAt && $trelloCreatedAt->lt(now()->subDays(7));
 
         if (! $isOlderThanWeek) {
+            $welcomeScheduledDate = $this->calculateWelcomeEmailScheduledDate($trelloCreatedAt);
+
             RelatedTask::create([
                 'order_id' => $order->id,
                 'title' => 'Enviar correo de bienvenida',
                 'type' => RelatedTaskType::BIENVENIDA,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
-                'due_date' => now()->toDateString(),
+                'scheduled_date' => $welcomeScheduledDate->toDateString(),
+                'due_date' => $welcomeScheduledDate->toDateString(),
                 'trigger_type' => 'NEW_ORDER_CREATED',
                 'priority' => 'high',
             ]);
@@ -148,6 +151,7 @@ class AutomationEngine
                 'type' => RelatedTaskType::FOLLOW_UP_CAMILA,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
+                'scheduled_date' => now()->addWeekdays(1)->toDateString(),
                 'due_date' => now()->addWeekdays(1)->toDateString(),
                 'trigger_type' => 'CAMILA_TRANSITION',
                 'priority' => $taskPriority,
@@ -295,6 +299,7 @@ class AutomationEngine
                 'type' => RelatedTaskType::RESOLVER,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
+                'scheduled_date' => $tomorrow->toDateString(),
                 'due_date' => $tomorrow->toDateString(),
                 'trigger_type' => 'MISSING_MEASURES_APPROVED',
                 'priority' => 'high',
@@ -478,12 +483,16 @@ class AutomationEngine
                     'type' => RelatedTaskType::CORREO_ATRASO,
                     'status' => 'todo',
                     'assignee_id' => $order->getPrimaryDesignerId(),
+                    'scheduled_date' => now()->toDateString(),
                     'due_date' => now()->toDateString(),
                     'trigger_type' => 'AUTOMATIC_OVERDUE_DETECTION',
                     'priority' => 'urgent',
                 ]);
             } else {
-                $existingTask->update(['priority' => 'urgent']);
+                $existingTask->update([
+                    'priority' => 'urgent',
+                    'scheduled_date' => $existingTask->scheduled_date ?? now()->toDateString(),
+                ]);
             }
         }
     }
@@ -636,5 +645,33 @@ class AutomationEngine
                 }
             }
         }
+    }
+
+    /**
+     * Calculate scheduled date for welcome email based on creation/entry time and 4:30 PM cutoff.
+     */
+    public function calculateWelcomeEmailScheduledDate(?Carbon $entryTime = null): Carbon
+    {
+        $time = $entryTime ? $entryTime->copy() : now();
+        $today = now()->startOfDay();
+
+        // If the order entry was in the past, do not schedule in the past; evaluate from today
+        if ($time->copy()->startOfDay()->lt($today)) {
+            $time = now();
+        }
+
+        // If entered on a weekend, advance to next business day (Monday)
+        if ($time->isWeekend()) {
+            return $time->nextWeekday()->startOfDay();
+        }
+
+        // Cutoff at 4:30 PM (16:30): if entered at or after 16:30, schedule for next business day
+        $isPastCutoff = ($time->hour > 16 || ($time->hour === 16 && $time->minute >= 30));
+
+        if ($isPastCutoff) {
+            return $time->addWeekday()->startOfDay();
+        }
+
+        return $time->startOfDay();
     }
 }

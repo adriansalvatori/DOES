@@ -390,4 +390,88 @@ class ClientDatabaseTest extends TestCase
         $this->assertEquals('SC', $client->phones[1]['label']);
         $this->assertEquals('(843) 123-4567', $client->phones[1]['phone']);
     }
+
+    public function test_client_database_displays_active_archived_and_backlog_order_counts(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE CON CONTEOS MIXTOS']);
+
+        // 1 active order
+        Order::create([
+            'company_name' => 'CLIENTE CON CONTEOS MIXTOS',
+            'task_name' => 'Active Task',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+        ]);
+
+        // 2 archived orders
+        Order::create([
+            'company_name' => 'CLIENTE CON CONTEOS MIXTOS',
+            'task_name' => 'Archived 1',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ARCHIVED,
+        ]);
+        Order::create([
+            'company_name' => 'CLIENTE CON CONTEOS MIXTOS',
+            'task_name' => 'Archived 2',
+            'client_id' => $client->id,
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ARCHIVED,
+        ]);
+
+        // 1 backlog order
+        Order::create([
+            'company_name' => 'CLIENTE CON CONTEOS MIXTOS',
+            'task_name' => 'Backlog Task',
+            'client_id' => $client->id,
+            'in_workspace' => false,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Livewire::test(ClientIndex::class)
+            ->assertSee('CLIENTE CON CONTEOS MIXTOS')
+            ->assertSee('1 activas')
+            ->assertSee('2 arch.')
+            ->assertSee('1 backlog');
+    }
+
+    public function test_can_sort_active_orders_by_fields_in_client_flyout(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE SORT FLYOUT']);
+
+        Order::create([
+            'company_name' => 'CLIENTE SORT FLYOUT',
+            'client_id' => $client->id,
+            'task_name' => 'Project 1',
+            'wo_number' => 'WO 99999',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+        ]);
+
+        Order::create([
+            'company_name' => 'CLIENTE SORT FLYOUT',
+            'client_id' => $client->id,
+            'task_name' => 'Project 2',
+            'wo_number' => 'WO 11111',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->set('activeTab', 'projects')
+            ->assertSet('activeOrdersSortField', 'wo')
+            ->assertSet('activeOrdersSortDirection', 'asc')
+            ->call('sortByActiveOrders', 'wo')
+            ->assertSet('activeOrdersSortDirection', 'desc')
+            ->call('sortByActiveOrders', 'location')
+            ->assertSet('activeOrdersSortField', 'location')
+            ->assertSet('activeOrdersSortDirection', 'asc')
+            ->call('sortByActiveOrders', 'core_status')
+            ->assertSet('activeOrdersSortField', 'core_status')
+            ->assertSet('activeOrdersSortDirection', 'asc')
+            ->assertSee('WO 99999')
+            ->assertSee('WO 11111');
+    }
 }

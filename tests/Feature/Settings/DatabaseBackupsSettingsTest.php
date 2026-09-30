@@ -20,15 +20,15 @@ class DatabaseBackupsSettingsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->backupDir = storage_path('app/backups');
+        $this->backupDir = storage_path('framework/testing/backups');
+        config(['database.backup_path' => $this->backupDir]);
+        File::ensureDirectoryExists($this->backupDir);
     }
 
     protected function tearDown(): void
     {
-        foreach ($this->createdTestFiles as $file) {
-            if (File::exists($file)) {
-                File::delete($file);
-            }
+        if (File::exists($this->backupDir)) {
+            File::cleanDirectory($this->backupDir);
         }
         parent::tearDown();
     }
@@ -82,5 +82,29 @@ class DatabaseBackupsSettingsTest extends TestCase
         Livewire::test(Backups::class)
             ->call('downloadBackup', 'backup_sqlite_2026-08-26_120000.sqlite')
             ->assertFileDownloaded('backup_sqlite_2026-08-26_120000.sqlite');
+    }
+
+    public function test_backups_can_be_paginated_and_searched(): void
+    {
+        File::ensureDirectoryExists($this->backupDir);
+
+        for ($i = 1; $i <= 15; $i++) {
+            $day = str_pad((string) $i, 2, '0', STR_PAD_LEFT);
+            $filename = "backup_sqlite_2026-01-{$day}_000000.sqlite";
+            $path = $this->backupDir.'/'.$filename;
+            File::put($path, 'dummy content '.$i);
+            touch($path, strtotime("2026-01-{$day} 12:00:00"));
+        }
+
+        Livewire::test(Backups::class)
+            ->set('perPage', 5)
+            ->assertSee('backup_sqlite_2026-01-15_000000.sqlite')
+            ->assertSee('15 disponible(s)')
+            ->call('nextPage')
+            ->assertSee('backup_sqlite_2026-01-10_000000.sqlite')
+            ->assertDontSee('backup_sqlite_2026-01-14_000000.sqlite')
+            ->set('search', '2026-01-05')
+            ->assertSee('backup_sqlite_2026-01-05_000000.sqlite')
+            ->assertDontSee('backup_sqlite_2026-01-02_000000.sqlite');
     }
 }

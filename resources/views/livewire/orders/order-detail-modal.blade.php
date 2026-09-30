@@ -109,7 +109,7 @@
                     }
                 }
             }"
-            @keydown.window.escape="confirmClose(() => $wire.closeModal())"
+            @keydown.window.escape="if (!document.getElementById('client-flyout-panel')) confirmClose(() => $wire.closeModal())"
             data-modal="order-detail"
             class="fixed inset-0 z-[300] flex"
         >
@@ -230,15 +230,26 @@
                     <div class="space-y-1 min-w-0 flex-1">
                         <div class="flex items-center justify-between gap-2 flex-wrap">
                             <div class="flex items-center gap-2 flex-wrap min-w-0">
-                                <h2 class="text-lg sm:text-xl font-bold text-zinc-900 tracking-tight leading-snug break-words uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
-                                    {{ $order->company_name }}
-                                </h2>
+                                <button 
+                                    type="button"
+                                    wire:click="openClientDetail"
+                                    class="text-left group/client inline-flex items-center gap-1.5 focus:outline-none cursor-pointer rounded-lg -ml-1.5 px-1.5 py-0.5 hover:bg-stone-100 transition-colors"
+                                    title="{{ __('Ver detalles de :client', ['client' => $order->company_name ?: 'cliente']) }}">
+                                    <h2 class="text-lg sm:text-xl font-bold text-zinc-900 group-hover/client:text-emerald-700 tracking-tight leading-snug break-words uppercase transition-colors {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">
+                                        {{ $order->company_name ?: __('Sin Cliente') }}
+                                    </h2>
+                                    <x-lucide-external-link class="w-4 h-4 text-zinc-400 group-hover/client:text-emerald-600 opacity-60 group-hover/client:opacity-100 transition-all shrink-0" />
+                                </button>
 
                                 @if($order->location_name || $order->clientLocation)
-                                    <span class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] text-zinc-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0" title="Locación del Cliente">
+                                    <button 
+                                        type="button"
+                                        wire:click="openClientDetail"
+                                        class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] hover:bg-stone-100 text-zinc-700 hover:text-emerald-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0 cursor-pointer transition" 
+                                        title="{{ __('Ver locación en detalles del cliente') }}">
                                         <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
                                         <span>{{ $order->location_name ?: $order->clientLocation?->name }}</span>
-                                    </span>
+                                    </button>
                                 @endif
                             </div>
 
@@ -406,7 +417,19 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                             <!-- WO Number -->
                             <div class="space-y-1">
-                                <label class="font-medium text-zinc-700 block">Número de Orden:</label>
+                                <div class="flex items-center justify-between">
+                                    <label class="font-medium text-zinc-700 block">Número de Orden:</label>
+                                    <button 
+                                        type="button" 
+                                        wire:click="generateWoNumber" 
+                                        wire:loading.attr="disabled"
+                                        class="text-[11px] font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition select-none disabled:opacity-50"
+                                        title="Crear siguiente número de WO automáticamente">
+                                        <x-lucide-sparkles class="w-3 h-3 text-amber-500" wire:loading.remove wire:target="generateWoNumber" />
+                                        <x-lucide-loader-2 class="w-3 h-3 animate-spin text-zinc-400" wire:loading wire:target="generateWoNumber" />
+                                        <span>Crear WO</span>
+                                    </button>
+                                </div>
                                 <div class="flex rounded-md shadow-2xs">
                                     <span class="inline-flex items-center px-2.5 rounded-l-md border border-r-0 border-[#e9e9e7] bg-stone-100 text-zinc-600 font-mono font-bold text-xs select-none">
                                         WO
@@ -576,7 +599,19 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="font-medium text-zinc-700 block">Nombre de Empresa:</label>
+                                <div class="flex items-center justify-between">
+                                    <label class="font-medium text-zinc-700 block">Nombre de Empresa:</label>
+                                    @if($order->client_id || $order->company_name || $editCompanyName)
+                                        <button 
+                                            type="button" 
+                                            wire:click="openClientDetail" 
+                                            class="text-[11px] font-medium text-emerald-600 hover:text-emerald-800 flex items-center gap-1 cursor-pointer transition select-none"
+                                            title="Ver detalles del cliente">
+                                            <x-lucide-external-link class="w-3 h-3" />
+                                            <span>Ver Cliente</span>
+                                        </button>
+                                    @endif
+                                </div>
                                 <div class="relative">
                                     <input 
                                         type="text" 
@@ -989,6 +1024,182 @@
                             <button wire:click="$set('showDelayModal', true)" class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium text-xs whitespace-nowrap shadow-2xs shrink-0">
                                 Resolver Atraso
                             </button>
+                        </div>
+                    @endif
+
+                    <!-- Client Other Active Orders Section (Collapsible) -->
+                    @if(isset($clientOtherActiveOrders) && $clientOtherActiveOrders->isNotEmpty())
+                        <div x-data="{ expanded: false }" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3.5 space-y-3">
+                            <div class="flex items-center justify-between gap-2 flex-wrap cursor-pointer select-none" @click="expanded = !expanded">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <x-lucide-layers class="w-4 h-4 text-emerald-600 shrink-0" />
+                                        <span>{{ __('Otras Órdenes Activas del Cliente') }}</span>
+                                        <span class="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">({{ $clientOtherActiveOrders->count() }})</span>
+                                    </h4>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button 
+                                        type="button" 
+                                        wire:click.stop="openClientDetail" 
+                                        class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-800 transition flex items-center gap-1 cursor-pointer"
+                                        title="{{ __('Ver ficha completa del cliente') }}"
+                                    >
+                                        <span>{{ __('Ficha Cliente') }}</span>
+                                        <x-lucide-external-link class="w-3 h-3" />
+                                    </button>
+                                    <button type="button" class="text-zinc-400 hover:text-zinc-600 p-0.5">
+                                        <x-lucide-chevron-down class="w-3.5 h-3.5 transition-transform" ::class="{ 'rotate-180': expanded }" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div x-show="expanded" x-collapse>
+                                <div class="space-y-2 pt-2 border-t border-[#e9e9e7]">
+                                    <!-- Sorting Toolbar -->
+                                    <div class="flex items-center gap-1.5 flex-wrap bg-white p-2 rounded-lg border border-[#e9e9e7] text-xs">
+                                        <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 mr-1">{{ __('Ordenar:') }}</span>
+
+                                        <button type="button" wire:click="sortByActiveOrders('wo')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'wo' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por WO') }}">
+                                            <span>WO</span>
+                                            @if($activeOrdersSortField === 'wo')
+                                                @if($activeOrdersSortDirection === 'asc')
+                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @else
+                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @endif
+                                            @endif
+                                        </button>
+
+                                        <button type="button" wire:click="sortByActiveOrders('designer')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'designer' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Diseñador') }}">
+                                            <span>{{ __('Diseñador') }}</span>
+                                            @if($activeOrdersSortField === 'designer')
+                                                @if($activeOrdersSortDirection === 'asc')
+                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @else
+                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @endif
+                                            @endif
+                                        </button>
+
+                                        <button type="button" wire:click="sortByActiveOrders('location')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'location' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Locación') }}">
+                                            <span>{{ __('Locación') }}</span>
+                                            @if($activeOrdersSortField === 'location')
+                                                @if($activeOrdersSortDirection === 'asc')
+                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @else
+                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @endif
+                                            @endif
+                                        </button>
+
+                                        <button type="button" wire:click="sortByActiveOrders('core_status')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'core_status' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Estado') }}">
+                                            <span>{{ __('Estado') }}</span>
+                                            @if($activeOrdersSortField === 'core_status')
+                                                @if($activeOrdersSortDirection === 'asc')
+                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @else
+                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @endif
+                                            @endif
+                                        </button>
+
+                                        <button type="button" wire:click="sortByActiveOrders('task')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'task' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Tarea') }}">
+                                            <span>{{ __('Tarea') }}</span>
+                                            @if($activeOrdersSortField === 'task')
+                                                @if($activeOrdersSortDirection === 'asc')
+                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @else
+                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
+                                                @endif
+                                            @endif
+                                        </button>
+                                    </div>
+
+                                    <!-- Orders List -->
+                                    <div class="divide-y divide-[#e9e9e7] bg-white rounded-lg border border-[#e9e9e7] overflow-hidden">
+                                        @php $modalPreviousGroup = null; @endphp
+                                        @foreach($clientOtherActiveOrders as $otherOrd)
+                                            @php
+                                                $mCurrentGroup = match($activeOrdersSortField) {
+                                                    'designer' => $otherOrd->designer?->name ?: __('Sin Diseñador Asignado'),
+                                                    'location' => $otherOrd->location_name ?: ($otherOrd->clientLocation?->name ?: __('Sin Locación')),
+                                                    'core_status' => $otherOrd->core_status?->label() ?: __('Sin Estado'),
+                                                    default => null,
+                                                };
+                                            @endphp
+
+                                            @if($mCurrentGroup !== null && $mCurrentGroup !== $modalPreviousGroup)
+                                                @php 
+                                                    $modalPreviousGroup = $mCurrentGroup; 
+                                                    $mGroupCount = match($activeOrdersSortField) {
+                                                        'designer' => $clientOtherActiveOrders->filter(fn($o) => ($o->designer?->name ?: __('Sin Diseñador Asignado')) === $mCurrentGroup)->count(),
+                                                        'location' => $clientOtherActiveOrders->filter(fn($o) => ($o->location_name ?: ($o->clientLocation?->name ?: __('Sin Locación'))) === $mCurrentGroup)->count(),
+                                                        'core_status' => $clientOtherActiveOrders->filter(fn($o) => ($o->core_status?->label() ?: __('Sin Estado')) === $mCurrentGroup)->count(),
+                                                        default => 0,
+                                                    };
+                                                @endphp
+                                                <div class="px-3 py-1.5 bg-[#f7f7f5] text-[10px] font-bold text-zinc-600 uppercase tracking-wider flex items-center justify-between border-y border-[#e9e9e7] first:border-t-0 select-none">
+                                                    <div class="flex items-center gap-1.5">
+                                                        @if($activeOrdersSortField === 'designer')
+                                                            <x-lucide-user class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                                        @elseif($activeOrdersSortField === 'location')
+                                                            <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                                        @elseif($activeOrdersSortField === 'core_status')
+                                                            <x-lucide-layers class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                                                        @endif
+                                                        <span>{{ $mCurrentGroup }}</span>
+                                                    </div>
+                                                    <span class="text-[9px] font-mono text-zinc-400 font-semibold">({{ $mGroupCount }})</span>
+                                                </div>
+                                            @endif
+
+                                            <div 
+                                                wire:click="openModal({{ $otherOrd->id }})"
+                                                class="p-2.5 hover:bg-stone-50 flex items-center justify-between text-xs cursor-pointer transition group"
+                                            >
+                                                <div class="min-w-0 pr-2 space-y-1">
+                                                    <div class="font-semibold text-zinc-900 flex items-center gap-2 truncate">
+                                                        @if($otherOrd->wo_number)
+                                                            <x-wo-badge :number="$otherOrd->wo_number" variant="dark" />
+                                                        @endif
+                                                        @if($otherOrd->designer)
+                                                            <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $otherOrd->getDesignerBadgeStyle() }}">
+                                                                {{ $otherOrd->designer->name }}
+                                                            </span>
+                                                        @endif
+                                                        @php
+                                                            $oLocName = $otherOrd->location_name ?: $otherOrd->clientLocation?->name;
+                                                            $oCleanTask = $otherOrd->clean_task_name;
+                                                            $oShowLocBadge = $oLocName && mb_strtolower(trim($oLocName), 'UTF-8') !== mb_strtolower(trim($oCleanTask), 'UTF-8');
+                                                        @endphp
+                                                        @if($oShowLocBadge)
+                                                            <span class="inline-flex items-center gap-1 font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded text-[10px] shrink-0">
+                                                                <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
+                                                                <span>{{ $oLocName }}</span>
+                                                            </span>
+                                                        @endif
+                                                        <span class="group-hover:text-emerald-700 transition truncate">{{ $oCleanTask }}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="flex items-center gap-1.5 shrink-0">
+                                                    @if($otherOrd->substatus)
+                                                        <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $otherOrd->substatus->badgeStyle() }}">
+                                                            {{ $otherOrd->substatus->label() }}
+                                                        </span>
+                                                    @endif
+                                                    @if($otherOrd->core_status)
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 {{ $otherOrd->core_status->badgeStyle() }}">
+                                                            {{ $otherOrd->core_status->label() }}
+                                                        </span>
+                                                    @endif
+                                                    <x-lucide-arrow-right class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 transition shrink-0 ml-1" />
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     @endif
 

@@ -160,7 +160,12 @@ class Client extends Model
 
     public function archivedOrders(): HasMany
     {
-        return $this->hasMany(Order::class)->where('in_workspace', true)->where('core_status', CoreStatus::ARCHIVED);
+        return $this->hasMany(Order::class)->where('core_status', CoreStatus::ARCHIVED);
+    }
+
+    public function backlogOrders(): HasMany
+    {
+        return $this->hasMany(Order::class)->where('in_workspace', false)->where('core_status', '!=', CoreStatus::ARCHIVED);
     }
 
     public function allOrders(): HasMany

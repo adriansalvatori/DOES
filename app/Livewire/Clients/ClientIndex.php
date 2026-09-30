@@ -46,7 +46,7 @@ class ClientIndex extends Component
     public function render()
     {
         $query = Client::query()
-            ->withCount(['activeOrders', 'archivedOrders'])
+            ->withCount(['activeOrders', 'archivedOrders', 'backlogOrders'])
             ->with(['locations', 'contacts', 'primaryContact']);
 
         if (! empty(trim($this->search))) {
