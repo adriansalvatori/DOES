@@ -235,4 +235,26 @@ class OverviewTest extends TestCase
             ->call('refreshCache')
             ->assertDispatched('toast');
     }
+
+    public function test_overview_loads_records_in_chunks_progressively(): void
+    {
+        // Create 150 orders to test chunking
+        for ($i = 1; $i <= 150; $i++) {
+            Order::create([
+                'wo_number' => sprintf('WO %05d', $i + 10000),
+                'task_name' => "Chunk Task {$i}",
+                'company_name' => 'Kudos Client Test',
+                'core_status' => CoreStatus::TO_DO_TODAY,
+                'in_workspace' => true,
+            ]);
+        }
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSet('loadedCount', 100)
+            ->assertViewHas('hasMore', true)
+            ->call('loadNextChunk')
+            ->assertSet('loadedCount', 200)
+            ->assertViewHas('hasMore', false);
+    }
 }

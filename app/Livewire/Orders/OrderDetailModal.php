@@ -20,9 +20,12 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class OrderDetailModal extends Component
 {
+    use WithFileUploads;
+
     public $orderId = null;
 
     public $showModal = false;
@@ -78,6 +81,12 @@ class OrderDetailModal extends Component
     public $measuresConfirmed = true;
 
     public $estimateApproved = true;
+
+    public string $approvalType = 'cliente'; // 'camila' or 'cliente'
+
+    public string $approvalComment = '';
+
+    public $approvalImage = null;
 
     // Delay fields
     public $clientPromisedDate;
@@ -884,6 +893,8 @@ class OrderDetailModal extends Component
         $this->showMediaPreviewModal = false;
         $this->isEditing = false;
         $this->newTrelloComment = '';
+        $this->approvalComment = '';
+        $this->approvalImage = null;
     }
 
     public function moveToBacklog()
@@ -946,18 +957,75 @@ class OrderDetailModal extends Component
         session()->flash('message', "Orden {$order->company_name} añadida al Workspace activo.");
     }
 
+    public function openApprovalModal(): void
+    {
+        $this->resetErrorBag();
+        if ($this->orderId) {
+            $order = Order::find($this->orderId);
+            $this->approvalType = ($order && $order->core_status === CoreStatus::ENVIADO_A_CAMILA) ? 'camila' : 'cliente';
+        } else {
+            $this->approvalType = 'cliente';
+        }
+        $this->approvalComment = '';
+        $this->approvalImage = null;
+        $this->measuresConfirmed = true;
+        $this->estimateApproved = true;
+        $this->showApprovalModal = true;
+    }
+
+    public function closeApprovalModal(): void
+    {
+        $this->showApprovalModal = false;
+        $this->approvalComment = '';
+        $this->approvalImage = null;
+        $this->resetErrorBag();
+    }
+
+    public function removeApprovalImage(): void
+    {
+        $this->approvalImage = null;
+    }
+
     public function submitApproval()
     {
         if (! $this->orderId) {
             return;
         }
 
+        $this->resetErrorBag();
+
+        $hasComment = ! empty(trim((string) $this->approvalComment));
+        $hasImage = (bool) $this->approvalImage;
+
+        if (! $hasComment && ! $hasImage) {
+            $this->addError('approvalSupport', 'Debes ingresar un comentario o adjuntar una imagen como soporte de la aprobación.');
+
+            return;
+        }
+
+        $this->validate([
+            'approvalType' => 'required|in:camila,cliente',
+            'approvalImage' => 'nullable|image|max:12288',
+        ], [
+            'approvalType.required' => 'Debes seleccionar quién aprobó el diseño.',
+            'approvalImage.image' => 'El archivo adjunto debe ser una imagen válida.',
+            'approvalImage.max' => 'La imagen no debe superar los 12MB.',
+        ]);
+
         $order = Order::findOrFail($this->orderId);
+
+        $imagePath = null;
+        if ($this->approvalImage) {
+            $imagePath = $this->approvalImage->store('approvals', 'public');
+        }
 
         app(AutomationEngine::class)->processApproval(
             $order,
             (bool) $this->measuresConfirmed,
-            (bool) $this->estimateApproved
+            (bool) $this->estimateApproved,
+            $this->approvalType,
+            trim((string) $this->approvalComment) ?: null,
+            $imagePath
         );
 
         $this->closeModal();

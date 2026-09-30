@@ -48,6 +48,10 @@ class Order extends Model
         'client_last_response',
         'last_sent_to_client_at',
         'approved',
+        'approval_type',
+        'approval_note',
+        'approval_image_path',
+        'approved_at',
         'measures_confirmed',
         'estimate_approved',
         'client_revision_count',
@@ -87,6 +91,7 @@ class Order extends Model
         'client_last_response' => 'datetime',
         'last_sent_to_client_at' => 'datetime',
         'approved' => 'boolean',
+        'approved_at' => 'datetime',
         'measures_confirmed' => 'boolean',
         'estimate_approved' => 'boolean',
         'done_today' => 'boolean',
@@ -189,6 +194,15 @@ class Order extends Model
     public function getLocationTextAttribute(): ?string
     {
         return $this->location_name ?: $this->clientLocation?->name;
+    }
+
+    public function getApprovalTypeLabelAttribute(): ?string
+    {
+        return match ($this->approval_type) {
+            'camila' => 'Aprobado por Camila',
+            'cliente' => 'Aprobado por Cliente',
+            default => $this->approval_type ? ucfirst((string) $this->approval_type) : null,
+        };
     }
 
     public function getDaysToCloseAttribute(): ?int

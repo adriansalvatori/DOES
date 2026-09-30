@@ -11,6 +11,7 @@ use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Models\SystemTaskConfig;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class AutomationEngine
 {
@@ -251,34 +252,62 @@ class AutomationEngine
     /**
      * Process Approval Button workflow.
      */
-    public function processApproval(Order $order, bool $measuresConfirmed, bool $estimateApproved): void
-    {
-        $tomorrow = now()->addWeekdays(1);
+    public function processApproval(
+        Order $order,
+        bool $measuresConfirmed,
+        bool $estimateApproved,
+        string $approvalType = 'cliente',
+        ?string $approvalNote = null,
+        ?string $approvalImagePath = null
+    ): void {
+        $isUrgente = $order->isUrgente();
+        $targetDate = $isUrgente ? now() : now()->addWeekdays(1);
+        $approvalLabel = $approvalType === 'camila' ? 'Aprobado por Camila' : 'Aprobado por Cliente';
+
+        if ($isUrgente) {
+            $order->addFlag(Substatus::URGENTE);
+        }
 
         $order->update([
             'approved' => true,
+            'approved_at' => now(),
+            'approval_type' => $approvalType,
+            'approval_note' => $approvalNote,
+            'approval_image_path' => $approvalImagePath,
             'measures_confirmed' => $measuresConfirmed,
             'estimate_approved' => $estimateApproved,
-            'current_due_date' => $tomorrow->toDateString(),
+            'current_due_date' => $targetDate->toDateString(),
+            'flags' => $order->flags,
         ]);
+
+        $slaMessage = $isUrgente
+            ? "Order approved ({$approvalLabel}) - Urgent same-day SLA set"
+            : "Order approved ({$approvalLabel}) - 24 hour SLA set";
 
         $this->slaEngine->updateDueDate(
             $order,
-            $tomorrow,
-            'Order approved - 24 hour SLA set',
+            $targetDate,
+            $slaMessage,
             'ORDER_APPROVED'
         );
+
+        $actor = auth()->user()?->name ?? 'Usuario';
 
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_APPROVED',
-            'actor' => 'User',
+            'actor' => $actor,
             'previous_value' => 'approved: false',
-            'new_value' => 'measures: '.($measuresConfirmed ? 'YES' : 'NO').', estimate: '.($estimateApproved ? 'YES' : 'NO'),
+            'new_value' => "{$approvalLabel} (Medidas: ".($measuresConfirmed ? 'SÍ' : 'NO').', Estimado: '.($estimateApproved ? 'SÍ' : 'NO').($isUrgente ? ', URGENTE' : '').')',
             'metadata' => [
+                'approval_type' => $approvalType,
+                'approval_type_label' => $approvalLabel,
+                'approval_note' => $approvalNote,
+                'approval_image' => $approvalImagePath ? Storage::url($approvalImagePath) : null,
                 'measures_confirmed' => $measuresConfirmed,
                 'estimate_approved' => $estimateApproved,
-                'new_due_date' => $tomorrow->toDateString(),
+                'new_due_date' => $targetDate->toDateString(),
+                'is_urgente' => $isUrgente,
             ],
         ]);
 
@@ -290,13 +319,26 @@ class AutomationEngine
                 'core_status' => $targetStatus,
                 'substatus' => Substatus::PONER_EN_ALTA,
             ]);
+
+            RelatedTask::create([
+                'order_id' => $order->id,
+                'title' => 'Poner en alta',
+                'type' => RelatedTaskType::PONER_ALTA,
+                'status' => 'todo',
+                'assignee_id' => $order->getPrimaryDesignerId(),
+                'scheduled_date' => $targetDate->toDateString(),
+                'due_date' => $targetDate->toDateString(),
+                'trigger_type' => 'ORDER_APPROVED',
+                'priority' => $isUrgente ? 'urgent' : 'normal',
+                'is_work_task' => true,
+            ]);
         } elseif (! $measuresConfirmed) {
             // Missing measures -> High priority RESOLVER in ENTRANTE
             $order->update([
                 'core_status' => CoreStatus::ENTRANTE,
                 'substatus' => Substatus::BLOQUEADA,
                 'blocking_reason' => BlockingReason::FALTAN_MEDIDAS,
-                'current_due_date' => $tomorrow->toDateString(),
+                'current_due_date' => $targetDate->toDateString(),
             ]);
 
             RelatedTask::create([
@@ -305,8 +347,8 @@ class AutomationEngine
                 'type' => RelatedTaskType::RESOLVER,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
-                'scheduled_date' => $tomorrow->toDateString(),
-                'due_date' => $tomorrow->toDateString(),
+                'scheduled_date' => $targetDate->toDateString(),
+                'due_date' => $targetDate->toDateString(),
                 'trigger_type' => 'MISSING_MEASURES_APPROVED',
                 'priority' => 'high',
             ]);

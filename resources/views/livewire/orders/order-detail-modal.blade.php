@@ -211,7 +211,7 @@
                         @endif
 
                         @if(!$order->approved || in_array($order->core_status, [\App\Enums\CoreStatus::ENVIADO_AL_CLIENTE, \App\Enums\CoreStatus::ENVIADO_A_CAMILA]))
-                            <button wire:click="$set('showApprovalModal', true)" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0">
+                            <button wire:click="openApprovalModal" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer">
                                 <x-lucide-check-circle-2 class="w-3.5 h-3.5 shrink-0" />
                                 <span>Aprobar</span>
                             </button>
@@ -363,6 +363,23 @@
                         <span class="px-2.5 py-1 rounded-md text-[11px] font-medium border flex items-center gap-1.5 {{ $order->substatus->badgeStyle() }}">
                             <x-lucide-alert-circle class="w-3.5 h-3.5 shrink-0" />
                             <span>{{ $order->substatus->value }}</span>
+                        </span>
+                    @endif
+
+                    <!-- Approved Badge -->
+                    @if($order->approved)
+                        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-2xs" title="{{ $order->approval_note ?: ($order->approval_type_label ?? 'Orden Aprobada') }}">
+                            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>{{ $order->approval_type_label ?? 'Aprobada' }}</span>
+                            @if($order->approval_image_path)
+                                <button 
+                                    type="button" 
+                                    wire:click="previewMedia('{{ Storage::url($order->approval_image_path) }}', 'Comprobante de Aprobación', 'image')" 
+                                    class="ml-0.5 text-emerald-700 hover:text-emerald-950 transition cursor-pointer" 
+                                    title="Ver comprobante de aprobación">
+                                    <x-lucide-paperclip class="w-3 h-3 inline" />
+                                </button>
+                            @endif
                         </span>
                     @endif
                 </div>
@@ -1677,6 +1694,43 @@
                                                 </div>
                                             @endif
 
+                                            @if($event->event_type === 'ORDER_APPROVED' && is_array($event->metadata))
+                                                <div class="mt-1 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-950 space-y-1.5">
+                                                    <div class="flex items-center justify-between gap-1.5 font-bold text-emerald-800">
+                                                        <span class="flex items-center gap-1">
+                                                            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                            <span>{{ $event->metadata['approval_type_label'] ?? ($event->metadata['approval_type'] === 'camila' ? 'Aprobado por Camila' : 'Aprobado por Cliente') }}</span>
+                                                        </span>
+                                                        @if(!empty($event->metadata['new_due_date']))
+                                                            <span class="px-1.5 py-0.2 rounded text-[9px] uppercase font-semibold bg-emerald-100 text-emerald-800">
+                                                                SLA: {{ $event->metadata['new_due_date'] }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+
+                                                    @if(!empty($event->metadata['approval_note']))
+                                                        <div class="p-2 rounded bg-white/80 border border-emerald-200/60 text-zinc-700 font-normal leading-relaxed break-words">
+                                                            {{ $event->metadata['approval_note'] }}
+                                                        </div>
+                                                    @endif
+
+                                                    @if(!empty($event->metadata['approval_image']))
+                                                        <div class="pt-0.5">
+                                                            <button 
+                                                                type="button" 
+                                                                wire:click="previewMedia('{{ $event->metadata['approval_image'] }}', 'Soporte de Aprobación', 'image')" 
+                                                                class="inline-flex items-center gap-2 p-1.5 rounded-md bg-white border border-emerald-200 hover:border-emerald-300 text-emerald-900 transition cursor-pointer group shadow-2xs">
+                                                                <img src="{{ $event->metadata['approval_image'] }}" alt="Comprobante" class="w-10 h-10 object-cover rounded border border-stone-200 shrink-0">
+                                                                <div class="text-left pr-1 min-w-0">
+                                                                    <span class="font-semibold text-[11px] group-hover:underline block truncate">Comprobante adjunto</span>
+                                                                    <span class="text-[10px] text-emerald-600 block">Clic para ver imagen</span>
+                                                                </div>
+                                                            </button>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endif
+
                                             @if(is_array($event->metadata) && isset($event->metadata['trigger_type']))
                                                 <div class="mt-1 p-2 rounded-md bg-purple-50 border border-purple-200 text-[11px] text-purple-900 font-medium space-y-0.5">
                                                     <div class="flex items-center justify-between gap-1.5 font-bold text-purple-800">
@@ -2231,15 +2285,163 @@
     @if($showApprovalModal)
         <div 
             class="fixed inset-0 z-[350] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
-            @keydown.window.escape.prevent="$wire.set('showApprovalModal', false)"
-            @keydown.window.enter.prevent="$wire.submitApproval()">
-            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
-                <div>
-                    <h3 class="text-base font-semibold text-zinc-900">Confirmación de Aprobación</h3>
-                    <p class="text-xs text-zinc-500 mt-0.5">El cliente aprobó el diseño. Por favor confirma las siguientes condiciones:</p>
+            @keydown.window.escape.prevent="$wire.closeApprovalModal()">
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[92vh] flex flex-col">
+                <div class="shrink-0 flex items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-zinc-900">Confirmación de Aprobación</h3>
+                        <p class="text-xs text-zinc-500 mt-0.5">Valida el visto bueno y registra el soporte de aprobación para continuar.</p>
+                    </div>
+                    <button type="button" wire:click="closeApprovalModal" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-stone-100 transition cursor-pointer">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
                 </div>
 
-                <div class="space-y-3 text-xs">
+                <div class="overflow-y-auto pr-1 space-y-4 text-xs scrollbar-thin flex-1">
+                    <!-- Validation Type Selection -->
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-semibold text-zinc-800">
+                            ¿Quién validó la aprobación? <span class="text-rose-500">*</span>
+                        </label>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <button 
+                                type="button" 
+                                wire:click="$set('approvalType', 'camila')"
+                                class="p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer select-none {{ $approvalType === 'camila' ? 'border-emerald-500 bg-emerald-50/60 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 text-zinc-700' }}">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition {{ $approvalType === 'camila' ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-zinc-500' }}">
+                                    <x-lucide-user-check class="w-4 h-4" />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-xs truncate">Aprobado por Camila</div>
+                                    <div class="text-[10px] {{ $approvalType === 'camila' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">Validación interna</div>
+                                </div>
+                                @if($approvalType === 'camila')
+                                    <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
+                                @endif
+                            </button>
+
+                            <button 
+                                type="button" 
+                                wire:click="$set('approvalType', 'cliente')"
+                                class="p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer select-none {{ $approvalType === 'cliente' ? 'border-emerald-500 bg-emerald-50/60 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 text-zinc-700' }}">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition {{ $approvalType === 'cliente' ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-zinc-500' }}">
+                                    <x-lucide-check-circle-2 class="w-4 h-4" />
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="font-bold text-xs truncate">Aprobado por Cliente</div>
+                                    <div class="text-[10px] {{ $approvalType === 'cliente' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">Confirmación directa</div>
+                                </div>
+                                @if($approvalType === 'cliente')
+                                    <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
+                                @endif
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Soporte de Aprobación Field (Texto o Imagen con Paste y Drag&Drop) -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-semibold text-zinc-800">
+                                Soporte de aprobación <span class="text-rose-500">*</span>
+                            </label>
+                            <span class="text-[10px] text-zinc-400">Texto o Imagen (al menos uno)</span>
+                        </div>
+
+                        <div 
+                            x-data="{
+                                isDragging: false,
+                                handlePaste(e) {
+                                    const items = (e.clipboardData || window.clipboardData)?.items;
+                                    if (!items) return;
+                                    for (let i = 0; i < items.length; i++) {
+                                        if (items[i].type.indexOf('image') !== -1) {
+                                            e.preventDefault();
+                                            const file = items[i].getAsFile();
+                                            if (file) {
+                                                $wire.upload('approvalImage', file);
+                                            }
+                                            return;
+                                        }
+                                    }
+                                },
+                                handleDrop(e) {
+                                    this.isDragging = false;
+                                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                        const file = e.dataTransfer.files[0];
+                                        if (file && file.type.startsWith('image/')) {
+                                            $wire.upload('approvalImage', file);
+                                        }
+                                    }
+                                }
+                            }"
+                            @dragover.prevent="isDragging = true"
+                            @dragenter.prevent="isDragging = true"
+                            @dragleave.prevent="isDragging = false"
+                            @drop.prevent="handleDrop($event)"
+                            @paste="handlePaste($event)"
+                            tabindex="0"
+                            class="relative border rounded-xl p-3 transition-all bg-white flex flex-col justify-between min-h-[115px]"
+                            :class="isDragging ? 'border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20' : 'border-[#e9e9e7] focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20'">
+                            
+                            <textarea 
+                                wire:model="approvalComment"
+                                rows="3"
+                                placeholder="Escribe aquí un comentario o pega una captura con Ctrl+V / Cmd+V (ej. visto bueno por WhatsApp, email, etc.)..."
+                                class="w-full text-xs text-zinc-800 placeholder-zinc-400 bg-transparent resize-none border-0 p-0 focus:outline-none focus:ring-0 leading-relaxed outline-none"></textarea>
+
+                            <!-- Uploading loader -->
+                            <div wire:loading wire:target="approvalImage" class="mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center gap-2 text-xs text-emerald-800">
+                                <x-lucide-loader-2 class="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
+                                <span>Cargando imagen de soporte...</span>
+                            </div>
+
+                            <!-- Uploaded image preview -->
+                            @if($approvalImage && !$errors->has('approvalImage'))
+                                <div wire:loading.remove wire:target="approvalImage" class="mt-2.5 p-2 rounded-lg bg-[#fafaf9] border border-stone-200 flex items-center justify-between gap-3">
+                                    <div class="flex items-center gap-2.5 min-w-0">
+                                        @if(method_exists($approvalImage, 'temporaryUrl'))
+                                            <img src="{{ $approvalImage->temporaryUrl() }}" alt="Soporte" class="w-12 h-12 object-cover rounded-md border border-stone-300 shadow-2xs shrink-0">
+                                        @endif
+                                        <div class="min-w-0">
+                                            <span class="text-xs font-semibold text-zinc-800 truncate block">Imagen de soporte adjunta</span>
+                                            <span class="text-[10px] text-zinc-400 block">{{ number_format($approvalImage->getSize() / 1024, 1) }} KB</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" wire:click="removeApprovalImage" class="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Quitar imagen">
+                                        <x-lucide-trash-2 class="w-4 h-4" />
+                                    </button>
+                                </div>
+                            @endif
+
+                            <!-- Bottom Action Bar / Dropzone hints -->
+                            <div class="flex items-center justify-between pt-2 border-t border-stone-100 mt-2 text-[11px] text-zinc-500">
+                                <label for="approval-image-file" class="inline-flex items-center gap-1.5 font-medium hover:text-emerald-700 cursor-pointer transition select-none">
+                                    <x-lucide-paperclip class="w-3.5 h-3.5 text-zinc-400" />
+                                    <span>Adjuntar imagen</span>
+                                    <input type="file" id="approval-image-file" wire:model="approvalImage" accept="image/*" class="hidden">
+                                </label>
+
+                                <span class="text-[10px] text-zinc-400 flex items-center gap-1 select-none">
+                                    <x-lucide-image class="w-3 h-3 text-zinc-400" />
+                                    <span>Pega con Cmd+V o arrastra aquí</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        @error('approvalSupport')
+                            <p class="text-xs text-rose-600 font-medium flex items-center gap-1 mt-1">
+                                <x-lucide-alert-circle class="w-3.5 h-3.5 shrink-0" />
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                        @error('approvalImage')
+                            <p class="text-xs text-rose-600 font-medium flex items-center gap-1 mt-1">
+                                <x-lucide-alert-circle class="w-3.5 h-3.5 shrink-0" />
+                                <span>{{ $message }}</span>
+                            </p>
+                        @enderror
+                    </div>
+
                     <!-- Medidas Confirmadas Checkbox -->
                     <label class="flex items-start gap-3 p-3.5 rounded-xl border border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 transition cursor-pointer select-none">
                         <input type="checkbox" wire:model="measuresConfirmed" class="w-4 h-4 mt-0.5 rounded border-stone-300 text-stone-900 focus:ring-stone-400">
@@ -2273,31 +2475,37 @@
                                 <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                 <div>
                                     <strong class="font-bold block text-[11px] uppercase tracking-wider text-amber-800">Resultado: Resolver (Bloqueada)</strong>
-                                    La orden se moverá a <span class="font-semibold">ENTRANTE</span> con subestado <span class="font-semibold">BLOQUEADA</span> y se creará una tarea de resolución de medidas de alta prioridad (SLA 24h).
+                                    La orden se moverá a <span class="font-semibold">ENTRANTE</span> con subestado <span class="font-semibold">BLOQUEADA</span> y se creará una tarea de resolución de medidas de alta prioridad (SLA {{ $order?->isUrgente() ? 'mismo día' : '24h' }}).
                                 </div>
                             @elseif(!$estimateApproved)
                                 <x-lucide-info class="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                                 <div>
                                     <strong class="font-bold block text-[11px] uppercase tracking-wider text-orange-800">Resultado: Pendiente de Estimado</strong>
-                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">FALTA APROBACIÓN DE ESTIMADO</span> (SLA 24h).
+                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">FALTA APROBACIÓN DE ESTIMADO</span> (SLA {{ $order?->isUrgente() ? 'mismo día' : '24h' }}).
                                 </div>
                             @else
                                 <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                                 <div>
                                     <strong class="font-bold block text-[11px] uppercase tracking-wider text-emerald-800">Resultado: Lista para Alta</strong>
-                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">PONER EN ALTA</span> (SLA 24h para preprensa de alta resolución).
+                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">PONER EN ALTA</span> @if($order?->isUrgente()) (<span class="font-bold text-rose-700">SLA MISMO DÍA</span> por orden urgente). @else (SLA 24h para preprensa de alta resolución). @endif
                                 </div>
                             @endif
                         </div>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-end gap-2.5 pt-2">
-                    <button wire:click="$set('showApprovalModal', false)" class="px-3 py-1.5 rounded-md bg-stone-100 text-zinc-700 text-xs font-medium">
+                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-stone-100 shrink-0">
+                    <button type="button" wire:click="closeApprovalModal" class="px-3.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium transition cursor-pointer">
                         Cancelar
                     </button>
-                    <button wire:click="submitApproval" class="px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow-2xs">
-                        Procesar Aprobación
+                    <button 
+                        type="button" 
+                        wire:click="submitApproval" 
+                        wire:loading.attr="disabled"
+                        class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                        <x-lucide-loader-2 wire:loading wire:target="submitApproval" class="w-3.5 h-3.5 animate-spin" />
+                        <span wire:loading.remove wire:target="submitApproval">Procesar Aprobación</span>
+                        <span wire:loading wire:target="submitApproval">Procesando...</span>
                     </button>
                 </div>
             </div>

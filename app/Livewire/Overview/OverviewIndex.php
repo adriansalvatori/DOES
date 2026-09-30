@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Overview;
 
-use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Models\Client;
 use App\Models\Designer;
@@ -35,18 +34,23 @@ class OverviewIndex extends Component
     {
         $version = Cache::store('file')->get('overview_cache_version', 1);
 
-        return Cache::store('file')->remember("overview_metrics_v{$version}", now()->addMinutes(30), function () {
+        return Cache::store('file')->remember("overview_metrics_v{$version}", now()->addMinutes(15), function () {
+            $result = Order::query()->selectRaw("
+                COUNT(CASE WHEN in_workspace = 1 AND core_status != 'ARCHIVED' THEN 1 END) as totalWorkspaceCount,
+                COUNT(CASE WHEN in_workspace = 0 AND core_status != 'ARCHIVED' THEN 1 END) as totalBacklogCount,
+                COUNT(CASE WHEN core_status = 'ARCHIVED' THEN 1 END) as totalArchivedCount,
+                COUNT(CASE WHEN in_workspace = 1 AND (wo_number IS NULL OR wo_number = '' OR wo_number LIKE 'WO 00%') THEN 1 END) as missingWoCount,
+                COUNT(CASE WHEN in_workspace = 1 AND core_status = 'EN PRODUCCIÓN' THEN 1 END) as inProductionCount,
+                COUNT(CASE WHEN in_workspace = 1 AND done_today = 1 THEN 1 END) as doneTodayCount
+            ")->first();
+
             return [
-                'totalWorkspaceCount' => Order::inWorkspace()->count(),
-                'totalBacklogCount' => Order::inBacklog()->count(),
-                'totalArchivedCount' => Order::archived()->count(),
-                'missingWoCount' => Order::inWorkspace()->where(function ($q) {
-                    $q->whereNull('wo_number')
-                        ->orWhere('wo_number', '')
-                        ->orWhere('wo_number', 'like', 'WO 00%');
-                })->count(),
-                'inProductionCount' => Order::inWorkspace()->where('core_status', CoreStatus::EN_PRODUCCION)->count(),
-                'doneTodayCount' => Order::inWorkspace()->where('done_today', true)->count(),
+                'totalWorkspaceCount' => (int) ($result->totalWorkspaceCount ?? 0),
+                'totalBacklogCount' => (int) ($result->totalBacklogCount ?? 0),
+                'totalArchivedCount' => (int) ($result->totalArchivedCount ?? 0),
+                'missingWoCount' => (int) ($result->missingWoCount ?? 0),
+                'inProductionCount' => (int) ($result->inProductionCount ?? 0),
+                'doneTodayCount' => (int) ($result->doneTodayCount ?? 0),
             ];
         });
     }
@@ -96,8 +100,17 @@ class OverviewIndex extends Component
     // Active View Tab (all, workspace, backlog, archived)
     public string $activeTab = 'all';
 
-    // Pagination (0 = Sin paginación / Carga completa con File Cache)
+    // Pagination / Chunked Loading (batches of 100 in background)
     public int $perPage = 0;
+
+    public int $loadedCount = 100;
+
+    public const CHUNK_SIZE = 100;
+
+    public function loadNextChunk(): void
+    {
+        $this->loadedCount += self::CHUNK_SIZE;
+    }
 
     // Section Visibility Toggles
     public bool $showWorkspace = true;
@@ -127,41 +140,49 @@ class OverviewIndex extends Component
 
     public function updatingSearch(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingFilterWo(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingFilterClient(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingFilterDesigner(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingFilterReviewStatus(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingFilterInstallation(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingFilterDateRange(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
     public function updatingPerPage(): void
     {
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
@@ -173,12 +194,15 @@ class OverviewIndex extends Component
             $this->sortBy = $column;
             $this->sortDirection = 'asc';
         }
+        $this->loadedCount = self::CHUNK_SIZE;
+        $this->resetPage();
     }
 
     public function setTab(string $tab): void
     {
         if (in_array($tab, ['all', 'workspace', 'backlog', 'archived'], true)) {
             $this->activeTab = $tab;
+            $this->loadedCount = self::CHUNK_SIZE;
             $this->resetPage();
         }
     }
@@ -206,6 +230,7 @@ class OverviewIndex extends Component
             'sortDirection',
             'perPage',
         ]);
+        $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
 
@@ -547,38 +572,15 @@ class OverviewIndex extends Component
         $baseQuery->with(['client', 'designer', 'designers', 'clientLocation']);
         $filteredQuery = $this->applyFilters($baseQuery);
 
-        $cacheKey = "overview_v{$version}_{$this->activeTab}_".md5(json_encode([
-            $this->search,
-            $this->filterWo,
-            $this->filterClient,
-            $this->filterDesigner,
-            $this->filterReviewStatus,
-            $this->filterInstallation,
-            $this->filterDateRange,
-            $this->sortBy,
-            $this->sortDirection,
-            $this->perPage,
-        ]));
+        $totalFilteredCount = (clone $filteredQuery)->count();
+        $hasMore = false;
 
-        $orders = ($this->perPage > 0)
-            ? $filteredQuery->paginate($this->perPage)
-            : (function () use ($cacheKey, $filteredQuery) {
-                $orderIds = Cache::store('file')->remember($cacheKey, now()->addMinutes(30), function () use ($filteredQuery) {
-                    return $filteredQuery->pluck('orders.id')->toArray();
-                });
-
-                if (empty($orderIds)) {
-                    return collect();
-                }
-
-                $collection = Order::with(['client', 'designer', 'designers', 'clientLocation'])
-                    ->whereIn('id', $orderIds)
-                    ->get();
-
-                $idOrder = array_flip($orderIds);
-
-                return $collection->sortBy(fn ($o) => $idOrder[$o->id] ?? 999999)->values();
-            })();
+        if ($this->perPage > 0) {
+            $orders = $filteredQuery->paginate($this->perPage);
+        } else {
+            $orders = (clone $filteredQuery)->take($this->loadedCount)->get();
+            $hasMore = $this->loadedCount < $totalFilteredCount;
+        }
 
         $clients = Client::orderBy('name')->get();
         $designers = Designer::where('active', true)->orderBy('name')->get();
@@ -592,6 +594,12 @@ class OverviewIndex extends Component
             'clients' => $clients,
             'designers' => $designers,
             'substatuses' => $substatuses,
+            'hasMore' => $hasMore,
+            'totalFilteredCount' => $totalFilteredCount,
+            'loadedCount' => $this->loadedCount,
+            'editingOrderId' => $this->editingOrderId,
+            'editingField' => $this->editingField,
+            'editingValue' => $this->editingValue,
         ], $this->metrics))->layout('components.layouts.app', ['title' => 'Overview Operativo']);
     }
 }

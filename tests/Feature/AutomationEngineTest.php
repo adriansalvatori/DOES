@@ -166,6 +166,19 @@ class AutomationEngineTest extends TestCase
         $this->assertTrue($freshOrder->measures_confirmed);
         $this->assertEquals(CoreStatus::CESAR_ORDERS_RECEIVED, $freshOrder->core_status);
         $this->assertEquals(Substatus::PONER_EN_ALTA, $freshOrder->substatus);
+
+        $this->assertDatabaseHas('related_tasks', [
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA->value,
+            'status' => 'todo',
+        ]);
+
+        $task = RelatedTask::where('order_id', $order->id)->where('type', RelatedTaskType::PONER_ALTA)->first();
+        $this->assertNotNull($task);
+        $this->assertEquals(now()->addWeekdays(1)->toDateString(), $task->due_date?->toDateString());
+        $this->assertEquals(now()->addWeekdays(1)->toDateString(), $task->scheduled_date?->toDateString());
+        $this->assertTrue($task->is_work_task);
     }
 
     public function test_delay_resolution_clears_overdue_and_saves_due_date_history()
@@ -243,5 +256,41 @@ class AutomationEngineTest extends TestCase
             'order_id' => $order->id,
             'event_type' => 'APPROVAL_RESET',
         ]);
+    }
+
+    public function test_urgent_order_approval_assigns_same_day_sla_and_subtask(): void
+    {
+        $designer = Designer::where('name', 'César')->first();
+        $order = Order::create([
+            'company_name' => 'Urgent Corp',
+            'task_name' => 'Fast Banner',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::ENTRANTE,
+            'substatus' => Substatus::URGENTE,
+        ]);
+
+        $this->assertTrue($order->isUrgente());
+
+        app(AutomationEngine::class)->processApproval(
+            $order,
+            measuresConfirmed: true,
+            estimateApproved: true,
+            approvalType: 'cliente',
+            approvalNote: 'Aprobación urgente directa'
+        );
+
+        $freshOrder = $order->fresh();
+        $this->assertTrue($freshOrder->approved);
+        $this->assertTrue($freshOrder->isUrgente());
+        $this->assertEquals(today()->toDateString(), $freshOrder->current_due_date?->toDateString());
+        $this->assertEquals(Substatus::PONER_EN_ALTA, $freshOrder->substatus);
+
+        $task = RelatedTask::where('order_id', $order->id)->where('type', RelatedTaskType::PONER_ALTA)->first();
+        $this->assertNotNull($task);
+        $this->assertEquals('Poner en alta', $task->title);
+        $this->assertEquals(today()->toDateString(), $task->due_date?->toDateString());
+        $this->assertEquals(today()->toDateString(), $task->scheduled_date?->toDateString());
+        $this->assertEquals('urgent', $task->priority);
+        $this->assertTrue($task->is_work_task);
     }
 }

@@ -3,11 +3,14 @@
 namespace Tests\Feature\Orders;
 
 use App\Enums\CoreStatus;
+use App\Enums\Substatus;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -302,5 +305,151 @@ class OrderDetailModalTest extends TestCase
             ->assertSet('activeOrdersSortDirection', 'asc')
             ->assertSee('César')
             ->assertSee('WO 10000');
+    }
+
+    public function test_approval_validation_requires_support(): void
+    {
+        $order = Order::create([
+            'company_name' => 'CLIENTE PRUEBA APROBACION',
+            'task_name' => 'Pendiente Aprobacion',
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('openApprovalModal')
+            ->assertSet('showApprovalModal', true)
+            ->set('approvalComment', '')
+            ->set('approvalImage', null)
+            ->call('submitApproval')
+            ->assertHasErrors(['approvalSupport']);
+
+        $this->assertFalse($order->fresh()->approved);
+    }
+
+    public function test_approval_with_text_by_camila(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true, 'is_lead' => true]);
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE CAMILA APROBACION',
+            'task_name' => 'Diseno Camila',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENVIADO_A_CAMILA,
+            'designer_id' => $designer->id,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('openApprovalModal')
+            ->assertSet('approvalType', 'camila')
+            ->set('approvalComment', 'Visto bueno dado directamente por Camila vía chat interno.')
+            ->call('submitApproval')
+            ->assertHasNoErrors()
+            ->assertDispatched('order-updated');
+
+        $fresh = $order->fresh();
+        $this->assertTrue($fresh->approved);
+        $this->assertEquals('camila', $fresh->approval_type);
+        $this->assertEquals('Aprobado por Camila', $fresh->approval_type_label);
+        $this->assertEquals('Visto bueno dado directamente por Camila vía chat interno.', $fresh->approval_note);
+        $this->assertNotNull($fresh->approved_at);
+
+        $event = $order->events()->where('event_type', 'ORDER_APPROVED')->first();
+        $this->assertNotNull($event);
+        $this->assertEquals('camila', $event->metadata['approval_type']);
+        $this->assertEquals('Visto bueno dado directamente por Camila vía chat interno.', $event->metadata['approval_note']);
+
+        $this->assertDatabaseHas('related_tasks', [
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'status' => 'todo',
+        ]);
+        $task = $order->relatedTasks()->where('title', 'Poner en alta')->first();
+        $this->assertNotNull($task);
+        $this->assertEquals(now()->addWeekdays(1)->toDateString(), $task->due_date?->toDateString());
+    }
+
+    public function test_approval_with_image_by_cliente(): void
+    {
+        Storage::fake('public');
+
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true, 'is_lead' => true]);
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE DIRECTO APROBACION',
+            'task_name' => 'Diseno Cliente',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'designer_id' => $designer->id,
+        ]);
+
+        $file = UploadedFile::fake()->image('whatsapp_proof.png', 600, 400);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('openApprovalModal')
+            ->assertSet('approvalType', 'cliente')
+            ->set('approvalImage', $file)
+            ->set('approvalComment', 'Cliente autorizó en captura adjunta.')
+            ->call('submitApproval')
+            ->assertHasNoErrors()
+            ->assertDispatched('order-updated');
+
+        $fresh = $order->fresh();
+        $this->assertTrue($fresh->approved);
+        $this->assertEquals('cliente', $fresh->approval_type);
+        $this->assertEquals('Aprobado por Cliente', $fresh->approval_type_label);
+        $this->assertNotNull($fresh->approval_image_path);
+        Storage::disk('public')->assertExists($fresh->approval_image_path);
+
+        $event = $order->events()->where('event_type', 'ORDER_APPROVED')->first();
+        $this->assertNotNull($event);
+        $this->assertEquals('cliente', $event->metadata['approval_type']);
+        $this->assertNotNull($event->metadata['approval_image']);
+
+        $this->assertDatabaseHas('related_tasks', [
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'status' => 'todo',
+        ]);
+        $task = $order->relatedTasks()->where('title', 'Poner en alta')->first();
+        $this->assertNotNull($task);
+        $this->assertEquals(now()->addWeekdays(1)->toDateString(), $task->due_date?->toDateString());
+    }
+
+    public function test_approval_for_urgent_order_assigns_today_to_task_and_sla(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true, 'is_lead' => true]);
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE URGENTE HOY',
+            'task_name' => 'Pendón Urgente',
+            'in_workspace' => true,
+            'substatus' => Substatus::URGENTE,
+            'designer_id' => $designer->id,
+        ]);
+
+        $this->assertTrue($order->isUrgente());
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('openApprovalModal')
+            ->set('approvalType', 'cliente')
+            ->set('approvalComment', 'Aprobado para hoy mismo')
+            ->call('submitApproval')
+            ->assertHasNoErrors()
+            ->assertDispatched('order-updated');
+
+        $fresh = $order->fresh();
+        $this->assertTrue($fresh->approved);
+        $this->assertTrue($fresh->isUrgente());
+        $this->assertEquals(today()->toDateString(), $fresh->current_due_date?->toDateString());
+
+        $task = $fresh->relatedTasks()->where('title', 'Poner en alta')->first();
+        $this->assertNotNull($task);
+        $this->assertEquals(today()->toDateString(), $task->due_date?->toDateString());
+        $this->assertEquals(today()->toDateString(), $task->scheduled_date?->toDateString());
+        $this->assertEquals('urgent', $task->priority);
     }
 }
