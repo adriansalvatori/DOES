@@ -343,13 +343,18 @@ class OrderDetailModal extends Component
         }
 
         $commentText = trim($this->newTrelloComment);
-        $res = app(TrelloSyncService::class)->addCardComment($order->trello_card_id, $commentText);
+        $authorName = auth()->user()?->name;
+        $res = app(TrelloSyncService::class)->addCardComment(
+            cardId: $order->trello_card_id,
+            text: $commentText,
+            authorName: $authorName
+        );
 
         if ($res['success']) {
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'TRELLO_COMMENT_ADDED',
-                'actor' => 'Usuario',
+                'actor' => $authorName ?? 'Usuario',
                 'previous_value' => null,
                 'new_value' => null,
                 'metadata' => [
@@ -400,8 +405,8 @@ class OrderDetailModal extends Component
         $generator ??= app(WorkOrderNumberGenerator::class);
 
         $this->editWoNumber = $generator->generateNextDigits([
-            'company_name' => $this->editCompanyName,
-            'task_name' => $this->editTaskName,
+            'company_name' => mb_strtoupper(trim($this->editCompanyName ?? ''), 'UTF-8'),
+            'task_name' => mb_strtoupper(trim($this->editTaskName ?? ''), 'UTF-8'),
         ]);
     }
 
@@ -643,16 +648,6 @@ class OrderDetailModal extends Component
 
         $this->closeUnblockModal();
         $this->dispatch('order-updated');
-    }
-
-    public function updatedEditCompanyName($value)
-    {
-        $this->editCompanyName = mb_strtoupper($value ?? '', 'UTF-8');
-    }
-
-    public function updatedEditTaskName($value)
-    {
-        $this->editTaskName = mb_strtoupper($value ?? '', 'UTF-8');
     }
 
     public function saveOrder($addToWorkspace = false)

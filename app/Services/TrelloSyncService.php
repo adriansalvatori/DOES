@@ -7,6 +7,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\TrelloListMapping;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -764,20 +765,63 @@ class TrelloSyncService
                 $actions = $response->json();
                 $comments = [];
 
+                $usersByName = User::whereNotNull('name')->get()->keyBy('name');
+                $knownNames = $usersByName->keys()->merge(Designer::pluck('name'))->filter()->unique()->all();
+
                 foreach ($actions as $action) {
                     $creator = $action['memberCreator'] ?? [];
                     $avatar = ! empty($creator['avatarUrl'])
                         ? $creator['avatarUrl'].'/50.png'
                         : (! empty($creator['avatarHash']) ? "https://trello-members.s3.amazonaws.com/{$creator['id']}/{$creator['avatarHash']}/50.png" : null);
 
+                    $rawText = $action['data']['text'] ?? '';
+                    $authorName = $creator['fullName'] ?? ($creator['username'] ?? 'Usuario Trello');
+                    $isKudos = false;
+                    $kudosUser = null;
+                    $cleanText = $rawText;
+
+                    if (preg_match('/^\*\*([^*]+?)\s*\((?:Kudos\s*DOES|Kudos)\):\*\*\s*(?:\r?\n)*(.*)$/si', $rawText, $matches)) {
+                        $isKudos = true;
+                        $kudosUser = trim($matches[1]);
+                        $cleanText = trim($matches[2]) !== '' ? trim($matches[2]) : $rawText;
+                        $authorName = $kudosUser;
+                    } elseif (preg_match('/^\*\*([^*]+?):\*\*\s*(?:\r?\n)*(.*)$/si', $rawText, $matches)) {
+                        $candidateName = trim($matches[1]);
+                        if (in_array($candidateName, $knownNames, true)) {
+                            $isKudos = true;
+                            $kudosUser = $candidateName;
+                            $cleanText = trim($matches[2]) !== '' ? trim($matches[2]) : $rawText;
+                            $authorName = $kudosUser;
+                        }
+                    }
+
+                    $authorInitials = null;
+
+                    if ($isKudos && $kudosUser) {
+                        $matchedUser = $usersByName[$kudosUser] ?? User::where('name', 'like', "%{$kudosUser}%")->first();
+                        if ($matchedUser) {
+                            $avatar = ! empty($matchedUser->avatar_url) ? $matchedUser->avatar_url : null;
+                            $authorInitials = $matchedUser->initials;
+                        } else {
+                            $avatar = null;
+                            $authorInitials = mb_strtoupper(mb_substr($kudosUser, 0, 2));
+                        }
+                    } else {
+                        $authorInitials = strtoupper(substr($authorName, 0, 2));
+                    }
+
                     $comments[] = [
                         'id' => $action['id'] ?? null,
-                        'text' => $action['data']['text'] ?? '',
+                        'text' => $rawText,
+                        'clean_text' => $cleanText,
+                        'is_kudos' => $isKudos,
+                        'kudos_user' => $kudosUser,
                         'date' => $action['date'] ?? null,
                         'author_id' => $creator['id'] ?? null,
-                        'author_name' => $creator['fullName'] ?? ($creator['username'] ?? 'Usuario Trello'),
+                        'author_name' => $authorName,
                         'author_username' => $creator['username'] ?? '',
                         'author_avatar' => $avatar,
+                        'author_initials' => $authorInitials,
                     ];
                 }
 
@@ -795,7 +839,7 @@ class TrelloSyncService
     /**
      * Add a new comment to a Trello card.
      */
-    public function addCardComment(string $cardId, string $text, ?string $apiKey = null, ?string $apiToken = null): array
+    public function addCardComment(string $cardId, string $text, ?string $apiKey = null, ?string $apiToken = null, ?string $authorName = null): array
     {
         if ($this->isPaused()) {
             Log::info("Trello comment skipped for card {$cardId}: Trello sync is currently paused.");
@@ -817,10 +861,24 @@ class TrelloSyncService
             return ['success' => false, 'error' => 'Se requiere Token de Usuario Trello para agregar comentarios.'];
         }
 
+        $authorName = $authorName ?: auth()->user()?->name;
+        $formattedText = $text;
+
+        if (! empty($authorName)) {
+            $authorName = trim($authorName);
+            $alreadyPrefixed = str_starts_with($text, "**{$authorName}")
+                || str_starts_with($text, "**[{$authorName}]")
+                || preg_match('/^\*\*[^*]+?\*\*:\s*/i', $text);
+
+            if (! $alreadyPrefixed) {
+                $formattedText = "**{$authorName} (Kudos DOES):**\n\n{$text}";
+            }
+        }
+
         $params = [
             'key' => $apiKey,
             'token' => $apiToken,
-            'text' => $text,
+            'text' => $formattedText,
         ];
 
         try {
@@ -833,16 +891,24 @@ class TrelloSyncService
                     ? $creator['avatarUrl'].'/50.png'
                     : (! empty($creator['avatarHash']) ? "https://trello-members.s3.amazonaws.com/{$creator['id']}/{$creator['avatarHash']}/50.png" : null);
 
+                $matchedUser = $authorName ? User::where('name', $authorName)->first() : null;
+                $commentAvatar = ! empty($matchedUser?->avatar_url) ? $matchedUser->avatar_url : null;
+                $commentInitials = $matchedUser?->initials ?? ($authorName ? mb_strtoupper(mb_substr($authorName, 0, 2)) : 'US');
+
                 return [
                     'success' => true,
                     'comment' => [
                         'id' => $action['id'] ?? null,
-                        'text' => $action['data']['text'] ?? $text,
+                        'text' => $action['data']['text'] ?? $formattedText,
+                        'clean_text' => $text,
+                        'is_kudos' => ! empty($authorName),
+                        'kudos_user' => $authorName,
                         'date' => $action['date'] ?? now()->toIso8601String(),
                         'author_id' => $creator['id'] ?? null,
-                        'author_name' => $creator['fullName'] ?? 'Trello User',
+                        'author_name' => $authorName ?: ($creator['fullName'] ?? 'Trello User'),
                         'author_username' => $creator['username'] ?? '',
-                        'author_avatar' => $avatar,
+                        'author_avatar' => ! empty($authorName) ? $commentAvatar : $avatar,
+                        'author_initials' => ! empty($authorName) ? $commentInitials : strtoupper(substr($creator['fullName'] ?? 'U', 0, 2)),
                     ],
                 ];
             }

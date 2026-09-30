@@ -641,7 +641,7 @@
                                         autocomplete="off"
                                         placeholder="Ej: TAQUERIA LA CHULA..." 
                                         class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full pr-7 font-semibold"
-                                        x-on:input="$event.target.value = $event.target.value.toUpperCase()">
+                                        x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                                     
                                     <button 
                                         type="button" 
@@ -755,7 +755,7 @@
                             <!-- Tarea -->
                             <div class="space-y-1">
                                 <label class="font-medium text-zinc-700 block">Tarea de Diseño / Trabajo:</label>
-                                <input type="text" wire:model="editTaskName" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full" x-on:input="$event.target.value = $event.target.value.toUpperCase()">
+                                <input type="text" wire:model="editTaskName" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                             </div>
 
                             <!-- Diseñadores -->
@@ -1959,15 +1959,20 @@
                                         <button type="button" @click="format('insertOrderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="Lista numerada">1. Lista</button>
                                     </div>
 
-                                    <button 
-                                        wire:click="addTrelloComment" 
-                                        wire:loading.attr="disabled"
-                                        type="button" 
-                                        class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0">
-                                        <x-lucide-send wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
-                                        <x-lucide-loader-2 wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
-                                        <span>Publicar en Trello</span>
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-[10px] text-zinc-400 hidden sm:inline">
+                                            Como: <strong class="text-zinc-600 font-medium">{{ auth()->user()?->name ?? 'Usuario' }}</strong>
+                                        </span>
+                                        <button 
+                                            wire:click="addTrelloComment" 
+                                            wire:loading.attr="disabled"
+                                            type="button" 
+                                            class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0">
+                                            <x-lucide-send wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
+                                            <x-lucide-loader-2 wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
+                                            <span>Publicar en Trello</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1995,16 +2000,20 @@
                                             <div class="flex items-center justify-between gap-2">
                                                 <div class="flex items-center gap-2 min-w-0">
                                                     @if(!empty($comment['author_avatar']))
-                                                        <img src="{{ $comment['author_avatar'] }}" alt="{{ $comment['author_name'] }}" class="w-5 h-5 rounded-full object-cover shrink-0">
+                                                        <img src="{{ $comment['author_avatar'] }}" alt="{{ $comment['author_name'] }}" class="w-6 h-6 rounded-full object-cover shrink-0 shadow-2xs border border-stone-200">
                                                     @else
-                                                        <div class="w-5 h-5 rounded-full bg-sky-100 text-sky-700 font-bold text-[9px] flex items-center justify-center shrink-0">
-                                                            {{ strtoupper(substr($comment['author_name'] ?? 'T', 0, 1)) }}
+                                                        <div class="w-6 h-6 rounded-full {{ !empty($comment['is_kudos']) ? 'bg-stone-900 text-white' : 'bg-sky-100 text-sky-700' }} font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
+                                                            {{ !empty($comment['author_initials']) ? $comment['author_initials'] : strtoupper(substr($comment['author_name'] ?? 'U', 0, 2)) }}
                                                         </div>
                                                     @endif
                                                     <span class="text-xs font-semibold text-zinc-900 truncate">
                                                         {{ $comment['author_name'] }}
                                                     </span>
-                                                    @if(!empty($comment['author_username']))
+                                                    @if(!empty($comment['is_kudos']))
+                                                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-100 text-stone-700 border border-stone-200 shrink-0">
+                                                            Kudos DOES
+                                                        </span>
+                                                    @elseif(!empty($comment['author_username']))
                                                         <span class="text-[10px] text-zinc-400 truncate">
                                                             @({{ $comment['author_username'] }})
                                                         </span>
@@ -2018,7 +2027,7 @@
                                             </div>
 
                                             <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5">
-                                                {!! \Illuminate\Support\Str::markdown($comment['text'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                                {!! \Illuminate\Support\Str::markdown(!empty($comment['clean_text']) ? $comment['clean_text'] : $comment['text'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
                                             </div>
                                         </div>
                                     @endforeach

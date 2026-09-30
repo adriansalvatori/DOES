@@ -343,7 +343,7 @@
                                 autocomplete="off"
                                 placeholder="Ej. RESTAURANTE EL TACO LOCO..." 
                                 class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none font-semibold pr-7"
-                                x-on:input="$event.target.value = $event.target.value.toUpperCase()">
+                                x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                             
                             <button 
                                 type="button" 
@@ -464,7 +464,7 @@
                             <x-lucide-briefcase class="w-3 h-3 text-zinc-400" />
                             <span>Tarea / Descripción Trabajo <span class="text-red-500">*</span></span>
                         </label>
-                        <input type="text" wire:model="taskName" placeholder="Ej. MENÚ EXTERIOR ACRÍLICO & ROTULACIÓN" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none" x-on:input="$event.target.value = $event.target.value.toUpperCase()">
+                        <input type="text" wire:model="taskName" placeholder="Ej. MENÚ EXTERIOR ACRÍLICO & ROTULACIÓN" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                         @error('taskName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 

@@ -136,19 +136,9 @@ class CreateOrderModal extends Component
         $generator ??= app(WorkOrderNumberGenerator::class);
 
         $this->woNumber = $generator->generateNextDigits([
-            'company_name' => $this->companyName,
-            'task_name' => $this->taskName,
+            'company_name' => mb_strtoupper(trim($this->companyName ?? ''), 'UTF-8'),
+            'task_name' => mb_strtoupper(trim($this->taskName ?? ''), 'UTF-8'),
         ]);
-    }
-
-    public function updatedCompanyName($value)
-    {
-        $this->companyName = mb_strtoupper($value ?? '', 'UTF-8');
-    }
-
-    public function updatedTaskName($value)
-    {
-        $this->taskName = mb_strtoupper($value ?? '', 'UTF-8');
     }
 
     public function updatedSubstatus($value)
