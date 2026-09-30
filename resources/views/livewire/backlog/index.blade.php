@@ -325,9 +325,16 @@
     <!-- Interactive Sync Summary Report Modal -->
     @if($syncReport['show'])
         <div 
+            x-data
+            x-init="
+                window.KudosModalStack?.register('sync-report-modal', $el, () => $wire.closeReportModal());
+                $cleanup(() => window.KudosModalStack?.unregister('sync-report-modal'));
+            "
+            @pointerdown="window.KudosModalStack?.bringToFront('sync-report-modal')"
             class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
-            @keydown.window.escape.prevent="if (!document.querySelector('[data-modal=\'order-detail\']')) $wire.closeReportModal()"
-            @keydown.window.enter.prevent="if (!document.querySelector('[data-modal=\'order-detail\']')) $wire.closeReportModal()">
+            style="z-index: 250;"
+            @keydown.window.escape.prevent="if (window.KudosModalStack ? window.KudosModalStack.isTop('sync-report-modal') : !document.querySelector('[data-modal=\'order-detail\']')) $wire.closeReportModal()"
+            @keydown.window.enter.prevent="if (window.KudosModalStack ? window.KudosModalStack.isTop('sync-report-modal') : !document.querySelector('[data-modal=\'order-detail\']')) $wire.closeReportModal()">
             <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2.5">

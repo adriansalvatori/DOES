@@ -21,6 +21,7 @@
                 <x-lucide-refresh-cw wire:loading wire:target="createBackup" class="w-3.5 h-3.5 animate-spin" />
                 <x-lucide-play wire:loading.remove wire:target="createBackup" class="w-3.5 h-3.5" />
                 <span>{{ __('Crear Respaldo Ahora') }}</span>
+                <kbd class="hidden sm:inline-block text-[10px] font-mono text-zinc-300 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-700 leading-tight">⌘S</kbd>
             </button>
         </div>
     </div>
@@ -290,6 +291,7 @@
                 >
                     <x-lucide-plus class="w-3.5 h-3.5" />
                     <span>{{ __('Crear Primer Respaldo') }}</span>
+                    <kbd class="text-[10px] font-mono text-zinc-300 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-700 leading-tight">⌘S</kbd>
                 </button>
             </div>
         @endif

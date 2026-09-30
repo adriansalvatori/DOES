@@ -474,4 +474,26 @@ class ClientDatabaseTest extends TestCase
             ->assertSee('WO 99999')
             ->assertSee('WO 11111');
     }
+
+    public function test_can_view_backlog_orders_tab_in_client_flyout(): void
+    {
+        $client = Client::create(['name' => 'CLIENTE BACKLOG FLYOUT']);
+
+        Order::create([
+            'company_name' => 'CLIENTE BACKLOG FLYOUT',
+            'client_id' => $client->id,
+            'task_name' => 'Backlog Project Item',
+            'wo_number' => 'WO 77777',
+            'in_workspace' => false,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->assertSeeHtml('wire:click="$set(\'activeTab\', \'backlog\')"')
+            ->set('activeTab', 'backlog')
+            ->assertSee('WO 77777')
+            ->assertSee('BACKLOG PROJECT ITEM')
+            ->assertSee('Backlog');
+    }
 }

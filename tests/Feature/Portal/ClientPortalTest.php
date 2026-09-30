@@ -165,10 +165,8 @@ class ClientPortalTest extends TestCase
             ->assertSet('isOpen', true)
             ->assertSeeHtml('Portal de Seguimiento (QR)')
             ->assertSee($client->portal_url)
-            ->assertSee('Portal QR')
-            ->set('activeTab', 'portal')
-            ->assertSee('Tarjeta QR y Portal del Cliente')
-            ->assertSee('Descargar Tarjeta JPG');
+            ->assertSee('Descargar Card JPG')
+            ->assertDontSeeHtml('<span>Portal QR</span>');
     }
 
     public function test_qr_code_service_generates_valid_svg_string(): void

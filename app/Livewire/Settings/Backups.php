@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -30,6 +31,13 @@ class Backups extends Component
         if ($user && ! $user->isAdmin()) {
             abort(403, __('No tiene permisos para acceder a esta sección.'));
         }
+    }
+
+    #[On('backup-created')]
+    public function onBackupCreated(): void
+    {
+        unset($this->allBackups);
+        $this->resetPage();
     }
 
     public function updatingSearch(): void
@@ -56,6 +64,8 @@ class Backups extends Component
 
             if ($exitCode === 0) {
                 $this->successMessage = __('Respaldo generado exitosamente.');
+                $this->dispatch('backup-created');
+                $this->dispatch('toast', message: __('Respaldo generado exitosamente.'));
                 $this->resetPage();
             } else {
                 $output = trim(Artisan::output());

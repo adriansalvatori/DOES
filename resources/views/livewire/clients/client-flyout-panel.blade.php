@@ -6,12 +6,32 @@
             this.$watch('$wire.isOpen', (open) => {
                 if (open) {
                     this.snapshot();
+                    window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
+                    this.$nextTick(() => {
+                        const container = document.getElementById('client-flyout-container') || this.$el;
+                        window.KudosModalStack?.register('client-flyout-panel', container, () => this.confirmClose(() => $wire.close()));
+                    });
                 } else {
                     window.KudosDirtyGuard.unregister('client-flyout-panel');
+                    window.KudosModalStack?.unregister('client-flyout-panel');
                 }
             });
-            window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
-            this.$cleanup(() => window.KudosDirtyGuard.unregister('client-flyout-panel'));
+            this.$watch('$wire.clientId', () => {
+                if ($wire.isOpen) {
+                    window.KudosModalStack?.bringToFront('client-flyout-panel');
+                }
+            });
+            if ($wire.isOpen) {
+                window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
+                this.$nextTick(() => {
+                    const container = document.getElementById('client-flyout-container') || this.$el;
+                    window.KudosModalStack?.register('client-flyout-panel', container, () => this.confirmClose(() => $wire.close()));
+                });
+            }
+            this.$cleanup(() => {
+                window.KudosDirtyGuard.unregister('client-flyout-panel');
+                window.KudosModalStack?.unregister('client-flyout-panel');
+            });
         },
         snapshot() {
             this.initialSnapshot = JSON.stringify({
@@ -93,29 +113,40 @@
                     onCancel: () => {},
                     onDiscard: () => {
                         window.KudosDirtyGuard.unregister('client-flyout-panel');
+                        window.KudosModalStack?.unregister('client-flyout-panel');
                         action();
                     },
                     onSave: () => {
                         window.KudosDirtyGuard.unregister('client-flyout-panel');
+                        window.KudosModalStack?.unregister('client-flyout-panel');
                         $wire.save();
                     }
                 });
             } else {
+                window.KudosDirtyGuard.unregister('client-flyout-panel');
+                window.KudosModalStack?.unregister('client-flyout-panel');
                 action();
             }
         }
     }"
-    @keydown.window.escape.stop="if ($wire.isOpen && !window.KudosDirtyGuard.isConfirmModalOpen) confirmClose(() => $wire.close())"
+    @open-client-flyout.window="window.KudosModalStack?.bringToFront('client-flyout-panel')"
+    @keydown.window.escape.stop="if (window.KudosModalStack ? window.KudosModalStack.isTop('client-flyout-panel') : ($wire.isOpen && !window.KudosDirtyGuard.isConfirmModalOpen)) confirmClose(() => $wire.close())"
 >
     @if($isOpen)
-        {{-- Backdrop --}}
         <div 
-            class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs z-[360] transition-opacity"
-            @click="confirmClose(() => $wire.close())"
-        ></div>
+            id="client-flyout-container" 
+            class="fixed inset-0 flex justify-end" 
+            style="z-index: 300;"
+            @pointerdown="window.KudosModalStack?.bringToFront('client-flyout-panel')"
+        >
+            {{-- Backdrop --}}
+            <div 
+                class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs transition-opacity"
+                @click="confirmClose(() => $wire.close())"
+            ></div>
 
-        {{-- Slide-over Flyout Panel (Proportioned max-w-2xl ~ 672px width) --}}
-        <div id="client-flyout-panel" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-[370] flex flex-col border-l border-zinc-200 transform transition-transform duration-200">
+            {{-- Slide-over Flyout Panel (Proportioned max-w-2xl ~ 672px width) --}}
+            <div id="client-flyout-panel" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col border-l border-zinc-200 transform transition-transform duration-200">
             
             {{-- Panel Header --}}
             <div class="px-6 py-4 border-b border-zinc-100 bg-white flex items-center justify-between shrink-0">
@@ -233,14 +264,6 @@
                 @if($currentClient)
                     <button 
                         type="button" 
-                        wire:click="$set('activeTab', 'portal')"
-                        class="py-3 px-3 border-b-2 font-medium transition cursor-pointer flex items-center gap-2 text-xs {{ $activeTab === 'portal' ? 'border-amber-500 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
-                    >
-                        <x-lucide-qr-code class="w-3.5 h-3.5 {{ $activeTab === 'portal' ? 'text-amber-500' : 'text-zinc-400' }}" />
-                        <span>{{ __('Portal QR') }}</span>
-                    </button>
-                    <button 
-                        type="button" 
                         wire:click="$set('activeTab', 'projects')"
                         class="py-3 px-3 border-b-2 font-medium transition cursor-pointer flex items-center gap-2 text-xs {{ $activeTab === 'projects' ? 'border-emerald-600 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
                     >
@@ -254,6 +277,14 @@
                     >
                         <x-lucide-archive class="w-3.5 h-3.5 {{ $activeTab === 'archived' ? 'text-emerald-600' : 'text-zinc-400' }}" />
                         <span>{{ __('Archivados') }} ({{ $currentClient->archivedOrders->count() }})</span>
+                    </button>
+                    <button 
+                        type="button" 
+                        wire:click="$set('activeTab', 'backlog')"
+                        class="py-3 px-2.5 border-b-2 font-medium transition cursor-pointer flex items-center justify-center text-xs {{ $activeTab === 'backlog' ? 'border-emerald-600 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
+                        title="Backlog"
+                    >
+                        <x-lucide-box class="w-3.5 h-3.5 {{ $activeTab === 'backlog' ? 'text-emerald-600' : 'text-zinc-400' }}" />
                     </button>
                 @endif
             </div>
@@ -347,6 +378,7 @@
                                     x-data="{
                                         copied: false,
                                         downloading: false,
+                                        showCardPreview: false,
                                         copyUrl() {
                                             const url = {{ json_encode($currentClient->portal_url) }};
                                             navigator.clipboard.writeText(url).then(() => {
@@ -453,7 +485,104 @@
                                                         </span>
                                                     </template>
                                                 </button>
+
+                                                <button 
+                                                    type="button" 
+                                                    @click="showCardPreview = !showCardPreview" 
+                                                    class="px-2 py-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-xs font-medium transition cursor-pointer flex items-center gap-1"
+                                                >
+                                                    <x-lucide-eye class="w-3.5 h-3.5 text-zinc-500" />
+                                                    <span x-text="showCardPreview ? '{{ __('Ocultar Vista') }}' : '{{ __('Ver Tarjeta') }}'"></span>
+                                                </button>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- Expandable Full Card Mockup & Details --}}
+                                    <div x-show="showCardPreview" x-cloak class="pt-3 border-t border-amber-200/80 space-y-4">
+                                        <div class="flex flex-col items-center">
+                                            <p class="text-[11px] text-zinc-500 mb-2 font-medium">
+                                                {{ __('Vista previa de la tarjeta JPG (Haz clic para descargar):') }}
+                                            </p>
+
+                                            <div 
+                                                @click="downloadCard()" 
+                                                class="w-full max-w-xs bg-white rounded-3xl shadow-lg border-2 border-zinc-100 overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 relative select-none flex flex-col justify-between"
+                                                style="aspect-ratio: 9 / 16;"
+                                                title="{{ __('Haz clic para descargar la tarjeta JPG') }}"
+                                            >
+                                                {{-- Card Header: Kudos Logo --}}
+                                                <div class="pt-8 px-6 flex justify-center">
+                                                    <img src="{{ asset('images/logo-kudos.svg') }}" alt="Kudos Print Media" class="h-14 w-auto">
+                                                </div>
+
+                                                {{-- Card Body: Client Name & Underline --}}
+                                                <div class="px-6 text-center space-y-1.5 my-auto">
+                                                    <div class="space-y-1">
+                                                        <h2 class="text-lg font-black text-zinc-900 uppercase tracking-tight line-clamp-2">
+                                                            {{ $currentClient->name }}
+                                                        </h2>
+                                                        <div class="w-16 h-1 bg-amber-400 rounded-full mx-auto"></div>
+                                                    </div>
+                                                    <p class="text-[11px] text-zinc-700 font-medium leading-tight">
+                                                        Consulta el estado de tus<br>pedidos en línea.
+                                                    </p>
+
+                                                    {{-- QR Code with sunshine rays --}}
+                                                    <div class="relative py-3 flex items-center justify-center">
+                                                        <div class="absolute left-6 flex flex-col gap-2.5">
+                                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform -rotate-25"></div>
+                                                            <div class="w-4 h-1 bg-amber-400 rounded-full"></div>
+                                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform rotate-25"></div>
+                                                        </div>
+
+                                                        <div class="p-3 bg-white rounded-2xl border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.35)] w-36 h-36 flex items-center justify-center">
+                                                            <div class="w-28 h-28">
+                                                                {!! $currentClientQrSvg !!}
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="absolute right-6 flex flex-col gap-2.5">
+                                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform rotate-25"></div>
+                                                            <div class="w-4 h-1 bg-amber-400 rounded-full"></div>
+                                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform -rotate-25"></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="bg-amber-400 rounded-full py-1.5 px-4 inline-flex items-center gap-2 text-zinc-900 font-extrabold text-[11px] shadow-xs">
+                                                        <x-lucide-smartphone class="w-4 h-4 text-zinc-900" />
+                                                        <div class="leading-tight text-left">
+                                                            <div>Escanea para acceder</div>
+                                                            <div>a tus órdenes</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="w-full shrink-0">
+                                                    <img src="{{ asset('images/footer-decor.svg') }}" alt="Decor" class="w-full h-14 object-cover object-bottom">
+                                                </div>
+
+                                                <div class="absolute inset-0 bg-amber-950/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white space-y-2 backdrop-blur-2xs">
+                                                    <div class="w-12 h-12 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center shadow-lg">
+                                                        <x-lucide-download class="w-6 h-6" />
+                                                    </div>
+                                                    <span class="text-xs font-bold uppercase tracking-wider">{{ __('Descargar Tarjeta JPG') }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {{-- Information Checklist --}}
+                                        <div class="bg-white/90 border border-amber-200/80 rounded-lg p-3 text-xs text-zinc-600 space-y-1.5">
+                                            <h4 class="font-bold text-zinc-800 flex items-center gap-1.5 text-[11px]">
+                                                <x-lucide-info class="w-3.5 h-3.5 text-amber-500" />
+                                                <span>{{ __('Características del Portal') }}</span>
+                                            </h4>
+                                            <ul class="space-y-1 text-[11px] text-zinc-500 list-disc list-inside">
+                                                <li>{{ __('Acceso inmediato sin contraseñas: el código QR auto-autentica al cliente.') }}</li>
+                                                <li>{{ __('Solo lectura y monitoreo: los clientes no pueden editar información del sistema.') }}</li>
+                                                <li>{{ __('Línea de tiempo compacta con hitos importantes de cada proyecto.') }}</li>
+                                                <li>{{ __('Optimizado para vista móvil en teléfonos inteligentes.') }}</li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
@@ -947,200 +1076,6 @@
                     </div>
                 @endif
 
-                {{-- TAB: Portal del Cliente (QR & Monitoreo) --}}
-                @if($activeTab === 'portal' && $currentClient)
-                    <div 
-                        x-data="{
-                            copied: false,
-                            downloading: false,
-                            copyUrl() {
-                                const url = {{ json_encode($currentClient->portal_url) }};
-                                navigator.clipboard.writeText(url).then(() => {
-                                    this.copied = true;
-                                    setTimeout(() => this.copied = false, 2000);
-                                });
-                            },
-                            downloadCard() {
-                                this.downloading = true;
-                                window.downloadClientQrCard({
-                                    clientName: {{ json_encode($currentClient->name) }},
-                                    portalUrl: {{ json_encode($currentClient->portal_url) }},
-                                    qrSvgDataUri: {{ json_encode($currentClientQrDataUri) }},
-                                    logoUrl: '{{ asset('images/logo-kudos.svg') }}',
-                                    footerDecorUrl: '{{ asset('images/footer-decor.svg') }}'
-                                }).finally(() => {
-                                    setTimeout(() => this.downloading = false, 600);
-                                });
-                            }
-                        }"
-                        class="space-y-6"
-                    >
-                        {{-- Tab Header Controls --}}
-                        <div class="flex items-center justify-between gap-3 pb-1 border-b border-zinc-100">
-                            <div>
-                                <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <x-lucide-qr-code class="w-4 h-4 text-amber-500" />
-                                    <span>{{ __('Tarjeta QR y Portal del Cliente') }}</span>
-                                </h3>
-                                <p class="text-[11px] text-zinc-500 mt-0.5">
-                                    {{ __('Descarga la tarjeta JPG lista para compartir o imprimir para el cliente.') }}
-                                </p>
-                            </div>
-
-                            <button 
-                                type="button" 
-                                @click="downloadCard()" 
-                                :disabled="downloading"
-                                class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs shrink-0"
-                            >
-                                <template x-if="!downloading">
-                                    <span class="flex items-center gap-1.5">
-                                        <x-lucide-download class="w-4 h-4 text-zinc-950" />
-                                        <span>{{ __('Descargar JPG') }}</span>
-                                    </span>
-                                </template>
-                                <template x-if="downloading">
-                                    <span class="flex items-center gap-1.5 text-zinc-950">
-                                        <x-lucide-loader-2 class="w-4 h-4 animate-spin" />
-                                        <span>{{ __('Generando...') }}</span>
-                                    </span>
-                                </template>
-                            </button>
-                        </div>
-
-                        {{-- Link Sharing Bar --}}
-                        <div class="p-3 bg-zinc-50 border border-zinc-200/80 rounded-xl space-y-2">
-                            <span class="text-[11px] font-bold text-zinc-700 block">{{ __('Enlace Directo del Portal') }}</span>
-                            <div class="flex items-center gap-2">
-                                <input 
-                                    type="text" 
-                                    readonly 
-                                    value="{{ $currentClient->portal_url }}" 
-                                    class="flex-1 bg-white border border-zinc-200 rounded-lg px-2.5 py-1 text-xs font-mono text-zinc-700 select-all focus:outline-none"
-                                >
-                                <button 
-                                    type="button" 
-                                    @click="copyUrl()" 
-                                    class="px-2.5 py-1 rounded-lg bg-white border border-zinc-200 hover:bg-zinc-100 text-zinc-700 text-xs font-semibold transition cursor-pointer flex items-center gap-1 shrink-0 shadow-2xs"
-                                >
-                                    <template x-if="!copied">
-                                        <span class="flex items-center gap-1">
-                                            <x-lucide-copy class="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{{ __('Copiar') }}</span>
-                                        </span>
-                                    </template>
-                                    <template x-if="copied">
-                                        <span class="flex items-center gap-1 text-emerald-600 font-bold">
-                                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
-                                            <span>{{ __('¡Copiado!') }}</span>
-                                        </span>
-                                    </template>
-                                </button>
-                                <a 
-                                    href="{{ $currentClient->portal_url }}" 
-                                    target="_blank" 
-                                    class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition flex items-center gap-1 shrink-0 shadow-2xs cursor-pointer"
-                                >
-                                    <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-400" />
-                                    <span>{{ __('Abrir') }}</span>
-                                </a>
-                            </div>
-                        </div>
-
-                        {{-- Card Mockup Preview (Accurate replica of the example image) --}}
-                        <div class="flex flex-col items-center">
-                            <p class="text-[11px] text-zinc-400 mb-2 font-medium">
-                                {{ __('Vista previa de la tarjeta JPG (Haz clic en la tarjeta para descargar):') }}
-                            </p>
-
-                            <div 
-                                @click="downloadCard()" 
-                                class="w-full max-w-xs bg-white rounded-3xl shadow-xl border-2 border-zinc-100 overflow-hidden cursor-pointer group hover:border-amber-400 hover:shadow-2xl transition duration-300 transform hover:-translate-y-1 relative select-none flex flex-col justify-between"
-                                style="aspect-ratio: 9 / 16;"
-                                title="{{ __('Haz clic para descargar la tarjeta JPG') }}"
-                            >
-                                {{-- Card Header: Kudos Logo --}}
-                                <div class="pt-8 px-6 flex justify-center">
-                                    <img src="{{ asset('images/logo-kudos.svg') }}" alt="Kudos Print Media" class="h-14 w-auto">
-                                </div>
-
-                                {{-- Card Body: Client Name & Underline --}}
-                                <div class="px-6 text-center space-y-1.5 my-auto">
-                                    <div class="space-y-1">
-                                        <h2 class="text-lg font-black text-zinc-900 uppercase tracking-tight line-clamp-2">
-                                            {{ $currentClient->name }}
-                                        </h2>
-                                        <div class="w-16 h-1 bg-amber-400 rounded-full mx-auto"></div>
-                                    </div>
-                                    <p class="text-[11px] text-zinc-700 font-medium leading-tight">
-                                        Consulta el estado de tus<br>pedidos en línea.
-                                    </p>
-
-                                    {{-- QR Code with sunshine rays --}}
-                                    <div class="relative py-3 flex items-center justify-center">
-                                        {{-- Left sunshine rays --}}
-                                        <div class="absolute left-6 flex flex-col gap-2.5">
-                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform -rotate-25"></div>
-                                            <div class="w-4 h-1 bg-amber-400 rounded-full"></div>
-                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform rotate-25"></div>
-                                        </div>
-
-                                        {{-- QR Container with rounded yellow border & glow --}}
-                                        <div class="p-3 bg-white rounded-2xl border-4 border-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.35)] w-36 h-36 flex items-center justify-center">
-                                            <div class="w-28 h-28">
-                                                {!! $currentClientQrSvg !!}
-                                            </div>
-                                        </div>
-
-                                        {{-- Right sunshine rays --}}
-                                        <div class="absolute right-6 flex flex-col gap-2.5">
-                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform rotate-25"></div>
-                                            <div class="w-4 h-1 bg-amber-400 rounded-full"></div>
-                                            <div class="w-3.5 h-1 bg-amber-400 rounded-full transform -rotate-25"></div>
-                                        </div>
-                                    </div>
-
-                                    {{-- Pill button badge --}}
-                                    <div class="bg-amber-400 rounded-full py-1.5 px-4 inline-flex items-center gap-2 text-zinc-900 font-extrabold text-[11px] shadow-xs">
-                                        <x-lucide-smartphone class="w-4 h-4 text-zinc-900" />
-                                        <div class="leading-tight text-left">
-                                            <div>Escanea para acceder</div>
-                                            <div>a tus órdenes</div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {{-- Card Footer Ribbon --}}
-                                <div class="w-full shrink-0">
-                                    <img src="{{ asset('images/footer-decor.svg') }}" alt="Decor" class="w-full h-14 object-cover object-bottom">
-                                </div>
-
-                                {{-- Hover Overlay Download Prompt --}}
-                                <div class="absolute inset-0 bg-amber-950/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center text-white space-y-2 backdrop-blur-2xs">
-                                    <div class="w-12 h-12 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center shadow-lg">
-                                        <x-lucide-download class="w-6 h-6" />
-                                    </div>
-                                    <span class="text-xs font-bold uppercase tracking-wider">{{ __('Descargar Tarjeta JPG') }}</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Information Checklist --}}
-                        <div class="bg-zinc-50 border border-zinc-200/80 rounded-xl p-4 text-xs text-zinc-600 space-y-2">
-                            <h4 class="font-bold text-zinc-800 flex items-center gap-1.5">
-                                <x-lucide-info class="w-4 h-4 text-amber-500" />
-                                <span>{{ __('Características del Portal') }}</span>
-                            </h4>
-                            <ul class="space-y-1 text-[11px] text-zinc-500 list-disc list-inside">
-                                <li>{{ __('Acceso inmediato sin contraseñas: el código QR auto-autentica al cliente.') }}</li>
-                                <li>{{ __('Solo lectura y monitoreo: los clientes no pueden editar información del sistema.') }}</li>
-                                <li>{{ __('Línea de tiempo compacta con hitos importantes (envíos, cambios, aprobaciones, on hold).') }}</li>
-                                <li>{{ __('Optimizado para vista móvil en un 95% de pantallas de teléfonos.') }}</li>
-                            </ul>
-                        </div>
-                    </div>
-                @endif
-
                 {{-- TAB 2: Enlaces & Recursos (Drive, Brandbook, Assets) --}}
                 @if($activeTab === 'links')
                     <div class="space-y-5">
@@ -1428,6 +1363,58 @@
                         </div>
                     </div>
                 @endif
+
+                {{-- TAB 5: Backlog --}}
+                @if($activeTab === 'backlog' && $currentClient)
+                    <div class="space-y-4">
+                        <div class="divide-y divide-zinc-200/60 border-t border-b border-zinc-200/60">
+                            @forelse($currentClient->backlogOrders as $order)
+                                <div 
+                                    wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
+                                    class="py-3 px-1 hover:bg-zinc-50 flex items-center justify-between text-xs cursor-pointer transition group"
+                                >
+                                    <div class="min-w-0 pr-2 space-y-1">
+                                        <div class="font-semibold text-zinc-900 flex items-center gap-2 truncate">
+                                            @if($order->wo_number)
+                                                <x-wo-badge :number="$order->wo_number" variant="dark" />
+                                            @endif
+                                            @if($order->designer)
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">
+                                                    {{ $order->designer->name }}
+                                                </span>
+                                            @endif
+                                            @php
+                                                $locName = $order->location_name ?: $order->clientLocation?->name;
+                                                $cleanTask = $order->clean_task_name;
+                                                $showLocBadge = $locName && mb_strtolower(trim($locName), 'UTF-8') !== mb_strtolower(trim($cleanTask), 'UTF-8');
+                                            @endphp
+                                            @if($showLocBadge)
+                                                <span class="inline-flex items-center gap-1 font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded text-[10px] shrink-0" title="Locación del Cliente">
+                                                    <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
+                                                    <span>{{ $locName }}</span>
+                                                </span>
+                                            @endif
+                                            <span class="group-hover:text-emerald-700 transition truncate text-zinc-600">{{ $cleanTask }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 shrink-0">
+                                        @if($order->substatus)
+                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                {{ $order->substatus->label() }}
+                                            </span>
+                                        @endif
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 bg-amber-50 text-amber-700 border-amber-200">
+                                            {{ __('Backlog') }}
+                                        </span>
+                                        <x-lucide-panel-right class="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition shrink-0 ml-1" />
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-xs text-zinc-400 italic py-4 text-center">{{ __('No hay órdenes en backlog para este cliente.') }}</p>
+                            @endforelse
+                        </div>
+                    </div>
+                @endif
             </div>
 
             {{-- Panel Footer --}}
@@ -1465,6 +1452,7 @@
                     </button>
                 </div>
             </div>
+        </div>
         </div>
     @endif
 </div>

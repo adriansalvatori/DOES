@@ -102,6 +102,174 @@ window.KudosDirtyGuard = {
     }
 };
 
+// Kudos Design Ops - Global Modal & Flyout Stack Layering Manager
+window.KudosModalStack = {
+    stack: [],
+    baseZIndex: 300,
+
+    /**
+     * Register or bring a modal/flyout to the front of the stack
+     * @param {string} id
+     * @param {HTMLElement|string|null} elementOrSelector
+     * @param {Function|null} closeCallback
+     */
+    register(id, elementOrSelector = null, closeCallback = null) {
+        if (!id) return;
+
+        const existing = this.stack.find(item => item.id === id);
+        this.stack = this.stack.filter(item => item.id !== id);
+
+        let selector = null;
+        let el = null;
+
+        if (typeof elementOrSelector === 'string') {
+            selector = elementOrSelector;
+            el = document.querySelector(selector);
+        } else if (elementOrSelector instanceof HTMLElement) {
+            el = elementOrSelector;
+            if (el.id) {
+                selector = '#' + el.id;
+            } else if (el.dataset && el.dataset.modal) {
+                selector = `[data-modal="${el.dataset.modal}"]`;
+            }
+        }
+
+        const entry = {
+            id,
+            selector: selector || existing?.selector || null,
+            el: el || existing?.el || null,
+            close: closeCallback || existing?.close || null
+        };
+
+        this.stack.push(entry);
+        this.recalculateZIndices();
+        return this.getZIndex(id);
+    },
+
+    /**
+     * Unregister a modal/flyout when closed
+     * @param {string} id
+     */
+    unregister(id) {
+        if (!id) return;
+        this.stack = this.stack.filter(item => item.id !== id);
+        this.recalculateZIndices();
+    },
+
+    /**
+     * Bring an active modal/flyout to the front (highest z-index)
+     * @param {string} id
+     */
+    bringToFront(id) {
+        if (!id) return;
+        const index = this.stack.findIndex(item => item.id === id);
+        if (index !== -1) {
+            const [item] = this.stack.splice(index, 1);
+            this.stack.push(item);
+            this.recalculateZIndices();
+        }
+    },
+
+    /**
+     * Recompute z-indices so the topmost item is always in front
+     */
+    recalculateZIndices() {
+        // Prune any elements no longer attached to DOM
+        this.stack = this.stack.filter(item => {
+            if (item.selector) {
+                const found = document.querySelector(item.selector);
+                if (found) {
+                    item.el = found;
+                    return true;
+                }
+            }
+            if (item.el && !document.body.contains(item.el)) {
+                return false;
+            }
+            return true;
+        });
+
+        this.stack.forEach((item, index) => {
+            const z = this.baseZIndex + (index * 20);
+            const el = (item.selector ? document.querySelector(item.selector) : null) || item.el;
+            if (el) {
+                item.el = el;
+                el.style.setProperty('z-index', z.toString(), 'important');
+            }
+        });
+    },
+
+    getZIndex(id) {
+        const index = this.stack.findIndex(item => item.id === id);
+        if (index === -1) return this.baseZIndex;
+        return this.baseZIndex + (index * 20);
+    },
+
+    getTop() {
+        return this.stack.length > 0 ? this.stack[this.stack.length - 1] : null;
+    },
+
+    isTop(id) {
+        const top = this.getTop();
+        return top && top.id === id;
+    },
+
+    handleEscape() {
+        if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
+            return false;
+        }
+
+        const top = this.getTop();
+        if (top && typeof top.close === 'function') {
+            top.close();
+            return true;
+        }
+        return false;
+    }
+};
+
+// Global Escape listener: intercepts Escape key and closes ONLY the topmost modal/flyout
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' || e.key === 'Esc') {
+        if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
+            return;
+        }
+        if (window.KudosModalStack && window.KudosModalStack.stack.length > 0) {
+            const handled = window.KudosModalStack.handleEscape();
+            if (handled) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }
+    }
+}, true);
+
+// Listen to Livewire lifecycle hooks to re-apply z-indexes after Livewire DOM morphs
+const attachLivewireModalHooks = () => {
+    if (!window.Livewire) return;
+
+    if (typeof window.Livewire.hook === 'function') {
+        window.Livewire.hook('commit', ({ succeed }) => {
+            if (typeof succeed === 'function') {
+                succeed(() => {
+                    window.KudosModalStack?.recalculateZIndices();
+                });
+            }
+        });
+        window.Livewire.hook('morph.updated', () => {
+            window.KudosModalStack?.recalculateZIndices();
+        });
+    }
+};
+
+if (window.Livewire) {
+    attachLivewireModalHooks();
+} else {
+    document.addEventListener('livewire:init', attachLivewireModalHooks);
+}
+
+
 
 // Global beforeunload warning for page refresh or tab close
 window.addEventListener('beforeunload', (event) => {

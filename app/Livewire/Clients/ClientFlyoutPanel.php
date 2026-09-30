@@ -690,7 +690,15 @@ class ClientFlyoutPanel extends Component
 
     public function render()
     {
-        $currentClient = $this->clientId ? Client::with(['activeOrders.designer', 'activeOrders.clientLocation', 'archivedOrders.designer', 'archivedOrders.clientLocation', 'locations'])->find($this->clientId) : null;
+        $currentClient = $this->clientId ? Client::with([
+            'activeOrders.designer',
+            'activeOrders.clientLocation',
+            'archivedOrders.designer',
+            'archivedOrders.clientLocation',
+            'backlogOrders.designer',
+            'backlogOrders.clientLocation',
+            'locations',
+        ])->find($this->clientId) : null;
         $sortedActiveOrders = $currentClient
             ? $this->sortOrdersCollection($currentClient->activeOrders, $this->activeOrdersSortField, $this->activeOrdersSortDirection)
             : collect();

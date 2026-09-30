@@ -1,6 +1,12 @@
 <div>
     @if($showModal)
-        <div @click.self="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[100] overflow-y-auto bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+            id="create-order-modal-container"
+            @click.self="confirmClose(() => $wire.closeModal())" 
+            class="fixed inset-0 overflow-y-auto bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4"
+            style="z-index: 300;"
+            @pointerdown="window.KudosModalStack?.bringToFront('create-order-modal')"
+        >
             <div 
                 x-data="{
                     initialForm: null,
@@ -9,13 +15,25 @@
                         this.$watch('$wire.showModal', (show) => {
                             if (!show) {
                                 window.KudosDirtyGuard.unregister('create-order-modal');
+                                window.KudosModalStack?.unregister('create-order-modal');
                             } else {
                                 this.snapshot();
                                 window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
+                                this.$nextTick(() => {
+                                    const container = document.getElementById('create-order-modal-container') || this.$el;
+                                    window.KudosModalStack?.register('create-order-modal', container, () => this.confirmClose(() => $wire.closeModal()));
+                                });
                             }
                         });
                         window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
-                        this.$cleanup(() => window.KudosDirtyGuard.unregister('create-order-modal'));
+                        this.$nextTick(() => {
+                            const container = document.getElementById('create-order-modal-container') || this.$el;
+                            window.KudosModalStack?.register('create-order-modal', container, () => this.confirmClose(() => $wire.closeModal()));
+                        });
+                        this.$cleanup(() => {
+                            window.KudosDirtyGuard.unregister('create-order-modal');
+                            window.KudosModalStack?.unregister('create-order-modal');
+                        });
                     },
                     snapshot() {
                         this.initialForm = JSON.stringify({
@@ -61,19 +79,23 @@
                                 onCancel: () => {},
                                 onDiscard: () => {
                                     window.KudosDirtyGuard.unregister('create-order-modal');
+                                    window.KudosModalStack?.unregister('create-order-modal');
                                     action();
                                 },
                                 onSave: () => {
                                     window.KudosDirtyGuard.unregister('create-order-modal');
+                                    window.KudosModalStack?.unregister('create-order-modal');
                                     $wire.save();
                                 }
                             });
                         } else {
+                            window.KudosDirtyGuard.unregister('create-order-modal');
+                            window.KudosModalStack?.unregister('create-order-modal');
                             action();
                         }
                     }
                 }"
-                @keydown.window.escape="confirmClose(() => $wire.closeModal())"
+                @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('create-order-modal') : true) confirmClose(() => $wire.closeModal())"
                 class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-2xl w-full flex flex-col transition duration-200">
                 
                 <!-- Modal Header -->

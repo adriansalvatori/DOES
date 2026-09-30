@@ -275,10 +275,13 @@
                             </a>
                             <a 
                                 href="/settings/backups" 
-                                title="{{ __('Respaldos de Base de Datos') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Respaldos') }}</span>
+                                title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <span class="truncate">{{ __('Respaldos') }}</span>
+                                </div>
+                                <kbd x-show="sidebarOpen" class="hidden sm:inline-block text-[10px] font-mono text-zinc-400 bg-stone-200/70 border border-stone-300/80 px-1 py-0.2 rounded leading-tight">⌘S</kbd>
                             </a>
                         @endif
                     </div>
@@ -340,10 +343,13 @@
                             </a>
                             <a 
                                 href="/settings/backups" 
-                                title="{{ __('Respaldos de Base de Datos') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Respaldos') }}</span>
+                                title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center justify-between gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <span class="truncate">{{ __('Respaldos') }}</span>
+                                </div>
+                                <kbd class="text-[10px] font-mono text-zinc-400 bg-stone-200/70 border border-stone-300/80 px-1 py-0.2 rounded leading-tight">⌘S</kbd>
                             </a>
                         @endif
                     </div>
@@ -596,6 +602,9 @@
 
     <!-- Global Unsaved Changes Warning Modal -->
     <x-dirty-confirm-modal />
+
+    <!-- Global Database Backup Shortcut Handler & Feedback -->
+    <livewire:settings.database-backup-shortcut />
 
     <!-- Global Toast Notification Banner -->
     <div 

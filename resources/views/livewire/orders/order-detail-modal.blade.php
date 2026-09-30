@@ -7,17 +7,31 @@
                 init() {
                     this.snapshot();
                     this.$watch('$wire.isEditing', (val) => {
-                        if (val) this.snapshot();
+                        if (val) {
+                            this.snapshot();
+                            window.KudosModalStack?.bringToFront('order-detail-modal');
+                        }
                     });
                     this.$watch('$wire.showModal', (show) => {
                         if (!show) {
                             window.KudosDirtyGuard.unregister('order-detail-modal');
+                            window.KudosModalStack?.unregister('order-detail-modal');
                         } else {
                             window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
+                            window.KudosModalStack?.register('order-detail-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
+                        }
+                    });
+                    this.$watch('$wire.orderId', () => {
+                        if ($wire.showModal) {
+                            window.KudosModalStack?.bringToFront('order-detail-modal');
                         }
                     });
                     window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
-                    this.$cleanup(() => window.KudosDirtyGuard.unregister('order-detail-modal'));
+                    window.KudosModalStack?.register('order-detail-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
+                    this.$cleanup(() => {
+                        window.KudosDirtyGuard.unregister('order-detail-modal');
+                        window.KudosModalStack?.unregister('order-detail-modal');
+                    });
                 },
                 snapshot() {
                     this.initialForm = JSON.stringify({
@@ -90,10 +104,12 @@
                             onCancel: () => {},
                             onDiscard: () => {
                                 window.KudosDirtyGuard.unregister('order-detail-modal');
+                                window.KudosModalStack?.unregister('order-detail-modal');
                                 action();
                             },
                             onSave: () => {
                                 window.KudosDirtyGuard.unregister('order-detail-modal');
+                                window.KudosModalStack?.unregister('order-detail-modal');
                                 if (this.isEditDirty()) {
                                     $wire.saveOrder(false);
                                 }
@@ -105,19 +121,23 @@
                         });
                     } else {
                         window.KudosDirtyGuard.unregister('order-detail-modal');
+                        window.KudosModalStack?.unregister('order-detail-modal');
                         action();
                     }
                 }
             }"
-            @keydown.window.escape="if (!document.getElementById('client-flyout-panel')) confirmClose(() => $wire.closeModal())"
+            @open-order-detail.window="window.KudosModalStack?.bringToFront('order-detail-modal')"
+            @pointerdown="window.KudosModalStack?.bringToFront('order-detail-modal')"
+            @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('order-detail-modal') : !document.getElementById('client-flyout-panel')) confirmClose(() => $wire.closeModal())"
             data-modal="order-detail"
-            class="fixed inset-0 z-[300] flex"
+            class="fixed inset-0 flex"
+            style="z-index: 300;"
         >
             <!-- Backdrop Overlay -->
-            <div @click="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[300] bg-black/30 backdrop-blur-xs transition-opacity"></div>
+            <div @click="confirmClose(() => $wire.closeModal())" class="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"></div>
 
             <!-- Slide-over Right Panel (Fully Responsive Width) -->
-            <div class="fixed inset-y-0 right-0 z-[300] w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
+            <div class="fixed inset-y-0 right-0 w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
             
             <!-- Flyout Header (Notion Page Header) -->
             <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white sticky top-0 z-20 space-y-3">
@@ -161,7 +181,7 @@
                         @endif
 
                         @if(!$isEditing)
-                            <button wire:click="startEditing" class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0" title="Editar campos">
+                            <button wire:click="startEditing" @click="window.KudosModalStack?.bringToFront('order-detail-modal')" class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0" title="Editar campos">
                                 <x-lucide-pencil class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                                 <span>Editar</span>
                             </button>
