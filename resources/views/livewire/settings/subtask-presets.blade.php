@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto">
+<div class="flex-1 w-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto pb-24">
     <!-- Header Card -->
     <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
         <div class="flex items-center gap-3">
@@ -61,12 +61,15 @@
 
     <!-- TAB 1: PRESETS (Plantillas de Subtareas) -->
     @if($activeTab === 'presets')
-        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden space-y-0">
-            <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50">
+        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
+            <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50 shrink-0">
                 <div>
                     <h2 class="font-bold text-xs text-zinc-800 uppercase tracking-wider">{{ __('Subtareas Predeterminadas (Weekly Planner)') }}</h2>
                     <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Opciones rápidas disponibles al hacer clic en "+ Subtarea" en la agenda diaria.') }}</p>
                 </div>
+                <span class="text-xs font-semibold text-zinc-500 bg-white border border-stone-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                    {{ $presets->count() }} {{ __('plantillas') }}
+                </span>
             </div>
 
             @if($presets->isEmpty())
@@ -98,9 +101,10 @@
                             this.draggedId = null;
                         }
                     }"
-                    class="divide-y divide-stone-100">
+                    class="divide-y divide-stone-100 overflow-y-auto max-h-[calc(100vh-270px)] custom-vertical-scrollbar">
                     @foreach($presets as $index => $preset)
                         <div 
+                            wire:key="preset-{{ $preset->id }}"
                             data-preset-id="{{ $preset->id }}"
                             draggable="true"
                             @dragstart="handleDragStart($event, {{ $preset->id }})"
@@ -171,12 +175,15 @@
 
     <!-- TAB 2: SYSTEM RELATED TASKS (Tareas Relacionadas del Sistema con Toggle y Descripción) -->
     @if($activeTab === 'system')
-        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden">
-            <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50">
+        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
+            <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50 shrink-0">
                 <div>
                     <h2 class="font-bold text-xs text-zinc-800 uppercase tracking-wider">{{ __('Tareas Relacionadas del Sistema (System Tasks)') }}</h2>
                     <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Acciones operativas predefinidas del sistema. Activa o desactiva su uso y revisa su funcionalidad.') }}</p>
                 </div>
+                <span class="text-xs font-semibold text-zinc-500 bg-white border border-stone-200 px-2.5 py-1 rounded-lg shadow-2xs">
+                    {{ $systemTaskConfigs->count() }} {{ __('tareas') }}
+                </span>
             </div>
 
             @if($systemTaskConfigs->isEmpty())
@@ -185,9 +192,9 @@
                     <p class="text-xs">{{ __('No se encontraron tareas del sistema que coincidan con el filtro de búsqueda.') }}</p>
                 </div>
             @else
-                <div class="divide-y divide-stone-100">
+                <div class="divide-y divide-stone-100 overflow-y-auto max-h-[calc(100vh-270px)] custom-vertical-scrollbar">
                     @foreach($systemTaskConfigs as $sysTask)
-                        <div class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-stone-50/60 transition">
+                        <div wire:key="sys-task-{{ $sysTask->id }}" class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-stone-50/60 transition">
                             
                             <!-- Task Details & Description -->
                             <div class="space-y-1.5 min-w-0 flex-1">
@@ -303,7 +310,7 @@
                     <div>
                         <label class="block text-xs font-medium text-zinc-700 mb-1">{{ __('Título de la Subtarea') }}</label>
                         <input 
-                            wire:model="title" 
+                            wire:model.live.debounce.150ms="title" 
                             type="text" 
                             placeholder="{{ __('Ej: Revisiones cliente, Ajuste Camila...') }}" 
                             class="w-full px-3 py-2 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-stone-400 focus:outline-none font-semibold text-zinc-800" />
@@ -439,5 +446,4 @@
             </div>
         </div>
     @endif
-</div>
 </div>

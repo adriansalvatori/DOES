@@ -1040,6 +1040,65 @@ class OrderDetailModal extends Component
         }
     }
 
+    public function updateTaskType(int|string $taskId, bool $isWork): void
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $task->update(['is_work_task' => $isWork]);
+            $this->dispatch('order-updated');
+            session()->flash('message', 'Tipo de subtarea actualizado a '.($isWork ? 'Trabajo' : 'Gestión').'.');
+        }
+    }
+
+    public function toggleTaskType(int|string $taskId): void
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $newIsWork = ! ($task->is_work_task ?? true);
+            $task->update(['is_work_task' => $newIsWork]);
+            $this->dispatch('order-updated');
+            session()->flash('message', 'Tipo de subtarea actualizado a '.($newIsWork ? 'Trabajo' : 'Gestión').'.');
+        }
+    }
+
+    public function updateTaskDate(int|string $taskId, ?string $date = null): void
+    {
+        $task = RelatedTask::with('order')->find($taskId);
+        if ($task) {
+            $parsedDate = ! empty($date) ? Carbon::parse($date)->toDateString() : null;
+            $task->update([
+                'scheduled_date' => $parsedDate,
+                'due_date' => $parsedDate ?? $task->due_date,
+            ]);
+
+            if ($parsedDate && $task->is_work_task && Carbon::parse($parsedDate)->isToday() && $task->order) {
+                $order = $task->order;
+                if ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ARCHIVED) {
+                    $order->update([
+                        'scheduled_date' => $parsedDate,
+                        'core_status' => CoreStatus::TO_DO_TODAY,
+                    ]);
+                }
+            }
+
+            $this->dispatch('order-updated');
+            session()->flash('message', $parsedDate ? 'Fecha de la subtarea actualizada para el '.Carbon::parse($parsedDate)->format('d M').'.' : 'Fecha de la subtarea eliminada.');
+        }
+    }
+
+    public function updateTaskAssignee(int|string $taskId, int|string|null $designerId = null): void
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $assigneeId = ! empty($designerId) ? (int) $designerId : null;
+            $task->update(['assignee_id' => $assigneeId]);
+            $this->dispatch('order-updated');
+
+            $designerName = $assigneeId ? (Designer::find($assigneeId)?->name ?? 'Diseñador') : 'Sin asignar';
+            session()->flash('message', "Responsable de la subtarea actualizado: {$designerName}.");
+        }
+    }
+
     public function deleteTask($taskId)
     {
         $task = RelatedTask::find($taskId);

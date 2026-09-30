@@ -1263,9 +1263,14 @@
                         <div class="space-y-1.5">
                             @forelse($subtasks as $task)
                                 <div 
+                                    wire:key="subtask-{{ $task->id }}"
                                     x-data="{ 
                                         editing: false, 
                                         title: @js($task->title),
+                                        openType: false,
+                                        openDate: false,
+                                        openAssignee: false,
+                                        assigneeSearch: '',
                                         saveTitle() {
                                             const trimmed = this.title.trim();
                                             if (trimmed && trimmed !== @js($task->title)) {
@@ -1276,7 +1281,8 @@
                                             this.editing = false;
                                         }
                                     }" 
-                                    class="bg-[#fbfbfa] hover:bg-stone-50/90 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs group"
+                                    class="bg-[#fbfbfa] hover:bg-stone-50/90 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs group relative"
+                                    :class="{ 'z-30': openType || openDate || openAssignee }"
                                 >
                                     <!-- Read Mode View -->
                                     <div x-show="!editing" class="flex items-center justify-between gap-3 w-full min-w-0">
@@ -1294,39 +1300,209 @@
                                             <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
                                                 <span 
                                                     @click="editing = true; $nextTick(() => $refs.editInput.focus())"
-                                                    class="font-semibold text-zinc-900 text-xs break-words cursor-pointer hover:text-zinc-700 transition {{ $task->isDone() ? 'line-through text-zinc-400 font-normal' : '' }}" 
+                                                    class="font-semibold text-zinc-900 text-xs break-words cursor-pointer hover:text-indigo-600 hover:underline decoration-stone-300 underline-offset-2 transition {{ $task->isDone() ? 'line-through text-zinc-400 font-normal' : '' }}" 
                                                     title="Haz clic para editar el nombre de la subtarea">
                                                     {{ $task->title }}
                                                 </span>
 
-                                                <!-- Work vs Admin Badge -->
-                                                @if($task->is_work_task !== false)
-                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0 flex items-center gap-1">
-                                                        <x-lucide-wrench class="w-2.5 h-2.5 text-blue-600" />
-                                                        <span>Trabajo</span>
-                                                    </span>
-                                                @else
-                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0 flex items-center gap-1">
-                                                        <x-lucide-clipboard-list class="w-2.5 h-2.5 text-amber-600" />
-                                                        <span>Gestión</span>
-                                                    </span>
-                                                @endif
+                                                <!-- Work vs Admin Badge (Clickable dropdown) -->
+                                                <div class="relative inline-block">
+                                                    <button 
+                                                        type="button" 
+                                                        @click.stop="openType = !openType; openDate = false; openAssignee = false"
+                                                        class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer hover:ring-2 hover:ring-offset-1 {{ $task->is_work_task !== false ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:ring-blue-300' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:ring-amber-300' }}"
+                                                        title="Clic para cambiar tipo (Trabajo / Gestión)">
+                                                        @if($task->is_work_task !== false)
+                                                            <x-lucide-wrench class="w-2.5 h-2.5 text-blue-600" />
+                                                            <span>Trabajo</span>
+                                                        @else
+                                                            <x-lucide-clipboard-list class="w-2.5 h-2.5 text-amber-600" />
+                                                            <span>Gestión</span>
+                                                        @endif
+                                                        <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
+                                                    </button>
 
-                                                <!-- Date Badge -->
-                                                @if($task->scheduled_date)
-                                                    <span class="text-[10px] text-zinc-500 font-medium inline-flex items-center gap-1 bg-stone-100 px-1.5 py-0.5 rounded border border-stone-200 shrink-0" title="Fecha programada">
-                                                        <x-lucide-calendar class="w-2.5 h-2.5 text-zinc-400" />
-                                                        <span>{{ $task->scheduled_date->format('d M') }}</span>
-                                                    </span>
-                                                @endif
+                                                    <!-- Type Dropdown Menu -->
+                                                    <div 
+                                                        x-show="openType" 
+                                                        @click.outside="openType = false"
+                                                        x-cloak
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[150px] space-y-1 text-left text-xs">
+                                                        <div class="px-2 py-0.5 font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
+                                                            Tipo de Subtarea
+                                                        </div>
+                                                        <button 
+                                                            type="button"
+                                                            wire:click="updateTaskType({{ $task->id }}, true)"
+                                                            @click="openType = false"
+                                                            class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-blue-50 {{ $task->is_work_task !== false ? 'text-blue-700 font-bold bg-blue-50/60' : 'text-zinc-700' }}">
+                                                            <span class="flex items-center gap-1.5">
+                                                                <x-lucide-wrench class="w-3.5 h-3.5 text-blue-600" />
+                                                                <span>Trabajo</span>
+                                                            </span>
+                                                            @if($task->is_work_task !== false)
+                                                                <x-lucide-check class="w-3.5 h-3.5 text-blue-600 stroke-[2.5]" />
+                                                            @endif
+                                                        </button>
+                                                        <button 
+                                                            type="button"
+                                                            wire:click="updateTaskType({{ $task->id }}, false)"
+                                                            @click="openType = false"
+                                                            class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-amber-50 {{ $task->is_work_task === false ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-zinc-700' }}">
+                                                            <span class="flex items-center gap-1.5">
+                                                                <x-lucide-clipboard-list class="w-3.5 h-3.5 text-amber-600" />
+                                                                <span>Gestión</span>
+                                                            </span>
+                                                            @if($task->is_work_task === false)
+                                                                <x-lucide-check class="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
+                                                            @endif
+                                                        </button>
+                                                    </div>
+                                                </div>
 
-                                                <!-- Assignee Badge -->
-                                                @if($task->assignee)
-                                                    <span class="text-[10px] text-zinc-500 font-medium inline-flex items-center gap-1 shrink-0" title="Asignado a">
-                                                        <x-lucide-user class="w-2.5 h-2.5 text-zinc-400" />
-                                                        <span>{{ $task->assignee->name }}</span>
-                                                    </span>
-                                                @endif
+                                                <!-- Date Badge (Clickable popover) -->
+                                                <div class="relative inline-block">
+                                                    <button 
+                                                        type="button" 
+                                                        @click.stop="openDate = !openDate; openType = false; openAssignee = false"
+                                                        class="text-[10px] font-medium inline-flex items-center gap-1 px-1.5 py-0.5 rounded border transition cursor-pointer shrink-0 hover:ring-2 hover:ring-offset-1 {{ $task->scheduled_date ? 'text-zinc-600 bg-stone-100 hover:bg-stone-200 border-stone-200 hover:ring-stone-300' : 'text-zinc-400 bg-white hover:bg-stone-50 border-dashed border-stone-300 hover:ring-stone-200' }}"
+                                                        title="Clic para cambiar fecha programada">
+                                                        <x-lucide-calendar class="w-2.5 h-2.5 {{ $task->scheduled_date ? 'text-zinc-500' : 'text-zinc-400' }}" />
+                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->format('d M') : '+ Fecha' }}</span>
+                                                        <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
+                                                    </button>
+
+                                                    <!-- Date Dropdown Popover -->
+                                                    <div 
+                                                        x-show="openDate" 
+                                                        @click.outside="openDate = false"
+                                                        x-cloak
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-2.5 min-w-[210px] space-y-2 text-left text-xs">
+                                                        
+                                                        <div class="font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
+                                                            Fecha Programada
+                                                        </div>
+
+                                                        <!-- Quick presets: Hoy, Mañana -->
+                                                        <div class="grid grid-cols-2 gap-1.5">
+                                                            <button 
+                                                                type="button"
+                                                                wire:click="updateTaskDate({{ $task->id }}, '{{ now()->toDateString() }}')"
+                                                                @click="openDate = false"
+                                                                class="px-2 py-1 text-[11px] font-medium rounded-lg border text-center transition cursor-pointer {{ $task->scheduled_date?->isToday() ? 'bg-zinc-900 text-white border-zinc-900 font-semibold' : 'bg-stone-50 hover:bg-stone-100 text-zinc-700 border-stone-200' }}">
+                                                                Hoy
+                                                            </button>
+                                                            <button 
+                                                                type="button"
+                                                                wire:click="updateTaskDate({{ $task->id }}, '{{ now()->addDay()->toDateString() }}')"
+                                                                @click="openDate = false"
+                                                                class="px-2 py-1 text-[11px] font-medium rounded-lg border text-center transition cursor-pointer {{ $task->scheduled_date?->isTomorrow() ? 'bg-zinc-900 text-white border-zinc-900 font-semibold' : 'bg-stone-50 hover:bg-stone-100 text-zinc-700 border-stone-200' }}">
+                                                                Mañana
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- Custom Date Input -->
+                                                        <div class="space-y-1 pt-1.5 border-t border-stone-100">
+                                                            <label class="text-[10px] text-zinc-500 font-medium block">Elegir otra fecha:</label>
+                                                            <input 
+                                                                type="date" 
+                                                                value="{{ $task->scheduled_date?->toDateString() }}"
+                                                                @change="$wire.updateTaskDate({{ $task->id }}, $event.target.value); openDate = false"
+                                                                class="w-full bg-[#fbfbfa] border border-[#e9e9e7] focus:border-stone-400 rounded-lg px-2 py-1 text-xs text-zinc-800 font-mono focus:outline-none">
+                                                        </div>
+
+                                                        <!-- Clear Date option if date is set -->
+                                                        @if($task->scheduled_date)
+                                                            <div class="pt-1 border-t border-stone-100">
+                                                                <button 
+                                                                    type="button"
+                                                                    wire:click="updateTaskDate({{ $task->id }}, null)"
+                                                                    @click="openDate = false"
+                                                                    class="w-full text-center py-1 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer font-medium">
+                                                                    Quitar fecha programada
+                                                                </button>
+                                                            </div>
+                                                        @endif
+                                                    </div>
+                                                </div>
+
+                                                <!-- Assignee Badge (Clickable dropdown) -->
+                                                <div class="relative inline-block">
+                                                    <button 
+                                                        type="button" 
+                                                        @click.stop="openAssignee = !openAssignee; openType = false; openDate = false"
+                                                        class="text-[10px] font-medium inline-flex items-center gap-1 px-1.5 py-0.5 rounded border transition cursor-pointer shrink-0 hover:ring-2 hover:ring-offset-1 {{ $task->assignee ? 'text-zinc-600 bg-stone-100 hover:bg-stone-200 border-stone-200 hover:ring-stone-300' : 'text-zinc-400 bg-white hover:bg-stone-50 border-dashed border-stone-300 hover:ring-stone-200' }}"
+                                                        title="Clic para cambiar responsable">
+                                                        <x-lucide-user class="w-2.5 h-2.5 {{ $task->assignee ? 'text-zinc-500' : 'text-zinc-400' }}" />
+                                                        <span>{{ $task->assignee ? $task->assignee->name : '+ Asignar' }}</span>
+                                                        <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
+                                                    </button>
+
+                                                    <!-- Assignee Dropdown Popover -->
+                                                    <div 
+                                                        x-show="openAssignee" 
+                                                        @click.outside="openAssignee = false"
+                                                        x-cloak
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-2 min-w-[190px] max-w-[250px] space-y-1.5 text-left text-xs">
+                                                        
+                                                        <div class="font-bold text-[10px] uppercase text-zinc-400 tracking-wider px-1">
+                                                            Asignar Responsable
+                                                        </div>
+
+                                                        @if(count($designers) > 4)
+                                                            <div class="px-1">
+                                                                <input 
+                                                                    type="text" 
+                                                                    x-model="assigneeSearch"
+                                                                    placeholder="Buscar diseñador..." 
+                                                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-2 py-1 text-xs text-zinc-800 focus:outline-none focus:border-stone-400">
+                                                            </div>
+                                                        @endif
+
+                                                        <div class="max-h-48 overflow-y-auto space-y-0.5 scrollbar-thin">
+                                                            <!-- Unassign option -->
+                                                            <button 
+                                                                type="button"
+                                                                wire:click="updateTaskAssignee({{ $task->id }}, null)"
+                                                                @click="openAssignee = false"
+                                                                class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition cursor-pointer hover:bg-stone-100 {{ !$task->assignee_id ? 'font-bold text-zinc-900 bg-stone-100' : 'text-zinc-500' }}">
+                                                                <span class="flex items-center gap-1.5">
+                                                                    <x-lucide-user-x class="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                                                                    <span>Sin asignar</span>
+                                                                </span>
+                                                                @if(!$task->assignee_id)
+                                                                    <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5] shrink-0" />
+                                                                @endif
+                                                            </button>
+
+                                                            @foreach($designers as $des)
+                                                                <button 
+                                                                    type="button"
+                                                                    x-show="!assigneeSearch || '{{ strtolower(addslashes($des->name)) }}'.includes(assigneeSearch.toLowerCase())"
+                                                                    wire:click="updateTaskAssignee({{ $task->id }}, {{ $des->id }})"
+                                                                    @click="openAssignee = false"
+                                                                    class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition cursor-pointer hover:bg-stone-100 {{ $task->assignee_id == $des->id ? 'font-bold text-zinc-900 bg-stone-100' : 'text-zinc-700' }}">
+                                                                    <span class="flex items-center gap-1.5 truncate">
+                                                                        <x-lucide-user class="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                                                                        <span class="truncate">{{ $des->name }}</span>
+                                                                    </span>
+                                                                    @if($task->assignee_id == $des->id)
+                                                                        <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5] shrink-0" />
+                                                                    @endif
+                                                                </button>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 

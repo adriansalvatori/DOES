@@ -43,21 +43,29 @@ code, pre, .font-mono {
 }
 
 /* Custom Vertical Scrollbar */
+.custom-vertical-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f5f5f4;
+}
+
 .custom-vertical-scrollbar::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
+    height: 8px;
 }
 
 .custom-vertical-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f5f5f4;
+    border-radius: 6px;
 }
 
 .custom-vertical-scrollbar::-webkit-scrollbar-thumb {
-    background: #d4d4d0;
-    border-radius: 4px;
+    background: #c4c4be;
+    border-radius: 6px;
+    border: 2px solid #f5f5f4;
 }
 
 .custom-vertical-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #a1a19a;
+    background: #8e8e88;
 }
 
 /* Kudos Design Ops - Driver.js Popover Overrides */

@@ -93,8 +93,8 @@ class SubtaskPresets extends Component
             $preset->update($validated);
             session()->flash('message', 'Plantilla de subtarea actualizada correctamente.');
         } else {
-            $maxSort = SubtaskPreset::max('sort_order') ?? 0;
-            $validated['sort_order'] = $maxSort + 1;
+            SubtaskPreset::query()->increment('sort_order');
+            $validated['sort_order'] = 1;
             SubtaskPreset::create($validated);
             session()->flash('message', 'Nueva plantilla de subtarea creada correctamente.');
         }

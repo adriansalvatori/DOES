@@ -100,6 +100,112 @@ class OrderDetailModalTest extends TestCase
         ]);
     }
 
+    public function test_can_update_and_toggle_subtask_type(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CON SUBTAREA TIPO',
+            'task_name' => 'DISENO LOGO',
+            'in_workspace' => true,
+        ]);
+
+        $subtask = $order->relatedTasks()->create([
+            'title' => 'Subtarea Tipo',
+            'status' => 'todo',
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('updateTaskType', $subtask->id, false)
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $subtask->id,
+            'is_work_task' => false,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('toggleTaskType', $subtask->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $subtask->id,
+            'is_work_task' => true,
+        ]);
+    }
+
+    public function test_can_update_and_clear_subtask_date(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CON SUBTAREA FECHA',
+            'task_name' => 'DISENO FLYER',
+            'in_workspace' => true,
+        ]);
+
+        $subtask = $order->relatedTasks()->create([
+            'title' => 'Subtarea Fecha',
+            'status' => 'todo',
+            'scheduled_date' => '2026-09-25',
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('updateTaskDate', $subtask->id, '2026-10-05')
+            ->assertDispatched('order-updated');
+
+        $this->assertEquals('2026-10-05', $subtask->fresh()->scheduled_date?->format('Y-m-d'));
+
+        // Clear date
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('updateTaskDate', $subtask->id, null)
+            ->assertDispatched('order-updated');
+
+        $this->assertNull($subtask->fresh()->scheduled_date);
+    }
+
+    public function test_can_update_and_clear_subtask_assignee(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA CON SUBTAREA ASIGNADO',
+            'task_name' => 'DISENO CATÁLOGO',
+            'in_workspace' => true,
+        ]);
+
+        $designer = Designer::create([
+            'name' => 'Diseñador Prueba',
+            'active' => true,
+        ]);
+
+        $subtask = $order->relatedTasks()->create([
+            'title' => 'Subtarea Asignado',
+            'status' => 'todo',
+            'assignee_id' => null,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('updateTaskAssignee', $subtask->id, $designer->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $subtask->id,
+            'assignee_id' => $designer->id,
+        ]);
+
+        // Unassign
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('updateTaskAssignee', $subtask->id, null)
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $subtask->id,
+            'assignee_id' => null,
+        ]);
+    }
+
     public function test_can_change_core_status_directly_from_dropdown(): void
     {
         $order = Order::create([

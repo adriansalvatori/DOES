@@ -117,7 +117,13 @@ class AutomationEngine
 
         // Handle transitions from ENVIADO A CAMILA -> TO DO TODAY
         if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA && $newStatus === CoreStatus::TO_DO_TODAY) {
-            $order->update(['substatus' => Substatus::CAMBIOS_CAMILA]);
+            $hasProofTask = $order->relatedTasks()->where('title', 'like', '%enviar proof al cliente%')->exists();
+            if (! $hasProofTask && $order->substatus !== null) {
+                $order->update([
+                    'core_status' => CoreStatus::TO_DO_TODAY,
+                    'substatus' => Substatus::CAMBIOS_CAMILA,
+                ]);
+            }
         }
 
         // Handle transitions to ENVIADO A CAMILA
@@ -445,6 +451,35 @@ class AutomationEngine
                 'new_value' => CoreStatus::EN_PRODUCCION->value,
                 'metadata' => ['trigger' => 'ALTA completed'],
             ]);
+        }
+
+        // Client auto-transition for orders in TO DO TODAY marked Done with completed "enviar proof al cliente"
+        $proofDoneOrders = Order::where('core_status', CoreStatus::TO_DO_TODAY)
+            ->where('done_today', true)
+            ->whereHas('relatedTasks', function ($q) {
+                $q->where('title', 'like', '%enviar proof al cliente%')
+                    ->where('status', 'done');
+            })
+            ->get();
+
+        foreach ($proofDoneOrders as $order) {
+            $previousStatus = $order->core_status;
+            $order->update([
+                'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+                'done_today' => true,
+                'last_sent_to_client_at' => now(),
+            ]);
+
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'MOVED_TO_CLIENT_CAMILA_PREAPPROVED',
+                'actor' => 'AutomationEngine',
+                'previous_value' => $previousStatus->value,
+                'new_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
+                'metadata' => ['trigger' => 'Enviar proof al cliente completed'],
+            ]);
+
+            $this->handleStatusChanged($order, $previousStatus, CoreStatus::ENVIADO_AL_CLIENTE);
         }
 
         // Check for overdue orders and auto-create preventative delay tasks

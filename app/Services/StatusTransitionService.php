@@ -156,8 +156,9 @@ class StatusTransitionService
             return;
         }
 
-        // If order is currently in a designer queue and new substatus is PONER EN ALTA or AJUSTES DE PRODUCCION, keep current designer queue
-        if ($order->core_status && CoreStatus::isPendingDesign($order->core_status) && in_array($subName, ['PONER EN ALTA', 'AJUSTES DE PRODUCCIÓN', SubstatusEnum::PONER_EN_ALTA->value, SubstatusEnum::AJUSTES_PRODUCCION->value], true)) {
+        // If order is currently in a designer queue or TO DO TODAY and new substatus is PONER EN ALTA, AJUSTES DE PRODUCCION, or CAMBIOS CAMILA, keep current status
+        $isDesignerOrToday = $order->core_status && (CoreStatus::isPendingDesign($order->core_status) || $order->core_status === CoreStatus::TO_DO_TODAY);
+        if ($isDesignerOrToday && in_array($subName, ['PONER EN ALTA', 'AJUSTES DE PRODUCCIÓN', 'CAMBIOS CAMILA', SubstatusEnum::PONER_EN_ALTA->value, SubstatusEnum::AJUSTES_PRODUCCION->value, SubstatusEnum::CAMBIOS_CAMILA->value], true)) {
             return;
         }
 
