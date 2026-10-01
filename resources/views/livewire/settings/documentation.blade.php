@@ -1,19 +1,11 @@
 <div class="h-full flex flex-col space-y-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-5xl mx-auto">
     <!-- Top Header & Search Bar (Trello Docs Style) -->
     <div class="bg-white border border-[#e9e9e7] rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        <div class="flex items-center gap-3.5">
-            <div class="w-11 h-11 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold shadow-xs shrink-0">
-                <x-lucide-book-open class="w-6 h-6 text-white" />
-            </div>
-            <div>
-                <div class="flex items-center gap-2.5">
-                    <h1 class="text-xl font-bold text-zinc-900 tracking-tight">{{ __('Guía de Comportamientos') }}</h1>
-                    <span class="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold">
-                        {{ __('Trello & Kudos Docs') }}
-                    </span>
-                </div>
-                <p class="text-xs text-zinc-500 mt-1">{{ __('Aprende cómo fluyen las tarjetas, qué ocurre al programar subtareas y cómo responder a los cambios de estado.') }}</p>
-            </div>
+        <div class="flex items-center gap-3 min-w-0 flex-wrap">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Guía de Comportamientos') }}</h1>
+            <span class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold">
+                {{ __('Trello & Kudos Docs') }}
+            </span>
         </div>
 
         <div class="w-full md:w-80 shrink-0">

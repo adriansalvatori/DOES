@@ -308,41 +308,36 @@
             <!-- ROW 1: Title & Main Date Navigation Controls -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0">
                 <!-- Title & Date Label -->
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="p-2 rounded-lg bg-stone-900 text-white shrink-0 shadow-2xs">
-                        <x-lucide-calendar-days class="w-4 h-4" />
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2.5 flex-wrap">
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight">
+                            {{ __('Agenda Semanal') }}
+                        </h1>
+                        @php
+                            $startVal = Carbon\Carbon::parse($selectedWeekStart);
+                            $endVal = $startVal->copy()->addDays(4);
+                            $currentMonday = now()->startOfWeek(Carbon\Carbon::MONDAY)->toDateString();
+                            $isThisWeek = $startVal->toDateString() === $currentMonday;
+                        @endphp
+                        @if($isThisWeek)
+                            <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px] uppercase tracking-wider border border-emerald-200">
+                                {{ __('Semana Actual') }}
+                            </span>
+                        @endif
+                        @if(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
+                            <button 
+                                wire:click="openAllSlaWarningsModal"
+                                type="button" 
+                                class="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 font-semibold text-[10px] flex items-center gap-1 border border-red-200 cursor-pointer transition"
+                                title="{{ __('Ver tareas que superan SLA') }}">
+                                <x-lucide-alert-triangle class="w-3 h-3 text-red-600 animate-pulse" />
+                                <span>{{ $slaBreachedList->count() }} {{ __('Alertas SLA') }}</span>
+                            </button>
+                        @endif
                     </div>
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <h1 class="font-bold text-base text-zinc-900 tracking-tight leading-none">
-                                {{ __('Agenda Semanal') }}
-                            </h1>
-                            @php
-                                $startVal = Carbon\Carbon::parse($selectedWeekStart);
-                                $endVal = $startVal->copy()->addDays(4);
-                                $currentMonday = now()->startOfWeek(Carbon\Carbon::MONDAY)->toDateString();
-                                $isThisWeek = $startVal->toDateString() === $currentMonday;
-                            @endphp
-                            @if($isThisWeek)
-                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px] uppercase tracking-wider border border-emerald-200">
-                                    {{ __('Semana Actual') }}
-                                </span>
-                            @endif
-                            @if(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
-                                <button 
-                                    wire:click="openAllSlaWarningsModal"
-                                    type="button" 
-                                    class="px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 hover:bg-red-100 font-semibold text-[10px] flex items-center gap-1 border border-red-200 cursor-pointer transition"
-                                    title="{{ __('Ver tareas que superan SLA') }}">
-                                    <x-lucide-alert-triangle class="w-3 h-3 text-red-600 animate-pulse" />
-                                    <span>{{ $slaBreachedList->count() }} {{ __('Alertas SLA') }}</span>
-                                </button>
-                            @endif
-                        </div>
-                        <p class="text-[11px] text-zinc-500 font-medium truncate mt-0.5">
-                            Lunes {{ $startVal->format('d') }} de {{ $startVal->locale('es')->translatedFormat('F') }} - Viernes {{ $endVal->format('d') }} de {{ $endVal->locale('es')->translatedFormat('F, Y') }}
-                        </p>
-                    </div>
+                    <p class="text-xs text-zinc-500 font-medium truncate mt-0.5">
+                        Lunes {{ $startVal->format('d') }} de {{ $startVal->locale('es')->translatedFormat('F') }} - Viernes {{ $endVal->format('d') }} de {{ $endVal->locale('es')->translatedFormat('F, Y') }}
+                    </p>
                 </div>
 
                 <!-- Right Controls: Week jump, This Week, Next Week, Open Calendar -->
@@ -528,7 +523,7 @@
                         <button 
                             wire:click="$set('selectedDesignerFilter', '{{ $des->id }}')" 
                             class="px-2 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter == $des->id ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
-                            <span class="w-2 h-2 rounded-full {{ $des->dot_color_class }}"></span>
+                            <span class="w-2 h-2 rounded-full {{ $des->dot_color_class }}" style="{{ $des->dot_inline_style }}"></span>
                             <span>{{ $des->name }}</span>
                         </button>
                     @endforeach
@@ -705,7 +700,7 @@
                     
                     <div class="flex items-center justify-between pb-1">
                         <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $designer->dot_color_class }}"></span>
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $designer->dot_color_class }}" style="{{ $designer->dot_inline_style }}"></span>
                             <h3 class="font-semibold text-base text-zinc-900 tracking-tight">Diseñador/a: {{ $designer->name }}</h3>
                         </div>
                     </div>
@@ -1139,7 +1134,7 @@
                         <!-- Designer Header -->
                         <div class="flex items-center justify-between border-b border-stone-200/60 pb-2">
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $designer->dot_color_class }}"></span>
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $designer->dot_color_class }}" style="{{ $designer->dot_inline_style }}"></span>
                                 <h3 class="font-semibold text-base text-zinc-900 truncate tracking-tight" title="{{ $designer->name }}">{{ $designer->name }}</h3>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">

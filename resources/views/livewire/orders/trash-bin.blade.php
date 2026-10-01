@@ -2,14 +2,8 @@
     <div class="bg-[#f7f7f5] pb-6 space-y-4">
         <!-- Page Header -->
         <div class="border-b border-[#e9e9e7] bg-white px-6 py-4 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <div class="p-2 rounded-xl bg-red-100 text-red-600 shrink-0">
-                    <x-lucide-trash-2 class="w-5 h-5" />
-                </div>
-                <div>
-                    <h1 class="text-base font-bold text-zinc-900 tracking-tight">{{ __('Papelera') }}</h1>
-                    <p class="text-xs text-zinc-500">{{ __('Órdenes eliminadas — Restaura o borra permanentemente') }}</p>
-                </div>
+            <div class="min-w-0">
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Papelera') }}</h1>
             </div>
             <a href="{{ route('kanban') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition">
                 <x-lucide-arrow-left class="w-3.5 h-3.5" />

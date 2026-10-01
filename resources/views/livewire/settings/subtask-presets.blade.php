@@ -1,14 +1,8 @@
 <div class="flex-1 w-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto pb-24">
     <!-- Header Card -->
     <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-stone-900 text-white rounded-xl flex items-center justify-center font-bold shadow-xs">
-                <x-lucide-list-checks class="w-5 h-5 text-stone-100" />
-            </div>
-            <div>
-                <h1 class="text-lg font-bold text-zinc-900 tracking-tight">{{ __('Gestión de Subtareas & Tareas del Sistema') }}</h1>
-                <p class="text-xs text-zinc-500 mt-0.5">{{ __('Configura las plantillas diarias del planificador semanal y activa/desactiva tareas del sistema.') }}</p>
-            </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Gestión de Subtareas & Tareas del Sistema') }}</h1>
         </div>
 
         <div class="flex items-center gap-3">

@@ -24,6 +24,7 @@ class TaskList extends Component
             'completed_at' => $newStatus === 'done' ? now() : null,
         ]);
 
+        $this->dispatch('order-updated');
         session()->flash('message', "Estado de tarea '{$task->title}' actualizado.");
     }
 

@@ -144,4 +144,44 @@ class KanbanBoardTest extends TestCase
             ->assertSee('FUERZA LATINA')
             ->assertSee('EL SOL');
     }
+
+    public function test_toggling_task_complete_on_kanban_board_logs_subtask_completed_timeline_event(): void
+    {
+        $order = Order::create([
+            'company_name' => 'Acme Corp',
+            'task_name' => 'Banner Design',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $task = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Digitalización',
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(Board::class)
+            ->call('toggleTaskComplete', $task->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertEquals('done', $task->fresh()->status);
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'SUBTASK_COMPLETED',
+            'new_value' => 'Digitalización',
+        ]);
+
+        // Toggle back to todo removes event
+        Livewire::test(Board::class)
+            ->call('toggleTaskComplete', $task->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertEquals('todo', $task->fresh()->status);
+        $this->assertDatabaseMissing('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'SUBTASK_COMPLETED',
+            'new_value' => 'Digitalización',
+        ]);
+    }
 }

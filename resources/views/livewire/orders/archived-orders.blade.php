@@ -15,16 +15,8 @@
 
     <!-- Header Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-[#e9e9e7] shadow-2xs shrink-0">
-        <div class="space-y-1">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 flex items-center justify-center font-bold">
-                    <x-lucide-archive class="w-4 h-4 text-slate-700" />
-                </div>
-                <h2 class="text-lg font-bold text-zinc-900 tracking-tight">{{ __('Órdenes Archivadas & Rendimiento') }}</h2>
-            </div>
-            <p class="text-xs text-zinc-500 font-normal">
-                {{ __('Análisis de cierre de órdenes, métricas por diseñador y registro histórico de entregas.') }}
-            </p>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Órdenes Archivadas & Rendimiento') }}</h1>
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-xs">
@@ -162,8 +154,8 @@
             <div class="flex flex-col sm:flex-row items-center justify-around gap-4 py-2">
                 @php
                     $colors = [
-                        'Euralíz' => ['hex' => '#d946ef', 'bg' => 'bg-fuchsia-500', 'text' => 'text-fuchsia-600'],
-                        'César' => ['hex' => '#06b6d4', 'bg' => 'bg-cyan-500', 'text' => 'text-cyan-600'],
+                        'Euralíz' => ['hex' => '#F3A8FF', 'bg' => 'bg-fuchsia-500', 'text' => 'text-fuchsia-600'],
+                        'César' => ['hex' => '#52EAFD', 'bg' => 'bg-cyan-500', 'text' => 'text-cyan-600'],
                         'Adrián' => ['hex' => '#6366f1', 'bg' => 'bg-indigo-500', 'text' => 'text-indigo-600'],
                     ];
                     
@@ -181,7 +173,7 @@
                         $gap = $circumference - $dash;
                         $offset = $circumference - (($cumulativePercentage / 100) * $circumference);
                         
-                        $hex = $colors[$name]['hex'] ?? '#64748b';
+                        $hex = $ds['designer']->hex_color ?: ($colors[$name]['hex'] ?? '#64748b');
                         $strokeSegments[] = [
                             'name' => $name,
                             'hex' => $hex,
@@ -233,7 +225,7 @@
                         @endphp
                         <div class="flex items-center justify-between gap-3">
                             <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full {{ $c['bg'] }} shrink-0"></span>
+                                <span class="w-3 h-3 rounded-full {{ $c['bg'] }} shrink-0" style="{{ $ds['designer']->dot_inline_style }}"></span>
                                 <span class="font-medium text-zinc-800">{{ $ds['designer']->name }}</span>
                             </div>
                             <div class="font-mono text-[11px] font-semibold text-zinc-600">
@@ -272,7 +264,7 @@
                     <div class="space-y-1">
                         <div class="flex items-center justify-between text-xs font-medium">
                             <span class="text-zinc-800 font-semibold flex items-center gap-1.5">
-                                <span class="w-2.5 h-2.5 rounded-full {{ $c['bg'] }}"></span>
+                                <span class="w-2.5 h-2.5 rounded-full {{ $c['bg'] }}" style="{{ $ds['designer']->dot_inline_style }}"></span>
                                 <span>{{ $ds['designer']->name }}</span>
                             </span>
                             <div class="flex items-center gap-4 text-[11px] font-mono">
@@ -287,7 +279,7 @@
                         <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden border border-stone-200 flex items-center">
                             <div 
                                 class="{{ $c['bg'] }} h-full rounded-full transition-all duration-500 relative" 
-                                style="width: {{ max(6, $barPct) }}%"
+                                style="width: {{ max(6, $barPct) }}%; @if($ds['designer']->hex_color) background-color: {{ $ds['designer']->hex_color }} !important; @endif"
                             ></div>
                         </div>
                     </div>

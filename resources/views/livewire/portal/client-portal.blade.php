@@ -141,8 +141,8 @@
                         </div>
 
                         {{-- Friendly Customer Status Badge --}}
-                        <div class="px-2.5 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 {{ $statusInfo['badge_class'] }}">
-                            <span class="w-2 h-2 rounded-full {{ $statusInfo['dot_color'] }}"></span>
+                        <div class="px-2.5 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 {{ $statusInfo['badge_class'] }}" @if(!empty($statusInfo['badge_inline_style'])) style="{{ $statusInfo['badge_inline_style'] }}" @endif>
+                            <span class="w-2 h-2 rounded-full {{ $statusInfo['dot_color'] }}" @if(!empty($statusInfo['dot_style'])) style="{{ $statusInfo['dot_style'] }}" @endif></span>
                             <span>{{ $statusInfo['label'] }}</span>
                         </div>
                     </div>
@@ -390,11 +390,11 @@
                                     <div class="relative group">
                                         {{-- Vertical Line Connector --}}
                                         @if(!$isLast)
-                                            <span class="absolute left-[-17px] top-3.5 bottom-[-24px] w-0.5 {{ $lineColor }}" aria-hidden="true"></span>
+                                            <span class="absolute left-[-17px] top-3.5 bottom-[-24px] w-0.5 {{ $lineColor }}" @if(!empty($milestone['line_style'])) style="{{ $milestone['line_style'] }}" @endif aria-hidden="true"></span>
                                         @endif
 
                                         {{-- Node Dot --}}
-                                        <span class="absolute left-[-23px] top-1 w-3.5 h-3.5 rounded-full flex items-center justify-center {{ $dotColors }}" aria-hidden="true"></span>
+                                        <span class="absolute left-[-23px] top-1 w-3.5 h-3.5 rounded-full flex items-center justify-center {{ $dotColors }}" @if(!empty($milestone['dot_style'])) style="{{ $milestone['dot_style'] }}" @endif aria-hidden="true"></span>
 
                                         {{-- Milestone Content --}}
                                         <div class="space-y-0.5">

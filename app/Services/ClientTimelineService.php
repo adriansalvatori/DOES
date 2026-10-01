@@ -257,12 +257,32 @@ class ClientTimelineService
 
         // Mark current active milestone (the last completed one)
         $lastIndex = $sorted->count() - 1;
+        $cc = app(ColorCodingService::class);
 
-        return $sorted->map(function ($m, $index) use ($lastIndex) {
+        return $sorted->map(function ($m, $index) use ($lastIndex, $cc) {
             $date = $m['date'];
             $m['date_formatted'] = $date->translatedFormat('d M, Y');
             $m['time_formatted'] = $date->format('g:i A');
             $m['is_current'] = ($index === $lastIndex);
+
+            $hex = match ($m['type'] ?? '') {
+                'in_production' => $cc->getColorHex('production'),
+                'changes_received' => $cc->getColorHex('camila'),
+                'sent_to_client' => $cc->getColorHex('client'),
+                'approved' => $cc->getColorHex('todo_today'),
+                'on_hold' => $cc->getColorHex('blocked'),
+                default => match ($m['color'] ?? '') {
+                    'pink' => $cc->getColorHex('production'),
+                    'purple' => $cc->getColorHex('camila'),
+                    'emerald', 'lime' => $cc->getColorHex('todo_today'),
+                    'amber', 'yellow' => $cc->getColorHex('blocked'),
+                    default => $cc->getColorHex('client'),
+                },
+            };
+
+            $m['hex_color'] = $hex;
+            $m['dot_style'] = "background-color: {$hex}; box-shadow: 0 0 0 4px {$hex}25;";
+            $m['line_style'] = "background-color: {$hex}50;";
 
             return $m;
         });
@@ -274,38 +294,57 @@ class ClientTimelineService
      * @return array{
      *     label: string,
      *     badge_class: string,
+     *     badge_inline_style: string,
      *     dot_color: string,
+     *     dot_style: string,
      *     description: string,
      *     icon: string
      * }
      */
     public function getCustomerStatus(Order $order): array
     {
+        $cc = app(ColorCodingService::class);
+
         if ($order->core_status === CoreStatus::ON_HOLD) {
+            $hex = $cc->getColorHex('blocked');
+            $palette = $cc->derivePalette($hex);
+
             return [
                 'label' => __('En Pausa'),
-                'badge_class' => 'bg-amber-500/10 text-amber-800 border-amber-300 dark:border-amber-700',
-                'dot_color' => 'bg-amber-500',
+                'badge_class' => 'border font-semibold',
+                'badge_inline_style' => $palette['badge_style'],
+                'dot_color' => '',
+                'dot_style' => "background-color: {$hex};",
                 'description' => $order->pause_reason ?: ($order->blocking_reason?->label() ?: __('Tu orden se encuentra pausada. Contacta a Customer Service para más información.')),
                 'icon' => 'pause-circle',
             ];
         }
 
         if ($order->core_status === CoreStatus::EN_PRODUCCION) {
+            $hex = $cc->getColorHex('production');
+            $palette = $cc->derivePalette($hex);
+
             return [
                 'label' => __('En Producción'),
-                'badge_class' => 'bg-pink-500/10 text-pink-700 border-pink-300 dark:border-pink-700',
-                'dot_color' => 'bg-pink-500',
+                'badge_class' => 'border font-semibold',
+                'badge_inline_style' => $palette['badge_style'],
+                'dot_color' => '',
+                'dot_style' => "background-color: {$hex};",
                 'description' => __('Tu orden se encuentra en etapa de producción. Te contactaremos cuando esté lista.'),
                 'icon' => 'printer',
             ];
         }
 
         if ($order->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
+            $hex = $cc->getColorHex('client');
+            $palette = $cc->derivePalette($hex);
+
             return [
                 'label' => __('Esperando tu respuesta'),
-                'badge_class' => 'bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:border-emerald-700 font-semibold ring-2 ring-emerald-500/20',
-                'dot_color' => 'bg-emerald-500',
+                'badge_class' => 'border font-semibold ring-2 ring-blue-500/20',
+                'badge_inline_style' => $palette['badge_style'],
+                'dot_color' => '',
+                'dot_style' => "background-color: {$hex};",
                 'description' => __('¡Te hemos enviado la propuesta! Esperamos tus comentarios o revisión.'),
                 'icon' => 'sparkles',
             ];
@@ -318,19 +357,29 @@ class ClientTimelineService
             CoreStatus::CESAR_ORDERS_RECEIVED,
             CoreStatus::ENVIADO_A_CAMILA,
         ], true)) {
+            $hex = $cc->getColorHex('todo_today');
+            $palette = $cc->derivePalette($hex);
+
             return [
                 'label' => __('En Diseño'),
-                'badge_class' => 'bg-sky-500/10 text-sky-700 border-sky-300 dark:border-sky-700',
-                'dot_color' => 'bg-sky-500',
+                'badge_class' => 'border font-semibold',
+                'badge_inline_style' => $palette['badge_style'],
+                'dot_color' => '',
+                'dot_style' => "background-color: {$hex};",
                 'description' => __('Nuestro equipo de diseño está trabajando activamente en tu orden.'),
                 'icon' => 'palette',
             ];
         }
 
+        $hex = '#78716c';
+        $palette = $cc->derivePalette($hex);
+
         return [
             'label' => __('Orden Recibida'),
-            'badge_class' => 'bg-stone-500/10 text-stone-700 border-stone-300 dark:border-stone-700',
-            'dot_color' => 'bg-stone-400',
+            'badge_class' => 'border font-semibold',
+            'badge_inline_style' => $palette['badge_style'],
+            'dot_color' => '',
+            'dot_style' => "background-color: {$hex};",
             'description' => __('¡Recibimos tu orden! Muy pronto te contactaremos para el siguiente paso.'),
             'icon' => 'clock',
         ];

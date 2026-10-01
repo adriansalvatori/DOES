@@ -1266,7 +1266,7 @@
                                                 <x-wo-badge :number="$order->wo_number" variant="dark" />
                                             @endif
                                             @if($order->designer)
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}" style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                                     {{ $order->designer->name }}
                                                 </span>
                                             @endif
@@ -1286,12 +1286,12 @@
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0">
                                         @if($order->substatus)
-                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                                                 {{ $order->substatus->label() }}
                                             </span>
                                         @endif
                                         @if($order->core_status)
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 {{ $order->core_status->badgeStyle() }}">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 {{ $order->core_status->badgeStyle() }}" style="{{ $order->core_status->badgeInlineStyle() }}">
                                                 {{ $order->core_status->label() }}
                                             </span>
                                         @endif
@@ -1327,7 +1327,7 @@
                                                 <x-wo-badge :number="$order->wo_number" variant="dark" />
                                             @endif
                                             @if($order->designer)
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}" style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                                     {{ $order->designer->name }}
                                                 </span>
                                             @endif
@@ -1347,7 +1347,7 @@
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0">
                                         @if($order->substatus)
-                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                                                 {{ $order->substatus->label() }}
                                             </span>
                                         @endif
@@ -1379,7 +1379,7 @@
                                                 <x-wo-badge :number="$order->wo_number" variant="dark" />
                                             @endif
                                             @if($order->designer)
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}">
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $order->getDesignerBadgeStyle() }}" style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                                     {{ $order->designer->name }}
                                                 </span>
                                             @endif
@@ -1399,7 +1399,7 @@
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0">
                                         @if($order->substatus)
-                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                            <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                                                 {{ $order->substatus->label() }}
                                             </span>
                                         @endif

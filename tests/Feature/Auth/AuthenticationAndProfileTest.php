@@ -470,4 +470,41 @@ class AuthenticationAndProfileTest extends TestCase
         $dashboardResponse->assertSee('/resolver');
         $dashboardResponse->assertSee('id="tour-stats-resolver"', false);
     }
+
+    public function test_profile_settings_dispatches_form_saved_on_profile_update(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(ProfileSettings::class)
+            ->set('name', 'Usuario Modificado')
+            ->set('email', 'modificado@kudos.com')
+            ->call('updateProfile')
+            ->assertDispatched('form-saved');
+    }
+
+    public function test_profile_settings_dispatches_form_saved_on_notifications_update(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        Livewire::test(ProfileSettings::class)
+            ->set('notify_order_assigned', false)
+            ->call('updateNotificationSettings')
+            ->assertDispatched('form-saved');
+    }
+
+    public function test_profile_settings_view_contains_dirty_tracker_and_navigation_guard(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->get(route('settings.profile'));
+        $response->assertStatus(200);
+        $response->assertSee('profileSettingsPage', false);
+        $response->assertSee('switchTab', false);
+        $response->assertSee('¿Salir sin guardar los cambios?');
+        $response->assertSee('Tienes cambios sin guardar');
+        $response->assertSee('bg-emerald-600', false);
+    }
 }

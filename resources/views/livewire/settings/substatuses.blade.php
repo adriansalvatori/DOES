@@ -1,14 +1,8 @@
 <div class="h-full flex flex-col space-y-6 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto pb-10">
     <!-- Header Card -->
     <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4 shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-stone-900 text-white rounded-xl flex items-center justify-center font-bold shadow-xs">
-                <x-lucide-settings-2 class="w-5 h-5" />
-            </div>
-            <div>
-                <h1 class="text-lg font-bold text-zinc-900 tracking-tight">{{ __('Configuración de Estados y Subestatus') }}</h1>
-                <p class="text-xs text-zinc-500 mt-0.5">{{ __('Crea, personaliza y organiza la pertenencia de subestatus por Core Status y gestiona los subestatus transversales globales.') }}</p>
-            </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Configuración de Estados y Subestatus') }}</h1>
         </div>
 
         <div class="flex items-center gap-3">
@@ -67,14 +61,14 @@
                     <!-- Core Status Section Header -->
                     <div class="px-5 py-3.5 bg-stone-50/70 border-b border-[#e9e9e7] flex items-center justify-between gap-3">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $coreCase->dotClass() }}"></span>
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $coreCase->dotClass() }}" style="{{ $coreCase->dotStyle() }}"></span>
                             @if(\App\Enums\CoreStatus::isPendingDesign($coreCase))
                                 <span class="px-2.5 py-0.5 rounded text-xs font-bold border bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200">
                                     {{ __('Colas de Diseño (Órdenes Recibidas)') }}
                                 </span>
                                 <span class="text-[11px] text-zinc-400 font-mono hidden sm:inline">({{ __('Aplica automáticamente a todos los diseñadores') }})</span>
                             @else
-                                <span class="px-2.5 py-0.5 rounded text-xs font-bold border {{ $coreCase->badgeStyle() }}">
+                                <span class="px-2.5 py-0.5 rounded text-xs font-bold border {{ $coreCase->badgeStyle() }}" style="{{ $coreCase->badgeInlineStyle() }}">
                                     {{ $coreCase->label() }}
                                 </span>
                                 <span class="text-[11px] text-zinc-400 font-mono hidden sm:inline">({{ $coreCase->value }})</span>

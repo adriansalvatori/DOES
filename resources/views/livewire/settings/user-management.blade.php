@@ -2,11 +2,8 @@
     
     <!-- Title & Action Bar -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
-        <div>
-            <h1 class="text-xl font-bold text-zinc-900 tracking-tight">{{ __('Gestión de Usuarios y Roles') }}</h1>
-            <p class="text-xs text-zinc-500 mt-1">
-                {{ __('Administra los accesos, asigna roles de usuario y vincula cuentas a diseñadores de Trello.') }}
-            </p>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Gestión de Usuarios y Roles') }}</h1>
         </div>
 
         <button 

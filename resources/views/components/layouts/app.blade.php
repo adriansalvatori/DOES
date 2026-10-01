@@ -38,6 +38,7 @@
         code, pre, .font-mono {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         }
+        {!! app(\App\Services\ColorCodingService::class)->generateCssVariables() !!}
     </style>
 </head>
 <body 
@@ -171,20 +172,20 @@
                 <div id="tour-designer-colors" class="space-y-2">
                     <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2.5 mb-1">{{ __('Diseñadores') }}</span>
                     <div class="space-y-2 text-[11px] text-zinc-600 font-medium px-2.5">
-                        <div class="flex items-center gap-2.5 py-0.5" title="Euralíz (Magenta)">
-                            <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100"></span>
+                        <div class="flex items-center gap-2.5 py-0.5" title="Euralíz">
+                            <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100" style="background-color: var(--cc-designer_euraliz-solid); ring-color: var(--cc-designer_euraliz-bg-light);"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">Euralíz</span>
                         </div>
-                        <div class="flex items-center gap-2.5 py-0.5" title="César (Cyan)">
-                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100"></span>
+                        <div class="flex items-center gap-2.5 py-0.5" title="César">
+                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100" style="background-color: var(--cc-designer_cesar-solid); ring-color: var(--cc-designer_cesar-bg-light);"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
                         </div>
-                        <div class="flex items-center gap-2.5 py-0.5" title="Adrián (Verde)">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100"></span>
+                        <div class="flex items-center gap-2.5 py-0.5" title="Adrián">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100" style="background-color: var(--cc-designer_adrian-solid); ring-color: var(--cc-designer_adrian-bg-light);"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">Adrián</span>
                         </div>
-                        <div class="flex items-center gap-2.5 py-0.5" title="Diseñador Externo (Amarillo)">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100"></span>
+                        <div class="flex items-center gap-2.5 py-0.5" title="Diseñador Externo">
+                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100" style="background-color: var(--cc-designer_external-solid); ring-color: var(--cc-designer_external-bg-light);"></span>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Externo') }}</span>
                         </div>
                     </div>
@@ -250,6 +251,13 @@
                             <span class="truncate">{{ __('Idioma') }}</span>
                         </a>
                         @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                            <a 
+                                href="/settings/color-coding" 
+                                title="{{ __('Personalización de Colores') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/color-coding*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                                <x-lucide-palette class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Color Coding') }}</span>
+                            </a>
                             <a 
                                 href="/settings/substatuses" 
                                 title="{{ __('Configuración de Subestatus') }}" 
@@ -318,6 +326,13 @@
                             <span class="truncate">{{ __('Idioma') }}</span>
                         </a>
                         @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                            <a 
+                                href="/settings/color-coding" 
+                                title="{{ __('Personalización de Colores') }}" 
+                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/color-coding*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                                <x-lucide-palette class="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                                <span class="truncate">{{ __('Color Coding') }}</span>
+                            </a>
                             <a 
                                 href="/settings/substatuses" 
                                 title="{{ __('Configuración de Subestatus') }}" 

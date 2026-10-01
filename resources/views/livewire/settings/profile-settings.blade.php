@@ -1,12 +1,15 @@
-<div class="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+<div 
+    x-data="profileSettingsPage(@js($activeTab))"
+    x-init="init()"
+    @input="checkDirty()"
+    @change="checkDirty()"
+    @form-saved.window="handleFormSaved()"
+    class="flex-1 w-full flex flex-col space-y-6 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-2 max-w-5xl mx-auto pb-28">
     
     <!-- Top Action Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
-        <div>
-            <h1 class="text-xl font-bold text-zinc-900 tracking-tight">{{ __('Mi Perfil y Configuración') }}</h1>
-            <p class="text-xs text-zinc-500 mt-1">
-                {{ __('Administra tus datos personales, preferencias de interfaz, alertas y seguridad de sesión.') }}
-            </p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4 shrink-0">
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Mi Perfil y Configuración') }}</h1>
         </div>
 
         <div class="flex items-center gap-2">
@@ -24,7 +27,7 @@
     </div>
 
     <!-- User Mini Hero Card -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
         <div class="flex items-center gap-4">
             @if($avatar_file && ! $errors->has('avatar_file') && in_array(strtolower($avatar_file->getClientOriginalExtension()), ['jpg', 'jpeg', 'png', 'webp', 'gif']))
                 <img src="{{ $avatar_file->temporaryUrl() }}" alt="{{ $user->name }}" class="w-14 h-14 rounded-full object-cover shadow-sm border border-stone-200" />
@@ -43,7 +46,7 @@
                         {{ $user->role?->label() ?? __('Diseñador') }}
                     </span>
                     @if($user->designer && $user->designer->is_lead)
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-200">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border" style="{{ $user->designer->badge_inline_style }}">
                             👑 {{ __('Lead Designer') }}
                         </span>
                     @endif
@@ -78,31 +81,35 @@
     </div>
 
     <!-- Navigation Tabs Bar -->
-    <div class="flex items-center gap-1 border-b border-[#e9e9e7] overflow-x-auto pb-px text-xs font-medium text-zinc-500">
+    <div class="flex items-center gap-1 border-b border-[#e9e9e7] overflow-x-auto pb-px text-xs font-medium text-zinc-500 shrink-0">
         <button 
-            wire:click="setTab('general')" 
-            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer {{ $activeTab === 'general' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
+            type="button"
+            @click="switchTab('general')" 
+            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'general' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
             <x-lucide-user class="w-4 h-4 {{ $activeTab === 'general' ? 'text-stone-900' : 'text-zinc-400' }}" />
             <span>{{ __('General & Perfil') }}</span>
         </button>
 
         <button 
-            wire:click="setTab('notifications')" 
-            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer {{ $activeTab === 'notifications' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
+            type="button"
+            @click="switchTab('notifications')" 
+            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'notifications' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
             <x-lucide-bell class="w-4 h-4 {{ $activeTab === 'notifications' ? 'text-stone-900' : 'text-zinc-400' }}" />
             <span>{{ __('Notificaciones') }}</span>
         </button>
 
         <button 
-            wire:click="setTab('preferences')" 
-            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer {{ $activeTab === 'preferences' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
+            type="button"
+            @click="switchTab('preferences')" 
+            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'preferences' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
             <x-lucide-sliders class="w-4 h-4 {{ $activeTab === 'preferences' ? 'text-stone-900' : 'text-zinc-400' }}" />
             <span>{{ __('Entorno & Idioma') }}</span>
         </button>
 
         <button 
-            wire:click="setTab('security')" 
-            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer {{ $activeTab === 'security' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
+            type="button"
+            @click="switchTab('security')" 
+            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'security' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
             <x-lucide-shield class="w-4 h-4 {{ $activeTab === 'security' ? 'text-stone-900' : 'text-zinc-400' }}" />
             <span>{{ __('Seguridad & Sesión') }}</span>
         </button>
@@ -237,6 +244,9 @@
                                 <span class="font-mono text-zinc-900 font-semibold" x-text="selectedCountry.dial"></span>
                                 <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
                             </button>
+
+                            <!-- Hidden input to track selected country dial in form snapshot -->
+                            <input type="hidden" name="phone_country" :value="selectedCountry.dial" />
 
                             <!-- Local Phone Number Input -->
                             <input 
@@ -386,11 +396,26 @@
                     </div>
 
                     <div class="pt-2">
-                        <button 
-                            type="submit" 
-                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
-                            {{ __('Guardar Cambios') }}
-                        </button>
+                        <!-- Disabled by default when no changes -->
+                        <template x-if="!isDirty">
+                            <button 
+                                type="button" 
+                                disabled 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-400 border border-stone-200/80 text-xs font-semibold rounded-xl cursor-not-allowed select-none opacity-60 shadow-none">
+                                <x-lucide-save class="w-4 h-4 text-stone-400" />
+                                <span>{{ __('Guardar Cambios') }}</span>
+                            </button>
+                        </template>
+
+                        <!-- Appears in green when user makes changes -->
+                        <template x-if="isDirty">
+                            <button 
+                                type="submit" 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20 transition-all duration-200 cursor-pointer animate-in fade-in zoom-in-95">
+                                <x-lucide-check class="w-4 h-4 text-white" />
+                                <span>{{ __('Guardar Cambios') }}</span>
+                            </button>
+                        </template>
                     </div>
                 </form>
             </div>
@@ -461,11 +486,26 @@
                     </div>
 
                     <div class="pt-2">
-                        <button 
-                            type="submit" 
-                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
-                            {{ __('Guardar Preferencias de Alertas') }}
-                        </button>
+                        <!-- Disabled by default when no changes -->
+                        <template x-if="!isDirty">
+                            <button 
+                                type="button" 
+                                disabled 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-400 border border-stone-200/80 text-xs font-semibold rounded-xl cursor-not-allowed select-none opacity-60 shadow-none">
+                                <x-lucide-save class="w-4 h-4 text-stone-400" />
+                                <span>{{ __('Guardar Preferencias de Alertas') }}</span>
+                            </button>
+                        </template>
+
+                        <!-- Appears in green when user makes changes -->
+                        <template x-if="isDirty">
+                            <button 
+                                type="submit" 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20 transition-all duration-200 cursor-pointer animate-in fade-in zoom-in-95">
+                                <x-lucide-check class="w-4 h-4 text-white" />
+                                <span>{{ __('Guardar Preferencias de Alertas') }}</span>
+                            </button>
+                        </template>
                     </div>
                 </form>
             </div>
@@ -495,11 +535,13 @@
                     <!-- Language Picker -->
                     <div class="space-y-2">
                         <label class="block text-xs font-semibold text-zinc-700">{{ __('Idioma de la Interfaz') }}</label>
+                        <!-- Hidden input to track selected locale in form snapshot -->
+                        <input type="hidden" name="locale" value="{{ $locale }}" />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <button 
                                 type="button"
-                                wire:click="setLocale('es')"
-                                @click="localStorage.setItem('app_locale', 'es')"
+                                wire:click="$set('locale', 'es')"
+                                @click="localStorage.setItem('app_locale', 'es'); $nextTick(() => setTimeout(() => checkDirty(), 100))"
                                 class="p-3.5 border-2 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 select-none text-left {{ $locale === 'es' ? 'border-stone-900 bg-stone-50 ring-2 ring-stone-900/10 shadow-2xs' : 'border-[#e9e9e7] hover:border-stone-400 bg-white' }}">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-xl bg-stone-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
@@ -520,8 +562,8 @@
 
                             <button 
                                 type="button"
-                                wire:click="setLocale('en')"
-                                @click="localStorage.setItem('app_locale', 'en')"
+                                wire:click="$set('locale', 'en')"
+                                @click="localStorage.setItem('app_locale', 'en'); $nextTick(() => setTimeout(() => checkDirty(), 100))"
                                 class="p-3.5 border-2 rounded-2xl flex items-center justify-between gap-3 cursor-pointer transition-all duration-200 select-none text-left {{ $locale === 'en' ? 'border-stone-900 bg-stone-50 ring-2 ring-stone-900/10 shadow-2xs' : 'border-[#e9e9e7] hover:border-stone-400 bg-white' }}">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-xl bg-stone-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
@@ -569,11 +611,26 @@
                     </div>
 
                     <div class="pt-2">
-                        <button 
-                            type="submit" 
-                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
-                            {{ __('Guardar Preferencias de Entorno') }}
-                        </button>
+                        <!-- Disabled by default when no changes -->
+                        <template x-if="!isDirty">
+                            <button 
+                                type="button" 
+                                disabled 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-400 border border-stone-200/80 text-xs font-semibold rounded-xl cursor-not-allowed select-none opacity-60 shadow-none">
+                                <x-lucide-save class="w-4 h-4 text-stone-400" />
+                                <span>{{ __('Guardar Preferencias de Entorno') }}</span>
+                            </button>
+                        </template>
+
+                        <!-- Appears in green when user makes changes -->
+                        <template x-if="isDirty">
+                            <button 
+                                type="submit" 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20 transition-all duration-200 cursor-pointer animate-in fade-in zoom-in-95">
+                                <x-lucide-check class="w-4 h-4 text-white" />
+                                <span>{{ __('Guardar Preferencias de Entorno') }}</span>
+                            </button>
+                        </template>
                     </div>
                 </form>
             </div>
@@ -651,16 +708,31 @@
                     </div>
 
                     <div class="flex items-center justify-between pt-1">
-                        <label class="flex items-center gap-2 cursor-pointer text-xs text-zinc-600">
+                        <label class="flex items-center gap-2 cursor-pointer text-xs text-zinc-600 select-none">
                             <input type="checkbox" wire:model.live="show_passwords" class="w-3.5 h-3.5 text-stone-900 rounded border-stone-300" />
                             <span>{{ __('Mostrar contraseñas') }}</span>
                         </label>
 
-                        <button 
-                            type="submit" 
-                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
-                            {{ __('Actualizar Contraseña') }}
-                        </button>
+                        <!-- Disabled by default when no changes -->
+                        <template x-if="!isDirty">
+                            <button 
+                                type="button" 
+                                disabled 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-400 border border-stone-200/80 text-xs font-semibold rounded-xl cursor-not-allowed select-none opacity-60 shadow-none">
+                                <x-lucide-lock class="w-4 h-4 text-stone-400" />
+                                <span>{{ __('Actualizar Contraseña') }}</span>
+                            </button>
+                        </template>
+
+                        <!-- Appears in green when user makes changes -->
+                        <template x-if="isDirty">
+                            <button 
+                                type="submit" 
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20 transition-all duration-200 cursor-pointer animate-in fade-in zoom-in-95">
+                                <x-lucide-check class="w-4 h-4 text-white" />
+                                <span>{{ __('Actualizar Contraseña') }}</span>
+                            </button>
+                        </template>
                     </div>
                 </form>
             </div>
@@ -794,4 +866,301 @@
         </div>
     @endif
 
+    <!-- Floating Unsaved Changes Bar -->
+    <div 
+        x-show="isDirty" 
+        x-transition:enter="transition ease-out duration-300"
+        x-transition:enter-start="opacity-0 translate-y-8 scale-95"
+        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+        x-transition:leave="transition ease-in duration-200"
+        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+        x-transition:leave-end="opacity-0 translate-y-8 scale-95"
+        x-cloak
+        class="fixed bottom-6 inset-x-0 mx-auto max-w-lg z-40 px-4 pointer-events-auto">
+        <div class="bg-stone-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl border border-stone-700/60 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+                <p class="text-xs font-medium text-stone-200 truncate">
+                    {{ __('Tienes cambios sin guardar') }}
+                </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button 
+                    type="button" 
+                    @click="discardChanges()"
+                    class="px-3 py-1.5 rounded-xl text-xs font-medium text-stone-300 hover:text-white hover:bg-stone-800 transition cursor-pointer">
+                    {{ __('Descartar') }}
+                </button>
+                <button 
+                    type="button" 
+                    @click="submitActiveForm()"
+                    class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5 cursor-pointer ring-2 ring-emerald-500/20">
+                    <x-lucide-check class="w-3.5 h-3.5" />
+                    <span>{{ __('Guardar') }}</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unsaved Changes Alert Modal -->
+    <div 
+        x-show="showUnsavedModal" 
+        x-cloak
+        class="fixed inset-0 z-50 overflow-y-auto bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div 
+            @click.outside="cancelNavigation()"
+            x-show="showUnsavedModal"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95"
+            x-transition:enter-end="opacity-100 scale-100"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100"
+            x-transition:leave-end="opacity-0 scale-95"
+            class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200 space-y-4">
+            
+            <div class="flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 border border-amber-200">
+                    <x-lucide-alert-triangle class="w-5 h-5" />
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-bold text-base text-zinc-900">
+                        {{ __('¿Salir sin guardar los cambios?') }}
+                    </h3>
+                    <p class="text-xs text-zinc-600 leading-relaxed">
+                        {{ __('Tienes cambios sin guardar en tu configuración. Si cambias de vista o de sección perderás las modificaciones realizadas.') }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-stone-100 flex items-center justify-end gap-2.5">
+                <button 
+                    type="button" 
+                    @click="cancelNavigation()" 
+                    class="px-4 py-2 border border-stone-200 hover:bg-stone-50 text-zinc-700 text-xs font-semibold rounded-xl transition cursor-pointer">
+                    {{ __('Permanecer aquí') }}
+                </button>
+
+                <button 
+                    type="button" 
+                    @click="confirmNavigation()" 
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
+                    {{ __('Descartar y salir') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<!-- Alpine.js Profile Settings Form Tracker & Navigation Guard Script -->
+<script>
+    (function() {
+        function registerProfileSettings() {
+            if (window.Alpine) {
+                Alpine.data('profileSettingsPage', (initialTab) => ({
+                    activeTab: initialTab || 'general',
+                    isDirty: false,
+                    initialSnapshot: '',
+                    showUnsavedModal: false,
+                    pendingUrl: null,
+                    pendingTab: null,
+                    pendingForm: null,
+                    linkClickHandler: null,
+                    beforeUnloadHandler: null,
+                    popstateHandler: null,
+
+                    init() {
+                        this.$nextTick(() => {
+                            this.takeSnapshot();
+                        });
+
+                        // Watch for Livewire tab changes
+                        this.$watch('$wire.activeTab', (newTab) => {
+                            this.activeTab = newTab;
+                            this.$nextTick(() => {
+                                this.takeSnapshot();
+                            });
+                        });
+
+                        // Intercept clicks on links and logout forms across the entire document
+                        this.linkClickHandler = (e) => {
+                            if (!this.isDirty) return;
+
+                            const link = e.target.closest('a[href]');
+                            if (link) {
+                                const href = link.getAttribute('href');
+                                if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+                                e.preventDefault();
+                                e.stopPropagation();
+                                this.pendingUrl = link.href;
+                                this.pendingTab = null;
+                                this.pendingForm = null;
+                                this.showUnsavedModal = true;
+                                return;
+                            }
+
+                            const submitBtn = e.target.closest('button[type="submit"]');
+                            if (submitBtn) {
+                                const form = submitBtn.closest('form');
+                                if (form && form.action && form.action.includes('logout')) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    this.pendingForm = form;
+                                    this.pendingUrl = null;
+                                    this.pendingTab = null;
+                                    this.showUnsavedModal = true;
+                                    return;
+                                }
+                            }
+                        };
+                        document.addEventListener('click', this.linkClickHandler, true);
+
+                        // Browser beforeunload handler (for page refresh, close tab, etc.)
+                        this.beforeUnloadHandler = (e) => {
+                            if (this.isDirty) {
+                                e.preventDefault();
+                                e.returnValue = '';
+                                return '';
+                            }
+                        };
+                        window.addEventListener('beforeunload', this.beforeUnloadHandler);
+
+                        // Handle browser back/forward buttons
+                        this.popstateHandler = (e) => {
+                            if (this.isDirty) {
+                                window.history.pushState(null, '', window.location.href);
+                                this.pendingUrl = document.referrer || '/';
+                                this.pendingTab = null;
+                                this.pendingForm = null;
+                                this.showUnsavedModal = true;
+                            }
+                        };
+                        window.addEventListener('popstate', this.popstateHandler);
+                    },
+
+                    destroy() {
+                        if (this.linkClickHandler) {
+                            document.removeEventListener('click', this.linkClickHandler, true);
+                        }
+                        if (this.beforeUnloadHandler) {
+                            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+                        }
+                        if (this.popstateHandler) {
+                            window.removeEventListener('popstate', this.popstateHandler);
+                        }
+                    },
+
+                    getActiveForm() {
+                        return this.$el.querySelector('form[wire\\:submit]');
+                    },
+
+                    getFormSnapshot(form) {
+                        if (!form) return '';
+                        const items = [];
+                        const elements = form.querySelectorAll('input, select, textarea');
+                        elements.forEach(el => {
+                            if (el.type === 'hidden' && el.name === '_token') return;
+                            let val = '';
+                            if (el.type === 'checkbox') {
+                                val = el.checked ? '1' : '0';
+                            } else if (el.type === 'radio') {
+                                if (el.checked) val = el.value;
+                            } else if (el.type === 'file') {
+                                val = el.files && el.files.length > 0 ? (el.files[0].name + ':' + el.files[0].size) : '';
+                            } else {
+                                val = el.value || '';
+                            }
+                            const key = el.name || el.getAttribute('wire:model') || el.id || '';
+                            items.push(key + '::' + val);
+                        });
+                        return items.join('||');
+                    },
+
+                    takeSnapshot() {
+                        const form = this.getActiveForm();
+                        if (form) {
+                            this.initialSnapshot = this.getFormSnapshot(form);
+                            this.isDirty = false;
+                        }
+                    },
+
+                    checkDirty() {
+                        const form = this.getActiveForm();
+                        if (!form) return;
+                        const current = this.getFormSnapshot(form);
+                        this.isDirty = (this.initialSnapshot !== '' && current !== this.initialSnapshot);
+                    },
+
+                    switchTab(tab) {
+                        if (this.activeTab === tab) return;
+                        if (this.isDirty) {
+                            this.pendingTab = tab;
+                            this.pendingUrl = null;
+                            this.pendingForm = null;
+                            this.showUnsavedModal = true;
+                            return;
+                        }
+                        this.activeTab = tab;
+                        this.$wire.setTab(tab);
+                    },
+
+                    cancelNavigation() {
+                        this.showUnsavedModal = false;
+                        this.pendingUrl = null;
+                        this.pendingTab = null;
+                        this.pendingForm = null;
+                    },
+
+                    confirmNavigation() {
+                        const url = this.pendingUrl;
+                        const tab = this.pendingTab;
+                        const form = this.pendingForm;
+
+                        this.isDirty = false;
+                        this.showUnsavedModal = false;
+                        this.pendingUrl = null;
+                        this.pendingTab = null;
+                        this.pendingForm = null;
+
+                        if (tab) {
+                            this.activeTab = tab;
+                            this.$wire.setTab(tab);
+                        } else if (url) {
+                            window.location.href = url;
+                        } else if (form) {
+                            form.submit();
+                        }
+                    },
+
+                    discardChanges() {
+                        this.$wire.$refresh().then(() => {
+                            this.$nextTick(() => {
+                                this.takeSnapshot();
+                            });
+                        });
+                    },
+
+                    submitActiveForm() {
+                        const form = this.getActiveForm();
+                        if (form) {
+                            form.requestSubmit();
+                        }
+                    },
+
+                    handleFormSaved() {
+                        this.$nextTick(() => {
+                            this.takeSnapshot();
+                        });
+                    }
+                }));
+            }
+        }
+
+        if (window.Alpine) {
+            registerProfileSettings();
+        } else {
+            document.addEventListener('alpine:init', registerProfileSettings);
+        }
+    })();
+</script>

@@ -572,10 +572,14 @@ class Order extends Model
             'customer_service_required' => false,
         ]);
 
-        $this->relatedTasks()
+        $tasksToComplete = $this->relatedTasks()
             ->where('status', 'todo')
             ->whereIn('type', [RelatedTaskType::BLOCKED, RelatedTaskType::RESOLVER])
-            ->update(['status' => 'done']);
+            ->get();
+
+        foreach ($tasksToComplete as $blockedTask) {
+            $blockedTask->update(['status' => 'done']);
+        }
 
         OrderEvent::create([
             'order_id' => $this->id,
@@ -611,9 +615,17 @@ class Order extends Model
 
     public function getSubstatusInlineStyleAttribute(): string
     {
+        if ($this->substatus instanceof Substatus) {
+            return $this->substatus->getInlineBadgeStyle();
+        }
+
         $name = is_string($this->substatus) ? $this->substatus : $this->substatus?->value;
         if (! $name) {
             return 'background-color: #f3f4f6; color: #374151; border-color: #e5e7eb;';
+        }
+
+        if ($enum = Substatus::tryFrom($name)) {
+            return $enum->getInlineBadgeStyle();
         }
 
         $style = \App\Models\Substatus::getStyleFor($name);
@@ -630,6 +642,15 @@ class Order extends Model
         return $this->designer->badge_style;
     }
 
+    public function getDesignerBadgeInlineStyle(): string
+    {
+        if (! $this->designer) {
+            return 'background-color: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;';
+        }
+
+        return $this->designer->badge_inline_style;
+    }
+
     public function getDesignerDotColorClass(): string
     {
         if (! $this->designer) {
@@ -637,6 +658,15 @@ class Order extends Model
         }
 
         return $this->designer->dot_color_class;
+    }
+
+    public function getDesignerDotStyle(): string
+    {
+        if (! $this->designer) {
+            return 'background-color: #fbbf24;';
+        }
+
+        return $this->designer->dot_inline_style;
     }
 
     public function isApproved(): bool

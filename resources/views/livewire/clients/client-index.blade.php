@@ -3,19 +3,9 @@
     <!-- Notion Header Controls (Compact Width) -->
     <div id="tour-client-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
         {{-- Row 1: Title & Badge --}}
-        <div class="flex items-center gap-2.5 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <x-lucide-building-2 class="w-4 h-4 text-stone-100" />
-            </div>
-            <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                    <h1 class="text-xs sm:text-sm font-bold text-zinc-900 tracking-tight">{{ __('Base de Datos de Clientes') }}</h1>
-                    <span class="px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-[10px] font-bold text-zinc-600">{{ $totalClientsCount }}</span>
-                </div>
-                <p class="text-xs text-zinc-500 mt-0.5 leading-relaxed">
-                    {{ __('Central repository of client profiles. Each subpage includes key information, assets, preferences, and project history—built to reduce friction, preserve context, and ensure consistency, speed, and clarity across the design team.') }}
-                </p>
-            </div>
+        <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Base de Datos de Clientes') }}</h1>
+            <span class="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-[11px] font-bold text-zinc-600">{{ $totalClientsCount }}</span>
         </div>
 
         {{-- Row 2: Searchbar (fills space) & New Button --}}

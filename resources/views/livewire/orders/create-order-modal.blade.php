@@ -526,8 +526,9 @@
                                         type="button"
                                         wire:click="toggleDesigner({{ $designer->id }})"
                                         class="px-2 py-0.5 rounded text-[11px] font-semibold border transition flex items-center gap-1 cursor-pointer {{ $isAssigned ? $designer->badge_style : 'bg-white text-zinc-500 border-stone-200 hover:bg-stone-100' }}"
+                                        style="{{ $isAssigned ? $designer->badge_inline_style : '' }}"
                                     >
-                                        <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }}"></span>
+                                        <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }}" style="{{ $designer->dot_inline_style }}"></span>
                                         <span>{{ $designer->name }}</span>
                                         @if($isAssigned)
                                             <x-lucide-check class="w-3 h-3 text-current stroke-[3]" />
@@ -563,7 +564,7 @@
                                     class="w-full bg-[#fbfbfa] border border-[#e9e9e7] hover:border-stone-400 rounded-md px-3 py-1.5 text-zinc-800 focus:outline-none text-left flex items-center justify-between font-medium">
                                     @if($substatus)
                                         @php $subEnum = \App\Enums\Substatus::tryFrom($substatus); @endphp
-                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $subEnum ? $subEnum->badgeStyle() : 'bg-stone-100 text-stone-700 border-stone-200' }}">
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $subEnum ? $subEnum->badgeStyle() : 'bg-stone-100 text-stone-700 border-stone-200' }}" style="{{ $subEnum ? $subEnum->getInlineBadgeStyle() : '' }}">
                                             {{ $substatus }}
                                         </span>
                                     @else
@@ -593,7 +594,7 @@
                                         type="button"
                                         @click="selectSub('{{ $sub->value }}')" 
                                         class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer transition flex items-center justify-between">
-                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $sub->badgeStyle() }}">
+                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $sub->badgeStyle() }}" style="{{ $sub->getInlineBadgeStyle() }}">
                                             {{ $sub->value }}
                                         </span>
                                         @if($substatus === $sub->value)

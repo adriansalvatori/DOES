@@ -19,17 +19,9 @@
     <!-- Top Notion-Style Header Controls -->
     <div id="tour-kanban-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <x-lucide-kanban class="w-4.5 h-4.5 text-stone-100" />
-                </div>
-                <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">{{ __('Kanban Board') }}</h1>
-                        <span class="px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-[10px] font-bold text-zinc-600">9 {{ __('Listas') }}</span>
-                    </div>
-                    <p class="text-xs text-zinc-500 truncate mt-0.5">{{ __('Arrastra y suelta tarjetas entre listas para actualizar su estado en tiempo real.') }}</p>
-                </div>
+            <div class="flex items-center gap-3 min-w-0 flex-wrap">
+                <h1 id="tour-kanban-title" class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Kanban Board') }}</h1>
+                <span class="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-[11px] font-bold text-zinc-600">9 {{ __('Listas') }}</span>
             </div>
 
             <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
@@ -338,7 +330,7 @@
                             x-show="!search || '{{ strtolower(addslashes($sub->value)) }}'.includes(search.toLowerCase())"
                             @click="selectSub('{{ $sub->value }}')" 
                             class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-medium border {{ $sub->badgeStyle() }}">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-medium border {{ $sub->badgeStyle() }}" style="{{ $sub->getInlineBadgeStyle() }}">
                                 {{ $sub->value }}
                             </span>
                             @if($substatusFilter === $sub->value)
@@ -514,7 +506,7 @@
                 <!-- Column Header -->
                 <div class="p-3 border-b border-[#e9e9e7] bg-[#efefed] rounded-t-xl flex items-center justify-between sticky top-0 z-10 shrink-0">
                     <div class="flex items-center gap-2 min-w-0">
-                        <span class="w-2 h-2 rounded-full shrink-0 bg-stone-600"></span>
+                        <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style="{{ $column->dotStyle() }}"></span>
                         <h3 class="font-semibold text-xs text-zinc-800 uppercase tracking-wider truncate">{{ $column->label() }}</h3>
                     </div>
                     @php
@@ -597,7 +589,7 @@
                                             </span>
                                         @endif
                                         @if($order->substatus && $order->substatus->value !== 'URGENTE')
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}">
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}" style="{{ ! $isBlocked ? $order->substatus->getInlineBadgeStyle() : '' }}">
                                                 {{ $order->substatus->value }}
                                             </span>
                                         @endif
@@ -615,7 +607,7 @@
                                         @endif
                                         <div class="flex flex-wrap items-center gap-1 shrink-0 justify-end">
                                             @forelse($order->assigned_designers as $des)
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}">
+                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
                                                     {{ $des->name }}
                                                 </span>
                                             @empty
@@ -878,7 +870,7 @@
                                             </span>
                                         @endif
                                         @if($order->substatus)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}">
+                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}" style="{{ ! $isBlocked ? $order->substatus->getInlineBadgeStyle() : '' }}">
                                                 {{ $order->substatus->value }}
                                             </span>
                                         @endif
@@ -896,7 +888,7 @@
                                         @endif
                                         <div class="flex flex-wrap items-center gap-1 shrink-0 justify-end">
                                             @forelse($order->assigned_designers as $des)
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}">
+                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
                                                     {{ $des->name }}
                                                 </span>
                                             @empty

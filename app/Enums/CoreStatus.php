@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Services\ColorCodingService;
+
 enum CoreStatus: string
 {
     case ENTRANTE = 'ENTRANTE';
@@ -35,15 +37,15 @@ enum CoreStatus: string
     {
         return match ($this) {
             self::ENTRANTE => 'orange',
-            self::EURALIZ_ORDERS_RECEIVED => 'pink',
+            self::EURALIZ_ORDERS_RECEIVED => 'fuchsia',
             self::ADRIAN_ORDERS_RECEIVED => 'emerald',
-            self::CESAR_ORDERS_RECEIVED => 'sky',
-            self::TO_DO_TODAY => 'yellow',
+            self::CESAR_ORDERS_RECEIVED => 'cyan',
+            self::TO_DO_TODAY => 'green',
             self::ENVIADO_A_CAMILA => 'purple',
-            self::ENVIADO_AL_CLIENTE => 'sky',
-            self::ON_HOLD => 'orange',
+            self::ENVIADO_AL_CLIENTE => 'blue',
+            self::ON_HOLD => 'slate',
             self::EN_PRODUCCION => 'pink',
-            self::ARCHIVED => 'stone',
+            self::ARCHIVED => 'rose',
         };
     }
 
@@ -52,14 +54,14 @@ enum CoreStatus: string
         return match ($this) {
             self::ENTRANTE => 'bg-orange-50 text-orange-700 border-orange-200',
             self::EURALIZ_ORDERS_RECEIVED => 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
-            self::ADRIAN_ORDERS_RECEIVED => 'bg-indigo-50 text-indigo-700 border-indigo-200',
+            self::ADRIAN_ORDERS_RECEIVED => 'bg-emerald-50 text-emerald-700 border-emerald-200',
             self::CESAR_ORDERS_RECEIVED => 'bg-cyan-50 text-cyan-700 border-cyan-200',
-            self::TO_DO_TODAY => 'bg-amber-50 text-amber-800 border-amber-300 font-semibold',
+            self::TO_DO_TODAY => 'bg-green-50 text-green-700 border-green-300 font-semibold',
             self::ENVIADO_A_CAMILA => 'bg-purple-50 text-purple-700 border-purple-200',
-            self::ENVIADO_AL_CLIENTE => 'bg-sky-50 text-sky-700 border-sky-200',
+            self::ENVIADO_AL_CLIENTE => 'bg-blue-50 text-blue-700 border-blue-200',
             self::ON_HOLD => 'bg-stone-100 text-stone-700 border-stone-200',
             self::EN_PRODUCCION => 'bg-pink-50 text-pink-700 border-pink-200',
-            self::ARCHIVED => 'bg-stone-100 text-stone-600 border-stone-200',
+            self::ARCHIVED => 'bg-rose-50 text-rose-700 border-rose-200',
         };
     }
 
@@ -77,35 +79,79 @@ enum CoreStatus: string
         return in_array($status, self::designerQueueStatuses(), true);
     }
 
-    public function hexColor(): string
+    public function colorCodingKey(): ?string
     {
         return match ($this) {
-            self::ENTRANTE => '#475569',
-            self::EURALIZ_ORDERS_RECEIVED => '#d946ef',
-            self::ADRIAN_ORDERS_RECEIVED => '#10b981',
-            self::CESAR_ORDERS_RECEIVED => '#06b6d4',
-            self::TO_DO_TODAY => '#f59e0b',
-            self::ENVIADO_A_CAMILA => '#f97316',
+            self::ENTRANTE => 'blocked',
+            self::EURALIZ_ORDERS_RECEIVED => 'designer_euraliz',
+            self::ADRIAN_ORDERS_RECEIVED => 'designer_adrian',
+            self::CESAR_ORDERS_RECEIVED => 'designer_cesar',
+            self::TO_DO_TODAY => 'todo_today',
+            self::ENVIADO_A_CAMILA => 'camila',
+            self::ENVIADO_AL_CLIENTE => 'client',
+            self::ON_HOLD => 'cs_hold',
+            self::EN_PRODUCCION => 'production',
+            self::ARCHIVED => null,
+        };
+    }
+
+    public function hexColor(): string
+    {
+        if ($key = $this->colorCodingKey()) {
+            try {
+                return app(ColorCodingService::class)->getHex($key);
+            } catch (\Throwable $e) {
+                // Fallback to static values if service is unavailable
+            }
+        }
+
+        return match ($this) {
+            self::ENTRANTE => '#f97316',
+            self::EURALIZ_ORDERS_RECEIVED => '#F3A8FF',
+            self::ADRIAN_ORDERS_RECEIVED => '#5FE9B5',
+            self::CESAR_ORDERS_RECEIVED => '#52EAFD',
+            self::TO_DO_TODAY => '#22c55e',
+            self::ENVIADO_A_CAMILA => '#a855f7',
             self::ENVIADO_AL_CLIENTE => '#3b82f6',
             self::ON_HOLD => '#64748b',
-            self::EN_PRODUCCION => '#8b5cf6',
-            self::ARCHIVED => '#94a3b8',
+            self::EN_PRODUCCION => '#db2777',
+            self::ARCHIVED => '#fb7185',
         };
+    }
+
+    public function badgeInlineStyle(): string
+    {
+        if ($key = $this->colorCodingKey()) {
+            try {
+                $palette = app(ColorCodingService::class)->getPalette($key);
+
+                return $palette['badge_style'];
+            } catch (\Throwable $e) {
+                // Fallback
+            }
+        }
+
+        return "background-color: {$this->hexColor()}; color: #ffffff;";
+    }
+
+    public function dotStyle(): string
+    {
+        return "background-color: {$this->hexColor()};";
     }
 
     public function dotClass(): string
     {
         return match ($this) {
-            self::ENTRANTE => 'bg-slate-600',
-            self::EURALIZ_ORDERS_RECEIVED => 'bg-fuchsia-500',
-            self::ADRIAN_ORDERS_RECEIVED => 'bg-emerald-500',
-            self::CESAR_ORDERS_RECEIVED => 'bg-cyan-500',
-            self::TO_DO_TODAY => 'bg-amber-500',
-            self::ENVIADO_A_CAMILA => 'bg-orange-500',
+            self::ENTRANTE => 'bg-orange-500',
+            self::EURALIZ_ORDERS_RECEIVED => 'bg-[#F3A8FF] border border-fuchsia-300',
+            self::ADRIAN_ORDERS_RECEIVED => 'bg-[#5FE9B5] border border-emerald-400',
+            self::CESAR_ORDERS_RECEIVED => 'bg-[#52EAFD] border border-cyan-400',
+            self::TO_DO_TODAY => 'bg-green-500',
+            self::ENVIADO_A_CAMILA => 'bg-purple-500',
             self::ENVIADO_AL_CLIENTE => 'bg-blue-500',
             self::ON_HOLD => 'bg-slate-500',
-            self::EN_PRODUCCION => 'bg-purple-500',
-            self::ARCHIVED => 'bg-slate-400',
+            self::EN_PRODUCCION => 'bg-pink-600',
+            self::ARCHIVED => 'bg-rose-400',
         };
     }
 

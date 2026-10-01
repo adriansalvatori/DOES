@@ -7,20 +7,8 @@
     
     <!-- Top Notion Header -->
     <div id="tour-resolver-header" class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
-        <div class="flex items-center gap-3">
-            @if($hasActionRequired)
-                <div class="w-9 h-9 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center shrink-0">
-                    <x-lucide-alert-triangle class="w-5 h-5 text-orange-600" />
-                </div>
-            @else
-                <div class="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0">
-                    <x-lucide-check-circle-2 class="w-5 h-5 text-emerald-600" />
-                </div>
-            @endif
-            <div>
-                <h2 class="text-sm font-semibold text-zinc-900 tracking-tight">{{ __('Action Required') }}</h2>
-                <p class="text-xs text-zinc-500">{{ __('Órdenes y tareas que requieren intervención de Manager / Admin.') }}</p>
-            </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Action Required') }}</h1>
         </div>
 
         <div id="tour-resolver-cases-badge" class="flex items-center gap-2">
@@ -72,8 +60,8 @@
                                     <p class="text-[11px] text-zinc-500 truncate uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
                                 </div>
 
-                                <span class="px-2 py-0.5 rounded bg-stone-100 text-[10px] font-medium text-zinc-700 border border-stone-200 shrink-0 whitespace-nowrap">
-                                    {{ $order->designer?->name }}
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap {{ $order->getDesignerBadgeStyle() }}" style="{{ $order->getDesignerBadgeInlineStyle() }}">
+                                    {{ $order->designer?->name ?? __('Sin Asignar') }}
                                 </span>
                             </div>
 
@@ -86,16 +74,16 @@
                             @if($order->done_today)
                                 <div class="mt-2 pt-2 border-t border-emerald-200 flex flex-wrap items-center gap-1.5">
                                     <span class="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block w-full">{{ __('Trabajo de hoy completado — Confirmar envío:') }}</span>
-                                    <button wire:click="sendToCamila({{ $order->id }})" class="px-2 py-1 rounded bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs">
+                                    <button wire:click="sendToCamila({{ $order->id }})" class="px-2 py-1 rounded text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs hover:opacity-90" style="background-color: var(--cc-camila-solid);">
                                         <x-lucide-send class="w-3 h-3" />
                                         <span>{{ __('Enviado a Camila') }}</span>
                                     </button>
-                                    <button wire:click="sendToClient({{ $order->id }})" class="px-2 py-1 rounded bg-sky-600 hover:bg-sky-700 text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs">
+                                    <button wire:click="sendToClient({{ $order->id }})" class="px-2 py-1 rounded text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs hover:opacity-90" style="background-color: var(--cc-client-solid);">
                                         <x-lucide-send class="w-3 h-3" />
                                         <span>{{ __('Enviado al Cliente') }}</span>
                                     </button>
                                     @if($order->isApproved() || $order->substatus === \App\Enums\Substatus::PONER_EN_ALTA)
-                                        <button wire:click="sendToProduction({{ $order->id }})" class="px-2 py-1 rounded bg-pink-600 hover:bg-pink-700 text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs">
+                                        <button wire:click="sendToProduction({{ $order->id }})" class="px-2 py-1 rounded text-white text-[10px] font-semibold transition flex items-center gap-1 shadow-2xs hover:opacity-90" style="background-color: var(--cc-production-solid);">
                                             <x-lucide-factory class="w-3 h-3" />
                                             <span>{{ __('Enviado a Producción') }}</span>
                                         </button>

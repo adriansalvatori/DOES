@@ -2,61 +2,29 @@
     
     <!-- Top Header Bar (Sober Light Style) -->
     <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs shrink-0">
-        <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <x-lucide-layout-dashboard class="w-4.5 h-4.5 text-stone-100" />
-            </div>
-            <div class="min-w-0">
-                <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">{{ __('Centro de Control Operativo') }}</h1>
-                <p class="text-xs text-zinc-500 truncate mt-0.5">
-                    {{ __('Respondiendo la pregunta clave:') }} <span class="text-zinc-700 font-medium italic">{{ __('¿Qué necesita atención hoy, por qué y quién es responsable?') }}</span>
-                </p>
-            </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Centro de Control Operativo') }}</h1>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto shrink-0">
-            <!-- Quick Role / Persona View Switcher -->
-            <div id="tour-role-switcher" class="inline-flex rounded-lg bg-stone-100 p-0.5 border border-stone-200 text-[11px] font-semibold shrink-0">
-                <button 
-                    wire:click="setUserRole('all')" 
-                    class="px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer {{ $userRole === 'all' ? 'bg-white text-zinc-900 shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800' }}">
-                    <x-lucide-layout-grid class="w-3 h-3 text-zinc-400" />
-                    <span>{{ __('Vista General') }}</span>
-                </button>
-                <button 
-                    wire:click="setUserRole('designer')" 
-                    class="px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer {{ $userRole === 'designer' ? 'bg-emerald-600 text-white shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-800' }}">
-                    <x-lucide-palette class="w-3 h-3" />
-                    <span>{{ __('Diseñador') }}</span>
-                </button>
-                <button 
-                    wire:click="setUserRole('manager')" 
-                    class="px-2.5 py-1 rounded-md transition flex items-center gap-1 cursor-pointer {{ $userRole === 'manager' ? 'bg-sky-600 text-white shadow-2xs font-bold' : 'text-zinc-500 hover:text-zinc-800' }}">
-                    <x-lucide-briefcase class="w-3 h-3" />
-                    <span>{{ __('Gestión / Account') }}</span>
-                </button>
-            </div>
-
+        <div id="tour-designer-pills" class="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5 custom-scrollbar shrink-0">
             <!-- Designer Filter Labels / Pills -->
-            <div class="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5 custom-scrollbar">
+            <button 
+                type="button" 
+                wire:click="selectDesigner('all')"
+                class="px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 border {{ $selectedDesigner === 'all' ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs font-semibold' : 'bg-white text-zinc-600 border-stone-200 hover:border-stone-400 hover:text-zinc-900' }}">
+                <span>{{ __('Todos') }}</span>
+            </button>
+            @foreach($designers as $designer)
                 <button 
                     type="button" 
-                    wire:click="selectDesigner('all')"
-                    class="px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 border {{ $selectedDesigner === 'all' ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs font-semibold' : 'bg-white text-zinc-600 border-stone-200 hover:border-stone-400 hover:text-zinc-900' }}">
-                    <span>{{ __('Todos') }}</span>
+                    wire:key="designer-filter-{{ $designer->id }}"
+                    wire:click="selectDesigner('{{ $designer->id }}')"
+                    class="px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 border {{ (string)$selectedDesigner === (string)$designer->id ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs font-semibold' : 'bg-white text-zinc-600 border-stone-200 hover:border-stone-400 hover:text-zinc-900' }}"
+                    title="{{ $designer->name }}">
+                    <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }} shrink-0" style="{{ $designer->dot_inline_style }}"></span>
+                    <span class="truncate max-w-[110px]">{{ $designer->name }}</span>
                 </button>
-                @foreach($designers as $designer)
-                    <button 
-                        type="button" 
-                        wire:key="designer-filter-{{ $designer->id }}"
-                        wire:click="selectDesigner('{{ $designer->id }}')"
-                        class="px-2.5 py-1 rounded-full text-[11px] font-medium transition cursor-pointer flex items-center gap-1.5 shrink-0 border {{ (string)$selectedDesigner === (string)$designer->id ? 'bg-zinc-900 text-white border-zinc-900 shadow-2xs font-semibold' : 'bg-white text-zinc-600 border-stone-200 hover:border-stone-400 hover:text-zinc-900' }}"
-                        title="{{ $designer->name }}">
-                        <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }} shrink-0"></span>
-                        <span class="truncate max-w-[110px]">{{ $designer->name }}</span>
-                    </button>
-                @endforeach
-            </div>
+            @endforeach
         </div>
     </div>
 
@@ -97,12 +65,13 @@
         <!-- 3. CAMILA -->
         <button 
             wire:click="setActiveTab('camila')" 
-            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'camila' ? 'bg-purple-50/70 border-2 border-purple-500 ring-4 ring-purple-300/40 shadow-xs' : 'bg-white border-purple-200/80 hover:border-purple-300 hover:bg-purple-50/30' }}">
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none"
+            style="{{ $activeTab === 'camila' ? 'background-color: var(--cc-camila-bg-light); border: 2px solid var(--cc-camila-solid); box-shadow: 0 0 0 4px var(--cc-camila-border);' : 'background-color: #ffffff; border: 1px solid var(--cc-camila-border);' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-purple-900 truncate">{{ __('Camila') }}</span>
-                <x-lucide-user-check class="w-3.5 h-3.5 text-purple-600 shrink-0 ml-1" />
+                <span class="font-bold text-xs truncate" style="color: var(--cc-camila-text-dark);">{{ __('Camila') }}</span>
+                <x-lucide-user-check class="w-3.5 h-3.5 shrink-0 ml-1" style="color: var(--cc-camila-solid);" />
             </div>
-            <span class="text-xl font-bold text-purple-900 font-mono leading-none">{{ $camilaFollowUpTasks->count() }}</span>
+            <span class="text-xl font-bold font-mono leading-none" style="color: var(--cc-camila-text-dark);">{{ $camilaFollowUpTasks->count() }}</span>
         </button>
 
         <!-- 4. RESOLVER / ACTION REQUIRED -->
@@ -122,12 +91,13 @@
         <!-- 5. LISTO ALTA -->
         <button 
             wire:click="setActiveTab('alta')" 
-            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none {{ $activeTab === 'alta' ? 'bg-teal-50/70 border-2 border-teal-500 ring-4 ring-teal-300/40 shadow-xs' : 'bg-white border-teal-200/80 hover:border-teal-300 hover:bg-teal-50/30' }}">
+            class="p-3 rounded-2xl border text-left transition flex flex-col justify-between h-20 cursor-pointer select-none"
+            style="{{ $activeTab === 'alta' ? 'background-color: var(--cc-production-bg-light); border: 2px solid var(--cc-production-solid); box-shadow: 0 0 0 4px var(--cc-production-border);' : 'background-color: #ffffff; border: 1px solid var(--cc-production-border);' }}">
             <div class="flex items-center justify-between text-xs min-w-0">
-                <span class="font-bold text-xs text-teal-800 truncate">{{ __('Listo ALTA') }}</span>
-                <x-lucide-rocket class="w-3.5 h-3.5 text-teal-600 shrink-0 ml-1" />
+                <span class="font-bold text-xs truncate" style="color: var(--cc-production-text-dark);">{{ __('Listo ALTA') }}</span>
+                <x-lucide-rocket class="w-3.5 h-3.5 shrink-0 ml-1" style="color: var(--cc-production-solid);" />
             </div>
-            <span class="text-xl font-bold text-teal-800 font-mono leading-none">{{ $readyForAltaOrders->count() }}</span>
+            <span class="text-xl font-bold font-mono leading-none" style="color: var(--cc-production-text-dark);">{{ $readyForAltaOrders->count() }}</span>
         </button>
 
         <!-- 6. PRONÓSTICO ALTA -->
@@ -235,7 +205,7 @@
                                             <div class="flex items-center gap-2 min-w-0">
                                                 <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
-                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
@@ -245,7 +215,7 @@
                                     </div>
 
                                     <div class="flex items-center gap-2 shrink-0">
-                                        <span class="px-2 py-0.5 rounded bg-stone-100 text-[10px] font-medium text-zinc-600 border border-stone-200 whitespace-nowrap">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap {{ $order->getDesignerBadgeStyle() }}" style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                             {{ $order->designer?->name ?? __('Sin Asignar') }}
                                         </span>
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1 cursor-pointer">
@@ -299,13 +269,13 @@
             </div>
 
             <!-- 3. SECTION: CAMILA -->
-            <div class="bg-white border border-purple-200/80 rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between">
+            <div class="bg-white rounded-2xl p-4 shadow-2xs space-y-3 flex flex-col justify-between" style="border: 1px solid var(--cc-camila-border);">
                 <div class="space-y-3">
-                    <div class="h-8 flex items-center justify-between border-b border-purple-100">
-                        <h3 class="h-8 font-bold text-xs text-purple-900 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-user-check class="w-4 h-4 text-purple-600" /> {{ __('Revisiones Camila') }} ({{ $camilaFollowUpTasks->count() }})
+                    <div class="h-8 flex items-center justify-between border-b" style="border-color: var(--cc-camila-border);">
+                        <h3 class="h-8 font-bold text-xs uppercase tracking-wider flex items-center gap-2" style="color: var(--cc-camila-text-dark);">
+                            <x-lucide-user-check class="w-4 h-4" style="color: var(--cc-camila-solid);" /> {{ __('Revisiones Camila') }} ({{ $camilaFollowUpTasks->count() }})
                         </h3>
-                        <span class="text-[10px] text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ __('Seguimiento') }}</span>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded border" style="background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border-color: var(--cc-camila-border);">{{ __('Seguimiento') }}</span>
                     </div>
 
                     @if($camilaFollowUpTasks->isEmpty())
@@ -313,19 +283,19 @@
                     @else
                         <div class="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
                             @foreach($camilaFollowUpTasks as $task)
-                                <div wire:key="camila-task-{{ $task->id }}" class="bg-purple-50/40 border border-purple-200 rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-purple-300 transition">
+                                <div wire:key="camila-task-{{ $task->id }}" class="rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 transition border" style="background-color: var(--cc-camila-bg-subtle); border-color: var(--cc-camila-border);">
                                     <div class="min-w-0 flex-1">
-                                        <span class="font-bold text-purple-950 block text-xs truncate">{{ $task->title }}</span>
+                                        <span class="font-bold block text-xs truncate" style="color: var(--cc-camila-text-dark);">{{ $task->title }}</span>
                                         <span class="text-zinc-500 text-[11px] truncate block mt-0.5 uppercase">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         @if($task->order)
-                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-purple-100 border border-purple-200 text-[10px] font-medium text-purple-800 transition flex items-center gap-1 cursor-pointer">
+                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white border text-[10px] font-medium transition flex items-center gap-1 cursor-pointer" style="border-color: var(--cc-camila-border); color: var(--cc-camila-text-dark);">
                                                 <x-lucide-panel-right class="w-3 h-3" />
                                                 <span>{{ __('Orden') }}</span>
                                             </button>
                                         @endif
-                                        <button wire:click="openCamilaModal({{ $task->id }})" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition shadow-2xs cursor-pointer">
+                                        <button wire:click="openCamilaModal({{ $task->id }})" class="px-3 py-1 rounded font-semibold text-xs transition shadow-2xs cursor-pointer" style="background-color: var(--cc-camila-solid); color: var(--cc-camila-text-on-solid);">
                                             {{ __('Completar ✓') }}
                                         </button>
                                     </div>
@@ -463,7 +433,7 @@
                                             <div class="flex items-center gap-2 min-w-0">
                                                 <h4 class="font-bold text-xs text-zinc-900 truncate leading-snug uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
-                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
@@ -473,7 +443,7 @@
                                     </div>
 
                                     <div class="flex items-center gap-2 shrink-0">
-                                        <span class="px-2 py-0.5 rounded bg-stone-100 text-[10px] font-medium text-zinc-600 border border-stone-200 whitespace-nowrap">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border whitespace-nowrap {{ $order->getDesignerBadgeStyle() }}" style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                             {{ $order->designer?->name ?? __('Sin Asignar') }}
                                         </span>
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1 cursor-pointer">
@@ -529,11 +499,11 @@
             <!-- 3. FULL-WIDTH: CAMILA -->
             @if($activeTab === 'camila')
                 <div class="space-y-3">
-                    <div class="h-8 flex items-center justify-between border-b border-purple-100">
-                        <h3 class="h-8 font-bold text-xs text-purple-900 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-user-check class="w-4 h-4 text-purple-600" /> {{ __('Revisiones Camila') }} ({{ $camilaFollowUpTasks->count() }})
+                    <div class="h-8 flex items-center justify-between border-b" style="border-color: var(--cc-camila-border);">
+                        <h3 class="h-8 font-bold text-xs uppercase tracking-wider flex items-center gap-2" style="color: var(--cc-camila-text-dark);">
+                            <x-lucide-user-check class="w-4 h-4" style="color: var(--cc-camila-solid);" /> {{ __('Revisiones Camila') }} ({{ $camilaFollowUpTasks->count() }})
                         </h3>
-                        <span class="text-[10px] text-purple-600 font-semibold bg-purple-50 px-2 py-0.5 rounded border border-purple-200">{{ __('Seguimiento') }}</span>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded border" style="background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border-color: var(--cc-camila-border);">{{ __('Seguimiento') }}</span>
                     </div>
 
                     @if($camilaFollowUpTasks->isEmpty())
@@ -541,19 +511,19 @@
                     @else
                         <div class="space-y-2 max-h-[calc(100vh-280px)] overflow-y-auto pr-1 scrollbar-thin">
                             @foreach($camilaFollowUpTasks as $task)
-                                <div wire:key="camila-expanded-task-{{ $task->id }}" class="bg-purple-50/40 border border-purple-200 rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 hover:border-purple-300 transition">
+                                <div wire:key="camila-expanded-task-{{ $task->id }}" class="rounded-xl p-3 flex items-center justify-between text-xs gap-3 min-w-0 transition border" style="background-color: var(--cc-camila-bg-subtle); border-color: var(--cc-camila-border);">
                                     <div class="min-w-0 flex-1">
-                                        <span class="font-bold text-purple-950 block text-xs truncate">{{ $task->title }}</span>
+                                        <span class="font-bold block text-xs truncate" style="color: var(--cc-camila-text-dark);">{{ $task->title }}</span>
                                         <span class="text-zinc-500 text-[11px] truncate block mt-0.5 uppercase">{{ $task->order?->company_name }} — {{ $task->order?->task_name }}</span>
                                     </div>
                                     <div class="flex items-center gap-2 shrink-0">
                                         @if($task->order)
-                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-purple-100 border border-purple-200 text-[10px] font-medium text-purple-800 transition flex items-center gap-1 cursor-pointer">
+                                            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white border text-[10px] font-medium transition flex items-center gap-1 cursor-pointer" style="border-color: var(--cc-camila-border); color: var(--cc-camila-text-dark);">
                                                 <x-lucide-panel-right class="w-3 h-3" />
                                                 <span>{{ __('Orden') }}</span>
                                             </button>
                                         @endif
-                                        <button wire:click="openCamilaModal({{ $task->id }})" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs transition shadow-2xs cursor-pointer">
+                                        <button wire:click="openCamilaModal({{ $task->id }})" class="px-3 py-1 rounded font-semibold text-xs transition shadow-2xs cursor-pointer" style="background-color: var(--cc-camila-solid); color: var(--cc-camila-text-on-solid);">
                                             {{ __('Completar ✓') }}
                                         </button>
                                     </div>
@@ -621,11 +591,11 @@
             <!-- 5. FULL-WIDTH: LISTO ALTA -->
             @if($activeTab === 'alta')
                 <div class="space-y-3">
-                    <div class="h-8 flex items-center justify-between border-b border-teal-100">
-                        <h3 class="h-8 font-bold text-xs text-teal-800 uppercase tracking-wider flex items-center gap-2">
-                            <x-lucide-rocket class="w-4 h-4 text-teal-600" /> {{ __('Órdenes Listas para ALTA') }} ({{ $readyForAltaOrders->count() }})
+                    <div class="h-8 flex items-center justify-between border-b" style="border-color: var(--cc-production-border);">
+                        <h3 class="h-8 font-bold text-xs uppercase tracking-wider flex items-center gap-2" style="color: var(--cc-production-text-dark);">
+                            <x-lucide-rocket class="w-4 h-4" style="color: var(--cc-production-solid);" /> {{ __('Órdenes Listas para ALTA') }} ({{ $readyForAltaOrders->count() }})
                         </h3>
-                        <span class="text-[10px] text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">{{ __('Producción') }}</span>
+                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded border" style="background-color: var(--cc-production-bg-light); color: var(--cc-production-text-dark); border-color: var(--cc-production-border);">{{ __('Producción') }}</span>
                     </div>
 
                     @if($readyForAltaOrders->isEmpty())
@@ -678,7 +648,7 @@
                                             <div class="flex items-center gap-2 min-w-0">
                                                 <h4 class="font-normal text-xs text-zinc-500 truncate leading-snug uppercase" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
                                                 @if($order->substatus)
-                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}">
+                                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                                                         {{ $order->substatus->value }}
                                                     </span>
                                                 @endif
@@ -697,7 +667,7 @@
 
                                         <div class="flex flex-wrap items-center gap-1 shrink-0">
                                             @forelse($order->assigned_designers as $des)
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}">
+                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
                                                     {{ $des->name }}
                                                 </span>
                                             @empty
@@ -929,11 +899,11 @@
             <div class="fixed inset-0 bg-stone-900/50 backdrop-blur-xs transition-opacity" wire:click="closeCamilaModal"></div>
 
             <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border border-purple-200">
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg border" style="border-color: var(--cc-camila-border);">
                     <!-- Modal Header -->
-                    <div class="bg-purple-50/70 px-5 py-4 border-b border-purple-200/80 flex items-center justify-between">
+                    <div class="px-5 py-4 border-b flex items-center justify-between" style="background-color: var(--cc-camila-bg-light); border-color: var(--cc-camila-border);">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border" style="background-color: var(--cc-camila-bg-subtle); border-color: var(--cc-camila-border); color: var(--cc-camila-solid);">
                                 <x-lucide-user-check class="w-4.5 h-4.5" />
                             </div>
                             <div class="min-w-0">
@@ -941,7 +911,7 @@
                                 <p class="text-[11px] text-zinc-500 truncate mt-0.5 uppercase">{{ $camilaOrder->company_name }} — {{ $camilaOrder->task_name }}</p>
                             </div>
                         </div>
-                        <button wire:click="closeCamilaModal" type="button" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-purple-100/60 transition cursor-pointer">
+                        <button wire:click="closeCamilaModal" type="button" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 transition cursor-pointer">
                             <x-lucide-x class="w-4 h-4" />
                         </button>
                     </div>

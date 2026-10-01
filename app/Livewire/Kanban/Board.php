@@ -330,6 +330,7 @@ class Board extends Component
             $task->update(['status' => 'done', 'completed_at' => now()]);
         }
 
+        $this->dispatch('order-updated');
         session()->flash('message', "Tarea '{$task->title}' actualizada.");
     }
 

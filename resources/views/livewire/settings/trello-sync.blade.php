@@ -35,12 +35,8 @@
     
     <!-- Top Notion Header -->
     <div id="tour-trello-sync-header" class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
-        <div class="flex items-center gap-3">
-            <x-lucide-refresh-cw class="w-5 h-5 text-zinc-700" />
-            <div>
-                <h2 class="text-sm font-semibold text-zinc-900 tracking-tight">{{ __('Sincronización en Vivo con Trello') }}</h2>
-                <p class="text-xs text-zinc-500">{{ __('Conecta tu tablero Trello real, importa tarjetas y gestiona la sincronización.') }}</p>
-            </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Sincronización en Vivo con Trello') }}</h1>
         </div>
 
         <div class="flex items-center gap-2.5">

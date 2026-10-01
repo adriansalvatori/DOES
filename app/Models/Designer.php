@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoreStatus;
+use App\Services\ColorCodingService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -176,6 +177,26 @@ class Designer extends Model
             'indigo' => 'bg-indigo-100 text-indigo-800 border-indigo-300 font-semibold',
             default => 'bg-cyan-100 text-cyan-800 border-cyan-300 font-semibold',
         };
+    }
+
+    public function getBadgeInlineStyleAttribute(): string
+    {
+        if ($this->hex_color) {
+            try {
+                $palette = app(ColorCodingService::class)->derivePalette($this->hex_color);
+
+                return $palette['badge_style'];
+            } catch (\Throwable $e) {
+                // Fallback
+            }
+        }
+
+        return 'background-color: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 600;';
+    }
+
+    public function getDotInlineStyleAttribute(): string
+    {
+        return $this->hex_color ? "background-color: {$this->hex_color};" : 'background-color: #06b6d4;';
     }
 
     public function isSamePersonAs(Designer|int|null $other): bool

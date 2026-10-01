@@ -180,6 +180,8 @@ class ProfileSettings extends Component
         $this->avatar_url = '';
         $this->avatar_file = null;
 
+        $this->dispatch('form-saved');
+
         session()->flash('success_profile', __('Foto de perfil eliminada correctamente.'));
     }
 
@@ -222,6 +224,8 @@ class ProfileSettings extends Component
             'avatar_url' => $this->avatar_url ?: null,
         ]);
 
+        $this->dispatch('form-saved');
+
         session()->flash('success_profile', __('Perfil actualizado correctamente.'));
     }
 
@@ -236,6 +240,8 @@ class ProfileSettings extends Component
             'overdue' => $this->notify_overdue,
             'sound_enabled' => $this->notify_sound_enabled,
         ]);
+
+        $this->dispatch('form-saved');
 
         session()->flash('success_notifications', __('Preferencias de notificaciones guardadas con éxito.'));
     }
@@ -258,6 +264,7 @@ class ProfileSettings extends Component
         cookie()->queue(cookie()->forever('app_locale', $locale));
 
         $this->dispatch('app-locale-changed', locale: $locale);
+        $this->dispatch('form-saved');
 
         session()->flash('success_preferences', __('Idioma actualizado correctamente.'));
         $this->redirectRoute('settings.profile', ['tab' => 'preferences']);
@@ -281,6 +288,8 @@ class ProfileSettings extends Component
         session(['locale' => $this->locale]);
         App::setLocale($this->locale);
         cookie()->queue(cookie()->forever('app_locale', $this->locale));
+
+        $this->dispatch('form-saved');
 
         session()->flash('success_preferences', __('Preferencias de entorno guardadas correctamente.'));
         $this->redirectRoute('settings.profile', ['tab' => 'preferences']);
@@ -306,6 +315,8 @@ class ProfileSettings extends Component
         ]);
 
         $this->reset(['current_password', 'new_password', 'new_password_confirmation']);
+
+        $this->dispatch('form-saved');
 
         session()->flash('success_password', __('Contraseña actualizada con éxito.'));
     }

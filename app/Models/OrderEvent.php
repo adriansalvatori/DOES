@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoreStatus;
+use App\Services\ColorCodingService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -48,6 +49,78 @@ class OrderEvent extends Model
             || str_contains($type, 'AUTOMATIC')
             || str_contains($type, 'TRIGGERED')
             || isset($this->metadata['trigger_type']);
+    }
+
+    public function getNodeHexColor(): ?string
+    {
+        $type = strtoupper((string) $this->event_type);
+        $newVal = strtoupper((string) $this->new_value);
+        $oldVal = strtoupper((string) $this->old_value);
+        $actor = strtoupper((string) $this->actor);
+
+        try {
+            $colorService = app(ColorCodingService::class);
+
+            // 1. Camila related events & actions
+            if (str_contains($type, 'CAMILA') || str_contains($newVal, 'CAMILA') || str_contains($oldVal, 'CAMILA') || str_contains($actor, 'CAMILA')) {
+                return $colorService->getHex('camila');
+            }
+
+            // 2. Production & ALTA
+            if (str_contains($newVal, 'PRODUCCI') || str_contains($newVal, 'PRODUCTION') || str_contains($type, 'PRODUCCI')
+                || str_contains($newVal, 'ALTA') || str_contains($type, 'ALTA')) {
+                return $colorService->getHex('production');
+            }
+
+            // 3. Designers Queue & assignments
+            if (str_contains($newVal, 'EURALIZ') || str_contains($oldVal, 'EURALIZ')) {
+                return $colorService->getHex('designer_euraliz');
+            }
+            if (str_contains($newVal, 'ADRIAN') || str_contains($oldVal, 'ADRIAN')) {
+                return $colorService->getHex('designer_adrian');
+            }
+            if (str_contains($newVal, 'CESAR') || str_contains($oldVal, 'CESAR')) {
+                return $colorService->getHex('designer_cesar');
+            }
+
+            // 4. Workflow Core Statuses
+            if (str_contains($newVal, 'TODAY') || str_contains($type, 'TODAY')) {
+                return $colorService->getHex('todo_today');
+            }
+            if (str_contains($newVal, 'BLOQUEA') || str_contains($newVal, 'ENTRANTE') || str_contains($type, 'BLOCK') || str_contains($type, 'ESTIMADO')) {
+                return $colorService->getHex('blocked');
+            }
+            if (str_contains($newVal, 'CLIENTE') || str_contains($type, 'CLIENTE')) {
+                return $colorService->getHex('client');
+            }
+            if (str_contains($newVal, 'HOLD') || str_contains($type, 'HOLD') || str_contains($newVal, 'CUSTOMER SERVICE') || str_contains($newVal, 'PAUSADO')) {
+                return $colorService->getHex('cs_hold');
+            }
+        } catch (\Throwable $e) {
+            // Fallback
+        }
+
+        return null;
+    }
+
+    public function getNodeInlineStyle(): string
+    {
+        $hex = $this->getNodeHexColor();
+        if ($hex) {
+            return "background-color: {$hex} !important; color: #ffffff !important;";
+        }
+
+        return '';
+    }
+
+    public function getLineInlineStyle(): string
+    {
+        $hex = $this->getNodeHexColor();
+        if ($hex) {
+            return "background-color: {$hex} !important; opacity: 0.35;";
+        }
+
+        return '';
     }
 
     public function getNodeColorClass(): string

@@ -13,6 +13,7 @@ use App\Livewire\Planner\WeeklyPlanner;
 use App\Livewire\Portal\ClientPortal;
 use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
+use App\Livewire\Settings\ColorCoding;
 use App\Livewire\Settings\Documentation;
 use App\Livewire\Settings\LanguageSettings;
 use App\Livewire\Settings\ProfileSettings;
@@ -83,6 +84,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/resolver', ResolverList::class)->name('resolver');
     Route::get('/trello-sync', TrelloSync::class)->name('trello-sync');
     Route::get('/settings/documentation', Documentation::class)->name('settings.documentation');
+    Route::get('/settings/color-coding', ColorCoding::class)->name('settings.color-coding');
     Route::get('/settings/language', LanguageSettings::class)->name('settings.language');
     Route::get('/settings/substatuses', Substatuses::class)->name('settings.substatuses');
     Route::get('/settings/subtasks', SubtaskPresets::class)->name('settings.subtasks');

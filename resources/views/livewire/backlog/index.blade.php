@@ -3,19 +3,9 @@
     <!-- Unified Top Notion-Style Header Controls -->
     <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-3.5 shadow-2xs shrink-0">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="w-9 h-9 rounded-lg bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <x-lucide-box class="w-4.5 h-4.5 text-stone-100" />
-                </div>
-                <div class="min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight">Backlog de Órdenes</h1>
-                        <span class="px-2 py-0.5 rounded-full bg-stone-100 border border-stone-200 text-[10px] font-bold text-zinc-600">{{ $backlogTotalCount }} Tarjetas</span>
-                    </div>
-                    <p class="text-xs text-zinc-500 truncate mt-0.5">
-                        Tarjetas fuera del Workspace activo. Selecciónalas y añádelas cuando requieras procesarlas.
-                    </p>
-                </div>
+            <div class="flex items-center gap-3 min-w-0 flex-wrap">
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">Backlog de Órdenes</h1>
+                <span class="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-[11px] font-bold text-zinc-600">{{ $backlogTotalCount }} Tarjetas</span>
             </div>
 
             <div class="flex items-center gap-3 shrink-0 self-end sm:self-auto">
@@ -649,14 +639,14 @@
                                 {{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : 'N/A' }}
                             </td>
                             <td class="p-3 whitespace-nowrap">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-medium bg-stone-100 border border-stone-200 text-zinc-700">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold border {{ $order->core_status->badgeStyle() }}" style="{{ $order->core_status->badgeInlineStyle() }}">
                                     {{ $order->core_status->label() }}
                                 </span>
                             </td>
                             <td class="p-3 whitespace-nowrap">
                                 <div class="flex flex-wrap items-center gap-1">
                                     @forelse($order->assigned_designers as $des)
-                                        <span class="px-2 py-0.5 rounded text-[10px] border font-semibold {{ $des->badge_style }}">
+                                        <span class="px-2 py-0.5 rounded text-[10px] border font-semibold {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
                                             {{ $des->name }}
                                         </span>
                                     @empty

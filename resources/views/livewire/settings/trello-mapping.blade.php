@@ -28,14 +28,8 @@
     
     <!-- Top Notch Notion Header -->
     <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 flex items-center justify-center font-bold shadow-2xs">
-                <x-lucide-sliders class="w-5 h-5 text-purple-600" />
-            </div>
-            <div>
-                <h2 class="text-sm font-semibold text-zinc-900 tracking-tight">{{ __('Mapeo de Listas Trello') }}</h2>
-                <p class="text-xs text-zinc-500">{{ __('Relaciona cada columna de estatus local con la lista correspondiente en tu tablero de Trello.') }}</p>
-            </div>
+        <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Mapeo de Listas Trello') }}</h1>
         </div>
 
         <div class="flex items-center gap-2.5">

@@ -174,11 +174,8 @@
     <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-stone-100">
             <div class="flex items-center gap-3 flex-wrap">
-                <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-lg bg-stone-100 text-stone-700 flex items-center justify-center">
-                        <x-lucide-table-properties class="w-4 h-4" />
-                    </div>
-                    <h2 class="font-bold text-sm text-stone-900">{{ __('Overview Operativo') }}</h2>
+                <div class="min-w-0">
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Overview Operativo') }}</h1>
                 </div>
 
                 <!-- View Mode Tabs (TODAS | WORKSPACE | BACKLOG | ARCHIVADAS) -->
@@ -303,9 +300,9 @@
                     wire:model.live="filterReviewStatus" 
                     class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
                     <option value="">{{ __('Todas') }}</option>
-                    <option value="CS">{{ __('Revisado por CS (Rosado)') }}</option>
-                    <option value="CAMILA">{{ __('Revisado por Camila (Amarillo)') }}</option>
-                    <option value="NONE">{{ __('Sin revisión (Blanco)') }}</option>
+                    <option value="CS">{{ __('Revisado por CS') }}</option>
+                    <option value="CAMILA">{{ __('Revisado por Camila') }}</option>
+                    <option value="NONE">{{ __('Sin revisión') }}</option>
                 </select>
             </div>
 
@@ -726,7 +723,8 @@
                                 <button 
                                     type="button"
                                     @click.stop="openMenu('designer', {{ $order->id }}, $el)"
-                                    class="px-1 py-0.5 rounded-sm border text-[10px] font-semibold cursor-pointer truncate transition w-full text-center block {{ $getDesignerBadgeStyle($order->designer?->name) }}"
+                                    class="px-1 py-0.5 rounded-sm border text-[10px] font-semibold cursor-pointer truncate transition w-full text-center block {{ $order->getDesignerBadgeStyle() }}"
+                                    style="{{ $order->getDesignerBadgeInlineStyle() }}"
                                     title="{{ $order->designer?->name ?? 'Sin Asignar' }}">
                                     <span class="truncate block">{{ $order->designer?->name ?? 'Sin Asignar' }}</span>
                                 </button>
@@ -764,17 +762,27 @@
                                 
                                 $cellBg = match($order->review_status) {
                                     'CS' => 'bg-pink-100 text-pink-900 font-bold',
-                                    'CAMILA' => 'bg-yellow-100 text-yellow-950 font-bold',
+                                    'CAMILA' => 'font-bold',
                                     default => 'bg-transparent text-stone-700',
+                                };
+
+                                $cellStyle = match($order->review_status) {
+                                    'CAMILA' => 'background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark);',
+                                    default => '',
                                 };
                                 
                                 $checkIconColor = match($order->review_status) {
                                     'CS' => 'text-pink-700 hover:bg-pink-200/80',
-                                    'CAMILA' => 'text-yellow-800 hover:bg-yellow-200/80',
+                                    'CAMILA' => 'hover:opacity-80',
                                     default => 'text-stone-400 hover:text-stone-800',
                                 };
+
+                                $checkIconStyle = match($order->review_status) {
+                                    'CAMILA' => 'color: var(--cc-camila-solid);',
+                                    default => '',
+                                };
                             @endphp
-                            <td class="py-1 px-1 truncate transition {{ $cellBg }}">
+                            <td class="py-1 px-1 truncate transition {{ $cellBg }}" @if(!empty($cellStyle)) style="{{ $cellStyle }}" @endif>
                                 <div class="flex items-center justify-between gap-0.5 w-full py-0.5 truncate">
                                     @if($editingOrderId === $order->id && $editingField === 'estimate_invoice_number')
                                         <input 
@@ -800,6 +808,7 @@
                                         type="button"
                                         @click.stop="openMenu('review', {{ $order->id }}, $el)"
                                         class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none {{ $checkIconColor }}"
+                                        @if(!empty($checkIconStyle)) style="{{ $checkIconStyle }}" @endif
                                         title="Cambiar estado de revisión">
                                         <x-lucide-check-square class="w-3.5 h-3.5" />
                                     </button>
@@ -900,7 +909,7 @@
                                 if ($subModel && !empty($subModel->bg_color) && !empty($subModel->text_color)) {
                                     $subInlineStyle = "background-color: {$subModel->bg_color}; color: {$subModel->text_color}; border-color: {$subModel->border_color};";
                                 } elseif ($subEnum) {
-                                    $subInlineStyle = $subEnum->customBadgeStyle() ?? '';
+                                    $subInlineStyle = $subEnum->getInlineBadgeStyle();
                                 }
 
                                 $subFallbackClass = match($subVal) {
@@ -946,7 +955,9 @@
                                                     $fLabel = $fEnum?->label() ?? $fName;
                                                 @endphp
                                                 @if($fName !== 'OVERDUE' && $fName !== 'ALMOST OVERDUE')
-                                                    <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold bg-purple-600 text-white uppercase shrink-0" title="Flag {{ $fLabel }}">{{ Str::limit($fLabel, 3, '') }}</span>
+                                                    <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold uppercase shrink-0" 
+                                                          style="{{ $fEnum ? $fEnum->getInlineBadgeStyle() : 'background-color: #9333ea; color: #ffffff;' }}" 
+                                                          title="Flag {{ $fLabel }}">{{ Str::limit($fLabel, 3, '') }}</span>
                                                 @endif
                                             @endforeach
                                         @endif
@@ -1027,11 +1038,17 @@
                     -- Sin Asignar --
                 </button>
                 @foreach($designers as $d)
+                    @php $desObj = is_object($d) ? $d : null; @endphp
                     <button 
                         type="button"
                         @click="setDesigner({{ is_object($d) ? $d->id : $d }})"
                         class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800 cursor-pointer">
-                        <span>{{ is_object($d) ? $d->name : $d }}</span>
+                        <span class="flex items-center gap-1.5">
+                            @if($desObj)
+                                <span class="w-2 h-2 rounded-full shrink-0" style="{{ $desObj->dot_inline_style }}"></span>
+                            @endif
+                            <span>{{ is_object($d) ? $d->name : $d }}</span>
+                        </span>
                     </button>
                 @endforeach
             </div>
@@ -1056,8 +1073,9 @@
                 <button 
                     type="button"
                     @click="setReviewStatus('CAMILA')"
-                    class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-yellow-100 text-yellow-950 font-semibold hover:bg-yellow-200 transition cursor-pointer">
-                    Revisado por Camila (Amarillo)
+                    class="w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold transition cursor-pointer"
+                    style="background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border: 1px solid var(--cc-camila-border);">
+                    Revisado por Camila
                 </button>
                 <button 
                     type="button"

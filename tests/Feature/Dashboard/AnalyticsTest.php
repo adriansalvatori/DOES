@@ -4,6 +4,7 @@ namespace Tests\Feature\Dashboard;
 
 use App\Enums\CoreStatus;
 use App\Livewire\Dashboard\Analytics;
+use App\Models\Designer;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,8 +32,10 @@ class AnalyticsTest extends TestCase
             ->assertSee(__('Centro de Control'));
 
         Livewire::test(Analytics::class)
-            ->assertSee('EMPRESA ANALYTICS TEST')
-            ->assertSee(__('Carga Operativa Activa'));
+            ->assertSee(__('Mapa de Órdenes en Curso'))
+            ->assertSee(__('Carga de Trabajo por Diseñador'))
+            ->assertSee(__('Órdenes en Diseño Activas'))
+            ->assertSee(__('Cumplimiento del SLA'));
     }
 
     public function test_analytics_dashboard_excludes_backlog_orders(): void
@@ -60,5 +63,40 @@ class AnalyticsTest extends TestCase
         Livewire::test(Analytics::class)
             ->assertDontSee('ORDEN EN PRODUCCION')
             ->assertViewHas('inProductionCount', 1);
+    }
+
+    public function test_analytics_dashboard_accurately_calculates_sla_and_designer_workload(): void
+    {
+        $designer = Designer::create([
+            'name' => 'Diseñador Prueba',
+            'active' => true,
+        ]);
+
+        // On-time order
+        Order::create([
+            'company_name' => 'EMPRESA A',
+            'task_name' => 'ORDEN A TIEMPO',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => now()->addDays(2),
+            'in_workspace' => true,
+        ]);
+
+        // Overdue order
+        Order::create([
+            'company_name' => 'EMPRESA B',
+            'task_name' => 'ORDEN VENCIDA',
+            'designer_id' => $designer->id,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => now()->subDays(2),
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(Analytics::class)
+            ->assertSet('totalOrders', 2)
+            ->assertViewHas('overdueCount', 1)
+            ->assertViewHas('slaComplianceRate', 50.0)
+            ->assertSee('Diseñador Prueba')
+            ->assertSee('50%');
     }
 }

@@ -459,11 +459,11 @@ window.KudosDemoTour = {
         },
         {
             route: '/',
-            element: '#tour-role-switcher',
-            title: 'Paso 5: Selector de Vistas por Rol',
-            description: 'Alterna al instante entre Vista General, Diseñador y Gestión/Account para adaptar la densidad de informacion al perfil del usuario.',
-            talkingPoint: 'Los disenadores ven sus prioridades operativas mientras los gerentes observan el estado general.',
-            wow: 'Personalizacion por rol de usuario',
+            element: '#tour-designer-pills',
+            title: 'Paso 5: Filtro Rápido por Diseñador',
+            description: 'Filtra al instante las órdenes y subtareas por diseñador asignado para ver el trabajo individual o de todo el equipo.',
+            talkingPoint: 'Permite aislar la carga de trabajo de un diseñador específico o ver la distribución de todo el equipo.',
+            wow: 'Filtro dinámico por diseñador',
             popoverPosition: 'bottom'
         },
         {

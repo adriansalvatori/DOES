@@ -82,6 +82,16 @@ enum Substatus: string
         return null;
     }
 
+    public function getInlineBadgeStyle(): string
+    {
+        return $this->customBadgeStyle() ?? '';
+    }
+
+    public function getInlineBadgeStyleAttribute(): string
+    {
+        return $this->customBadgeStyle() ?? '';
+    }
+
     public function badgeStyle(): string
     {
         if ($custom = $this->customBadgeStyle()) {

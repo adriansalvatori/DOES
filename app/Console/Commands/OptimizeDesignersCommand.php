@@ -35,7 +35,7 @@ class OptimizeDesignersCommand extends Command
             'Euralíz' => [
                 'slug' => 'euraliz',
                 'color_type' => 'magenta',
-                'hex_color' => '#d946ef',
+                'hex_color' => '#F3A8FF',
                 'is_lead' => true,
                 'is_external' => false,
                 'queue_status_value' => CoreStatus::EURALIZ_ORDERS_RECEIVED->value,
@@ -44,7 +44,7 @@ class OptimizeDesignersCommand extends Command
             'César' => [
                 'slug' => 'cesar',
                 'color_type' => 'cyan',
-                'hex_color' => '#06b6d4',
+                'hex_color' => '#52EAFD',
                 'is_lead' => false,
                 'is_external' => false,
                 'queue_status_value' => CoreStatus::CESAR_ORDERS_RECEIVED->value,
@@ -53,7 +53,7 @@ class OptimizeDesignersCommand extends Command
             'Adrián' => [
                 'slug' => 'adrian',
                 'color_type' => 'emerald',
-                'hex_color' => '#10b981',
+                'hex_color' => '#5FE9B5',
                 'is_lead' => false,
                 'is_external' => false,
                 'queue_status_value' => CoreStatus::ADRIAN_ORDERS_RECEIVED->value,
