@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 class Order extends Model
 {
@@ -298,7 +299,53 @@ class Order extends Model
 
     public function events(): HasMany
     {
-        return $this->hasMany(OrderEvent::class)->orderBy('created_at', 'desc');
+        return $this->hasMany(OrderEvent::class)->orderBy('created_at', 'desc')->orderBy('id', 'desc');
+    }
+
+    /**
+     * Get clean, de-duplicated timeline events for UI display.
+     * Consolidates system-generated SLA changes that belong to an approval into the approval point.
+     *
+     * @return Collection<int, OrderEvent>
+     */
+    public function getTimelineEvents(): Collection
+    {
+        $events = $this->events;
+
+        return $events->filter(function (OrderEvent $event) use ($events) {
+            if ($event->event_type === 'DUE_DATE_CHANGED') {
+                $reason = strtolower((string) ($event->metadata['reason'] ?? ''));
+                $trigger = (string) ($event->metadata['trigger_event'] ?? '');
+
+                if ($trigger === 'ORDER_APPROVED' || str_contains($reason, 'order approved') || str_contains($reason, 'aprobado por')) {
+                    $approvalEvent = $events->first(function (OrderEvent $e) {
+                        return str_contains(strtoupper((string) $e->event_type), 'APPROVAL')
+                            || str_contains(strtoupper((string) $e->event_type), 'APPROVED');
+                    });
+
+                    if ($approvalEvent) {
+                        $meta = $approvalEvent->metadata ?? [];
+                        if (empty($meta['sla_reason']) && ! empty($event->metadata['reason'])) {
+                            $meta['sla_reason'] = $event->metadata['reason'];
+                            $approvalEvent->metadata = $meta;
+                        }
+
+                        return false;
+                    }
+                }
+
+                if ($trigger === 'DELAY_RESOLVED_CLIENT_PROMISED_DATE' || str_contains($reason, 'delay_resolved')) {
+                    $hasDelay = $events->contains(function (OrderEvent $e) {
+                        return str_contains(strtoupper((string) $e->event_type), 'DELAY_RESOLVED');
+                    });
+                    if ($hasDelay) {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        })->values();
     }
 
     public function dueDateHistories(): HasMany

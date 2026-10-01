@@ -74,17 +74,20 @@ class SlaEngine
             'last_meaningful_update' => now(),
         ]);
 
-        OrderEvent::create([
-            'order_id' => $order->id,
-            'event_type' => 'DUE_DATE_CHANGED',
-            'actor' => $createdBy,
-            'previous_value' => $previousDueDate ? $previousDueDate->toDateString() : 'N/A',
-            'new_value' => $newDueDate->toDateString(),
-            'metadata' => [
-                'reason' => $reason,
-                'client_promised_date' => $clientPromisedDate ? $clientPromisedDate->toDateString() : null,
-            ],
-        ]);
+        if (! in_array($triggerEvent, ['ORDER_APPROVED', 'DELAY_RESOLVED_CLIENT_PROMISED_DATE'], true)) {
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'DUE_DATE_CHANGED',
+                'actor' => $createdBy,
+                'previous_value' => $previousDueDate ? $previousDueDate->toDateString() : 'N/A',
+                'new_value' => $newDueDate->toDateString(),
+                'metadata' => [
+                    'reason' => $reason,
+                    'trigger_event' => $triggerEvent,
+                    'client_promised_date' => $clientPromisedDate ? $clientPromisedDate->toDateString() : null,
+                ],
+            ]);
+        }
     }
 
     /**

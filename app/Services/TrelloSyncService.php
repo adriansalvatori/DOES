@@ -461,7 +461,7 @@ class TrelloSyncService
         }
 
         if ($isNew) {
-            app(AutomationEngine::class)->handleOrderCreated($order);
+            app(AutomationEngine::class)->handleOrderCreated($order, source: 'trello', actor: 'Trello');
         } else {
             if ($action === 'moved' && $existing && $existing->core_status !== $targetStatus) {
                 OrderEvent::create([

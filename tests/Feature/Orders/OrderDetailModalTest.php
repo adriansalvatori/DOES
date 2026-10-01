@@ -452,4 +452,193 @@ class OrderDetailModalTest extends TestCase
         $this->assertEquals(today()->toDateString(), $task->scheduled_date?->toDateString());
         $this->assertEquals('urgent', $task->priority);
     }
+
+    public function test_timeline_formats_approval_event_as_aprobacion_recibida(): void
+    {
+        app()->setLocale('es');
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE TEST APROBACION',
+            'task_name' => 'Diseño Aprobado',
+            'in_workspace' => true,
+        ]);
+
+        $event1 = $order->events()->create([
+            'event_type' => 'ORDER_APPROVED',
+            'actor' => 'Usuario',
+            'new_value' => 'Aprobado por Cliente (Medidas: SÍ, Estimado: SÍ)',
+            'metadata' => ['approval_type' => 'cliente'],
+        ]);
+
+        $event2 = $order->events()->create([
+            'event_type' => 'APPROVAL_SUBMITTED',
+            'actor' => 'Usuario',
+            'new_value' => 'Aprobado por Cliente',
+        ]);
+
+        $event3 = $order->events()->create([
+            'event_type' => 'STATUS_CHANGED',
+            'actor' => 'Usuario',
+            'new_value' => 'Aprobado por Cliente',
+        ]);
+
+        $event4 = $order->events()->create([
+            'event_type' => 'ORDER_APPROVED',
+            'actor' => 'Usuario',
+            'new_value' => 'Aprobado por Cliente',
+            'metadata' => ['other_key' => 'test_without_approval_type'],
+        ]);
+
+        $this->assertEquals('Aprobación Recibida', $event1->getFormattedTitle());
+        $this->assertEquals('Aprobación Recibida', $event2->getFormattedTitle());
+        $this->assertEquals('Aprobación Recibida', $event3->getFormattedTitle());
+        $this->assertEquals('Aprobación Recibida', $event4->getFormattedTitle());
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertSee('Aprobación Recibida')
+            ->assertSee('LÍNEA DE TIEMPO / HISTORIAL')
+            ->assertSee('timeline-scrollbar');
+    }
+
+    public function test_can_preview_media_via_preview_media_method(): void
+    {
+        $order = Order::create([
+            'company_name' => 'CLIENTE PREVIEW MEDIA',
+            'task_name' => 'Diseño Preview',
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('previewMedia', 'https://example.com/comprobante.png', 'Comprobante de Aprobación', 'image')
+            ->assertSet('showMediaPreviewModal', true)
+            ->assertSet('previewMediaUrl', 'https://example.com/comprobante.png')
+            ->assertSet('previewMediaTitle', 'Comprobante de Aprobación')
+            ->assertSet('previewMediaType', 'image')
+            ->call('closeMediaPreview')
+            ->assertSet('showMediaPreviewModal', false);
+    }
+
+    public function test_timeline_formats_updated_review_titles_and_colors(): void
+    {
+        app()->setLocale('es');
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE TEST REVIEW',
+            'task_name' => 'Diseño Review',
+            'in_workspace' => true,
+        ]);
+
+        $createdEvent = $order->events()->create([
+            'event_type' => 'ORDER_CREATED',
+            'actor' => 'Admin',
+            'new_value' => 'in_workspace',
+        ]);
+
+        $onHoldEvent = $order->events()->create([
+            'event_type' => 'MOVED_TO_ON_HOLD',
+            'actor' => 'Admin',
+            'new_value' => 'ON_HOLD',
+            'metadata' => ['reason' => 'Falta información del cliente'],
+        ]);
+
+        $delayEvent = $order->events()->create([
+            'event_type' => 'DELAY_RESOLVED',
+            'actor' => 'User',
+            'new_value' => 'Promised Date: 2026-10-15',
+            'metadata' => ['reason' => 'Nueva fecha acordada con cliente'],
+        ]);
+
+        $statusEvent = $order->events()->create([
+            'event_type' => 'STATUS_CHANGED',
+            'actor' => 'Admin',
+            'previous_value' => 'BACKLOG',
+            'new_value' => 'EN PRODUCCIÓN',
+        ]);
+
+        $autoTaskEvent = $order->events()->create([
+            'event_type' => 'AUTOMATIC_TASK',
+            'actor' => 'Sistema',
+            'new_value' => 'Poner en alta',
+            'metadata' => ['task_title' => 'Poner en alta', 'trigger_type' => 'order_approved'],
+        ]);
+
+        $trelloEvent = $order->events()->create([
+            'event_type' => 'ORDER_CREATED',
+            'actor' => 'Trello',
+            'new_value' => 'Restaurante El Fuego - Trello Card',
+            'metadata' => ['status' => 'TO DO TODAY', 'source' => 'trello'],
+        ]);
+
+        $this->assertEquals('Orden creada desde la app', $createdEvent->getFormattedTitle());
+        $this->assertEquals('Orden creada desde Trello', $trelloEvent->getFormattedTitle());
+        $this->assertEquals('Orden ON HOLD', $onHoldEvent->getFormattedTitle());
+        $this->assertEquals('Atraso resuelto', $delayEvent->getFormattedTitle());
+        $this->assertEquals('ENVIADO A PRODUCCIÓN', $statusEvent->getFormattedTitle());
+        $this->assertStringNotContainsString('Movido a', $statusEvent->getFormattedTitle());
+        $this->assertStringContainsString('bg-orange-500', $statusEvent->getNodeColorClass());
+        $this->assertStringContainsString('bg-purple-500', $autoTaskEvent->getNodeColorClass());
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertSee('Orden creada desde la app')
+            ->assertSee('Orden creada desde Trello')
+            ->assertSee('Orden ON HOLD')
+            ->assertSee('Atraso resuelto')
+            ->assertSee('Entrega acordada:')
+            ->assertSee('ENVIADO A PRODUCCIÓN')
+            ->assertDontSee('Anterior:');
+    }
+
+    public function test_timeline_consolidates_approval_and_due_date_sla_events_into_single_point(): void
+    {
+        app()->setLocale('es');
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE UNIFIED SLA',
+            'task_name' => 'Diseño SLA Unificado',
+            'in_workspace' => true,
+        ]);
+
+        // Simulated system due date event created during approval
+        $dueDateEvent = $order->events()->create([
+            'event_type' => 'DUE_DATE_CHANGED',
+            'actor' => 'system',
+            'previous_value' => '2026-09-30',
+            'new_value' => '2026-09-30',
+            'metadata' => [
+                'reason' => 'Order approved (Aprobado por Cliente) - Urgent same-day SLA set',
+                'trigger_event' => 'ORDER_APPROVED',
+            ],
+        ]);
+
+        // Human approval event
+        $approvalEvent = $order->events()->create([
+            'event_type' => 'ORDER_APPROVED',
+            'actor' => 'Euralíz Bravo',
+            'new_value' => 'Aprobado por Cliente (Medidas: SÍ, Estimado: SÍ, URGENTE)',
+            'metadata' => [
+                'approval_type' => 'cliente',
+                'approval_type_label' => 'Aprobado por Cliente',
+                'approval_note' => 'HOY HACE 31 MIN, SE ENVIO PROOF ACTUALIZADO CON CONFIRMACION DE PRODUCCION.',
+                'new_due_date' => '2026-09-30',
+                'is_urgente' => true,
+            ],
+        ]);
+
+        $this->assertCount(2, $order->events);
+        $timelineEvents = $order->getTimelineEvents();
+        $this->assertCount(1, $timelineEvents);
+        $this->assertEquals('ORDER_APPROVED', $timelineEvents->first()->event_type);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertSee('Aprobación Recibida')
+            ->assertSee('Aprobado por Cliente')
+            ->assertSee('SLA: 2026-09-30')
+            ->assertSee('Urgente (Mismo Día)')
+            ->assertSee('HOY HACE 31 MIN')
+            ->assertDontSee('Anterior: miércoles 30');
+    }
 }

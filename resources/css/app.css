@@ -68,6 +68,32 @@ code, pre, .font-mono {
     background: #8e8e88;
 }
 
+/* Dedicated Timeline Scrollbar - High contrast, always visible for mouse dragging */
+.timeline-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #a1a1aa #f4f4f5;
+}
+
+.timeline-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-track {
+    background: #f4f4f5;
+    border-radius: 9999px;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-thumb {
+    background: #a1a1aa;
+    border-radius: 9999px;
+    border: 2px solid #f4f4f5;
+}
+
+.timeline-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #71717a;
+}
+
 /* Kudos Design Ops - Driver.js Popover Overrides */
 .kudos-driver-popover {
     background-color: #ffffff !important;

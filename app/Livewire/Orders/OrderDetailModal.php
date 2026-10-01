@@ -877,6 +877,14 @@ class OrderDetailModal extends Component
         $this->showMediaPreviewModal = true;
     }
 
+    public function previewMedia(string $url, string $title = 'Archivo', ?string $type = null): void
+    {
+        $this->openMediaPreview($url, $title);
+        if ($type) {
+            $this->previewMediaType = $type;
+        }
+    }
+
     public function closeMediaPreview()
     {
         $this->showMediaPreviewModal = false;
@@ -1195,8 +1203,30 @@ class OrderDetailModal extends Component
         if ($task) {
             if ($task->isDone()) {
                 $task->update(['status' => 'todo', 'completed_at' => null]);
+                if ($task->order_id) {
+                    OrderEvent::where('order_id', $task->order_id)
+                        ->where('event_type', 'SUBTASK_COMPLETED')
+                        ->where(function ($q) use ($task) {
+                            $q->where('metadata->task_id', $task->id)
+                                ->orWhere('new_value', $task->title);
+                        })
+                        ->delete();
+                }
             } else {
                 $task->update(['status' => 'done', 'completed_at' => now()]);
+                if ($task->order_id) {
+                    OrderEvent::create([
+                        'order_id' => $task->order_id,
+                        'event_type' => 'SUBTASK_COMPLETED',
+                        'actor' => auth()->user()?->name ?? 'Usuario',
+                        'new_value' => $task->title,
+                        'metadata' => [
+                            'task_id' => $task->id,
+                            'task_title' => $task->title,
+                            'date' => $task->scheduled_date?->toDateString(),
+                        ],
+                    ]);
+                }
             }
             $this->dispatch('order-updated');
         }

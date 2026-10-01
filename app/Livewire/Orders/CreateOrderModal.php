@@ -221,7 +221,7 @@ class CreateOrderModal extends Component
         }
 
         // Run automation hooks for new order
-        app(AutomationEngine::class)->handleOrderCreated($order);
+        app(AutomationEngine::class)->handleOrderCreated($order, source: 'app', actor: auth()->user()?->name ?? 'Usuario');
 
         if ($this->createOnTrello && empty($cleanTrelloId)) {
             app(TrelloSyncService::class)->createCardOnTrello($order);

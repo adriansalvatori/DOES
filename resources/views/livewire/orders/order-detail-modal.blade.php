@@ -1631,87 +1631,198 @@
                         </div>
                     </div>
 
-                    <!-- Timeline / Event Log (Color-Coded Vertical Timeline) -->
-                    <div class="space-y-3 pt-2">
-                        <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                            <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
-                                <x-lucide-git-commit-vertical class="w-4 h-4 text-indigo-600 shrink-0" /> 
-                                LÍNEA DE TIEMPO / HISTORIAL
-                            </h4>
-                            <span class="text-[10px] text-zinc-400 font-medium">{{ $order->events->count() }} registro(s)</span>
+                    <!-- Timeline / Event Log (Color-Coded Vertical Timeline with Expand & Clean Cards) -->
+                    <div 
+                        x-data="{ 
+                            timelineExpanded: false,
+                            toggleTimeline() {
+                                this.timelineExpanded = !this.timelineExpanded;
+                                if (this.timelineExpanded) {
+                                    this.$nextTick(() => {
+                                        this.$refs.timelineSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                        if (this.$refs.timelineList) {
+                                            this.$refs.timelineList.scrollTop = 0;
+                                        }
+                                    });
+                                    setTimeout(() => {
+                                        this.$refs.timelineSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    }, 120);
+                                }
+                            }
+                        }" 
+                        x-ref="timelineSection"
+                        class="space-y-2.5 pt-2 scroll-mt-2"
+                    >
+                        <!-- Clickable Header that Expands Timeline -->
+                        <div 
+                            @click="toggleTimeline()" 
+                            class="flex items-center justify-between border-b border-[#e9e9e7] pb-2 cursor-pointer select-none group transition"
+                            :title="timelineExpanded ? '{{ __('Clic para contraer vista del historial') }}' : '{{ __('Clic para expandir vista completa del historial') }}'"
+                        >
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600 transition group-hover:scale-105 group-hover:bg-indigo-100">
+                                    <x-lucide-git-commit-vertical class="w-3.5 h-3.5 stroke-[2.5]" />
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider group-hover:text-indigo-600 transition flex items-center gap-1.5">
+                                        <span>{{ __('LÍNEA DE TIEMPO / HISTORIAL') }}</span>
+                                    </h4>
+                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition flex items-center gap-1"
+                                          :class="timelineExpanded ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-stone-100 text-zinc-500 border-stone-200 group-hover:bg-stone-200'">
+                                        <span x-text="timelineExpanded ? '{{ __('Expandido') }}' : '{{ __('Compacto') }}'"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] text-zinc-400 font-mono font-medium">{{ $order->getTimelineEvents()->count() }} {{ __('registro(s)') }}</span>
+                                <button 
+                                    type="button" 
+                                    class="p-1 rounded-md text-zinc-400 group-hover:text-zinc-700 group-hover:bg-stone-100 transition cursor-pointer"
+                                    :title="timelineExpanded ? '{{ __('Contraer') }}' : '{{ __('Expandir') }}'"
+                                >
+                                    <x-lucide-maximize-2 class="w-3.5 h-3.5" x-show="!timelineExpanded" />
+                                    <x-lucide-minimize-2 class="w-3.5 h-3.5" x-show="timelineExpanded" x-cloak />
+                                </button>
+                            </div>
                         </div>
                         
-                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-4 shadow-2xs">
-                            <div class="relative pl-6 space-y-5 max-h-64 overflow-y-auto pr-1 scrollbar-thin">
-                                @forelse($order->events as $index => $event)
+                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                            <div 
+                                x-ref="timelineList"
+                                class="relative pl-6 space-y-4 overflow-y-auto pr-2 timeline-scrollbar transition-all duration-300 ease-in-out"
+                                :class="timelineExpanded ? 'max-h-[580px]' : 'max-h-60'"
+                            >
+                                @forelse($order->getTimelineEvents() as $index => $event)
+                                    @php
+                                        $isCrucial = str_contains(strtoupper((string) $event->new_value), 'PRODUCCI')
+                                            || str_contains(strtoupper((string) $event->new_value), 'PRODUCTION')
+                                            || str_contains(strtoupper((string) $event->event_type), 'APPROVAL')
+                                            || str_contains(strtoupper((string) $event->event_type), 'APPROVED')
+                                            || str_contains(strtoupper((string) $event->event_type), 'HOLD')
+                                            || str_contains(strtoupper((string) $event->event_type), 'DELAY_RESOLVED');
+                                        $isAuto = $event->isAutomated() && ! $isCrucial;
+                                    @endphp
                                     <div class="relative group">
                                         <!-- Vertical Line Segment -->
                                         @if(!$loop->last || $order->current_due_date)
-                                            <span class="absolute left-[-17px] top-3 bottom-[-24px] w-0.5 {{ $event->getLineColorClass() }}" aria-hidden="true"></span>
+                                            <span class="absolute left-[-16px] -translate-x-1/2 top-2.5 bottom-[-16px] w-0.5 bg-stone-200/80" aria-hidden="true"></span>
                                         @endif
 
-                                        <!-- Node Dot -->
-                                        <span class="absolute left-[-23px] top-1 w-3.5 h-3.5 rounded-full flex items-center justify-center {{ $event->getNodeColorClass() }}" aria-hidden="true"></span>
-
                                         <!-- Event Content -->
-                                        <div class="min-w-0">
-                                            <div class="flex items-center justify-between gap-2">
-                                                <span class="text-[11px] font-semibold text-zinc-500 tracking-tight">
-                                                    {{ $event->getDisplayDate() }}
-                                                </span>
-                                                @if($event->actor)
-                                                    <span class="text-[9px] px-1.5 py-0.2 rounded bg-stone-200 text-zinc-600 font-medium">
-                                                        {{ $event->actor }}
-                                                    </span>
+                                        <div class="min-w-0 {{ $isAuto ? 'opacity-85 hover:opacity-100 transition-opacity' : '' }}">
+                                            <div class="relative flex items-center justify-between gap-2 flex-wrap min-h-5">
+                                                <!-- Node Dot: perfectly centered vertically with the title and horizontally on the line -->
+                                                @if($isAuto)
+                                                    <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full ring-2 ring-white flex items-center justify-center {{ $event->getNodeColorClass() }}" aria-hidden="true"></span>
+                                                @elseif($isCrucial)
+                                                    <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full ring-2.5 ring-white shadow-2xs flex items-center justify-center {{ $event->getNodeColorClass() }}" aria-hidden="true"></span>
+                                                @else
+                                                    <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full ring-2 ring-white shadow-2xs flex items-center justify-center {{ $event->getNodeColorClass() }}" aria-hidden="true"></span>
+                                                @endif
+
+                                                <h5 class="text-xs leading-5 tracking-tight {{ $isCrucial ? 'font-bold text-zinc-950 uppercase' : ($isAuto ? 'font-medium text-zinc-700' : 'font-bold text-zinc-900') }}">
+                                                    {!! $event->getFormattedTitleHtml() !!}
+                                                </h5>
+                                                <div class="flex items-center gap-1.5 shrink-0 text-[10px] text-zinc-400 font-mono">
+                                                    @if($event->actor)
+                                                        @if($isAuto)
+                                                            <span class="inline-flex items-center gap-0.5 text-zinc-400 font-sans text-[10px]">
+                                                                <x-lucide-bot class="w-3 h-3 text-zinc-400 shrink-0" />
+                                                                <span>{{ str_contains(strtolower($event->actor), 'automation') ? 'Auto' : $event->actor }}</span>
+                                                            </span>
+                                                        @else
+                                                            <span class="px-1.5 py-0.2 rounded bg-stone-100 border border-stone-200/80 text-zinc-700 font-sans font-medium text-[9px]">
+                                                                {{ $event->actor }}
+                                                            </span>
+                                                        @endif
+                                                        <span class="text-zinc-300">•</span>
+                                                    @endif
+                                                    <span class="{{ $isCrucial ? 'font-bold text-zinc-900' : '' }}">{{ $event->getDisplayDate() }}</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Secondary Discreet Metadata (Non-intrusive) -->
+                                            <div class="space-y-0.5 text-[10px] text-zinc-400">
+                                                @if(is_array($event->metadata) && isset($event->metadata['from_list']) && isset($event->metadata['to_list']))
+                                                    <div class="flex items-center gap-1 pt-0.5">
+                                                        <span>Trello:</span>
+                                                        <span class="text-zinc-500">{{ $event->metadata['from_list'] }}</span>
+                                                        <span class="text-zinc-300">→</span>
+                                                        <span class="text-zinc-700 font-medium">{{ $event->metadata['to_list'] }}</span>
+                                                    </div>
+                                                @endif
+
+                                                @if(str_contains($event->event_type, 'DELAY_RESOLVED'))
+                                                    @php
+                                                        $promisedDate = null;
+                                                        if (!empty($event->new_value) && preg_match('/\d{4}-\d{2}-\d{2}/', (string)$event->new_value, $matches)) {
+                                                            try {
+                                                                $promisedDate = \Carbon\Carbon::parse($matches[0])->locale(app()->getLocale())->translatedFormat('d M, Y');
+                                                            } catch (\Throwable $e) {}
+                                                        }
+                                                    @endphp
+                                                    <div class="flex items-center gap-1.5 pt-0.5 text-zinc-600 font-medium">
+                                                        <x-lucide-calendar class="w-3 h-3 text-emerald-600 shrink-0" />
+                                                        <span>{{ __('Entrega acordada:') }} <strong class="text-zinc-800 font-semibold">{{ $promisedDate ?? $event->new_value }}</strong></span>
+                                                    </div>
+                                                @endif
+
+
+
+                                                @if(is_array($event->metadata) && isset($event->metadata['trigger_type']))
+                                                    <div class="flex items-center gap-1.5 pt-0.5">
+                                                        <x-lucide-zap class="w-2.5 h-2.5 text-zinc-400 shrink-0" />
+                                                        <span>Origen: {{ strtolower(str_replace('_', ' ', (string)$event->metadata['trigger_type'])) }}</span>
+                                                        @if(isset($event->metadata['priority']) && $event->metadata['priority'] === 'urgent')
+                                                            <span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200 uppercase">Urgente</span>
+                                                        @endif
+                                                    </div>
                                                 @endif
                                             </div>
 
-                                            <h5 class="text-xs font-semibold text-zinc-900 mt-0.5 truncate">
-                                                {{ $event->getFormattedTitle() }}
-                                            </h5>
-
-                                            @if(is_array($event->metadata) && isset($event->metadata['from_list']) && isset($event->metadata['to_list']))
-                                                <div class="mt-1 p-2 rounded-md bg-blue-50 border border-blue-200 text-[11px] text-blue-900 font-medium space-y-0.5">
-                                                    <div class="flex items-center gap-1.5 font-medium text-blue-800">
-                                                        <x-lucide-arrow-right-left class="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                                        <span>Lista Trello: {{ $event->metadata['from_list'] }} &rarr; <strong>{{ $event->metadata['to_list'] }}</strong></span>
-                                                    </div>
-                                                </div>
-                                            @endif
-
-                                            @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])))
-                                                <div class="mt-1 p-2 rounded-md bg-amber-50 border border-amber-200 text-[11px] text-amber-800 font-medium space-y-1">
-                                                    <div class="flex items-start gap-1.5">
-                                                        <x-lucide-message-square class="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                                                        <div><strong>Motivo:</strong> {{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</div>
-                                                    </div>
+                                            @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])) && $event->event_type !== 'ORDER_APPROVED')
+                                                <div class="mt-1 pl-2 border-l-2 border-amber-300 text-[11px] text-zinc-600 py-0.5 space-y-0.5">
+                                                    <span class="font-semibold text-amber-900 text-[10px] uppercase tracking-wider block">Motivo:</span>
+                                                    <p class="italic text-zinc-700 leading-snug">{{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</p>
                                                     @if(isset($event->metadata['blocked_duration']))
-                                                        <div class="flex items-center gap-1.5 text-emerald-800 font-semibold pt-1 border-t border-amber-200/60">
-                                                            <x-lucide-clock class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                            <span>{{ __('Tiempo bloqueada: :duration', ['duration' => $event->metadata['blocked_duration']]) }}</span>
-                                                        </div>
+                                                        <span class="block text-[10px] text-emerald-700 font-medium pt-0.5">
+                                                            {{ __('Bloqueada por :duration', ['duration' => $event->metadata['blocked_duration']]) }}
+                                                        </span>
                                                     @endif
                                                 </div>
                                             @endif
 
-                                            @if($event->event_type === 'ORDER_APPROVED' && is_array($event->metadata))
-                                                <div class="mt-1 p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-950 space-y-1.5">
-                                                    <div class="flex items-center justify-between gap-1.5 font-bold text-emerald-800">
-                                                        <span class="flex items-center gap-1">
+                                            @php
+                                                $hasApprovalDetails = ($event->event_type === 'ORDER_APPROVED' || str_contains($event->event_type, 'APPROVAL')) 
+                                                    && is_array($event->metadata) 
+                                                    && (!empty($event->metadata['approval_type']) || !empty($event->metadata['approval_type_label']) || !empty($event->metadata['approval_note']) || !empty($event->metadata['approval_image']) || !empty($event->metadata['new_due_date']));
+                                            @endphp
+                                            @if($hasApprovalDetails)
+                                                <div class="mt-1.5 p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200/70 text-xs text-emerald-950 space-y-1.5 shadow-2xs">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <div class="flex items-center gap-1.5 font-bold text-emerald-900">
                                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                            <span>{{ $event->metadata['approval_type_label'] ?? ($event->metadata['approval_type'] === 'camila' ? 'Aprobado por Camila' : 'Aprobado por Cliente') }}</span>
-                                                        </span>
+                                                            <span>{{ $event->metadata['approval_type_label'] ?? ((($event->metadata['approval_type'] ?? '') === 'camila') ? 'Aprobado por Camila' : 'Aprobado por Cliente') }}</span>
+                                                        </div>
                                                         @if(!empty($event->metadata['new_due_date']))
-                                                            <span class="px-1.5 py-0.2 rounded text-[9px] uppercase font-semibold bg-emerald-100 text-emerald-800">
-                                                                SLA: {{ $event->metadata['new_due_date'] }}
-                                                            </span>
+                                                            <div class="flex items-center gap-1.5 flex-wrap">
+                                                                <span class="px-2 py-0.2 rounded-full text-[10px] font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200/80">
+                                                                    SLA: {{ $event->metadata['new_due_date'] }}
+                                                                </span>
+                                                                @if(!empty($event->metadata['is_urgente']) || (!empty($event->metadata['sla_reason']) && str_contains(strtolower($event->metadata['sla_reason']), 'urgent')) || (!empty($event->metadata['sla_message']) && str_contains(strtolower($event->metadata['sla_message']), 'urgent')))
+                                                                    <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-200 uppercase">
+                                                                        {{ __('Urgente (Mismo Día)') }}
+                                                                    </span>
+                                                                @endif
+                                                            </div>
                                                         @endif
                                                     </div>
 
                                                     @if(!empty($event->metadata['approval_note']))
-                                                        <div class="p-2 rounded bg-white/80 border border-emerald-200/60 text-zinc-700 font-normal leading-relaxed break-words">
-                                                            {{ $event->metadata['approval_note'] }}
-                                                        </div>
+                                                        <p class="p-2 rounded bg-white/80 border border-emerald-200/50 text-zinc-700 text-[11px] leading-relaxed break-words italic">
+                                                            "{{ $event->metadata['approval_note'] }}"
+                                                        </p>
                                                     @endif
 
                                                     @if(!empty($event->metadata['approval_image']))
@@ -1719,43 +1830,19 @@
                                                             <button 
                                                                 type="button" 
                                                                 wire:click="previewMedia('{{ $event->metadata['approval_image'] }}', 'Soporte de Aprobación', 'image')" 
-                                                                class="inline-flex items-center gap-2 p-1.5 rounded-md bg-white border border-emerald-200 hover:border-emerald-300 text-emerald-900 transition cursor-pointer group shadow-2xs">
-                                                                <img src="{{ $event->metadata['approval_image'] }}" alt="Comprobante" class="w-10 h-10 object-cover rounded border border-stone-200 shrink-0">
-                                                                <div class="text-left pr-1 min-w-0">
-                                                                    <span class="font-semibold text-[11px] group-hover:underline block truncate">Comprobante adjunto</span>
-                                                                    <span class="text-[10px] text-emerald-600 block">Clic para ver imagen</span>
-                                                                </div>
+                                                                class="inline-flex items-center gap-2 p-1 rounded-md bg-white border border-emerald-200 hover:border-emerald-300 text-emerald-950 transition cursor-pointer group shadow-2xs">
+                                                                <img src="{{ $event->metadata['approval_image'] }}" alt="Comprobante" class="w-8 h-8 object-cover rounded border border-stone-200 shrink-0">
+                                                                <span class="font-medium text-[11px] group-hover:underline text-emerald-800 pr-1.5">Ver comprobante adjunto</span>
                                                             </button>
                                                         </div>
                                                     @endif
                                                 </div>
                                             @endif
-
-                                            @if(is_array($event->metadata) && isset($event->metadata['trigger_type']))
-                                                <div class="mt-1 p-2 rounded-md bg-purple-50 border border-purple-200 text-[11px] text-purple-900 font-medium space-y-0.5">
-                                                    <div class="flex items-center justify-between gap-1.5 font-bold text-purple-800">
-                                                        <span class="flex items-center gap-1">
-                                                            <x-lucide-zap class="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                                                            <span>Origen: {{ $event->metadata['trigger_type'] }}</span>
-                                                        </span>
-                                                        @if(isset($event->metadata['priority']))
-                                                            <span class="px-1.5 py-0.2 rounded text-[9px] uppercase font-extrabold {{ $event->metadata['priority'] === 'urgent' ? 'bg-rose-100 text-rose-700 border border-rose-300' : 'bg-purple-100 text-purple-700' }}">
-                                                                {{ $event->metadata['priority'] }}
-                                                            </span>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            @elseif($event->previous_value && $event->new_value && !str_contains($event->event_type, 'CREATED'))
-                                                <p class="text-[11px] text-zinc-500 mt-0.5">
-                                                    {{ $event->formatValueIfDate($event->previous_value) }} &rarr; 
-                                                    <strong class="text-zinc-800">{{ $event->formatValueIfDate($event->new_value) }}</strong>
-                                                </p>
-                                            @endif
                                         </div>
                                     </div>
                                 @empty
-                                    <div class="relative">
-                                        <span class="absolute left-[-23px] top-1 w-3.5 h-3.5 rounded-full bg-stone-300 ring-4 ring-stone-100"></span>
+                                    <div class="relative flex items-center min-h-5">
+                                        <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-stone-300 ring-2 ring-white shadow-2xs" aria-hidden="true"></span>
                                         <p class="text-xs text-zinc-500">Sin eventos en la línea de tiempo aún.</p>
                                     </div>
                                 @endforelse
@@ -1763,21 +1850,20 @@
                                 <!-- SLA / Current Due Date Node if set -->
                                 @if($order->current_due_date)
                                     <div class="relative group pt-1">
-                                        @if($order->isOverdue())
-                                            <span class="absolute left-[-24px] top-0.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center ring-4 ring-red-100 font-bold text-[10px]" title="SLA Vencido">
-                                                <x-lucide-alert-triangle class="w-2.5 h-2.5 text-white" />
+                                        <div class="relative flex items-center justify-between gap-2 flex-wrap min-h-5">
+                                            <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full {{ $order->isOverdue() ? 'bg-rose-600' : 'bg-emerald-500' }} ring-2.5 ring-white shadow-2xs flex items-center justify-center text-white" aria-hidden="true">
+                                                @if($order->isOverdue())
+                                                    <x-lucide-alert-triangle class="w-1.5 h-1.5 text-white stroke-[2.5]" />
+                                                @else
+                                                    <x-lucide-flag class="w-1.5 h-1.5 text-white stroke-[2.5]" />
+                                                @endif
                                             </span>
-                                        @else
-                                            <span class="absolute left-[-23px] top-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-100" aria-hidden="true"></span>
-                                        @endif
-
-                                        <div class="min-w-0">
-                                            <span class="text-[11px] font-semibold text-zinc-500 tracking-tight">
+                                            <h5 class="text-xs leading-5 font-bold {{ $order->isOverdue() ? 'text-rose-700' : 'text-emerald-800' }}">
+                                                Objetivo de Entrega {{ $order->isOverdue() ? '(Vencido)' : '(En plazo)' }}
+                                            </h5>
+                                            <span class="text-[10px] font-mono font-semibold {{ $order->isOverdue() ? 'text-rose-600' : 'text-emerald-700' }}">
                                                 {{ $order->current_due_date->format('d M, g:i A') }}
                                             </span>
-                                            <h5 class="text-xs font-bold {{ $order->isOverdue() ? 'text-red-600' : 'text-emerald-700' }} mt-0.5">
-                                                Deadline de entrega {{ $order->isOverdue() ? '(Vencido)' : '(En plazo)' }}
-                                            </h5>
                                         </div>
                                     </div>
                                 @endif
@@ -1786,15 +1872,15 @@
                             <!-- Summary Duration Footer Box (matching mockup) -->
                             <div class="pt-3 border-t border-[#e9e9e7] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                                 <div class="flex items-center gap-1.5 text-zinc-600">
-                                    <x-lucide-clock class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                    <x-lucide-clock class="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                                     <span>Tiempo transcurrido:</span>
-                                    <strong class="text-zinc-900 font-mono">{{ $order->created_at->diffForHumans(null, true) }}</strong>
+                                    <strong class="text-zinc-900 font-mono font-semibold">{{ $order->created_at->diffForHumans(null, true) }}</strong>
                                 </div>
 
                                 @if($order->current_due_date)
-                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold {{ $order->isOverdue() ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
+                                    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold shadow-2xs {{ $order->isOverdue() ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
                                         @if($order->isOverdue())
-                                            <x-lucide-alert-triangle class="w-3.5 h-3.5 text-red-600 shrink-0" />
+                                            <x-lucide-alert-triangle class="w-3.5 h-3.5 text-rose-600 shrink-0" />
                                             <span>SLA Vencido</span>
                                         @else
                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />

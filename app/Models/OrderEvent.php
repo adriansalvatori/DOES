@@ -30,37 +30,58 @@ class OrderEvent extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function isAutomated(): bool
+    {
+        $type = strtoupper((string) $this->event_type);
+        $newVal = strtoupper((string) $this->new_value);
+
+        if (str_contains($type, 'STATUS_CHANGED') || str_contains($newVal, 'PRODUCCI') || str_contains($type, 'APPROVAL')) {
+            return false;
+        }
+
+        $actor = strtolower((string) $this->actor);
+
+        return str_contains($actor, 'automation')
+            || str_contains($actor, 'sistema')
+            || str_contains($actor, 'system')
+            || str_contains($actor, 'bot')
+            || str_contains($type, 'AUTOMATIC')
+            || str_contains($type, 'TRIGGERED')
+            || isset($this->metadata['trigger_type']);
+    }
+
     public function getNodeColorClass(): string
     {
         $type = strtoupper((string) $this->event_type);
         $newVal = strtoupper((string) $this->new_value);
 
-        if (str_contains($type, 'UNBLOCKED') || str_contains($type, 'DESBLOQUEA')) {
-            return 'bg-emerald-500 ring-4 ring-emerald-100 text-white';
+        if (str_contains($type, 'APPROVAL') || str_contains($type, 'APPROVED')) {
+            return 'bg-emerald-500 text-white';
         }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
-            return 'bg-emerald-500 ring-4 ring-emerald-100 text-white';
+            return 'bg-emerald-500 text-white';
         }
-        if (str_contains($type, 'SUBTASK')) {
-            return 'bg-purple-500 ring-4 ring-purple-100 text-white';
-        }
-        if (str_contains($type, 'CREATED') || str_contains($type, 'TRELLO')) {
-            return 'bg-blue-500 ring-4 ring-blue-100 text-white';
-        }
-        if (str_contains($type, 'EMAIL') || str_contains($type, 'BIENVENIDA') || str_contains($newVal, 'CLIENTE')) {
-            return 'bg-emerald-500 ring-4 ring-emerald-100 text-white';
+        if (str_contains($type, 'UNBLOCKED') || str_contains($type, 'DESBLOQUEA')) {
+            return 'bg-emerald-500 text-white';
         }
         if (str_contains($type, 'HOLD') || str_contains($newVal, 'HOLD') || str_contains($type, 'REVISION')) {
-            return 'bg-amber-500 ring-4 ring-amber-100 text-white';
-        }
-        if (str_contains($type, 'APPROVAL') || str_contains($type, 'APPROVED') || str_contains($newVal, 'PRODUCCION') || str_contains($newVal, 'TODAY')) {
-            return 'bg-lime-500 ring-4 ring-lime-100 text-white';
+            return 'bg-amber-500 text-white';
         }
         if (str_contains($type, 'SLA') || str_contains($type, 'BREACH') || str_contains($type, 'DELAY') || str_contains($type, 'WARNING')) {
-            return 'bg-rose-500 ring-4 ring-rose-100 text-white';
+            return 'bg-rose-500 text-white';
+        }
+        if (str_contains($newVal, 'PRODUCCI') || str_contains($newVal, 'PRODUCTION')) {
+            return 'bg-orange-500 text-white';
+        }
+        if (str_contains($type, 'CREATED') || str_contains($type, 'TRELLO')) {
+            return 'bg-blue-500 text-white';
         }
 
-        return 'bg-indigo-500 ring-4 ring-indigo-100 text-white';
+        if ($this->isAutomated() || str_contains($type, 'SUBTASK') || str_contains($type, 'TASK')) {
+            return 'bg-purple-500 text-white';
+        }
+
+        return 'bg-indigo-500 text-white';
     }
 
     public function getLineColorClass(): string
@@ -74,7 +95,7 @@ class OrderEvent extends Model
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
             return 'bg-emerald-400';
         }
-        if (str_contains($type, 'SUBTASK')) {
+        if (str_contains($type, 'SUBTASK') || $this->isAutomated()) {
             return 'bg-purple-400';
         }
         if (str_contains($type, 'CREATED') || str_contains($type, 'TRELLO')) {
@@ -86,7 +107,10 @@ class OrderEvent extends Model
         if (str_contains($type, 'HOLD') || str_contains($newVal, 'HOLD') || str_contains($type, 'REVISION')) {
             return 'bg-amber-400';
         }
-        if (str_contains($type, 'APPROVAL') || str_contains($type, 'APPROVED') || str_contains($newVal, 'PRODUCCION') || str_contains($newVal, 'TODAY')) {
+        if (str_contains($newVal, 'PRODUCCION') || str_contains($newVal, 'PRODUCCI') || str_contains($newVal, 'PRODUCTION')) {
+            return 'bg-orange-400';
+        }
+        if (str_contains($type, 'APPROVAL') || str_contains($type, 'APPROVED') || str_contains($newVal, 'TODAY')) {
             return 'bg-lime-400';
         }
         if (str_contains($type, 'SLA') || str_contains($type, 'BREACH') || str_contains($type, 'DELAY')) {
@@ -123,6 +147,17 @@ class OrderEvent extends Model
     public function getFormattedTitle(): string
     {
         $type = strtoupper((string) $this->event_type);
+        $newValLower = strtolower((string) $this->new_value);
+
+        if (
+            str_contains($type, 'ORDER_APPROVED') ||
+            str_contains($type, 'APPROVAL_SUBMITTED') ||
+            str_contains($newValLower, 'aprobado por cliente') ||
+            str_contains($newValLower, 'aprobado por camila') ||
+            str_contains($newValLower, 'aprobación recibida')
+        ) {
+            return __('Aprobación Recibida');
+        }
 
         if (str_contains($type, 'ORDER_UNBLOCKED') || str_contains($type, 'UNBLOCKED')) {
             return __('Orden desbloqueada');
@@ -130,40 +165,75 @@ class OrderEvent extends Model
         if (str_contains($type, 'AUTOMATIC_TASK') || str_contains($type, 'TASK_TRIGGERED')) {
             $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
 
-            return __('Tarea automática ":title" gatillada', ['title' => $taskTitle]);
+            return __('":title" añadida', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'SUBTASK_SCHEDULED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Subtarea');
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
             $dateStr = isset($this->metadata['date']) ? $this->formatValueIfDate($this->metadata['date']) : '';
 
-            return __('Subtarea ":title" agendada', ['title' => $taskTitle]).($dateStr ? ' '.__('para el').' '.$dateStr : '');
+            return __('":title" agendada', ['title' => $taskTitle]).($dateStr ? ' '.__('para el').' '.$dateStr : '');
         }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Subtarea');
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
 
-            return __('Subtarea ":title" completada ✓', ['title' => $taskTitle]);
+            return __('":title" completada ✓', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'ORDER_CREATED') || str_contains($type, 'CREATED')) {
-            return __('Orden creada en flujo / Trello');
+            $source = $this->metadata['source'] ?? null;
+            if (! $source) {
+                $actor = strtolower((string) $this->actor);
+                if (str_contains($actor, 'trello')) {
+                    $source = 'trello';
+                } elseif ($this->order) {
+                    if ($this->order->is_new_from_trello || ! empty($this->order->trello_card_id)) {
+                        $source = 'trello';
+                    } else {
+                        $source = 'app';
+                    }
+                } else {
+                    $source = 'app';
+                }
+            }
+
+            return $source === 'trello'
+                ? __('Orden creada desde Trello')
+                : __('Orden creada desde la app');
         }
         if (str_contains($type, 'MOVED_TO_ON_HOLD')) {
-            return __('Movido a ON HOLD');
-        }
-        if (str_contains($type, 'APPROVAL_SUBMITTED')) {
-            return __('Diseño aprobado por cliente');
+            return __('Orden ON HOLD');
         }
         if (str_contains($type, 'DELAY_RESOLVED')) {
-            return __('Atraso resuelto y nueva fecha acordada');
+            return __('Atraso resuelto');
+        }
+        if (str_contains($type, 'WO_UPDATED')) {
+            return __('WO actualizado (:new)', ['new' => $this->new_value]);
+        }
+        if (str_contains($type, 'DUPLICATED')) {
+            return __('Orden duplicada');
+        }
+        if (str_contains($type, 'COMMENT')) {
+            return __('Comentario de Trello agregado');
         }
         if (str_contains($type, 'STATUS_CHANGED_VIA_TRELLO')) {
             $statusLabel = $this->formatValueIfDate($this->new_value);
+            if (str_contains(strtoupper((string) $this->new_value), 'PRODUCCI') || str_contains(strtoupper((string) $statusLabel), 'PRODUCCI')) {
+                $statusLabel = __('ENVIADO A PRODUCCIÓN');
+            }
 
             return __('Estatus actualizado desde Trello (:status)', ['status' => $statusLabel]);
         }
-        if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
-            $statusLabel = $this->formatValueIfDate($this->new_value);
+        if (str_contains($type, 'DUE_DATE_CHANGED')) {
+            $dateLabel = $this->formatValueIfDate($this->new_value);
 
-            return __('Movido a :status', ['status' => $statusLabel]);
+            return __('Fecha de entrega actualizada (:date)', ['date' => $dateLabel]);
+        }
+        if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
+            $formatted = $this->formatValueIfDate($this->new_value);
+            if (str_contains(strtoupper((string) $this->new_value), 'PRODUCCI') || str_contains(strtoupper((string) $formatted), 'PRODUCCI')) {
+                return __('ENVIADO A PRODUCCIÓN');
+            }
+
+            return $formatted;
         }
 
         return __($this->event_type);
@@ -171,29 +241,17 @@ class OrderEvent extends Model
 
     public function getDisplayDate(): string
     {
-        $type = strtoupper((string) $this->event_type);
+        return $this->created_at ? $this->created_at->format('d M, g:i A') : '';
+    }
 
-        if (str_contains($type, 'SUBTASK')) {
-            $dateStr = $this->metadata['date'] ?? null;
+    public function getFormattedTitleHtml(): string
+    {
+        $title = $this->getFormattedTitle();
 
-            if (! $dateStr && isset($this->metadata['task_id'])) {
-                $subtask = RelatedTask::find($this->metadata['task_id']);
-                if ($subtask && $subtask->scheduled_date) {
-                    $dateStr = $subtask->scheduled_date->toDateString();
-                }
-            }
-
-            if ($dateStr) {
-                try {
-                    $date = Carbon::parse($dateStr)->locale(app()->getLocale());
-
-                    return $date->translatedFormat('d M');
-                } catch (\Throwable $e) {
-                    // fallback
-                }
-            }
-        }
-
-        return $this->created_at->format('d M, g:i A');
+        return (string) preg_replace(
+            '/((?:completad[ao]s?|completed)(?:\s*[✓✔])?|[✓✔])/iu',
+            '<span class="text-emerald-600 font-semibold">$1</span>',
+            e($title)
+        );
     }
 }

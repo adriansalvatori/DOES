@@ -22,7 +22,7 @@ class AutomationEngine
     /**
      * Triggered when a new order is created.
      */
-    public function handleOrderCreated(Order $order): void
+    public function handleOrderCreated(Order $order, string $source = 'app', ?string $actor = null): void
     {
         // 1. Mandatory Welcome Email task (only if card creation date is no older than a week / 7 days)
         $trelloCreatedAt = $order->trello_created_at ?? $order->created_at;
@@ -53,13 +53,18 @@ class AutomationEngine
             'last_meaningful_update' => now(),
         ]);
 
+        $resolvedActor = $actor ?: ($source === 'trello' ? 'Trello' : (auth()->user()?->name ?? 'Usuario'));
+
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_CREATED',
-            'actor' => 'AutomationEngine',
+            'actor' => $resolvedActor,
             'previous_value' => null,
             'new_value' => $order->company_name.' - '.$order->task_name,
-            'metadata' => ['status' => $order->core_status->value],
+            'metadata' => [
+                'status' => $order->core_status->value,
+                'source' => $source,
+            ],
         ]);
     }
 
@@ -308,6 +313,7 @@ class AutomationEngine
                 'estimate_approved' => $estimateApproved,
                 'new_due_date' => $targetDate->toDateString(),
                 'is_urgente' => $isUrgente,
+                'sla_message' => $slaMessage,
             ],
         ]);
 
