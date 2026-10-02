@@ -287,7 +287,7 @@
                     wire:model.live="filterDesigner" 
                     class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
                     <option value="">{{ __('Todos') }}</option>
-                    @foreach($designers as $d)
+                    @foreach($filterDesigners as $d)
                         <option value="{{ is_object($d) ? $d->id : $d }}">{{ is_object($d) ? $d->name : $d }}</option>
                     @endforeach
                 </select>

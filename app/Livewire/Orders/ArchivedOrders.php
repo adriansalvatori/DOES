@@ -88,7 +88,7 @@ class ArchivedOrders extends Component
         $totalArchivedCount = $allArchived->count();
 
         // Group archived orders by designer
-        $designers = Designer::where('active', true)->get();
+        $designers = Designer::where('active', true)->internal()->get();
         $designerStats = [];
 
         foreach ($designers as $des) {

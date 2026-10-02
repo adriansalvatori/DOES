@@ -438,7 +438,7 @@ class Board extends Component
             'orders' => $orders,
             'relatedTasks' => $relatedTasks,
             'newOrdersCount' => Order::inBacklog()->newFromTrello()->count(),
-            'designers' => Designer::where('active', true)->get(),
+            'designers' => Designer::where('active', true)->internal()->get(),
             'existingCompanies' => Order::inWorkspace()
                 ->whereNotNull('company_name')
                 ->where('company_name', '!=', '')

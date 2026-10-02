@@ -336,9 +336,6 @@
                             </button>
                         @endif
                     </div>
-                    <p class="text-xs text-zinc-500 font-medium truncate mt-0.5">
-                        Lunes {{ $startVal->format('d') }} de {{ $startVal->locale('es')->translatedFormat('F') }} - Viernes {{ $endVal->format('d') }} de {{ $endVal->locale('es')->translatedFormat('F, Y') }}
-                    </p>
                 </div>
 
                 <!-- Right Controls: Week jump, This Week, Next Week, Open Calendar -->
@@ -447,7 +444,7 @@
             <!-- ROW 2: View Controls, Designer Filters & Unified Search Bar -->
             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pt-2 border-t border-[#e9e9e7]">
                 
-                <!-- Left: View Mode Switcher + System Tasks Toggle + Sort Mode Selector -->
+                <!-- Left: View Mode Switcher + Sort Mode Selector -->
                 <div class="flex flex-wrap items-center gap-1.5 shrink-0">
                     <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-0.5 h-7.5 text-xs font-medium shrink-0">
                         <button 
@@ -465,15 +462,6 @@
                             <span>{{ __('Por Diseñador') }}</span>
                         </button>
                     </div>
-
-                    <button 
-                        type="button" 
-                        wire:click="toggleShowSystemTasks"
-                        class="px-2.5 py-1 h-7.5 rounded-lg border text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shrink-0 {{ $showSystemTasks ? 'bg-violet-50 hover:bg-violet-100 text-violet-700 border-violet-200' : 'bg-stone-50 hover:bg-stone-100 text-stone-500 border-stone-200' }}"
-                        title="{{ $showSystemTasks ? __('Ocultar tareas de sistema') : __('Mostrar tareas de sistema') }}">
-                        <x-lucide-cpu class="w-3.5 h-3.5 {{ $showSystemTasks ? 'text-violet-600' : 'text-stone-400' }}" />
-                        <span>{{ __('Tareas de Sistema') }}</span>
-                    </button>
 
                     <!-- Sort Mode Selector -->
                     <div class="flex items-center bg-[#f7f7f5] border border-[#e3e3e1] p-0.5 rounded-lg gap-0.5 h-7.5 text-xs font-medium shrink-0">
@@ -493,22 +481,6 @@
                             title="{{ __('Ordenar por Prioridad') }}">
                             <x-lucide-flame class="w-3 h-3 text-red-500" />
                             <span>{{ __('Prioridad') }}</span>
-                        </button>
-                        <button 
-                            type="button" 
-                            wire:click="changePlannerSortBy('client')"
-                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1 {{ $plannerSortBy === 'client' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}"
-                            title="{{ __('Ordenar por Cliente / Empresa') }}">
-                            <x-lucide-building-2 class="w-3 h-3 text-indigo-500" />
-                            <span>{{ __('Cliente') }}</span>
-                        </button>
-                        <button 
-                            type="button" 
-                            wire:click="changePlannerSortBy('sla')"
-                            class="px-2 py-1 h-6.5 rounded-md transition cursor-pointer flex items-center gap-1 {{ $plannerSortBy === 'sla' ? 'bg-white text-zinc-900 font-semibold shadow-2xs' : 'text-zinc-500 hover:text-zinc-800' }}"
-                            title="{{ __('Ordenar por Fecha Límite SLA') }}">
-                            <x-lucide-clock class="w-3 h-3 text-amber-500" />
-                            <span>{{ __('SLA') }}</span>
                         </button>
                     </div>
                 </div>

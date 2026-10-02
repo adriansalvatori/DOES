@@ -347,7 +347,7 @@ class Index extends Component
             'newTrelloOrders' => $newTrelloOrders,
             'backlogTotalCount' => $backlogTotalCount,
             'activeWorkspaceCount' => $activeWorkspaceCount,
-            'designers' => Designer::where('active', true)->get(),
+            'designers' => Designer::where('active', true)->internal()->get(),
             'coreStatuses' => CoreStatus::cases(),
             'existingCompanies' => Order::inBacklog()
                 ->whereNotNull('company_name')

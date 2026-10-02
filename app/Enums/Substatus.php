@@ -30,6 +30,7 @@ enum Substatus: string
     case CANCELADA = 'CANCELADA';
     case NO_REALIZADA_TRANSFERIDA = 'NO REALIZADA / TRANSFERIDA';
     case FINALIZADA = 'FINALIZADA !';
+    case EXTERNO = 'EXTERNO';
 
     public function label(): string
     {
@@ -60,6 +61,7 @@ enum Substatus: string
             self::CANCELADA => __('Cancelada'),
             self::NO_REALIZADA_TRANSFERIDA => __('No realizada / Transferida'),
             self::FINALIZADA => __('Finalizada'),
+            self::EXTERNO => __('Externo'),
         };
     }
 
@@ -125,13 +127,14 @@ enum Substatus: string
             self::CANCELADA => 'bg-red-100 text-red-800 border-red-300 font-bold',
             self::NO_REALIZADA_TRANSFERIDA => 'bg-stone-200 text-stone-700 border-stone-300 font-medium',
             self::FINALIZADA => 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
+            self::EXTERNO => 'bg-amber-100 text-amber-800 border-amber-300 font-bold',
         };
     }
 
     public function isGlobal(): bool
     {
         return match ($this) {
-            self::TICKET, self::POTENTIAL_CUSTOMER, self::URGENTE, self::OVERDUE, self::ALMOST_OVERDUE => true,
+            self::TICKET, self::POTENTIAL_CUSTOMER, self::URGENTE, self::OVERDUE, self::ALMOST_OVERDUE, self::EXTERNO => true,
             default => false,
         };
     }

@@ -584,6 +584,7 @@ class OverviewIndex extends Component
 
         $clients = Client::orderBy('name')->get();
         $designers = Designer::where('active', true)->orderBy('name')->get();
+        $filterDesigners = Designer::where('active', true)->internal()->orderBy('name')->get();
         $substatuses = \App\Models\Substatus::orderBy('sort_order')->get();
         if ($substatuses->isEmpty()) {
             $substatuses = collect(Substatus::cases());
@@ -593,6 +594,7 @@ class OverviewIndex extends Component
             'orders' => $orders,
             'clients' => $clients,
             'designers' => $designers,
+            'filterDesigners' => $filterDesigners,
             'substatuses' => $substatuses,
             'hasMore' => $hasMore,
             'totalFilteredCount' => $totalFilteredCount,

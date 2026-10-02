@@ -35,7 +35,6 @@ class RelatedTask extends Model
 
     protected $casts = [
         'type' => RelatedTaskType::class,
-        'category' => SubtaskCategory::class,
         'return_core_status' => CoreStatus::class,
         'scheduled_date' => 'date',
         'due_date' => 'date',
@@ -43,6 +42,11 @@ class RelatedTask extends Model
         'is_work_task' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    public function setCategoryAttribute($value): void
+    {
+        $this->attributes['category'] = $value instanceof SubtaskCategory ? $value->value : $value;
+    }
 
     public function getCategoryAttribute(): SubtaskCategory
     {

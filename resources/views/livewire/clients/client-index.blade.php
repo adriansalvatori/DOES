@@ -1,6 +1,6 @@
-<div class="h-full flex flex-col space-y-3 min-h-0 max-w-xl mx-auto w-full">
+<div class="h-full flex flex-col space-y-3 min-h-0 max-w-4xl mx-auto w-full">
     
-    <!-- Notion Header Controls (Compact Width) -->
+    <!-- Notion Header Controls -->
     <div id="tour-client-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
         {{-- Row 1: Title & Badge --}}
         <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
@@ -48,14 +48,19 @@
         </div>
     @endif
 
-    <!-- Ultra-Compact Slim Client List Card -->
+    <!-- Client List Card (Locked against horizontal overflow) -->
     <div class="flex-1 min-h-0 bg-white border border-[#e9e9e7] rounded-xl shadow-2xs flex flex-col overflow-hidden">
-        <div class="flex-1 min-h-0 overflow-y-auto custom-vertical-scrollbar">
-            <table class="w-full text-left text-xs text-zinc-700">
+        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-vertical-scrollbar">
+            <table class="w-full text-left text-xs text-zinc-700 table-fixed">
+                <colgroup>
+                    <col class="w-auto">
+                    <col class="w-48 sm:w-64">
+                    <col class="w-10">
+                </colgroup>
                 <thead class="bg-[#f7f7f5] text-zinc-500 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
                     <tr>
                         <th class="py-2 px-3.5">{{ __('Cliente') }}</th>
-                        <th class="py-2 px-3.5 text-right whitespace-nowrap">{{ __('Órdenes') }}</th>
+                        <th class="py-2 px-3.5 text-right">{{ __('Órdenes') }}</th>
                         <th class="py-2 pr-3.5 pl-1 w-10 text-right"></th>
                     </tr>
                 </thead>
@@ -66,9 +71,9 @@
                             wire:click="openClientDetail({{ $client->id }})" 
                             class="group hover:bg-[#f7f7f5] transition cursor-pointer"
                         >
-                            <td class="py-2.5 px-3.5">
-                                <div class="flex flex-col">
-                                    <span class="font-bold text-zinc-900 text-xs tracking-tight uppercase">
+                            <td class="py-2.5 px-3.5 min-w-0">
+                                <div class="flex flex-col min-w-0">
+                                    <span class="font-bold text-zinc-900 text-xs tracking-tight uppercase truncate">
                                         {{ $client->name }}
                                     </span>
                                     @php
@@ -79,21 +84,21 @@
                                     @if($primaryContact && ($primaryContact->name || $primaryContact->phone || $primaryContact->email))
                                         <div class="flex items-center gap-2.5 text-[11px] text-zinc-500 font-normal mt-0.5 flex-wrap">
                                             @if($primaryContact->name)
-                                                <span class="font-medium text-zinc-700 flex items-center gap-1">
+                                                <span class="font-medium text-zinc-700 flex items-center gap-1 shrink-0">
                                                     <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
                                                     <span>{{ $primaryContact->name }}</span>
                                                 </span>
                                             @endif
                                             @if($primaryContact->phone)
-                                                <span class="flex items-center gap-1 text-zinc-600 font-mono text-[10px]">
+                                                <span class="flex items-center gap-1 text-zinc-600 font-mono text-[10px] shrink-0">
                                                     <x-lucide-phone class="w-3 h-3 text-zinc-400 shrink-0" />
                                                     <span>{{ $primaryContact->phone }}</span>
                                                 </span>
                                             @endif
                                             @if($primaryContact->email)
-                                                <span class="flex items-center gap-1 text-zinc-600 truncate text-[10px]">
+                                                <span class="flex items-center gap-1 text-zinc-600 truncate text-[10px] min-w-0">
                                                     <x-lucide-mail class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                    <span>{{ $primaryContact->email }}</span>
+                                                    <span class="truncate">{{ $primaryContact->email }}</span>
                                                 </span>
                                             @endif
                                         </div>
@@ -128,9 +133,9 @@
                                                     setTimeout(() => this.copied = false, 2000);
                                                 }
                                             }"
-                                            class="flex items-center gap-1.5 text-[11px] text-zinc-600 mt-1 flex-wrap"
+                                            class="flex items-center gap-1.5 text-[11px] text-zinc-600 mt-1 min-w-0"
                                         >
-                                            <span class="flex items-center gap-1 text-zinc-700 min-w-0">
+                                            <span class="flex items-center gap-1 text-zinc-700 min-w-0 truncate">
                                                 <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
                                                 <span class="font-medium truncate">{{ $mainAddress }}</span>
                                             </span>
@@ -157,8 +162,8 @@
                                     @endif
                                 </div>
                             </td>
-                            <td class="py-2.5 px-3.5 text-right whitespace-nowrap">
-                                <div class="inline-flex items-center gap-1.5 justify-end">
+                            <td class="py-2.5 px-3.5 text-right">
+                                <div class="inline-flex items-center gap-1.5 justify-end flex-wrap sm:flex-nowrap">
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $client->active_orders_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' : 'bg-stone-100/70 text-zinc-400 border-stone-200/60' }} border inline-flex items-center gap-1 shrink-0">
                                         <x-lucide-zap class="w-3 h-3 {{ $client->active_orders_count > 0 ? 'text-emerald-600' : 'text-zinc-400' }}" />
                                         <span>{{ $client->active_orders_count }} activas</span>

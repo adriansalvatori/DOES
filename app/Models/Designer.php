@@ -216,4 +216,13 @@ class Designer extends Model
 
         return false;
     }
+
+    public function scopeInternal($query)
+    {
+        return $query->where(function ($q) {
+            $q->where('is_external', false)->orWhereNull('is_external');
+        })->where(function ($q) {
+            $q->whereNull('color_type')->orWhereNotIn('color_type', ['yellow', 'amber']);
+        })->where('name', 'not like', '%extern%');
+    }
 }

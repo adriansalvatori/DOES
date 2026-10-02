@@ -508,7 +508,6 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertSet('showSystemTasks', true)
             ->assertSee('Confirmar medidas')
             ->assertSee('Enviar correo de atraso preventivo')
-            ->assertSee('Tareas de Sistema')
             ->call('toggleShowSystemTasks')
             ->assertSet('showSystemTasks', false)
             ->assertDontSee('Confirmar medidas')
@@ -608,9 +607,12 @@ class SubtaskWeeklyPlannerTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        // Reorder subtask2 before subtask1
+        // Reorder subtask2 before subtask1 - should automatically switch sort to custom (manual)
         Livewire::test(WeeklyPlanner::class)
-            ->call('reorderSubtasks', [$subtask2->id, $subtask1->id], $dateStr);
+            ->assertSet('plannerSortBy', 'priority')
+            ->call('reorderSubtasks', [$subtask2->id, $subtask1->id], $dateStr)
+            ->assertSet('plannerSortBy', 'custom')
+            ->assertSessionHas('weekly_planner_sort_by', 'custom');
 
         $this->assertEquals(0, $subtask2->fresh()->sort_order);
         $this->assertEquals(1, $subtask1->fresh()->sort_order);
@@ -619,16 +621,15 @@ class SubtaskWeeklyPlannerTest extends TestCase
     public function test_can_change_planner_sort_by_mode(): void
     {
         Livewire::test(WeeklyPlanner::class)
+            ->assertSet('plannerSortBy', 'priority')
+            ->call('changePlannerSortBy', 'custom')
             ->assertSet('plannerSortBy', 'custom')
+            ->assertSessionHas('weekly_planner_sort_by', 'custom')
             ->call('changePlannerSortBy', 'priority')
             ->assertSet('plannerSortBy', 'priority')
             ->assertSessionHas('weekly_planner_sort_by', 'priority')
             ->call('changePlannerSortBy', 'client')
-            ->assertSet('plannerSortBy', 'client')
-            ->assertSessionHas('weekly_planner_sort_by', 'client')
-            ->call('changePlannerSortBy', 'sla')
-            ->assertSet('plannerSortBy', 'sla')
-            ->assertSessionHas('weekly_planner_sort_by', 'sla');
+            ->assertSet('plannerSortBy', 'priority');
     }
 
     public function test_weekly_planner_includes_subtasks_for_archived_orders(): void

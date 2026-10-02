@@ -23,7 +23,7 @@ class WeeklyPlanner extends Component
 
     public string $viewMode = 'by_day';
 
-    public string $plannerSortBy = 'custom';
+    public string $plannerSortBy = 'priority';
 
     public $viewMonth;
 
@@ -50,7 +50,8 @@ class WeeklyPlanner extends Component
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->viewMonth = now()->format('Y-m');
         $this->viewMode = session('weekly_planner_view_mode', 'by_day');
-        $this->plannerSortBy = session('weekly_planner_sort_by', 'custom');
+        $sessionSort = session('weekly_planner_sort_by', 'priority');
+        $this->plannerSortBy = in_array($sessionSort, ['custom', 'priority']) ? $sessionSort : 'priority';
         $this->showSystemTasks = (bool) session('weekly_planner_show_system_tasks', true);
 
         $user = Auth::user();
@@ -61,14 +62,14 @@ class WeeklyPlanner extends Component
 
     public function updatedPlannerSortBy($value)
     {
-        if (in_array($value, ['custom', 'priority', 'client', 'sla'])) {
+        if (in_array($value, ['custom', 'priority'])) {
             session(['weekly_planner_sort_by' => $value]);
         }
     }
 
     public function changePlannerSortBy(string $mode)
     {
-        if (in_array($mode, ['custom', 'priority', 'client', 'sla'])) {
+        if (in_array($mode, ['custom', 'priority'])) {
             $this->plannerSortBy = $mode;
             session(['weekly_planner_sort_by' => $mode]);
         }
@@ -79,6 +80,8 @@ class WeeklyPlanner extends Component
         if (empty($orderedTaskIds)) {
             return;
         }
+
+        $this->changePlannerSortBy('custom');
 
         foreach ($orderedTaskIds as $index => $taskId) {
             $updateData = ['sort_order' => $index];
@@ -589,7 +592,7 @@ class WeeklyPlanner extends Component
             'range_label' => $nextWeekMonday->format('d M').' - '.$nextWeekFriday->format('d M'),
         ];
 
-        $designerQuery = Designer::where('active', true)->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['clientLocation', 'designers', 'designer'])]);
+        $designerQuery = Designer::where('active', true)->internal()->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['clientLocation', 'designers', 'designer'])]);
         if ($this->selectedDesignerFilter !== 'all') {
             $designerQuery->where('id', $this->selectedDesignerFilter);
         }
@@ -734,7 +737,7 @@ class WeeklyPlanner extends Component
             'weekDaysOnly' => $days,
             'nextWeekItem' => $nextWeekItem,
             'designers' => $designers,
-            'allDesigners' => Designer::where('active', true)->get(),
+            'allDesigners' => Designer::where('active', true)->internal()->get(),
             'subtasks' => $subtasks,
             'unscheduledOrders' => $unscheduledOrders,
             'workspaceOrders' => $workspaceOrders,

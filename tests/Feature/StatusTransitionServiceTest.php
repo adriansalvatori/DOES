@@ -33,6 +33,7 @@ class StatusTransitionServiceTest extends TestCase
         $this->assertContains('TICKET', $names); // Global
         $this->assertContains('POTENTIAL CUSTOMER', $names); // Global
         $this->assertContains('URGENTE', $names); // Global
+        $this->assertContains('EXTERNO', $names); // Global
     }
 
     public function test_get_default_substatus_returns_correct_enum(): void
@@ -95,5 +96,25 @@ class StatusTransitionServiceTest extends TestCase
         ]);
 
         $this->assertEquals(CoreStatus::EN_PRODUCCION, $order->fresh()->core_status);
+    }
+
+    public function test_externo_is_global_yellow_substatus_and_preserved_on_core_status_change(): void
+    {
+        $this->assertTrue(SubstatusEnum::EXTERNO->isGlobal());
+        $this->assertStringContainsString('FEFCE8', SubstatusEnum::EXTERNO->badgeStyle());
+
+        $order = Order::create([
+            'company_name' => 'Empresa Externa',
+            'task_name' => 'Tarea Externa',
+            'core_status' => CoreStatus::ENTRANTE,
+            'substatus' => SubstatusEnum::EXTERNO,
+            'in_workspace' => true,
+        ]);
+
+        $order->update([
+            'core_status' => CoreStatus::EN_PRODUCCION,
+        ]);
+
+        $this->assertEquals(SubstatusEnum::EXTERNO, $order->fresh()->substatus);
     }
 }

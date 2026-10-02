@@ -45,6 +45,17 @@ class SubstatusSeeder extends Seeder
                 'sort_order' => 3,
             ],
             [
+                'name' => 'EXTERNO',
+                'core_status' => null,
+                'is_default' => false,
+                'is_global' => true,
+                'bg_color' => '#FEFCE8',
+                'text_color' => '#854D0E',
+                'border_color' => '#FEF08A',
+                'is_system' => true,
+                'sort_order' => 4,
+            ],
+            [
                 'name' => 'BLOQUEADA',
                 'core_status' => CoreStatus::ENTRANTE->value,
                 'is_default' => true,

@@ -480,7 +480,7 @@ class Index extends Component
             'readyForAltaOrders' => $readyForAltaOrders,
             'pronosticoAltaOrders' => $pronosticoAltaOrders,
             'newTrelloOrders' => $newTrelloOrders,
-            'designers' => Designer::where('active', true)->orderBy('name')->get(),
+            'designers' => Designer::where('active', true)->internal()->orderBy('name')->get(),
         ])->layout('components.layouts.app', ['title' => __('Dashboard Operativo - ').config('app.name')]);
     }
 }

@@ -7,8 +7,10 @@ use App\Enums\Substatus;
 use App\Livewire\Backlog\Index as BacklogIndex;
 use App\Livewire\Dashboard\Index;
 use App\Livewire\Kanban\Board;
+use App\Livewire\Orders\ArchivedOrders;
 use App\Livewire\Orders\CreateOrderModal;
 use App\Livewire\Orders\OrderDetailModal;
+use App\Livewire\Planner\WeeklyPlanner;
 use App\Models\Designer;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -222,5 +224,42 @@ class AutocompleteAndFilterTest extends TestCase
 
         $this->assertTrue($newOrder->fresh()->in_workspace);
         $this->assertFalse($newOrder->fresh()->is_new_from_trello);
+    }
+
+    public function test_external_designers_are_excluded_from_filters(): void
+    {
+        $euraliz = Designer::create([
+            'name' => 'Euralíz',
+            'active' => true,
+            'is_external' => false,
+            'color_type' => 'magenta',
+        ]);
+
+        $external = Designer::create([
+            'name' => 'Diseñador Externo',
+            'active' => true,
+            'is_external' => true,
+            'color_type' => 'amber',
+        ]);
+
+        // Weekly Planner filters
+        Livewire::test(WeeklyPlanner::class)
+            ->assertViewHas('allDesigners', fn ($des) => $des->pluck('id')->contains($euraliz->id) && ! $des->pluck('id')->contains($external->id));
+
+        // Dashboard pills filter
+        Livewire::test(Index::class)
+            ->assertViewHas('designers', fn ($des) => $des->pluck('id')->contains($euraliz->id) && ! $des->pluck('id')->contains($external->id));
+
+        // Kanban Board filter
+        Livewire::test(Board::class)
+            ->assertViewHas('designers', fn ($des) => $des->pluck('id')->contains($euraliz->id) && ! $des->pluck('id')->contains($external->id));
+
+        // Backlog filter
+        Livewire::test(BacklogIndex::class)
+            ->assertViewHas('designers', fn ($des) => $des->pluck('id')->contains($euraliz->id) && ! $des->pluck('id')->contains($external->id));
+
+        // Archived Orders filter
+        Livewire::test(ArchivedOrders::class)
+            ->assertViewHas('designers', fn ($des) => $des->pluck('id')->contains($euraliz->id) && ! $des->pluck('id')->contains($external->id));
     }
 }
