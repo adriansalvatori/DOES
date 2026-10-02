@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\SubtaskCategory;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\ActionRequiredResolverService;
@@ -19,6 +20,12 @@ class RelatedTaskObserver
             $task->completed_at = now();
         } elseif ($task->status !== 'done' && $task->completed_at !== null && $task->isDirty('status')) {
             $task->completed_at = null;
+        }
+
+        if ($task->isFollowUp()) {
+            $task->is_work_task = false;
+            $task->category = SubtaskCategory::MANAGEMENT;
+            $task->return_core_status = null;
         }
     }
 

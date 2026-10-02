@@ -261,6 +261,9 @@ class WeeklyPlanner extends Component
             $preset = SubtaskPreset::where('title', $rawTitle)->orWhere('title', $taskTitle)->first();
             $category = $preset?->category ?? SubtaskCategory::detectFromContext($taskTitle, $order);
             $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
+            if ($category === SubtaskCategory::MANAGEMENT || str_contains(strtolower($rawTitle), 'follow up') || str_contains(strtolower($taskTitle), 'follow up')) {
+                $isWorkTask = false;
+            }
 
             $subtask = RelatedTask::create([
                 'order_id' => $order->id,

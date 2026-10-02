@@ -1077,6 +1077,10 @@ class OrderDetailModal extends Component
             ? SubtaskCategory::tryFrom($this->newTaskCategory) ?? SubtaskCategory::detectFromContext($this->newTaskTitle, $order)
             : SubtaskCategory::detectFromContext($this->newTaskTitle, $order);
 
+        if ($category === SubtaskCategory::MANAGEMENT || str_contains(strtolower($this->newTaskTitle), 'follow up')) {
+            $isWork = false;
+        }
+
         $returnStatus = $category->defaultReturnCoreStatus() ?? ($order->core_status !== CoreStatus::TO_DO_TODAY ? $order->core_status : null);
 
         $subtask = $order->relatedTasks()->create([

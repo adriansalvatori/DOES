@@ -172,12 +172,14 @@ class AutomationEngine
                 'order_id' => $order->id,
                 'title' => $taskTitle,
                 'type' => RelatedTaskType::FOLLOW_UP_CAMILA,
+                'category' => SubtaskCategory::MANAGEMENT,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
                 'scheduled_date' => now()->addWeekdays(1)->toDateString(),
                 'due_date' => now()->addWeekdays(1)->toDateString(),
                 'trigger_type' => 'CAMILA_TRANSITION',
                 'priority' => $taskPriority,
+                'is_work_task' => false,
             ]);
         }
 
@@ -637,16 +639,24 @@ class AutomationEngine
             ->exists();
 
         if (! $exists) {
+            $isFollowUp = in_array($type, [
+                RelatedTaskType::FOLLOW_UP_CLIENTE,
+                RelatedTaskType::FOLLOW_UP_CAMILA,
+                RelatedTaskType::FOLLOW_UP_ALTA,
+            ], true) || str_contains(strtolower($title), 'follow up');
+
             RelatedTask::create([
                 'order_id' => $order->id,
                 'title' => $title,
                 'type' => $type,
+                'category' => $isFollowUp ? SubtaskCategory::MANAGEMENT : null,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
                 'scheduled_date' => now()->toDateString(),
                 'due_date' => now()->toDateString(),
                 'trigger_type' => 'CLIENT_FOLLOW_UP_CYCLE',
                 'priority' => 'normal',
+                'is_work_task' => ! $isFollowUp,
             ]);
         }
     }
@@ -676,6 +686,17 @@ class AutomationEngine
                 $q->whereNull('is_work_task')
                     ->orWhere('is_work_task', true);
             })
+            ->where(function ($q) {
+                $q->whereNull('category')
+                    ->orWhere('category', '!=', SubtaskCategory::MANAGEMENT->value);
+            })
+            ->whereNotIn('type', [
+                RelatedTaskType::FOLLOW_UP_CLIENTE->value,
+                RelatedTaskType::FOLLOW_UP_CAMILA->value,
+                RelatedTaskType::FOLLOW_UP_ALTA->value,
+            ])
+            ->where('title', 'not like', '%follow up%')
+            ->where('title', 'not like', '%followup%')
             ->where(function ($q) {
                 $q->whereDate('scheduled_date', '<=', today())
                     ->orWhere(function ($sq) {
@@ -745,6 +766,15 @@ class AutomationEngine
                         $q->whereNull('is_work_task')->orWhere('is_work_task', true);
                     })
                     ->where(function ($q) {
+                        $q->whereNull('category')
+                            ->orWhere('category', '!=', SubtaskCategory::MANAGEMENT->value);
+                    })
+                    ->whereNotIn('type', [
+                        RelatedTaskType::FOLLOW_UP_CLIENTE->value,
+                        RelatedTaskType::FOLLOW_UP_CAMILA->value,
+                        RelatedTaskType::FOLLOW_UP_ALTA->value,
+                    ])
+                    ->where(function ($q) {
                         $q->whereDate('scheduled_date', '<=', today())
                             ->orWhere(function ($sq) {
                                 $sq->whereNull('scheduled_date')
@@ -767,6 +797,15 @@ class AutomationEngine
                         ->where(function ($q) {
                             $q->whereNull('is_work_task')->orWhere('is_work_task', true);
                         })
+                        ->where(function ($q) {
+                            $q->whereNull('category')
+                                ->orWhere('category', '!=', SubtaskCategory::MANAGEMENT->value);
+                        })
+                        ->whereNotIn('type', [
+                            RelatedTaskType::FOLLOW_UP_CLIENTE->value,
+                            RelatedTaskType::FOLLOW_UP_CAMILA->value,
+                            RelatedTaskType::FOLLOW_UP_ALTA->value,
+                        ])
                         ->where(function ($q) {
                             $q->whereNotNull('return_core_status')
                                 ->orWhereIn('category', [

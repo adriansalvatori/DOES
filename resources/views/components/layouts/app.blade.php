@@ -169,23 +169,31 @@
                 <div class="my-2 border-t border-[#e9e9e7]"></div>
 
                 <!-- Team Designers List -->
-                <div id="tour-designer-colors" class="space-y-2">
-                    <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2.5 mb-1">{{ __('Diseñadores') }}</span>
-                    <div class="space-y-2 text-[11px] text-zinc-600 font-medium px-2.5">
-                        <div class="flex items-center gap-2.5 py-0.5" title="Euralíz">
-                            <span class="w-2.5 h-2.5 rounded-full bg-fuchsia-500 shrink-0 ring-2 ring-fuchsia-100" style="background-color: var(--cc-designer_euraliz-solid); ring-color: var(--cc-designer_euraliz-bg-light);"></span>
+                <div id="tour-designer-colors" class="space-y-1">
+                    <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2.5 mb-1.5">{{ __('Diseñadores') }}</span>
+                    <div class="space-y-1 text-xs text-zinc-600 font-medium">
+                        <div class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition hover:bg-[#efefed]/70" title="Euralíz">
+                            <div class="w-4 h-4 flex items-center justify-center shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style="background-color: var(--cc-designer-euraliz-solid, var(--cc-designer_euraliz-solid, #FFA9FF));"></span>
+                            </div>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">Euralíz</span>
                         </div>
-                        <div class="flex items-center gap-2.5 py-0.5" title="César">
-                            <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 shrink-0 ring-2 ring-cyan-100" style="background-color: var(--cc-designer_cesar-solid); ring-color: var(--cc-designer_cesar-bg-light);"></span>
+                        <div class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition hover:bg-[#efefed]/70" title="César">
+                            <div class="w-4 h-4 flex items-center justify-center shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style="background-color: var(--cc-designer-cesar-solid, var(--cc-designer_cesar-solid, #00CDDD));"></span>
+                            </div>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">César</span>
                         </div>
-                        <div class="flex items-center gap-2.5 py-0.5" title="Adrián">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 ring-2 ring-emerald-100" style="background-color: var(--cc-designer_adrian-solid); ring-color: var(--cc-designer_adrian-bg-light);"></span>
+                        <div class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition hover:bg-[#efefed]/70" title="Adrián">
+                            <div class="w-4 h-4 flex items-center justify-center shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style="background-color: var(--cc-designer-adrian-solid, var(--cc-designer_adrian-solid, #5CE0B0));"></span>
+                            </div>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">Adrián</span>
                         </div>
-                        <div class="flex items-center gap-2.5 py-0.5" title="Diseñador Externo">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 ring-2 ring-amber-100" style="background-color: var(--cc-designer_external-solid); ring-color: var(--cc-designer_external-bg-light);"></span>
+                        <div class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition hover:bg-[#efefed]/70" title="{{ __('Diseñador Externo') }}">
+                            <div class="w-4 h-4 flex items-center justify-center shrink-0">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" style="background-color: var(--cc-designer-external-solid, var(--cc-designer_external-solid, #FAD900));"></span>
+                            </div>
                             <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Externo') }}</span>
                         </div>
                     </div>

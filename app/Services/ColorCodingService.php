@@ -514,6 +514,16 @@ class ColorCodingService
             $lines[] = "    {$varPrefix}-bg-subtle: {$p['bg_subtle']};";
             $lines[] = "    {$varPrefix}-text-dark: {$p['text_dark']};";
             $lines[] = "    {$varPrefix}-border: {$p['border']};";
+
+            if (str_contains($key, '_')) {
+                $varPrefixUnder = '--cc-'.$key;
+                $lines[] = "    {$varPrefixUnder}-solid: {$p['solid']};";
+                $lines[] = "    {$varPrefixUnder}-text-on-solid: {$p['text_on_solid']};";
+                $lines[] = "    {$varPrefixUnder}-bg-light: {$p['bg_light']};";
+                $lines[] = "    {$varPrefixUnder}-bg-subtle: {$p['bg_subtle']};";
+                $lines[] = "    {$varPrefixUnder}-text-dark: {$p['text_dark']};";
+                $lines[] = "    {$varPrefixUnder}-border: {$p['border']};";
+            }
         }
 
         $lines[] = '}';

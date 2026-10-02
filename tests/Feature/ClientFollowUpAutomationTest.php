@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Models\Designer;
 use App\Models\Order;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
@@ -17,6 +18,12 @@ use Tests\TestCase;
 class ClientFollowUpAutomationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Designer::create(['name' => 'Adrián', 'active' => true]);
+    }
 
     public function test_moving_order_to_enviado_al_cliente_sets_last_sent_to_client_at_and_logs_event(): void
     {

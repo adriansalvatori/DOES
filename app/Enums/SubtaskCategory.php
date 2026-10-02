@@ -112,6 +112,11 @@ enum SubtaskCategory: string
     {
         $titleLower = mb_strtolower(trim($title), 'UTF-8');
 
+        // Check for Follow Up or Management keywords FIRST so they don't get misclassified by client/camila
+        if (preg_match('/\b(follow\s*up|followup|llamar?|medidas?|survey|confirmar|solicitar)\b/u', $titleLower)) {
+            return self::MANAGEMENT;
+        }
+
         // 1. Explicit keyword matching takes precedence when specific keywords are present
         if (preg_match('/\b(cliente|client|proof)\b/u', $titleLower)) {
             return self::CLIENT_ADJUSTMENTS;
@@ -123,10 +128,6 @@ enum SubtaskCategory: string
 
         if (preg_match('/\b(producci[oó]n|alta|taller)\b/u', $titleLower)) {
             return self::PRODUCTION_ADJUSTMENTS;
-        }
-
-        if (preg_match('/\b(medidas?|survey|confirmar|solicitar|llamar?)\b/u', $titleLower)) {
-            return self::MANAGEMENT;
         }
 
         // 2. Fall back to current order status context

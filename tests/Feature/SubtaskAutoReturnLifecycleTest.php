@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
 use App\Enums\SubtaskCategory;
 use App\Livewire\Orders\OrderDetailModal;
@@ -208,5 +209,73 @@ class SubtaskAutoReturnLifecycleTest extends TestCase
         $this->assertEquals(CoreStatus::ENVIADO_AL_CLIENTE, $order->core_status);
         $this->assertEquals(Substatus::WAITING_FOR_CLIENT, $order->substatus);
         $this->assertTrue($order->done_today);
+    }
+
+    public function test_automated_client_follow_up_is_management_task_and_does_not_change_order_core_status(): void
+    {
+        $designer = Designer::create(['name' => 'Adrián', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'SUPERMERCADOS TALPA',
+            'task_name' => 'Brochure Design',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'substatus' => Substatus::WAITING_FOR_CLIENT,
+            'last_sent_to_client_at' => now()->subWeekdays(3),
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        app(AutomationEngine::class)->runDailyAutomations();
+
+        $task = $order->relatedTasks()->where('title', 'Follow Up Cliente #1')->first();
+        $this->assertNotNull($task);
+        $this->assertTrue($task->isFollowUp());
+        $this->assertFalse($task->is_work_task);
+        $this->assertFalse($task->isWorkTask());
+        $this->assertEquals(SubtaskCategory::MANAGEMENT, $task->category);
+
+        $order->refresh();
+        // The order core status MUST NOT change to TO_DO_TODAY
+        $this->assertEquals(CoreStatus::ENVIADO_AL_CLIENTE, $order->core_status);
+        $this->assertEquals(Substatus::WAITING_FOR_CLIENT, $order->substatus);
+
+        // Marking the follow-up task done must also keep the order in ENVIADO_AL_CLIENTE
+        $task->update(['status' => 'done', 'completed_at' => now()]);
+        app(AutomationEngine::class)->evaluateSubtaskCompletionAutoDone($order);
+
+        $order->refresh();
+        $this->assertEquals(CoreStatus::ENVIADO_AL_CLIENTE, $order->core_status);
+    }
+
+    public function test_automated_camila_follow_up_is_management_task_and_does_not_change_order_core_status(): void
+    {
+        $designer = Designer::create(['name' => 'Camila', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'CLIENT CORP',
+            'task_name' => 'Logo Review',
+            'core_status' => CoreStatus::ENVIADO_A_CAMILA,
+            'substatus' => Substatus::CAMBIOS_CAMILA,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $task = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Follow Up Camila',
+            'type' => RelatedTaskType::FOLLOW_UP_CAMILA,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => now()->toDateString(),
+            'due_date' => now()->toDateString(),
+        ]);
+
+        $this->assertTrue($task->isFollowUp());
+        $this->assertFalse($task->is_work_task);
+        $this->assertFalse($task->isWorkTask());
+        $this->assertEquals(SubtaskCategory::MANAGEMENT, $task->category);
+
+        $order->refresh();
+        $this->assertEquals(CoreStatus::ENVIADO_A_CAMILA, $order->core_status);
     }
 }

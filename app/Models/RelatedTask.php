@@ -50,6 +50,10 @@ class RelatedTask extends Model
 
     public function getCategoryAttribute(): SubtaskCategory
     {
+        if ($this->isFollowUp()) {
+            return SubtaskCategory::MANAGEMENT;
+        }
+
         if ($this->attributes['category'] ?? null) {
             return $this->attributes['category'] instanceof SubtaskCategory
                 ? $this->attributes['category']
@@ -57,6 +61,15 @@ class RelatedTask extends Model
         }
 
         return SubtaskCategory::detectFromContext($this->title ?? '', $this->order);
+    }
+
+    public function getIsWorkTaskAttribute(): bool
+    {
+        if ($this->isFollowUp() || ($this->attributes['category'] ?? null) === SubtaskCategory::MANAGEMENT->value) {
+            return false;
+        }
+
+        return (bool) ($this->attributes['is_work_task'] ?? true);
     }
 
     public function order(): BelongsTo
@@ -157,6 +170,10 @@ class RelatedTask extends Model
 
     public function isWorkTask(): bool
     {
+        if ($this->isFollowUp() || $this->category === SubtaskCategory::MANAGEMENT) {
+            return false;
+        }
+
         return (bool) $this->is_work_task && $this->trigger_type === null;
     }
 
@@ -222,15 +239,19 @@ class RelatedTask extends Model
 
     public function isFollowUp(): bool
     {
-        if ($this->type && in_array($this->type, [
-            RelatedTaskType::FOLLOW_UP_CLIENTE,
-            RelatedTaskType::FOLLOW_UP_CAMILA,
-            RelatedTaskType::FOLLOW_UP_ALTA,
-        ], true)) {
+        $rawType = $this->type instanceof RelatedTaskType ? $this->type->value : (string) ($this->type ?? '');
+
+        if (in_array($rawType, [
+            RelatedTaskType::FOLLOW_UP_CLIENTE->value,
+            RelatedTaskType::FOLLOW_UP_CAMILA->value,
+            RelatedTaskType::FOLLOW_UP_ALTA->value,
+        ], true) || ($this->trigger_type === 'CLIENT_FOLLOW_UP_CYCLE')) {
             return true;
         }
 
-        return str_contains(strtolower($this->title), 'follow up');
+        $titleLower = mb_strtolower($this->title ?? '', 'UTF-8');
+
+        return str_contains($titleLower, 'follow up') || str_contains($titleLower, 'followup') || str_starts_with($titleLower, 'llamar');
     }
 
     /**
