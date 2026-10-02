@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SubtaskCategory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,12 +15,14 @@ class SubtaskPreset extends Model
         'title',
         'emoji',
         'color_theme',
+        'category',
         'sort_order',
         'is_active',
         'is_work_task',
     ];
 
     protected $casts = [
+        'category' => SubtaskCategory::class,
         'is_active' => 'boolean',
         'is_work_task' => 'boolean',
         'sort_order' => 'integer',

@@ -27,6 +27,8 @@ class SubtaskPresets extends Component
 
     public string $color_theme = 'sky';
 
+    public string $category = 'new_design';
+
     public bool $is_active = true;
 
     public bool $is_work_task = true;
@@ -45,6 +47,7 @@ class SubtaskPresets extends Component
             'title' => 'required|string|max:100|unique:subtask_presets,title,'.$this->editingId,
             'emoji' => 'nullable|string|max:50',
             'color_theme' => 'required|string|in:sky,purple,emerald,amber,rose,violet,indigo,stone',
+            'category' => 'required|string|in:client_adjustments,camila_adjustments,production_adjustments,new_design,management',
             'is_active' => 'boolean',
             'is_work_task' => 'boolean',
         ];
@@ -64,9 +67,10 @@ class SubtaskPresets extends Component
 
     public function openCreateModal(): void
     {
-        $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'is_active', 'is_work_task']);
+        $this->reset(['editingId', 'title', 'emoji', 'color_theme', 'category', 'is_active', 'is_work_task']);
         $this->emoji = 'sparkles';
         $this->color_theme = 'sky';
+        $this->category = 'new_design';
         $this->is_active = true;
         $this->is_work_task = true;
         $this->showModal = true;
@@ -79,6 +83,7 @@ class SubtaskPresets extends Component
         $this->title = $preset->title;
         $this->emoji = $preset->emoji ?? '';
         $this->color_theme = $preset->color_theme ?? 'sky';
+        $this->category = $preset->category?->value ?? 'new_design';
         $this->is_active = (bool) $preset->is_active;
         $this->is_work_task = (bool) $preset->is_work_task;
         $this->showModal = true;

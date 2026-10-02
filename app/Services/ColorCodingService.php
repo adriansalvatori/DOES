@@ -160,6 +160,20 @@ class ColorCodingService
                 ],
                 'presets' => ['#3b82f6', '#2563eb', '#1d4ed8', '#0ea5e9', '#0284c7', '#6366f1'],
             ],
+            'urgent' => [
+                'category' => 'workflow',
+                'category_name' => __('Flujo de Trabajo'),
+                'name' => __('Urgente & Atraso Preventivo'),
+                'description' => __('Afecta subtareas automáticas de retraso, alertas prioritarias y tareas marcadas como urgentes.'),
+                'default_hex' => '#ef4444', // Red
+                'icon' => 'alert-circle',
+                'affects' => [
+                    __('Subtareas automáticas: Correo atraso y prevención de retraso'),
+                    __('Weekly Planner: Tareas y subtareas con prioridad urgente'),
+                    __('Detalle de orden: Alertas críticas y acciones urgentes'),
+                ],
+                'presets' => ['#ef4444', '#dc2626', '#b91c1c', '#f43f5e', '#e11d48', '#ea580c'],
+            ],
             'cs_hold' => [
                 'category' => 'workflow',
                 'category_name' => __('Flujo de Trabajo'),

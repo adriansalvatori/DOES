@@ -123,8 +123,15 @@
                                 </span>
                             </div>
 
-                            <!-- Right Side Controls: Trabajo/Gestión badge + Active Toggle & Actions -->
+                            <!-- Right Side Controls: Category badge + Trabajo/Gestión badge + Active Toggle & Actions -->
                             <div class="flex items-center gap-2.5 shrink-0">
+                                <!-- Category Badge -->
+                                @if($preset->category)
+                                    <span class="text-[10px] px-2 py-0.5 rounded-md border font-medium shrink-0 flex items-center gap-1 {{ $preset->category->badgeStyle() }}" title="{{ __('Al completar hoy, envía la orden a: ') . $preset->category->returnActionLabel() }}">
+                                        <span>{{ $preset->category->shortReturnLabel() }}</span>
+                                    </span>
+                                @endif
+
                                 <!-- Trabajo / Gestión Badge (Positioned next to Active status) -->
                                 @if($preset->is_work_task)
                                     <span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-200 font-bold shrink-0 flex items-center gap-1">
@@ -243,12 +250,14 @@
                     initialIsWorkTask: null,
                     initialEmoji: null,
                     initialColorTheme: null,
+                    initialCategory: null,
                     initialIsActive: null,
                     init() {
                         this.initialTitle = $wire.title || '';
                         this.initialIsWorkTask = Boolean($wire.is_work_task);
                         this.initialEmoji = $wire.emoji || '';
                         this.initialColorTheme = $wire.color_theme || '';
+                        this.initialCategory = $wire.category || 'new_design';
                         this.initialIsActive = Boolean($wire.is_active);
                         window.KudosDirtyGuard.register('subtask-preset-modal', () => this.isDirty());
                         this.$cleanup(() => window.KudosDirtyGuard.unregister('subtask-preset-modal'));
@@ -259,6 +268,7 @@
                                Boolean($wire.is_work_task) !== this.initialIsWorkTask ||
                                ($wire.emoji || '') !== this.initialEmoji ||
                                ($wire.color_theme || '') !== this.initialColorTheme ||
+                               ($wire.category || '') !== this.initialCategory ||
                                Boolean($wire.is_active) !== this.initialIsActive;
                     },
                     confirmClose(action) {
@@ -330,6 +340,62 @@
                                 <span>{{ __('Gestión') }}</span>
                             </button>
                         </div>
+                    </div>
+
+                    <!-- When marked as done, send to... -->
+                    <div class="space-y-1.5" x-data="{ 
+                        open: false, 
+                        selected: @entangle('category'),
+                        options: {
+                            'new_design': { label: '{{ __('Volver al estado anterior') }}', dot: 'bg-emerald-500' },
+                            'client_adjustments': { label: '{{ __('Enviado al Cliente') }}', dot: 'bg-blue-500' },
+                            'camila_adjustments': { label: '{{ __('Enviado a Camila') }}', dot: 'bg-purple-500' },
+                            'production_adjustments': { label: '{{ __('En Producción') }}', dot: 'bg-pink-500' },
+                            'management': { label: '{{ __('No mover la orden') }}', dot: 'bg-stone-400' }
+                        }
+                    }">
+                        <label class="block font-semibold text-zinc-700 text-xs mb-1">
+                            {{ __('Al marcar como lista, enviar orden a...') }}
+                        </label>
+                        <div class="relative">
+                            <button 
+                                type="button" 
+                                @click="open = !open" 
+                                class="w-full bg-[#fbfbfa] hover:bg-white focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-xl px-3 py-2 text-xs text-zinc-800 flex items-center justify-between transition shadow-2xs font-medium cursor-pointer">
+                                <span class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="options[selected]?.dot || 'bg-emerald-500'"></span>
+                                    <span x-text="options[selected]?.label || '{{ __('Volver al estado anterior') }}'"></span>
+                                </span>
+                                <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200" ::class="{ 'rotate-180': open }" />
+                            </button>
+                            <div 
+                                x-show="open" 
+                                @click.outside="open = false" 
+                                x-cloak 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                class="absolute left-0 right-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 space-y-0.5 text-left text-xs">
+                                <template x-for="(opt, key) in options" :key="key">
+                                    <button 
+                                        type="button" 
+                                        @click="selected = key; open = false" 
+                                        class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-stone-100" 
+                                        :class="selected === key ? 'font-bold text-zinc-900 bg-stone-50' : 'text-zinc-700'">
+                                        <span class="flex items-center gap-2">
+                                            <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="opt.dot"></span>
+                                            <span x-text="opt.label"></span>
+                                        </span>
+                                        <span x-show="selected === key">
+                                            <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5]" />
+                                        </span>
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-zinc-500">
+                            {{ __('Cuando se completen las subtareas de hoy, la orden se moverá automáticamente a este estado.') }}
+                        </p>
                     </div>
 
                     <!-- Lucide Icon Library Grid Picker -->

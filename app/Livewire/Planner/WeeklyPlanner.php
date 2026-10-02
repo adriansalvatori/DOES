@@ -5,6 +5,7 @@ namespace App\Livewire\Planner;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Enums\SubtaskCategory;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -255,12 +256,15 @@ class WeeklyPlanner extends Component
             $taskTitle = RelatedTask::cleanTitleForOrder($rawTitle, $order);
 
             $preset = SubtaskPreset::where('title', $rawTitle)->orWhere('title', $taskTitle)->first();
+            $category = $preset?->category ?? SubtaskCategory::detectFromContext($taskTitle, $order);
             $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
 
             $subtask = RelatedTask::create([
                 'order_id' => $order->id,
                 'title' => $taskTitle,
                 'type' => RelatedTaskType::SUBTASK->value,
+                'category' => $category,
+                'return_core_status' => $category->defaultReturnCoreStatus() ?? ($order->core_status !== CoreStatus::TO_DO_TODAY ? $order->core_status : null),
                 'scheduled_date' => $scheduledDate->toDateString(),
                 'assignee_id' => $assigneeId,
                 'status' => 'todo',
@@ -282,7 +286,13 @@ class WeeklyPlanner extends Component
                 } else {
                     $previousStatus = $order->core_status;
                     $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
-                    if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                    if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
+                        $updateData['origin_core_status'] = $previousStatus;
+                        $updateData['origin_substatus'] = $order->substatus;
+                    }
+                    if ($category->triggerSubstatus()) {
+                        $updateData['substatus'] = $category->triggerSubstatus();
+                    } elseif ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
                         $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
                     } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
                         $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
@@ -305,6 +315,7 @@ class WeeklyPlanner extends Component
                 'metadata' => [
                     'task_id' => $subtask->id,
                     'task_title' => $taskTitle,
+                    'category' => $category->value,
                     'date' => $scheduledDate->toDateString(),
                     'is_work_task' => $isWorkTask,
                 ],
@@ -337,12 +348,14 @@ class WeeklyPlanner extends Component
             // Note type subtask (no order attached)
             $taskTitle = trim($title) ?: __('Nota sin nombre');
             $preset = SubtaskPreset::where('title', $taskTitle)->first();
+            $category = $preset?->category ?? SubtaskCategory::MANAGEMENT;
             $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
 
             $subtask = RelatedTask::create([
                 'order_id' => null,
                 'title' => $taskTitle,
                 'type' => RelatedTaskType::SUBTASK->value,
+                'category' => $category,
                 'scheduled_date' => $scheduledDate->toDateString(),
                 'assignee_id' => $designerId ?: null,
                 'status' => 'todo',
@@ -377,7 +390,20 @@ class WeeklyPlanner extends Component
                 $updateData['substatus'] = Substatus::TICKET;
                 $updateData['archived_at'] = null;
             } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                $previousStatus = $order->core_status;
                 $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
+                if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
+                    $updateData['origin_core_status'] = $previousStatus;
+                    $updateData['origin_substatus'] = $order->substatus;
+                }
+                $category = $subtask->category;
+                if ($category->triggerSubstatus()) {
+                    $updateData['substatus'] = $category->triggerSubstatus();
+                } elseif ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                    $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
+                } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                    $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
+                }
             }
 
             $order->update($updateData);

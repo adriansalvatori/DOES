@@ -141,100 +141,257 @@
             
             <!-- Flyout Header (Notion Page Header) -->
             <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white sticky top-0 z-20 space-y-3">
-                
-                <!-- TOP UTILITY ACTION BAR (Fluid flex wrapping) -->
-                <div class="flex flex-wrap items-center justify-between gap-2.5">
+                          <!-- TOP UTILITY ACTION BAR (Horizontally aligned) -->
+                <div class="flex items-center justify-between gap-3 min-w-0">
                     <!-- Left: Clean WO & Creation Timestamp Tag -->
                     <div class="flex items-center gap-2 shrink-0">
                         @if($order->wo_number)
                             <x-wo-badge :number="$order->wo_number" variant="dark" class="px-2 py-0.5 text-[11px] tracking-wide" show-copy-icon />
                         @else
                             <span class="px-2 py-0.5 rounded font-mono text-[11px] font-semibold bg-stone-100 text-zinc-500 border border-stone-200">
-                                SIN WO
+                                {{ __('SIN WO') }}
                             </span>
                         @endif
 
                         @if($order->is_missing_from_trello)
-                            <span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-stone-200 text-stone-700 border border-stone-300 flex items-center gap-1 shadow-2xs">
+                            <span class="px-2 py-0.5 rounded font-mono text-[11px] font-bold bg-stone-200 text-stone-700 border border-stone-300 flex items-center gap-1 shadow-2xs" title="{{ __('Falta en Trello') }}">
                                 <x-lucide-alert-triangle class="w-3 h-3 text-stone-600" />
-                                <span>FALTA EN TRELLO</span>
+                                <span class="hidden sm:inline">{{ __('FALTA EN TRELLO') }}</span>
                             </span>
                         @endif
 
                         <span class="text-zinc-300">•</span>
 
-                        <span class="text-xs font-mono text-zinc-500 flex items-center gap-1">
+                        <span class="text-xs font-mono text-zinc-500 flex items-center gap-1 whitespace-nowrap">
                             <x-lucide-clock class="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                            <span>{{ $order->trello_created_at ? $order->trello_created_at->format('d M, Y (H:i)') : 'N/A' }}</span>
+                            <span>{{ ($order->trello_created_at ?? $order->created_at)?->format('d M, Y (H:i)') ?? 'N/A' }}</span>
                         </span>
                     </div>
 
-                    <!-- Right: Action Buttons (Fluid flex wrapping) -->
-                    <div class="flex flex-wrap items-center gap-1.5 min-w-0 justify-end flex-1">
-                        @if($order->trello_url)
-                            <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" 
-                               class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0" title="Abrir en Trello">
-                                <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="hidden xs:inline">Ver en Trello</span>
-                                <span class="xs:hidden">Trello</span>
-                            </a>
-                        @endif
-
+                    <!-- Right: Edit, Duplicate, Approve, Three-dots menu, Close X -->
+                    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                        <!-- Edit Button -->
                         @if(!$isEditing)
-                            <button wire:click="startEditing" @click="window.KudosModalStack?.bringToFront('order-detail-modal')" class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0" title="Editar campos">
+                            <button 
+                                type="button"
+                                wire:click="startEditing" 
+                                @click="window.KudosModalStack?.bringToFront('order-detail-modal')" 
+                                class="h-8 px-2.5 py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 active:bg-stone-200 text-zinc-700 hover:text-zinc-900 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs" 
+                                title="{{ __('Editar campos de la orden') }}">
                                 <x-lucide-pencil class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span>Editar</span>
-                            </button>
-                            <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0" title="Duplicar esta orden">
-                                <x-lucide-copy class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="hidden sm:inline">Duplicar</span>
-                            </button>
-                        @endif
-
-                        @if(!$order->in_workspace)
-                            <button wire:click="addToWorkspaceDirectly" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0">
-                                <x-lucide-plus-circle class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                <span>Añadir a Workspace</span>
+                                <span>{{ __('Editar') }}</span>
                             </button>
                         @else
-                            <button wire:click="moveToBacklog" wire:confirm="¿Mover esta orden de regreso al Backlog?" class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0">
-                                <x-lucide-archive class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span>A Backlog</span>
-                            </button>
-                        @endif
-
-                        @if($order->isBlocked())
-                            <button wire:click="openUnblockModal" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer">
-                                <x-lucide-unlock class="w-3.5 h-3.5 shrink-0" />
-                                <span>Desbloquear</span>
-                            </button>
-                        @endif
-
-                        @if(!$order->approved || in_array($order->core_status, [\App\Enums\CoreStatus::ENVIADO_AL_CLIENTE, \App\Enums\CoreStatus::ENVIADO_A_CAMILA]))
-                            <button wire:click="openApprovalModal" class="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer">
-                                <x-lucide-check-circle-2 class="w-3.5 h-3.5 shrink-0" />
-                                <span>Aprobar</span>
-                            </button>
-                        @endif
-
-                        <!-- Move to Trashcan Button (Admin & Coordinator only) -->
-                        @if(!auth()->user()?->isDesigner() && !auth()->user()?->isSales())
                             <button 
-                                wire:click="deleteOrder" 
-                                wire:confirm="¿Estás seguro de mover la orden '{{ $order->company_name }}' a la Papelera de Reciclaje?" 
-                                class="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium text-xs border border-rose-200 transition flex items-center gap-1.5 shrink-0 cursor-pointer" 
-                                title="Mover a la Papelera de Reciclaje">
-                                <x-lucide-trash-2 class="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                                <span class="hidden sm:inline">Enviar a Papelera</span>
-                                <span class="sm:hidden">Papelera</span>
+                                type="button"
+                                @click.prevent="confirmClose(() => $wire.cancelEditing())" 
+                                class="h-8 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 font-medium text-xs border border-stone-200 transition flex items-center gap-1.5 shrink-0 cursor-pointer" 
+                                title="{{ __('Cancelar edición') }}">
+                                <x-lucide-x class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span>{{ __('Cancelar') }}</span>
                             </button>
                         @endif
 
-                        <div class="h-4 w-px bg-stone-200 mx-0.5 hidden sm:block"></div>
-
-                        <button @click="confirmClose(() => $wire.closeModal())" class="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition shrink-0 cursor-pointer" title="Cerrar panel">
-                            <x-lucide-x class="w-4 h-4" />
+                        <!-- Duplicate Button -->
+                        <button 
+                            type="button"
+                            wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" 
+                            class="h-8 px-2.5 py-1.5 rounded-lg bg-[#f7f7f5] hover:bg-stone-200 active:bg-stone-200 text-zinc-700 hover:text-zinc-900 font-medium text-xs border border-[#e9e9e7] transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs" 
+                            title="{{ __('Duplicar esta orden') }}">
+                            <x-lucide-copy class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span>{{ __('Duplicar') }}</span>
                         </button>
+
+                        <!-- Approve Button -->
+                        @if($order->approved && !in_array($order->core_status, [\App\Enums\CoreStatus::ENVIADO_AL_CLIENTE, \App\Enums\CoreStatus::ENVIADO_A_CAMILA]))
+                            <button 
+                                type="button"
+                                wire:click="openApprovalModal" 
+                                class="h-8 px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-100 text-emerald-700 border border-emerald-200 font-medium text-xs transition flex items-center gap-1.5 shrink-0 cursor-pointer shadow-2xs" 
+                                title="{{ __('Orden aprobada. Clic para ver o registrar nueva aprobación.') }}">
+                                <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span>{{ __('Aprobada') }}</span>
+                            </button>
+                        @else
+                            <button 
+                                type="button"
+                                wire:click="openApprovalModal" 
+                                class="h-8 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+                                title="{{ __('Aprobar orden') }}">
+                                <x-lucide-check-circle-2 class="w-3.5 h-3.5 shrink-0" />
+                                <span>{{ __('Aprobar') }}</span>
+                            </button>
+                        @endif
+
+                        <!-- Three Dots Dropdown Menu -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button 
+                                type="button"
+                                @click="open = !open" 
+                                @click.outside="open = false" 
+                                class="h-8 w-8 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition flex items-center justify-center shrink-0 cursor-pointer"
+                                :class="{ 'text-zinc-800 bg-stone-100': open }"
+                                title="{{ __('Más opciones') }}"
+                                aria-label="{{ __('Más opciones') }}">
+                                <x-lucide-more-horizontal class="w-4 h-4 shrink-0" />
+                            </button>
+
+                            <!-- Dropdown Popover -->
+                            <div 
+                                x-show="open" 
+                                x-transition:enter="transition ease-out duration-100"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-75"
+                                x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                x-cloak
+                                class="absolute right-0 top-full mt-1.5 z-[350] w-64 bg-white border border-[#e9e9e7] rounded-xl shadow-xl py-1 text-xs divide-y divide-stone-100">
+                                
+                                <div class="py-1">
+                                    <!-- Option 1: Mark as Blocked / Unblock -->
+                                    @if($order->isBlocked())
+                                        <button 
+                                            type="button"
+                                            wire:click="openUnblockModal" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center justify-between gap-2.5 cursor-pointer group">
+                                            <div class="flex items-center gap-2.5 min-w-0">
+                                                <div class="w-6 h-6 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0 group-hover:bg-emerald-100">
+                                                    <x-lucide-unlock class="w-3.5 h-3.5" />
+                                                </div>
+                                                <div>
+                                                    <span class="font-medium text-emerald-900 block leading-tight">{{ __('Desbloquear orden') }}</span>
+                                                    <span class="text-[10px] text-zinc-400 block leading-tight">{{ __('Reactivar orden pausada') }}</span>
+                                                </div>
+                                            </div>
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                                {{ __('Bloqueada') }}
+                                            </span>
+                                        </button>
+                                    @else
+                                        <button 
+                                            type="button"
+                                            wire:click="openBlockModal" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center gap-2.5 cursor-pointer group">
+                                            <div class="w-6 h-6 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-amber-100">
+                                                <x-lucide-ban class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <span class="font-medium text-zinc-800 block leading-tight">{{ __('Marcar como bloqueada') }}</span>
+                                                <span class="text-[10px] text-zinc-400 block leading-tight">{{ __('Pausar por falta de medidas o info') }}</span>
+                                            </div>
+                                        </button>
+                                    @endif
+
+                                    <!-- Option 2: Send to Backlog (or Add to Workspace if already in backlog) -->
+                                    @if($order->in_workspace)
+                                        <button 
+                                            type="button"
+                                            wire:click="moveToBacklog" 
+                                            wire:confirm="{{ __('¿Mover esta orden de regreso al Backlog?') }}" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center gap-2.5 cursor-pointer group">
+                                            <div class="w-6 h-6 rounded-md bg-stone-100 border border-stone-200 flex items-center justify-center text-zinc-600 shrink-0 group-hover:bg-stone-200">
+                                                <x-lucide-archive class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <span class="font-medium text-zinc-800 block leading-tight">{{ __('Enviar a Backlog') }}</span>
+                                                <span class="text-[10px] text-zinc-400 block leading-tight">{{ __('Quitar del workspace activo') }}</span>
+                                            </div>
+                                        </button>
+                                    @else
+                                        <button 
+                                            type="button"
+                                            wire:click="addToWorkspaceDirectly" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center gap-2.5 cursor-pointer group">
+                                            <div class="w-6 h-6 rounded-md bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0 group-hover:bg-emerald-100">
+                                                <x-lucide-plus-circle class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <span class="font-medium text-zinc-800 block leading-tight">{{ __('Añadir a Workspace') }}</span>
+                                                <span class="text-[10px] text-zinc-400 block leading-tight">{{ __('Mover a órdenes en progreso') }}</span>
+                                            </div>
+                                        </button>
+                                    @endif
+
+                                    <!-- Option 3: View this order in Trello -->
+                                    @if($order->trello_url)
+                                        <a 
+                                            href="{{ $order->trello_url }}" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center justify-between gap-2.5 cursor-pointer group">
+                                            <div class="flex items-center gap-2.5 min-w-0">
+                                                <div class="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shrink-0 group-hover:bg-blue-100">
+                                                    <x-lucide-external-link class="w-3.5 h-3.5" />
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <span class="font-medium text-zinc-800 block truncate leading-tight">{{ __('Ver orden en Trello') }}</span>
+                                                    <span class="text-[10px] text-zinc-400 block truncate leading-tight">{{ __('Abrir tarjeta en pestaña nueva') }}</span>
+                                                </div>
+                                            </div>
+                                            <x-lucide-arrow-up-right class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-600 shrink-0" />
+                                        </a>
+                                    @else
+                                        <div class="w-full text-left px-3 py-2 text-zinc-400 flex items-center gap-2.5 opacity-60 cursor-not-allowed">
+                                            <div class="w-6 h-6 rounded-md bg-stone-100 border border-stone-200 flex items-center justify-center text-zinc-400 shrink-0">
+                                                <x-lucide-external-link class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <span class="font-medium text-zinc-400 block leading-tight">{{ __('Sin tarjeta en Trello') }}</span>
+                                                <span class="text-[10px] text-zinc-400 block leading-tight">{{ __('No vinculada a Trello') }}</span>
+                                            </div>
+                                        </div>
+                                    @endif
+
+                                    <!-- Option 5: Active orders from this client -->
+                                    <button 
+                                        type="button"
+                                        wire:click="openClientDetail" 
+                                        @click="open = false"
+                                        class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center justify-between gap-2.5 cursor-pointer group">
+                                        <div class="flex items-center gap-2.5 min-w-0">
+                                            <div class="w-6 h-6 rounded-md bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0 group-hover:bg-indigo-100">
+                                                <x-lucide-layers class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0">
+                                                <span class="font-medium text-zinc-800 block truncate leading-tight">{{ __('Órdenes activas del cliente') }}</span>
+                                                <span class="text-[10px] text-zinc-400 block truncate leading-tight">{{ $order->company_name ?: __('Ver cliente') }}</span>
+                                            </div>
+                                        </div>
+                                        @if(isset($clientOtherActiveOrders) && $clientOtherActiveOrders->isNotEmpty())
+                                            <span class="px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-mono text-[10px] font-bold shrink-0">
+                                                {{ $clientOtherActiveOrders->count() + 1 }}
+                                            </span>
+                                        @endif
+                                    </button>
+                                </div>
+
+                                <!-- Option 4: Send to Trashcan (Admin & Coordinator only) -->
+                                @if(!auth()->user()?->isDesigner() && !auth()->user()?->isSales())
+                                    <div class="py-1">
+                                        <button 
+                                            type="button"
+                                            wire:click="deleteOrder" 
+                                            wire:confirm="{{ __('¿Estás seguro de mover la orden :name a la Papelera de Reciclaje?', ['name' => $order->company_name]) }}" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-700 transition flex items-center gap-2.5 cursor-pointer group">
+                                            <div class="w-6 h-6 rounded-md bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-100">
+                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <span class="font-medium text-rose-700 block leading-tight">{{ __('Enviar a papelera') }}</span>
+                                                <span class="text-[10px] text-rose-500/80 block leading-tight">{{ __('Mover a reciclaje') }}</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -360,7 +517,7 @@
 
                     <!-- Substatus Badge -->
                     @if($order->substatus)
-                        <span class="px-2.5 py-1 rounded-md text-[11px] font-medium border flex items-center gap-1.5 {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyleAttribute() }}">
+                        <span class="px-2.5 py-1 rounded-md text-[11px] font-medium border flex items-center gap-1.5 {{ $order->substatus->badgeStyle() }}" style="{{ $order->substatus->getInlineBadgeStyle() }}">
                             <x-lucide-alert-circle class="w-3.5 h-3.5 shrink-0" />
                             <span>{{ $order->substatus->value }}</span>
                         </span>
@@ -1286,6 +1443,7 @@
                                         editing: false, 
                                         title: @js($task->title),
                                         openType: false,
+                                        openCategory: false,
                                         openDate: false,
                                         openAssignee: false,
                                         assigneeSearch: '',
@@ -1300,7 +1458,7 @@
                                         }
                                     }" 
                                     class="bg-[#fbfbfa] hover:bg-stone-50/90 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs group relative"
-                                    :class="{ 'z-30': openType || openDate || openAssignee }"
+                                    :class="{ 'z-30': openType || openCategory || openDate || openAssignee }"
                                 >
                                     <!-- Read Mode View -->
                                     <div x-show="!editing" class="flex items-center justify-between gap-3 w-full min-w-0">
@@ -1316,12 +1474,67 @@
 
                                             <!-- Subtask Title & Tags -->
                                             <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
+                                                @if($task->isSystemTask())
+                                                    <span 
+                                                        style="{{ $task->systemBadgeStyle() }}"
+                                                        class="px-1.5 py-0.5 rounded text-[9.5px] font-bold shrink-0 flex items-center gap-1 border shadow-2xs"
+                                                        title="Subtarea generada automáticamente por el sistema ({{ $task->colorCodingLabel() }})">
+                                                        <span class="w-1.5 h-1.5 rounded-full" style="{{ $task->systemDotStyle() }}"></span>
+                                                        <span>{{ $task->colorCodingShortLabel() }}</span>
+                                                    </span>
+                                                @endif
+
                                                 <span 
                                                     @click="editing = true; $nextTick(() => $refs.editInput.focus())"
                                                     class="font-semibold text-zinc-900 text-xs break-words cursor-pointer hover:text-indigo-600 hover:underline decoration-stone-300 underline-offset-2 transition {{ $task->isDone() ? 'line-through text-zinc-400 font-normal' : '' }}" 
                                                     title="Haz clic para editar el nombre de la subtarea">
                                                     {{ $task->title }}
                                                 </span>
+
+                                                <!-- Subtask Category Badge (Clickable dropdown) -->
+                                                <div class="relative inline-block">
+                                                    @php
+                                                        $cat = $task->category;
+                                                    @endphp
+                                                    <button 
+                                                        type="button" 
+                                                        @click.stop="openCategory = !openCategory; openType = false; openDate = false; openAssignee = false"
+                                                        class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer border hover:ring-2 hover:ring-offset-1 {{ $cat->badgeStyle() }}"
+                                                        title="Al completar: {{ $cat->returnActionLabel() }}. Clic para cambiar">
+                                                        <span class="w-1.5 h-1.5 rounded-full {{ $cat->dotColorClass() }}"></span>
+                                                        <span>{{ $cat->shortReturnLabel() }}</span>
+                                                        <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
+                                                    </button>
+
+                                                    <!-- Category Dropdown Menu -->
+                                                    <div 
+                                                        x-show="openCategory" 
+                                                        @click.outside="openCategory = false"
+                                                        x-cloak
+                                                        x-transition:enter="transition ease-out duration-100"
+                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                        class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[210px] space-y-1 text-left text-xs">
+                                                        <div class="px-2 py-0.5 font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
+                                                            Al marcar como lista, enviar a:
+                                                        </div>
+                                                        @foreach(\App\Enums\SubtaskCategory::cases() as $categoryCase)
+                                                            <button 
+                                                                type="button"
+                                                                wire:click="updateTaskCategory({{ $task->id }}, '{{ $categoryCase->value }}')"
+                                                                @click="openCategory = false"
+                                                                class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-stone-100 {{ $cat === $categoryCase ? 'font-bold text-zinc-900 bg-stone-100' : 'text-zinc-700' }}">
+                                                                <span class="flex items-center gap-2">
+                                                                    <span class="w-2 h-2 rounded-full shrink-0 {{ $categoryCase->dotColorClass() }}"></span>
+                                                                    <span>{{ $categoryCase->label() }}</span>
+                                                                </span>
+                                                                @if($cat === $categoryCase)
+                                                                    <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5]" />
+                                                                @endif
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
 
                                                 <!-- Work vs Admin Badge (Clickable dropdown) -->
                                                 <div class="relative inline-block">
@@ -1585,12 +1798,61 @@
 
                         <!-- Add Manual Subtask Form -->
                         <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs">
-                            <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
                                     <x-lucide-plus-circle class="w-3.5 h-3.5 text-zinc-500" />
                                     <span>Añadir Nueva Subtarea</span>
                                 </span>
                                 <div class="flex items-center gap-1.5 text-xs">
+                                    <!-- Destination Selector: When marked as done, send to... -->
+                                    <div x-data="{ 
+                                        open: false, 
+                                        selected: @entangle('newTaskCategory'),
+                                        options: {
+                                            '': { label: '{{ __('Al terminar: Auto') }}', dot: 'bg-zinc-400' },
+                                            'new_design': { label: '{{ __('Volver al estado anterior') }}', dot: 'bg-emerald-500' },
+                                            'client_adjustments': { label: '{{ __('Enviado al Cliente') }}', dot: 'bg-blue-500' },
+                                            'camila_adjustments': { label: '{{ __('Enviado a Camila') }}', dot: 'bg-purple-500' },
+                                            'production_adjustments': { label: '{{ __('En Producción') }}', dot: 'bg-pink-500' },
+                                            'management': { label: '{{ __('No mover la orden') }}', dot: 'bg-stone-400' }
+                                        }
+                                    }" class="relative">
+                                        <button 
+                                            type="button" 
+                                            @click="open = !open" 
+                                            class="bg-white border border-stone-200 rounded-md px-2 py-1 text-[10px] text-zinc-700 font-semibold focus:outline-none flex items-center gap-1.5 cursor-pointer shadow-2xs hover:bg-stone-50"
+                                            title="{{ __('Al marcar como lista, enviar orden a...') }}">
+                                            <span class="w-2 h-2 rounded-full shrink-0" :class="options[selected]?.dot || 'bg-zinc-400'"></span>
+                                            <span x-text="options[selected]?.label || '{{ __('Al terminar: Auto') }}'"></span>
+                                            <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 transition-transform duration-200" ::class="{ 'rotate-180': open }" />
+                                        </button>
+                                        <div 
+                                            x-show="open" 
+                                            @click.outside="open = false" 
+                                            x-cloak 
+                                            x-transition:enter="transition ease-out duration-100"
+                                            x-transition:enter-start="opacity-0 scale-95"
+                                            x-transition:enter-end="opacity-100 scale-100"
+                                            class="absolute right-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[200px] space-y-0.5 text-left text-xs">
+                                            <template x-for="(opt, key) in options" :key="key">
+                                                <button 
+                                                    type="button" 
+                                                    @click="selected = key; open = false" 
+                                                    class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-stone-100" 
+                                                    :class="selected === key ? 'font-bold text-zinc-900 bg-stone-50' : 'text-zinc-700'">
+                                                    <span class="flex items-center gap-2">
+                                                        <span class="w-2 h-2 rounded-full shrink-0" :class="opt.dot"></span>
+                                                        <span x-text="opt.label"></span>
+                                                    </span>
+                                                    <span x-show="selected === key">
+                                                        <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5]" />
+                                                    </span>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+
+                                    <!-- Work vs Admin buttons -->
                                     <button 
                                         type="button" 
                                         wire:click="$set('newTaskIsWork', true)" 
@@ -1610,12 +1872,29 @@
                                 </div>
                             </div>
 
+                            @if($order && ($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE || $order->origin_core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE))
+                                <div class="flex items-center gap-1.5 text-[10px] text-sky-800 bg-sky-50 border border-sky-200 px-2 py-1 rounded-lg font-medium">
+                                    <x-lucide-corner-down-left class="w-3 h-3 text-sky-600 shrink-0" />
+                                    <span>Al completar las subtareas de hoy, este pedido volverá automáticamente a <strong>Enviado al Cliente</strong>.</span>
+                                </div>
+                            @elseif($order && ($order->core_status === \App\Enums\CoreStatus::ENVIADO_A_CAMILA || $order->origin_core_status === \App\Enums\CoreStatus::ENVIADO_A_CAMILA))
+                                <div class="flex items-center gap-1.5 text-[10px] text-purple-800 bg-purple-50 border border-purple-200 px-2 py-1 rounded-lg font-medium">
+                                    <x-lucide-corner-down-left class="w-3 h-3 text-purple-600 shrink-0" />
+                                    <span>Al completar las subtareas de hoy, este pedido volverá automáticamente a <strong>Enviado a Camila</strong>.</span>
+                                </div>
+                            @elseif($order && ($order->core_status === \App\Enums\CoreStatus::EN_PRODUCCION || $order->origin_core_status === \App\Enums\CoreStatus::EN_PRODUCCION))
+                                <div class="flex items-center gap-1.5 text-[10px] text-pink-800 bg-pink-50 border border-pink-200 px-2 py-1 rounded-lg font-medium">
+                                    <x-lucide-corner-down-left class="w-3 h-3 text-pink-600 shrink-0" />
+                                    <span>Al completar las subtareas de hoy, este pedido volverá automáticamente a <strong>En Producción</strong>.</span>
+                                </div>
+                            @endif
+
                             <div class="flex flex-col sm:flex-row items-center gap-2">
                                 <input 
                                     type="text" 
                                     wire:model="newTaskTitle" 
                                     wire:keydown.enter="addTask" 
-                                    placeholder="Nombre de la subtarea (ej: Ajustes Camila, Confirmar medidas...)" 
+                                    placeholder="Nombre de la subtarea (ej: Ajustes cliente, Confirmar medidas...)" 
                                     class="bg-white border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 flex-1 font-normal w-full">
 
                                 <div class="flex items-center gap-1.5 w-full sm:w-auto shrink-0">

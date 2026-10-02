@@ -3,12 +3,14 @@
 namespace Tests\Feature\Settings;
 
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
 use App\Enums\Substatus as SubstatusEnum;
 use App\Enums\UserRole;
 use App\Livewire\Settings\ColorCoding;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Models\RelatedTask;
 use App\Models\Substatus;
 use App\Models\User;
 use App\Services\ColorCodingService;
@@ -220,5 +222,77 @@ class ColorCodingSettingsTest extends TestCase
 
         $this->assertEquals($customProductionPink, $productionEvent->fresh()->getNodeHexColor());
         $this->assertStringContainsString($customProductionPink, $productionEvent->fresh()->getNodeInlineStyle());
+    }
+
+    public function test_urgent_color_coding_is_available_and_applies_to_subtasks(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $service = app(ColorCodingService::class);
+
+        $defs = ColorCodingService::defaultDefinitions();
+        $this->assertArrayHasKey('urgent', $defs);
+        $this->assertEquals('#ef4444', $defs['urgent']['default_hex']);
+
+        // 1. Verify admin can customize urgent color
+        $customRed = '#DC2626';
+        Livewire::actingAs($admin)
+            ->test(ColorCoding::class)
+            ->call('saveColor', 'urgent', $customRed)
+            ->assertHasNoErrors();
+
+        $this->assertEquals($customRed, $service->getHex('urgent'));
+
+        // 2. Test subtask color coding resolution
+        $order = Order::create([
+            'company_name' => 'ACME CORP',
+            'task_name' => 'BANNER DESIGN',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $urgentSubtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'ENVIAR CORREO DE ATRASO',
+            'type' => RelatedTaskType::CORREO_ATRASO,
+            'trigger_type' => 'AUTOMATIC_OVERDUE_DETECTION',
+            'priority' => 'urgent',
+            'is_work_task' => false,
+        ]);
+
+        $this->assertEquals('urgent', $urgentSubtask->colorCodingKey());
+        $this->assertStringContainsString('var(--cc-urgent-bg-light)', $urgentSubtask->systemBadgeStyle());
+        $this->assertStringContainsString('var(--cc-urgent-solid)', $urgentSubtask->systemDotStyle());
+        $this->assertStringContainsString('var(--cc-urgent-text-dark)', $urgentSubtask->systemTextStyle());
+        $this->assertEquals(__('Urgente'), $urgentSubtask->colorCodingShortLabel());
+
+        $altaSubtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'PONER EN ALTA',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'trigger_type' => 'SYSTEM_AUTOMATION',
+            'is_work_task' => false,
+        ]);
+        $this->assertEquals('production', $altaSubtask->colorCodingKey());
+        $this->assertStringContainsString('var(--cc-production-bg-light)', $altaSubtask->systemBadgeStyle());
+
+        $clientSubtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'FOLLOW UP CLIENTE',
+            'type' => RelatedTaskType::FOLLOW_UP_CLIENTE,
+            'trigger_type' => 'SYSTEM_AUTOMATION',
+            'is_work_task' => false,
+        ]);
+        $this->assertEquals('client', $clientSubtask->colorCodingKey());
+        $this->assertStringContainsString('var(--cc-client-bg-light)', $clientSubtask->systemBadgeStyle());
+
+        $camilaSubtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'FOLLOW UP CAMILA',
+            'type' => RelatedTaskType::FOLLOW_UP_CAMILA,
+            'trigger_type' => 'SYSTEM_AUTOMATION',
+            'is_work_task' => false,
+        ]);
+        $this->assertEquals('camila', $camilaSubtask->colorCodingKey());
+        $this->assertStringContainsString('var(--cc-camila-bg-light)', $camilaSubtask->systemBadgeStyle());
     }
 }

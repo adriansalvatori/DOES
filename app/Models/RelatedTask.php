@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
+use App\Enums\SubtaskCategory;
 use App\Services\AutomationEngine;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +20,8 @@ class RelatedTask extends Model
         'order_id',
         'title',
         'type',
+        'category',
+        'return_core_status',
         'status',
         'assignee_id',
         'scheduled_date',
@@ -31,12 +35,25 @@ class RelatedTask extends Model
 
     protected $casts = [
         'type' => RelatedTaskType::class,
+        'category' => SubtaskCategory::class,
+        'return_core_status' => CoreStatus::class,
         'scheduled_date' => 'date',
         'due_date' => 'date',
         'completed_at' => 'datetime',
         'is_work_task' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    public function getCategoryAttribute(): SubtaskCategory
+    {
+        if ($this->attributes['category'] ?? null) {
+            return $this->attributes['category'] instanceof SubtaskCategory
+                ? $this->attributes['category']
+                : SubtaskCategory::tryFrom($this->attributes['category']) ?? SubtaskCategory::NEW_DESIGN;
+        }
+
+        return SubtaskCategory::detectFromContext($this->title ?? '', $this->order);
+    }
 
     public function order(): BelongsTo
     {
@@ -210,5 +227,128 @@ class RelatedTask extends Model
         }
 
         return str_contains(strtolower($this->title), 'follow up');
+    }
+
+    /**
+     * Determine the matching ColorCoding key for this subtask.
+     */
+    public function colorCodingKey(): string
+    {
+        $rawType = is_string($this->type) ? $this->type : $this->type?->value;
+        $titleUpper = mb_strtoupper($this->title ?? '');
+
+        // 1. Urgente / Atraso Preventivo
+        if (
+            $this->priority === 'urgent'
+            || $this->trigger_type === 'AUTOMATIC_OVERDUE_DETECTION'
+            || $rawType === RelatedTaskType::CORREO_ATRASO->value
+            || str_contains($titleUpper, 'ATRASO')
+            || str_contains($titleUpper, 'URGENTE')
+        ) {
+            return 'urgent';
+        }
+
+        // 2. Poner en ALTA / Producción
+        if (
+            in_array($rawType, [
+                RelatedTaskType::PONER_ALTA->value,
+                RelatedTaskType::FOLLOW_UP_ALTA->value,
+                RelatedTaskType::AJUSTES_PRODUCCION->value,
+            ], true)
+            || $this->category === SubtaskCategory::PRODUCTION_ADJUSTMENTS
+            || str_contains($titleUpper, 'ALTA')
+            || str_contains($titleUpper, 'PRODUCCI')
+        ) {
+            return 'production';
+        }
+
+        // 3. Follow-up Camila / QA
+        if (
+            $rawType === RelatedTaskType::FOLLOW_UP_CAMILA->value
+            || $this->category === SubtaskCategory::CAMILA_ADJUSTMENTS
+            || str_contains($titleUpper, 'CAMILA')
+        ) {
+            return 'camila';
+        }
+
+        // 4. Follow-up / Correo Cliente / Solicitar Info
+        if (
+            in_array($rawType, [
+                RelatedTaskType::BIENVENIDA->value,
+                RelatedTaskType::SOLICITAR_INFO->value,
+                RelatedTaskType::FOLLOW_UP_CLIENTE->value,
+            ], true)
+            || $this->category === SubtaskCategory::CLIENT_ADJUSTMENTS
+            || str_contains($titleUpper, 'CLIENTE')
+            || str_contains($titleUpper, 'CORREO')
+            || str_contains($titleUpper, 'BIENVENIDA')
+            || str_contains($titleUpper, 'SOLICITAR')
+        ) {
+            return 'client';
+        }
+
+        // 5. Bloqueado / Resolver
+        if (
+            in_array($rawType, [
+                RelatedTaskType::RESOLVER->value,
+                RelatedTaskType::BLOCKED->value,
+            ], true)
+            || str_contains($titleUpper, 'RESOLVER')
+            || str_contains($titleUpper, 'BLOQUE')
+        ) {
+            return 'blocked';
+        }
+
+        return 'camila';
+    }
+
+    public function colorCodingCssKey(): string
+    {
+        return str_replace('_', '-', $this->colorCodingKey());
+    }
+
+    public function systemBadgeStyle(): string
+    {
+        $k = $this->colorCodingCssKey();
+
+        return "background-color: var(--cc-{$k}-bg-light); color: var(--cc-{$k}-text-dark); border-color: var(--cc-{$k}-border);";
+    }
+
+    public function systemDotStyle(): string
+    {
+        $k = $this->colorCodingCssKey();
+
+        return "background-color: var(--cc-{$k}-solid);";
+    }
+
+    public function systemTextStyle(): string
+    {
+        $k = $this->colorCodingCssKey();
+
+        return "color: var(--cc-{$k}-text-dark);";
+    }
+
+    public function colorCodingLabel(): string
+    {
+        return match ($this->colorCodingKey()) {
+            'urgent' => __('Urgente / Atraso'),
+            'production' => __('ALTA / Producción'),
+            'client' => __('Cliente / Seguimiento'),
+            'camila' => __('Camila / QA'),
+            'blocked' => __('Bloqueado / Resolver'),
+            default => __('Sistema'),
+        };
+    }
+
+    public function colorCodingShortLabel(): string
+    {
+        return match ($this->colorCodingKey()) {
+            'urgent' => __('Urgente'),
+            'production' => __('ALTA'),
+            'client' => __('Cliente'),
+            'camila' => __('QA'),
+            'blocked' => __('Bloqueo'),
+            default => __('Sistema'),
+        };
     }
 }

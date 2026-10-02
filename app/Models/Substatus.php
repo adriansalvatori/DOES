@@ -55,13 +55,34 @@ class Substatus extends Model
         return $query->where('is_global', true);
     }
 
+    public function getInlineBadgeStyle(): string
+    {
+        if ($this->bg_color && $this->text_color) {
+            $borderColor = $this->border_color ?: $this->bg_color;
+
+            return "background-color: {$this->bg_color}; color: {$this->text_color}; border-color: {$borderColor};";
+        }
+
+        return '';
+    }
+
     public function getInlineBadgeStyleAttribute(): string
     {
-        return "background-color: {$this->bg_color}; color: {$this->text_color}; border-color: {$this->border_color};";
+        return $this->getInlineBadgeStyle();
     }
 
     public function getValueAttribute(): string
     {
+        return $this->name;
+    }
+
+    public function label(): string
+    {
+        $enum = \App\Enums\Substatus::tryFrom($this->name);
+        if ($enum) {
+            return $enum->label();
+        }
+
         return $this->name;
     }
 

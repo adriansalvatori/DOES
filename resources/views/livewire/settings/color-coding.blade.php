@@ -83,6 +83,8 @@
                                     <x-lucide-calendar-check class="w-5 h-5" />
                                 @elseif($item['icon'] === 'alert-triangle')
                                     <x-lucide-alert-triangle class="w-5 h-5" />
+                                @elseif($item['icon'] === 'alert-circle')
+                                    <x-lucide-alert-circle class="w-5 h-5" />
                                 @elseif($item['icon'] === 'message-square')
                                     <x-lucide-message-square class="w-5 h-5" />
                                 @elseif($item['icon'] === 'headphones')

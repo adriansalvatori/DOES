@@ -36,6 +36,8 @@ class Order extends Model
         'trello_title',
         'designer_id',
         'core_status',
+        'origin_core_status',
+        'origin_substatus',
         'substatus',
         'flags',
         'blocking_reason',
@@ -78,6 +80,8 @@ class Order extends Model
     protected $casts = [
         'trello_created_at' => 'datetime',
         'core_status' => CoreStatus::class,
+        'origin_core_status' => CoreStatus::class,
+        'origin_substatus' => Substatus::class,
         'substatus' => Substatus::class,
         'flags' => 'array',
         'blocking_reason' => BlockingReason::class,

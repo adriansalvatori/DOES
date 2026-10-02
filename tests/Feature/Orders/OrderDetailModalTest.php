@@ -8,6 +8,7 @@ use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\Substatus as SubstatusModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -640,5 +641,31 @@ class OrderDetailModalTest extends TestCase
             ->assertSee('Urgente (Mismo Día)')
             ->assertSee('HOY HACE 31 MIN')
             ->assertDontSee('Anterior: miércoles 30');
+    }
+
+    public function test_flyout_renders_successfully_with_database_substatuses(): void
+    {
+        SubstatusModel::create([
+            'name' => 'EN ESPERA DE ARCHIVO',
+            'core_status' => CoreStatus::TO_DO_TODAY->value,
+            'bg_color' => '#fef3c7',
+            'text_color' => '#92400e',
+            'border_color' => '#fde68a',
+            'is_global' => false,
+            'is_default' => false,
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'ACME CORP',
+            'task_name' => 'DISENO CATALOGO',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id, true)
+            ->assertSuccessful()
+            ->assertSee('EN ESPERA DE ARCHIVO')
+            ->assertSee('background-color: #fef3c7');
     }
 }

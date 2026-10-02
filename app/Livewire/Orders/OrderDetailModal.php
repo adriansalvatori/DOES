@@ -6,6 +6,7 @@ use App\Contracts\WorkOrderNumberGenerator;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Enums\SubtaskCategory;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
@@ -99,6 +100,8 @@ class OrderDetailModal extends Component
     public $newTaskDate = '';
 
     public $newTaskIsWork = true;
+
+    public $newTaskCategory = '';
 
     // Trello comments state
     public $trelloComments = [];
@@ -1070,9 +1073,17 @@ class OrderDetailModal extends Component
         $taskDate = ! empty($this->newTaskDate) ? Carbon::parse($this->newTaskDate) : now();
         $isWork = (bool) $this->newTaskIsWork;
 
+        $category = ! empty($this->newTaskCategory)
+            ? SubtaskCategory::tryFrom($this->newTaskCategory) ?? SubtaskCategory::detectFromContext($this->newTaskTitle, $order)
+            : SubtaskCategory::detectFromContext($this->newTaskTitle, $order);
+
+        $returnStatus = $category->defaultReturnCoreStatus() ?? ($order->core_status !== CoreStatus::TO_DO_TODAY ? $order->core_status : null);
+
         $subtask = $order->relatedTasks()->create([
             'title' => trim($this->newTaskTitle),
             'type' => RelatedTaskType::RESOLVER,
+            'category' => $category,
+            'return_core_status' => $returnStatus,
             'status' => 'todo',
             'assignee_id' => $order->getPrimaryDesignerId(),
             'scheduled_date' => $taskDate->toDateString(),
@@ -1088,7 +1099,13 @@ class OrderDetailModal extends Component
                     'scheduled_date' => $taskDate->toDateString(),
                     'core_status' => CoreStatus::TO_DO_TODAY,
                 ];
-                if ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
+                    $updateData['origin_core_status'] = $previousStatus;
+                    $updateData['origin_substatus'] = $order->substatus;
+                }
+                if ($category->triggerSubstatus()) {
+                    $updateData['substatus'] = $category->triggerSubstatus();
+                } elseif ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
                     $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
                 } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
                     $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
@@ -1098,7 +1115,22 @@ class OrderDetailModal extends Component
         }
 
         $this->newTaskTitle = '';
+        $this->newTaskCategory = '';
         $this->dispatch('order-updated');
+    }
+
+    public function updateTaskCategory(int|string $taskId, string $categoryValue): void
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $cat = SubtaskCategory::tryFrom($categoryValue) ?? SubtaskCategory::NEW_DESIGN;
+            $task->update([
+                'category' => $cat,
+                'return_core_status' => $cat->defaultReturnCoreStatus() ?? $task->return_core_status,
+            ]);
+            $this->dispatch('order-updated');
+            session()->flash('message', 'Categoría de subtarea actualizada a '.$cat->label().'.');
+        }
     }
 
     public function updateTaskTitle($taskId, $newTitle)
@@ -1150,10 +1182,24 @@ class OrderDetailModal extends Component
             if ($parsedDate && $task->is_work_task && Carbon::parse($parsedDate)->isToday() && $task->order) {
                 $order = $task->order;
                 if ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ARCHIVED) {
-                    $order->update([
+                    $previousStatus = $order->core_status;
+                    $updateData = [
                         'scheduled_date' => $parsedDate,
                         'core_status' => CoreStatus::TO_DO_TODAY,
-                    ]);
+                    ];
+                    if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
+                        $updateData['origin_core_status'] = $previousStatus;
+                        $updateData['origin_substatus'] = $order->substatus;
+                    }
+                    $category = $task->category;
+                    if ($category->triggerSubstatus()) {
+                        $updateData['substatus'] = $category->triggerSubstatus();
+                    } elseif ($previousStatus === CoreStatus::ENVIADO_A_CAMILA) {
+                        $updateData['substatus'] = Substatus::CAMBIOS_CAMILA;
+                    } elseif ($previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                        $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
+                    }
+                    $order->update($updateData);
                 }
             }
 

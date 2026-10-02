@@ -4,6 +4,7 @@
             'id' => $p->id,
             'title' => $p->title,
             'badge_style' => $p->badgeStyle(),
+            'category' => $p->category?->value ?? 'new_design',
             'is_work_task' => (bool) $p->is_work_task,
         ];
     })->values()->toArray();
@@ -997,8 +998,11 @@
                                                                 <div class="min-w-0 flex-1 flex items-center gap-1.5">
                                                                     @if($staskIsNote)
                                                                         <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
+                                                                    @elseif($stask->isSystemTask())
+                                                                        <span class="w-2 h-2 rounded-full shrink-0 shadow-2xs" style="{{ $stask->systemDotStyle() }}" title="Sistema: {{ $stask->colorCodingLabel() }}"></span>
                                                                     @endif
-                                                                    <h5 class="font-semibold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : ($staskIsNote ? 'text-amber-950 font-semibold' : 'text-zinc-900')) }}">
+                                                                    <h5 class="font-semibold text-[11px] truncate leading-tight {{ $stask->isDone() ? 'line-through text-zinc-400' : ($staskIsNote ? 'text-amber-950 font-semibold' : ($stask->isSystemTask() ? 'font-semibold' : 'text-zinc-900')) }}"
+                                                                        @if(!$stask->isDone() && $stask->isSystemTask()) style="{{ $stask->systemTextStyle() }}" @endif>
                                                                         {{ $stask->title }}
                                                                     </h5>
                                                                 </div>
@@ -1019,7 +1023,8 @@
                                                                     class="text-left min-w-0 flex-1 hover:underline group/link">
                                                                     <div class="flex items-center gap-1 min-w-0">
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
-                                                                        <span class="font-semibold text-[10px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? 'text-violet-700' : 'text-zinc-800' }}">{{ $stask->order->company_name }}</span>
+                                                                        <span class="font-semibold text-[10px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? '' : 'text-zinc-800' }}"
+                                                                              @if($stask->isSystemTask()) style="{{ $stask->systemTextStyle() }}" @endif>{{ $stask->order->company_name }}</span>
                                                                         @if($stask->order->isArchived())
                                                                             <span class="inline-flex items-center px-1 py-0.2 text-[8.5px] font-semibold bg-zinc-100 text-zinc-600 rounded border border-zinc-200/80 shrink-0">
                                                                                 {{ __('Archivada') }}
@@ -1032,7 +1037,8 @@
                                                                             </span>
                                                                         @endif
                                                                         @if($stask->order->task_name)
-                                                                            <span class="text-[9.5px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500' }}">• {{ $stask->order->task_name }}</span>
+                                                                            <span class="text-[9.5px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? 'font-medium' : 'text-zinc-500 font-medium' }}"
+                                                                                  @if($stask->isSystemTask()) style="{{ $stask->systemTextStyle() }}; opacity: 0.85;" @endif>• {{ $stask->order->task_name }}</span>
                                                                         @endif
                                                                     </div>
                                                                 </button>
@@ -1475,8 +1481,9 @@
                                                                     <!-- Row 1: Order Details (Company, Location, Task Name) -->
                                                                     <div class="flex items-center gap-1 text-[10.5px] leading-tight min-w-0">
                                                                          <!-- Company Name with Instant Tooltip -->
-                                                                        <div class="relative group/tip min-w-0 shrink">
-                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-700 font-semibold' : 'text-zinc-900 font-semibold') }}">
+                                                                         <div class="relative group/tip min-w-0 shrink">
+                                                                            <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'font-semibold' : 'text-zinc-900 font-semibold') }}"
+                                                                                  @if(!$staskDone && $stask->isSystemTask()) style="{{ $stask->systemTextStyle() }}" @endif>
                                                                                 {{ $stask->order->company_name }}
                                                                             </span>
                                                                             <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -1500,7 +1507,8 @@
                                                                         @if($stask->order->task_name)
                                                                             <!-- Order Name with Instant Tooltip -->
                                                                             <div class="relative group/tip min-w-0 flex-1">
-                                                                                <span class="block truncate uppercase {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'text-violet-600 font-medium' : 'text-zinc-500 font-medium') }} text-[10px]">
+                                                                                <span class="block truncate uppercase {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'font-medium' : 'text-zinc-500 font-medium') }} text-[10px]"
+                                                                                      @if(!$staskDone && $stask->isSystemTask()) style="{{ $stask->systemTextStyle() }}; opacity: 0.85;" @endif>
                                                                                     • {{ $stask->order->task_name }}
                                                                                 </span>
                                                                                 <div class="absolute bottom-full left-0 mb-1 hidden group-hover/tip:flex items-center px-1.5 py-0.5 text-[9.5px] font-medium text-white bg-zinc-900 rounded shadow-md whitespace-nowrap z-50 pointer-events-none">
@@ -1514,14 +1522,23 @@
                                                                     <div class="flex items-center gap-1 text-[10px] leading-tight min-w-0 pt-0.5">
                                                                         <!-- Subtask Title Badge -->
                                                                         @php
-                                                                            $presetMatch = $subtaskPresets->firstWhere('title', $stask->title);
+                                                                            $presetMatch = ! $stask->isSystemTask() ? $subtaskPresets->firstWhere('title', $stask->title) : null;
                                                                         @endphp
                                                                         @if($presetMatch)
                                                                             <span class="px-1.5 py-0.2 rounded text-[9.5px] font-medium border shrink-0 inline-flex items-center gap-1 max-w-full truncate {{ $presetMatch->badgeStyle() }} {{ $staskDone ? 'opacity-50 line-through' : '' }}">
                                                                                 <span class="truncate">{{ $stask->title }}</span>
                                                                             </span>
+                                                                        @elseif($stask->isSystemTask())
+                                                                            <span 
+                                                                                class="font-medium px-1.5 py-0.2 rounded text-[9.5px] border shrink-0 max-w-full truncate inline-flex items-center gap-1 {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : '' }}"
+                                                                                @if(!$staskDone) style="{{ $stask->systemBadgeStyle() }}" @endif>
+                                                                                @if(!$staskDone)
+                                                                                    <span class="w-1.5 h-1.5 rounded-full shrink-0" style="{{ $stask->systemDotStyle() }}"></span>
+                                                                                @endif
+                                                                                <span class="truncate">{{ $stask->title }}</span>
+                                                                            </span>
                                                                         @else
-                                                                            <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] shrink-0 max-w-full truncate {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : ($stask->isSystemTask() ? 'text-violet-800 bg-violet-50 border border-violet-200' : 'text-stone-700 bg-stone-100 border border-stone-200') }}">
+                                                                            <span class="font-medium px-1.5 py-0.2 rounded text-[9.5px] border shrink-0 max-w-full truncate {{ $staskDone ? 'line-through text-zinc-400 bg-stone-100 border-stone-200' : $stask->category->badgeStyle() }}">
                                                                                 <span class="truncate">{{ $stask->title }}</span>
                                                                             </span>
                                                                         @endif

@@ -83,12 +83,19 @@ class ActionRequiredResolverService
             CoreStatus::ON_HOLD,
             CoreStatus::ARCHIVED,
         ], true)) {
-            $hasUncompletedTasks = $order->relatedTasks()
+            $hasUncompletedTodayTasks = $order->relatedTasks()
                 ->where('status', '!=', 'done')
                 ->whereNull('completed_at')
+                ->where(function ($q) {
+                    $q->whereDate('scheduled_date', '<=', today())
+                        ->orWhere(function ($sq) {
+                            $sq->whereNull('scheduled_date')
+                                ->whereDate('due_date', '<=', today());
+                        });
+                })
                 ->exists();
 
-            if ($hasUncompletedTasks) {
+            if ($hasUncompletedTodayTasks) {
                 $order->updateQuietly(['done_today' => false]);
                 $resolved = true;
             }
