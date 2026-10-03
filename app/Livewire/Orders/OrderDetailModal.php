@@ -12,6 +12,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
 use App\Services\OrderTitleParserService;
@@ -48,6 +49,16 @@ class OrderDetailModal extends Component
     public $blockComment = '';
 
     public $requireCustomerService = false;
+
+    public bool $showOnHoldModal = false;
+
+    public string $onHoldReason = '';
+
+    public bool $showResumeModal = false;
+
+    public string $resumeReason = '';
+
+    public ?string $pendingResumeStatus = null;
 
     // Edit Mode state
     public $isEditing = false;
@@ -443,7 +454,19 @@ class OrderDetailModal extends Component
             return;
         }
 
+        if ($newCoreStatus === CoreStatus::ON_HOLD) {
+            $this->openOnHoldModal();
+
+            return;
+        }
+
         $previousStatus = $order->core_status;
+
+        if ($previousStatus === CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ARCHIVED) {
+            $this->openResumeModal($statusValue);
+
+            return;
+        }
 
         $isDoneStatus = in_array($newCoreStatus, [
             CoreStatus::ENVIADO_A_CAMILA,
@@ -513,6 +536,9 @@ class OrderDetailModal extends Component
         } elseif ($value === Substatus::BLOQUEADA->value || $value === 'BLOQUEADA') {
             $this->editCoreStatus = CoreStatus::ENTRANTE->value;
             $this->openBlockModal();
+        } elseif ($value === Substatus::PAUSADO->value || $value === 'PAUSADO') {
+            $this->editCoreStatus = CoreStatus::ON_HOLD->value;
+            $this->openOnHoldModal();
         }
     }
 
@@ -525,7 +551,195 @@ class OrderDetailModal extends Component
 
         if ($value === CoreStatus::ENTRANTE->value || $value === 'ENTRANTE' || $value === 'BLOCKED') {
             $this->openBlockModal();
+        } elseif ($value === CoreStatus::ON_HOLD->value || $value === 'ON HOLD' || $value === 'PAUSA') {
+            $this->openOnHoldModal();
+        } else {
+            $order = Order::find($this->orderId);
+            if ($order && $order->core_status === CoreStatus::ON_HOLD && $value !== CoreStatus::ARCHIVED->value && $value !== 'ARCHIVED') {
+                $this->openResumeModal($value);
+            }
         }
+    }
+
+    public function openOnHoldModal(): void
+    {
+        $this->onHoldReason = '';
+        $this->showOnHoldModal = true;
+    }
+
+    public function closeOnHoldModal(): void
+    {
+        $this->showOnHoldModal = false;
+        $this->onHoldReason = '';
+    }
+
+    public function confirmOnHold(): void
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $this->validate([
+            'onHoldReason' => 'required|string|min:3',
+        ], [
+            'onHoldReason.required' => 'Debes ingresar un motivo para poner la orden en On Hold.',
+            'onHoldReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+        ]);
+
+        $this->showOnHoldModal = false;
+
+        if ($this->isEditing) {
+            $this->editCoreStatus = CoreStatus::ON_HOLD->value;
+            $this->editSubstatus = Substatus::PAUSADO->value;
+            $this->saveOrder();
+
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        $previousStatus = $order->core_status;
+        $newCoreStatus = CoreStatus::ON_HOLD;
+
+        $order->update([
+            'core_status' => $newCoreStatus,
+        ]);
+
+        $this->editCoreStatus = $newCoreStatus->value;
+
+        if ($previousStatus !== $newCoreStatus) {
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+        }
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'MOVED_TO_ON_HOLD',
+            'actor' => auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $previousStatus ? $previousStatus->value : null,
+            'new_value' => $newCoreStatus->value,
+            'metadata' => [
+                'reason' => $this->onHoldReason,
+                'comment' => $this->onHoldReason,
+            ],
+        ]);
+
+        app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
+
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
+            try {
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($success) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $this->onHoldReason = '';
+        $this->openModal($this->orderId);
+        $this->dispatch('order-updated');
+        session()->flash('message', __('Orden :company movida a On Hold.', ['company' => $order->company_name]));
+    }
+
+    public function openResumeModal(?string $targetStatus = null): void
+    {
+        $this->pendingResumeStatus = $targetStatus;
+        $this->resumeReason = '';
+        $this->showResumeModal = true;
+    }
+
+    public function closeResumeModal(): void
+    {
+        $this->showResumeModal = false;
+        $this->pendingResumeStatus = null;
+        $this->resumeReason = '';
+    }
+
+    public function confirmResume(): void
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $this->validate([
+            'resumeReason' => 'required|string|min:3',
+        ], [
+            'resumeReason.required' => 'Debes ingresar un motivo para reanudar la orden.',
+            'resumeReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+        ]);
+
+        $this->showResumeModal = false;
+
+        if ($this->isEditing) {
+            if ($this->pendingResumeStatus) {
+                $this->editCoreStatus = $this->pendingResumeStatus;
+            }
+            $this->saveOrder();
+
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        $previousStatus = $order->core_status;
+        $newCoreStatus = CoreStatus::tryFrom($this->pendingResumeStatus) ?: CoreStatus::TO_DO_TODAY;
+
+        $isDoneStatus = in_array($newCoreStatus, [
+            CoreStatus::ENVIADO_A_CAMILA,
+            CoreStatus::ENVIADO_AL_CLIENTE,
+            CoreStatus::EN_PRODUCCION,
+        ], true);
+
+        $updateData = [
+            'core_status' => $newCoreStatus,
+            'done_today' => $isDoneStatus ? true : $order->done_today,
+        ];
+
+        if ($newCoreStatus === CoreStatus::EN_PRODUCCION && empty($order->substatus)) {
+            $updateData['substatus'] = Substatus::ENVIADO_EN_ALTA;
+        }
+
+        $order->update($updateData);
+
+        $this->editCoreStatus = $newCoreStatus->value;
+        if (isset($updateData['substatus'])) {
+            $this->editSubstatus = $updateData['substatus']->value;
+        }
+
+        if ($previousStatus !== $newCoreStatus) {
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+        }
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'RESUMED_FROM_ON_HOLD',
+            'actor' => auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $previousStatus ? $previousStatus->value : null,
+            'new_value' => $newCoreStatus->value,
+            'metadata' => [
+                'reason' => $this->resumeReason,
+                'comment' => $this->resumeReason,
+            ],
+        ]);
+
+        app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
+
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
+            try {
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($success) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $this->resumeReason = '';
+        $this->openModal($this->orderId);
+        $this->dispatch('order-updated');
+        session()->flash('message', __('Orden :company reanudada.', ['company' => $order->company_name]));
     }
 
     public function openBlockModal()
@@ -691,6 +905,18 @@ class OrderDetailModal extends Component
         $previousStatus = $order->core_status;
         $newCoreStatus = ! empty($this->editCoreStatus) ? CoreStatus::tryFrom($this->editCoreStatus) : $order->core_status;
 
+        if ($newCoreStatus === CoreStatus::ON_HOLD && $previousStatus !== CoreStatus::ON_HOLD && empty($this->onHoldReason)) {
+            $this->openOnHoldModal();
+
+            return;
+        }
+
+        if ($previousStatus === CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ARCHIVED && empty($this->resumeReason)) {
+            $this->openResumeModal($newCoreStatus->value);
+
+            return;
+        }
+
         $cleanLocationName = ! empty($this->editLocationName) ? mb_strtoupper(trim($this->editLocationName), 'UTF-8') : null;
 
         $newDueDate = ! empty($this->editDueDate) ? $this->editDueDate : null;
@@ -739,11 +965,52 @@ class OrderDetailModal extends Component
             $updateData['in_workspace'] = true;
         }
 
+        $oldDueDateStr = $order->current_due_date ? $order->current_due_date->toDateString() : null;
+
         $order->update($updateData);
         $order->syncDesigners($this->editDesignerIds);
 
+        if ($newDueDate && $newDueDate !== $oldDueDateStr) {
+            app(SlaEngine::class)->updateDueDate(
+                $order,
+                Carbon::parse($newDueDate),
+                'Manual due date update in detail modal',
+                'MANUAL_UPDATE',
+                null,
+                auth()->user()?->name ?? 'Usuario'
+            );
+        }
+
         if ($newCoreStatus && $previousStatus !== $newCoreStatus) {
             app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+
+            if ($newCoreStatus === CoreStatus::ON_HOLD && ! empty($this->onHoldReason)) {
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'MOVED_TO_ON_HOLD',
+                    'actor' => auth()->user()?->name ?? 'Usuario',
+                    'previous_value' => $previousStatus ? $previousStatus->value : null,
+                    'new_value' => $newCoreStatus->value,
+                    'metadata' => [
+                        'reason' => $this->onHoldReason,
+                        'comment' => $this->onHoldReason,
+                    ],
+                ]);
+            }
+
+            if ($previousStatus === CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ON_HOLD && ! empty($this->resumeReason)) {
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'RESUMED_FROM_ON_HOLD',
+                    'actor' => auth()->user()?->name ?? 'Usuario',
+                    'previous_value' => $previousStatus ? $previousStatus->value : null,
+                    'new_value' => $newCoreStatus->value,
+                    'metadata' => [
+                        'reason' => $this->resumeReason,
+                        'comment' => $this->resumeReason,
+                    ],
+                ]);
+            }
         }
 
         // Trigger overdue task creation immediately if updated date is today or overdue
@@ -1072,19 +1339,26 @@ class OrderDetailModal extends Component
         $order = Order::findOrFail($this->orderId);
         $taskDate = ! empty($this->newTaskDate) ? Carbon::parse($this->newTaskDate) : now();
         $isWork = (bool) $this->newTaskIsWork;
+        $rawTitle = trim($this->newTaskTitle);
+
+        $preset = SubtaskPreset::where('title', $rawTitle)->first();
 
         $category = ! empty($this->newTaskCategory)
-            ? SubtaskCategory::tryFrom($this->newTaskCategory) ?? SubtaskCategory::detectFromContext($this->newTaskTitle, $order)
-            : SubtaskCategory::detectFromContext($this->newTaskTitle, $order);
+            ? SubtaskCategory::tryFrom($this->newTaskCategory) ?? ($preset?->category ?? SubtaskCategory::detectFromContext($rawTitle, $order))
+            : ($preset?->category ?? SubtaskCategory::detectFromContext($rawTitle, $order));
 
-        if ($category === SubtaskCategory::MANAGEMENT || str_contains(strtolower($this->newTaskTitle), 'follow up')) {
+        if ($preset && $preset->is_work_task !== null) {
+            $isWork = (bool) $preset->is_work_task;
+        }
+
+        if ($category === SubtaskCategory::MANAGEMENT || str_contains(strtolower($rawTitle), 'follow up')) {
             $isWork = false;
         }
 
         $returnStatus = $category->defaultReturnCoreStatus() ?? ($order->core_status !== CoreStatus::TO_DO_TODAY ? $order->core_status : null);
 
         $subtask = $order->relatedTasks()->create([
-            'title' => trim($this->newTaskTitle),
+            'title' => $rawTitle,
             'type' => RelatedTaskType::RESOLVER,
             'category' => $category,
             'return_core_status' => $returnStatus,
@@ -1097,7 +1371,14 @@ class OrderDetailModal extends Component
         ]);
 
         if ($isWork && $taskDate->isToday()) {
-            if ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ARCHIVED) {
+            if ($order->core_status === CoreStatus::ARCHIVED) {
+                $order->update([
+                    'scheduled_date' => $taskDate->toDateString(),
+                    'core_status' => CoreStatus::TO_DO_TODAY,
+                    'substatus' => Substatus::TICKET,
+                    'archived_at' => null,
+                ]);
+            } elseif ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION) {
                 $previousStatus = $order->core_status;
                 $updateData = [
                     'scheduled_date' => $taskDate->toDateString(),
@@ -1312,6 +1593,7 @@ class OrderDetailModal extends Component
             'order' => $order,
             'clientOtherActiveOrders' => $clientOtherActiveOrders,
             'designers' => Designer::where('active', true)->get(),
+            'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
             'coreStatuses' => CoreStatus::cases(),
             'substatuses' => $validSubstatuses,
             'existingCompanies' => Order::inWorkspace()

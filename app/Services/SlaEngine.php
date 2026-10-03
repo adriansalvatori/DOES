@@ -15,7 +15,7 @@ class SlaEngine
 
     public const CLIENT_CHANGES_SLA_DAYS = 2;
 
-    public const MISSING_MEASURES_SLA_DAYS = 2;
+    public const RESUME_FROM_HOLD_SLA_DAYS = 2;
 
     public const CLIENT_FOLLOWUP_INTERVAL_DAYS = 3;
 
@@ -35,14 +35,7 @@ class SlaEngine
             $startDate->addDays(1);
         }
 
-        if (CoreStatus::isPendingDesign($status)) {
-            return $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS);
-        }
-
-        return match ($status) {
-            CoreStatus::ENTRANTE => $startDate->addWeekdays(self::MISSING_MEASURES_SLA_DAYS),
-            default => $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS),
-        };
+        return $startDate->addWeekdays(self::DESIGN_BASE_SLA_DAYS);
     }
 
     /**

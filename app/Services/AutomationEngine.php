@@ -244,6 +244,23 @@ class AutomationEngine
         if ($newStatus === CoreStatus::ON_HOLD && $order->substatus !== Substatus::NO_RESPUESTA && $order->substatus !== Substatus::CUSTOMER_SERVICE_REQUIRED) {
             $order->update(['substatus' => Substatus::PAUSADO]);
         }
+
+        // Handle transitions from ON HOLD -> Active Work Status (Resuming work)
+        if ($previousStatus === CoreStatus::ON_HOLD && $newStatus !== CoreStatus::ON_HOLD && $newStatus !== CoreStatus::ARCHIVED) {
+            $newDueDate = now()->addWeekdays(SlaEngine::RESUME_FROM_HOLD_SLA_DAYS);
+            $this->slaEngine->updateDueDate(
+                $order,
+                $newDueDate,
+                'Order resumed from ON HOLD - 2 day SLA reset',
+                'RESUMED_FROM_ON_HOLD'
+            );
+            $order->removeFlag(Substatus::OVERDUE);
+            $order->removeFlag(Substatus::ALMOST_OVERDUE);
+            if ($order->substatus === Substatus::PAUSADO || $order->substatus === Substatus::CUSTOMER_SERVICE_REQUIRED || $order->substatus === Substatus::NO_RESPUESTA) {
+                $order->substatus = null;
+            }
+            $order->save();
+        }
     }
 
     /**

@@ -1,13 +1,13 @@
-<div wire:poll.3s class="h-full flex flex-col space-y-3 min-h-0 overflow-hidden">
+<div wire:poll.visible.10s class="h-full flex flex-col space-y-3 min-h-0 overflow-hidden">
     
-    @if(isset($newOrdersCount) && $newOrdersCount > 0)
+    @if($this->newOrdersCount > 0)
         <div class="bg-amber-50/90 border border-amber-200 rounded-xl px-3.5 py-2 flex items-center justify-between gap-3 text-xs shrink-0 shadow-2xs">
             <div class="flex items-center gap-2 text-amber-900 font-medium truncate">
                 <span class="flex h-2 w-2 relative shrink-0">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                 </span>
-                <span>{{ __('Hay') }} <strong>{{ $newOrdersCount }}</strong> {{ $newOrdersCount === 1 ? __('nueva orden') : __('nuevas órdenes') }} {{ __('de Trello sin revisar en el Backlog.') }}</span>
+                <span>{{ __('Hay') }} <strong>{{ $this->newOrdersCount }}</strong> {{ $this->newOrdersCount === 1 ? __('nueva orden') : __('nuevas órdenes') }} {{ __('de Trello sin revisar en el Backlog.') }}</span>
             </div>
             <a href="{{ route('backlog') }}" class="px-2.5 py-1 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-bold transition shrink-0 flex items-center gap-1">
                 <span>{{ __('Ver Nuevas Órdenes') }}</span>
@@ -146,7 +146,7 @@
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
                     </button>
-                    @foreach($existingCompanies as $comp)
+                    @foreach($this->existingCompanies as $comp)
                         <button 
                             type="button"
                             x-show="!search || '{{ strtolower(addslashes($comp)) }}'.includes(search.toLowerCase())"
@@ -203,7 +203,7 @@
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
                     </button>
-                    @foreach($existingResponsibles as $resp)
+                    @foreach($this->existingResponsibles as $resp)
                         <button 
                             type="button"
                             x-show="!search || '{{ strtolower(addslashes($resp)) }}'.includes(search.toLowerCase())"
@@ -238,7 +238,7 @@
                         @if($designerFilter === 'all')
                             {{ __('Diseñadores (Todos)') }}
                         @else
-                            {{ $designers->firstWhere('id', $designerFilter)?->name ?? __('Diseñadores (Todos)') }}
+                            {{ $this->designers->firstWhere('id', $designerFilter)?->name ?? __('Diseñadores (Todos)') }}
                         @endif
                     </span>
                     <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
@@ -266,7 +266,7 @@
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
                     </button>
-                    @foreach($designers as $designer)
+                    @foreach($this->designers as $designer)
                         <button 
                             type="button"
                             x-show="!search || '{{ strtolower(addslashes($designer->name)) }}'.includes(search.toLowerCase())"
@@ -459,12 +459,10 @@
                                 <span>{{ __('Enviar a Archivo') }}</span>
                             </h3>
                         </div>
-                        @php
-                            $archivedTotalCount = \App\Models\Order::archived()->count();
-                        @endphp
+
                         <a href="/archived" title="{{ __('Ver Órdenes Archivadas') }}" class="flex items-center gap-1 px-2 py-0.5 rounded bg-white text-[11px] font-mono text-zinc-700 border border-stone-300 font-bold shrink-0 hover:bg-stone-100 transition">
                             <x-lucide-external-link class="w-3 h-3 text-zinc-500" />
-                            <span>{{ $archivedTotalCount }}</span>
+                            <span>{{ $this->archivedCount }}</span>
                         </a>
                     </div>
 
@@ -487,7 +485,7 @@
                 </div>
             @else
                 @php
-                    $columnOrders = $orders->filter(fn($o) => $o->core_status === $column);
+                    $columnOrders = $this->orders->filter(fn($o) => $o->core_status === $column);
                 @endphp
                 <div 
                     x-data="{ isTarget: false }"
@@ -511,8 +509,8 @@
                     </div>
                     @php
                         $columnTasks = match ($column) {
-                            \App\Enums\CoreStatus::TO_DO_TODAY => $relatedTasks->filter(fn($t) => $t->order !== null && !$t->isDone() && $t->type !== \App\Enums\RelatedTaskType::BLOCKED),
-                            \App\Enums\CoreStatus::ENTRANTE => $relatedTasks->filter(fn($t) => $t->order !== null && !$t->isDone() && ($t->type === \App\Enums\RelatedTaskType::BLOCKED || $t->type === \App\Enums\RelatedTaskType::RESOLVER)),
+                            \App\Enums\CoreStatus::TO_DO_TODAY => $this->relatedTasks->filter(fn($t) => $t->order !== null && !$t->isDone() && $t->type !== \App\Enums\RelatedTaskType::BLOCKED),
+                            \App\Enums\CoreStatus::ENTRANTE => $this->relatedTasks->filter(fn($t) => $t->order !== null && !$t->isDone() && ($t->type === \App\Enums\RelatedTaskType::BLOCKED || $t->type === \App\Enums\RelatedTaskType::RESOLVER)),
                             default => collect(),
                         };
                         $totalItemCount = $columnOrders->count() + $columnTasks->count();
@@ -545,216 +543,7 @@
                     @else
                         <!-- 1. URGENTE ORDER CARDS (ALWAYS TOP OF EVERYTHING IN COLUMN!) -->
                         @foreach($urgentColumnOrders as $order)
-                            <div 
-                                wire:key="order-card-{{ $order->id }}"
-                                x-data="{ showTasks: false }"
-                                @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                draggable="true"
-                                @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-                                class="rounded-xl p-3 space-y-2 transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-lg {{ ($order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE) ? 'bg-stone-100/90 border border-stone-300 text-zinc-500 opacity-60 grayscale-[50%] shadow-none ring-0' : ($order->done_today ? 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40') }}">
-                                
-                                @php $isBlocked = $order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE; @endphp
-                                <!-- Card Header: Badges & Designer -->
-                                <div class="flex items-start justify-between gap-1.5 min-w-0">
-                                    <div class="flex flex-wrap gap-1 min-w-0">
-                                        @if($order->is_missing_from_trello)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-stone-200 text-stone-700 border border-stone-300 shrink-0 whitespace-nowrap flex items-center gap-0.5">
-                                                <x-lucide-alert-triangle class="w-2.5 h-2.5 text-stone-600" />
-                                                <span>FALTA EN TRELLO</span>
-                                            </span>
-                                        @endif
-                                        @if($order->wo_number)
-                                            <x-wo-badge :number="$order->wo_number" variant="dark" />
-                                        @endif
-
-                                        <!-- URGENTE Badge (Muted when done_today or isBlocked) -->
-                                        @if($order->done_today || $isBlocked)
-                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-stone-200 text-stone-600 border border-stone-300 flex items-center gap-1 shrink-0 opacity-80" title="Urgente">
-                                                @if($order->done_today)
-                                                    <x-lucide-check class="w-2.5 h-2.5 text-stone-500" />
-                                                @endif
-                                                <span>URGENTE</span>
-                                            </span>
-                                        @else
-                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-600 text-white shadow-2xs shadow-red-500/30 flex items-center gap-1.5 shrink-0">
-                                                <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                                                <span>URGENTE</span>
-                                            </span>
-                                        @endif
-
-                                        @if($order->responsible_person)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-1 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-indigo-50 text-indigo-800 border border-indigo-200' }}">
-                                                <x-lucide-user class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : 'text-indigo-600' }} shrink-0" />
-                                                <span>{{ $order->responsible_person }}</span>
-                                            </span>
-                                        @endif
-                                        @if($order->substatus && $order->substatus->value !== 'URGENTE')
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}" style="{{ ! $isBlocked ? $order->substatus->getInlineBadgeStyle() : '' }}">
-                                                {{ $order->substatus->value }}
-                                            </span>
-                                        @endif
-                                        @if($order->customer_service_required)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-50 text-pink-700 border border-pink-200' }}">
-                                                ATENCIÓN CLIENTE
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center gap-1 shrink-0 ml-1">
-                                        @if($order->trello_url)
-                                            <a href="{{ $order->trello_url }}" @click.stop target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
-                                                <x-lucide-external-link class="w-3.5 h-3.5" />
-                                            </a>
-                                        @endif
-                                        <div class="flex flex-wrap items-center gap-1 shrink-0 justify-end">
-                                            @forelse($order->assigned_designers as $des)
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
-                                                    {{ $des->name }}
-                                                </span>
-                                            @empty
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-800 shrink-0 whitespace-nowrap">
-                                                    Sin Asignar
-                                                </span>
-                                            @endforelse
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Card Title & Company -->
-                                <div class="min-w-0 flex items-start gap-2">
-                                    <button 
-                                        wire:click="toggleDoneToday({{ $order->id }})" 
-                                        @click.stop
-                                        type="button"
-                                        class="w-4 h-4 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
-                                        title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
-                                        <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                    </button>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center justify-between gap-1.5 min-w-0">
-                                            <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <h4 class="font-normal text-[11px] text-zinc-600 truncate leading-snug min-w-0 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                                @if($order->location_text)
-                                                    <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="Locación: {{ $order->location_text }}">
-                                                        <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                                                        <span class="truncate max-w-[120px]">{{ $order->location_text }}</span>
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            @if($order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE)
-                                                <button 
-                                                    wire:click="openUnblockModal({{ $order->id }})" 
-                                                    @click.stop 
-                                                    type="button"
-                                                    class="px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1 shrink-0 cursor-pointer opacity-100 filter-none"
-                                                    title="Desbloquear orden">
-                                                    <x-lucide-unlock class="w-3.5 h-3.5 text-white stroke-[2.5]" />
-                                                    <span>Desbloquear</span>
-                                                </button>
-                                            @endif
-                                        </div>
-                                        <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
-                                    </div>
-                                </div>
-
-                                <!-- Metadata & Due Date -->
-                                <div class="flex items-center justify-between text-[10px] pt-1.5 border-t gap-1 {{ $order->done_today ? 'border-stone-200 text-zinc-500' : 'border-red-200/60' }}">
-                                    <div class="flex items-center gap-1 min-w-0">
-                                        <x-lucide-calendar class="w-3.5 h-3.5 {{ $order->done_today ? 'text-zinc-400' : 'text-red-600' }} shrink-0" />
-                                        <span class="font-mono font-medium truncate {{ $order->done_today ? 'text-zinc-500' : 'text-red-700 font-bold' }}">
-                                            {{ $order->current_due_date ? $order->current_due_date->format('d M') : 'N/A' }}
-                                        </span>
-                                    </div>
-
-                                    @if($order->relatedTasks->count() > 0)
-                                        <button 
-                                            @click.stop="showTasks = !showTasks"
-                                            type="button"
-                                            class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
-                                            title="Ver subtareas de la orden">
-                                            <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
-                                            <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} Tareas</span>
-                                            <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
-                                        </button>
-                                    @endif
-                                </div>
-
-                                <!-- Expandable Subtasks List -->
-                                @if($order->relatedTasks->count() > 0)
-                                    <div x-show="showTasks" x-collapse @click.stop class="pt-2 border-t border-red-200/60 space-y-1.5 min-w-0">
-                                        <div class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
-                                            <span>Subtareas & Acciones</span>
-                                            <span class="text-[9px] text-zinc-400 font-normal">{{ $order->relatedTasks->where('status', 'todo')->count() }} pendientes</span>
-                                        </div>
-                                        @foreach($order->relatedTasks as $task)
-                                            <div class="flex items-center justify-between gap-1.5 p-1.5 rounded bg-white/90 border border-stone-200 text-[11px] shadow-2xs">
-                                                <div class="flex items-center gap-1.5 min-w-0">
-                                                    <button 
-                                                        wire:click="toggleTaskComplete({{ $task->id }})"
-                                                        @click.stop
-                                                        type="button" 
-                                                        class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent' }}">
-                                                        <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                                    </button>
-                                                    <span class="font-medium truncate text-[11px] {{ $task->isDone() ? 'line-through text-zinc-400' : 'text-zinc-800' }}" title="{{ $task->title }}">
-                                                        {{ $task->title }}
-                                                    </span>
-                                                </div>
-                                                <div class="flex items-center gap-1 shrink-0">
-                                                    @if($task->type === \App\Enums\RelatedTaskType::SUBTASK)
-                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
-                                                            SUBTAREA
-                                                        </span>
-                                                        <button 
-                                                            wire:click="deleteTask({{ $task->id }})"
-                                                            wire:confirm="¿Eliminar esta subtarea?"
-                                                            @click.stop
-                                                            type="button"
-                                                            class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                                            title="Eliminar subtarea">
-                                                            <x-lucide-x class="w-3 h-3" />
-                                                        </button>
-                                                    @else
-                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-violet-100 text-violet-800 border border-violet-200 shrink-0">
-                                                            ACCION
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-
-                                <!-- Quick Move Select & Modal Trigger -->
-                                <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t min-w-0 {{ $order->done_today ? 'border-stone-200' : 'border-red-200/60' }}">
-                                    <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" @click.stop class="rounded px-1.5 py-0.5 text-[10px] focus:outline-none w-full min-w-0 truncate font-medium {{ $order->done_today ? 'bg-stone-50 border-stone-200 text-zinc-600' : 'bg-white border-red-200 hover:border-red-300 text-zinc-800' }}">
-                                        <option value="">Mover a...</option>
-                                        @foreach($allColumns as $colOption)
-                                            @if($colOption !== $order->core_status)
-                                                <option value="{{ $colOption->value }}">{{ $colOption->label() }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-
-                                    <div class="shrink-0 flex items-center gap-1">
-                                        <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" @click.stop class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' }}" title="Duplicar Orden">
-                                            <x-lucide-copy class="w-3 h-3 text-zinc-500" />
-                                            <span>Duplicar</span>
-                                        </button>
-                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" @click.stop class="p-1 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' }}" title="Ver detalle de la orden">
-                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-600" />
-                                        </button>
-                                        <button
-                                            wire:click="trashOrder({{ $order->id }})"
-                                            @click.stop
-                                            wire:confirm="¿Mover esta orden a la papelera?"
-                                            class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-red-50 border-stone-200 text-zinc-500 hover:text-red-600' : 'bg-white hover:bg-red-100 border-red-200 text-red-600 hover:text-red-800' }}"
-                                            title="Mover a la papelera"
-                                        >
-                                            <x-lucide-trash-2 class="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            @include('livewire.kanban.card', ['order' => $order, 'allColumns' => $allColumns])
                         @endforeach
 
                         <!-- 2. RELATED TASK CARDS IN KANBAN -->
@@ -769,7 +558,7 @@
                                     <div class="flex flex-wrap gap-1 min-w-0">
                                         <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-700 text-white shrink-0 flex items-center gap-1">
                                             <x-lucide-check-square class="w-3 h-3 text-white" />
-                                            <span>TAREA VINCULADA</span>
+                                            <span>{{ __('TAREA VINCULADA') }}</span>
                                         </span>
                                         @if($task->type)
                                             <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 {{ $task->type === \App\Enums\RelatedTaskType::SUBTASK ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-violet-100 text-violet-800 border border-violet-200' }}">
@@ -780,7 +569,7 @@
 
                                     <div class="flex items-center gap-1 shrink-0">
                                         <span class="text-[10px] font-medium text-zinc-700 bg-white px-1.5 py-0.5 rounded border border-stone-200 shrink-0">
-                                            {{ $task->assignee?->name ?? 'Sin Asignar' }}
+                                            {{ $task->assignee?->name ?? __('Sin Asignar') }}
                                         </span>
                                     </div>
                                 </div>
@@ -797,7 +586,7 @@
                                                 <x-wo-badge :number="$task->order->wo_number" variant="light" />
                                                 <span>• {{ $task->order->company_name }}{{ $task->order->location_text ? ' (' . $task->order->location_text . ')' : '' }}</span>
                                             @else
-                                                <span>{{ $task->order->wo_number ?? 'Orden' }} • {{ $task->order->company_name }}{{ $task->order->location_text ? ' (' . $task->order->location_text . ')' : '' }}</span>
+                                                <span>{{ $task->order->wo_number ?? __('Orden') }} • {{ $task->order->company_name }}{{ $task->order->location_text ? ' (' . $task->order->location_text . ')' : '' }}</span>
                                             @endif
                                         </p>
                                     @endif
@@ -810,23 +599,23 @@
                                             @click="isCompleting = true; setTimeout(() => $wire.toggleTaskComplete({{ $task->id }}), 300)"
                                             class="px-2 py-0.5 rounded text-[10px] font-semibold bg-white hover:bg-emerald-50 text-emerald-800 border border-emerald-200 transition flex items-center gap-1 shadow-2xs">
                                             <x-lucide-check-circle-2 class="w-3 h-3 text-emerald-600" />
-                                            <span>Completar</span>
+                                            <span>{{ __('Completar') }}</span>
                                         </button>
                                         <button 
                                             wire:click="deleteTask({{ $task->id }})"
-                                            wire:confirm="¿Eliminar esta tarea vinculada?"
+                                            wire:confirm="{{ __('¿Eliminar esta tarea vinculada?') }}"
                                             @click.stop
                                             class="px-1.5 py-0.5 rounded bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:text-rose-700 transition flex items-center gap-1 text-[10px] shadow-2xs"
-                                            title="Eliminar tarea">
+                                            title="{{ __('Eliminar tarea') }}">
                                             <x-lucide-trash-2 class="w-3 h-3" />
-                                            <span>Eliminar</span>
+                                            <span>{{ __('Eliminar') }}</span>
                                         </button>
                                     </div>
 
                                     @if($task->order)
                                         <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order->id }} })" class="px-2 py-0.5 rounded bg-white hover:bg-stone-100 border border-stone-200 text-[10px] font-medium text-zinc-700 transition flex items-center gap-1">
                                             <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                            <span>Ver Orden</span>
+                                            <span>{{ __('Ver Orden') }}</span>
                                         </button>
                                     @endif
                                 </div>
@@ -835,219 +624,7 @@
 
                         <!-- 3. REGULAR ORDER CARDS IN KANBAN -->
                         @foreach($regularColumnOrders as $order)
-                            <div 
-                                wire:key="order-card-{{ $order->id }}"
-                                x-data="{ showTasks: false }"
-                                @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                draggable="true"
-                                @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-                                class="rounded-lg p-3 space-y-2 shadow-2xs transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-md {{ $order->getCardBgClass() }}"
-                                @if($order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE) style="border: 1px solid #d6d3d1 !important; background-color: #f5f5f4 !important;" @elseif($order->is_missing_from_trello) style="border: 1.5px dashed #a8a29e !important; background-color: #f5f5f4 !important; opacity: 0.75 !important;" @elseif($order->isOverdue()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" @elseif($order->isDueToday()) style="border: 1px solid #f59e0b !important; background-color: #fffbeb !important;" @elseif($order->isApproved() || $order->isInProduction()) style="border: 1px solid #f472b6 !important; background-color: #fdf2f8 !important;" @endif>
-                                
-                                @php $isBlocked = $order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE; @endphp
-                                <!-- Card Header: Badges & Designer -->
-                                <div class="flex items-start justify-between gap-1.5 min-w-0">
-                                    <div class="flex flex-wrap gap-1 min-w-0">
-                                        @if($order->is_missing_from_trello)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-stone-200 text-stone-700 border border-stone-300 shrink-0 whitespace-nowrap flex items-center gap-0.5">
-                                                <x-lucide-alert-triangle class="w-2.5 h-2.5 text-stone-600" />
-                                                <span>FALTA EN TRELLO</span>
-                                            </span>
-                                        @endif
-                                        @if($order->wo_number)
-                                            <x-wo-badge :number="$order->wo_number" variant="dark" />
-                                        @endif
-                                        @if($order->approved && $order->substatus !== \App\Enums\Substatus::PONER_EN_ALTA)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-0.5 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-100 text-pink-800 border border-pink-300' }}">
-                                                <x-lucide-check-circle-2 class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : 'text-pink-600' }}" />
-                                                <span>{{ __('APROBADA') }}</span>
-                                            </span>
-                                        @endif
-                                        @if($order->responsible_person)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-1 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-indigo-50 text-indigo-800 border border-indigo-200' }}">
-                                                <x-lucide-user class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : 'text-indigo-600' }} shrink-0" />
-                                                <span>{{ $order->responsible_person }}</span>
-                                            </span>
-                                        @endif
-                                        @if($order->substatus)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}" style="{{ ! $isBlocked ? $order->substatus->getInlineBadgeStyle() : '' }}">
-                                                {{ $order->substatus->value }}
-                                            </span>
-                                        @endif
-                                        @if($order->customer_service_required)
-                                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-50 text-pink-700 border border-pink-200' }}">
-                                                {{ __('ATENCIÓN CLIENTE') }}
-                                            </span>
-                                        @endif
-                                    </div>
-                                    <div class="flex items-center gap-1 shrink-0 ml-1">
-                                        @if($order->trello_url)
-                                            <a href="{{ $order->trello_url }}" @click.stop target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
-                                                <x-lucide-external-link class="w-3.5 h-3.5" />
-                                            </a>
-                                        @endif
-                                        <div class="flex flex-wrap items-center gap-1 shrink-0 justify-end">
-                                            @forelse($order->assigned_designers as $des)
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
-                                                    {{ $des->name }}
-                                                </span>
-                                            @empty
-                                                <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-800 shrink-0 whitespace-nowrap">
-                                                    Sin Asignar
-                                                </span>
-                                            @endforelse
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Card Title & Company -->
-                                <div class="min-w-0 flex items-start gap-2">
-                                    <button 
-                                        wire:click="toggleDoneToday({{ $order->id }})" 
-                                        @click.stop
-                                        type="button"
-                                        class="w-4 h-4 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
-                                        title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
-                                        <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                    </button>
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex items-center justify-between gap-1.5 min-w-0">
-                                            <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <h4 class="font-normal text-[11px] text-zinc-500 truncate leading-snug min-w-0 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                                                @if($order->location_text)
-                                                    <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="Locación: {{ $order->location_text }}">
-                                                        <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                                                        <span class="truncate max-w-[120px]">{{ $order->location_text }}</span>
-                                                    </span>
-                                                @endif
-                                            </div>
-                                            @if($order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE)
-                                                <button 
-                                                    wire:click="openUnblockModal({{ $order->id }})" 
-                                                    @click.stop 
-                                                    type="button"
-                                                    class="px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1 shrink-0 cursor-pointer opacity-100 filter-none"
-                                                    title="Desbloquear orden">
-                                                    <x-lucide-unlock class="w-3.5 h-3.5 text-white stroke-[2.5]" />
-                                                    <span>Desbloquear</span>
-                                                </button>
-                                            @endif
-                                        </div>
-                                        <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
-                                    </div>
-                                </div>
-
-                                <!-- Metadata & Due Date -->
-                                <div class="flex items-center justify-between text-[10px] text-zinc-500 pt-1.5 border-t border-[#f0f0ee] gap-1">
-                                    <div class="flex items-center gap-1 min-w-0">
-                                        @if($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE)
-                                            @php
-                                                $sentDate = $order->last_sent_to_client_at ?? $order->last_meaningful_update ?? $order->updated_at ?? now();
-                                                $daysElapsed = $sentDate ? $sentDate->diffInWeekdays(now()) : 0;
-                                                $daysRemaining = max(0, 9 - $daysElapsed);
-                                            @endphp
-                                            <x-lucide-send class="w-3 h-3 text-sky-500 shrink-0" />
-                                            <span class="font-mono font-medium truncate text-sky-800" title="Enviado el {{ $sentDate->format('d M, Y') }} ({{ $daysElapsed }}d hábiles transcurridos)">
-                                                Enviado hace {{ $daysElapsed }}d hábiles <span class="text-sky-600 font-normal">({{ $daysRemaining }}d a Hold)</span>
-                                            </span>
-                                        @else
-                                            <x-lucide-calendar class="w-3 h-3 text-zinc-400 shrink-0" />
-                                            <span class="font-mono font-medium truncate {{ $order->isOverdue() ? 'text-red-600 font-bold' : ($order->isDueToday() ? 'text-amber-800 font-bold' : 'text-zinc-700') }}">
-                                                {{ $order->current_due_date ? ($order->current_due_date->isToday() ? 'Hoy (' . $order->current_due_date->format('d M') . ')' : $order->current_due_date->format('d M')) : 'N/A' }}
-                                            </span>
-                                        @endif
-                                    </div>
-
-                                    @if($order->relatedTasks->count() > 0)
-                                        <button 
-                                            @click.stop="showTasks = !showTasks"
-                                            type="button"
-                                            class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
-                                            title="Ver subtareas de la orden">
-                                            <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
-                                            <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} Tareas</span>
-                                            <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
-                                        </button>
-                                    @endif
-                                </div>
-
-                                <!-- Expandable Subtasks List -->
-                                @if($order->relatedTasks->count() > 0)
-                                    <div x-show="showTasks" x-collapse @click.stop class="pt-2 border-t border-[#f0f0ee] space-y-1.5 min-w-0">
-                                        <div class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
-                                            <span>Subtareas & Acciones</span>
-                                            <span class="text-[9px] text-zinc-400 font-normal">{{ $order->relatedTasks->where('status', 'todo')->count() }} pendientes</span>
-                                        </div>
-                                        @foreach($order->relatedTasks as $task)
-                                            <div class="flex items-center justify-between gap-1.5 p-1.5 rounded bg-[#fbfbfa] border border-stone-200 text-[11px] shadow-2xs">
-                                                <div class="flex items-center gap-1.5 min-w-0">
-                                                    <button 
-                                                        wire:click="toggleTaskComplete({{ $task->id }})"
-                                                        @click.stop
-                                                        type="button" 
-                                                        class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent' }}">
-                                                        <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                                    </button>
-                                                    <span class="font-medium truncate text-[11px] {{ $task->isDone() ? 'line-through text-zinc-400' : 'text-zinc-800' }}" title="{{ $task->title }}">
-                                                        {{ $task->title }}
-                                                    </span>
-                                                </div>
-                                                <div class="flex items-center gap-1 shrink-0">
-                                                    @if($task->type === \App\Enums\RelatedTaskType::SUBTASK)
-                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
-                                                            SUBTAREA
-                                                        </span>
-                                                        <button 
-                                                            wire:click="deleteTask({{ $task->id }})"
-                                                            wire:confirm="¿Eliminar esta subtarea?"
-                                                            @click.stop
-                                                            type="button"
-                                                            class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                                            title="Eliminar subtarea">
-                                                            <x-lucide-x class="w-3 h-3" />
-                                                        </button>
-                                                    @else
-                                                        <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-violet-100 text-violet-800 border border-violet-200 shrink-0">
-                                                            ACCION
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-
-                                <!-- Quick Move Select & Modal Trigger -->
-                                <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t border-[#f0f0ee] min-w-0">
-                                    <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" @click.stop class="bg-[#fbfbfa] border border-[#e9e9e7] rounded px-1.5 py-0.5 text-[10px] text-zinc-700 focus:outline-none w-full min-w-0 truncate">
-                                        <option value="">Mover a...</option>
-                                        @foreach($allColumns as $colOption)
-                                            @if($colOption !== $order->core_status)
-                                                <option value="{{ $colOption->value }}">{{ $colOption->label() }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-
-                                    <div class="shrink-0 flex items-center gap-1">
-                                        <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" @click.stop class="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1" title="Duplicar Orden">
-                                            <x-lucide-copy class="w-3 h-3 text-zinc-500" />
-                                            <span>Duplicar</span>
-                                        </button>
-                                        <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" @click.stop class="p-1 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1" title="Ver detalle de la orden">
-                                            <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-600" />
-                                        </button>
-                                        <button
-                                            wire:click="trashOrder({{ $order->id }})"
-                                            @click.stop
-                                            wire:confirm="¿Mover esta orden a la papelera?"
-                                            class="px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 border border-red-200 text-[10px] font-medium text-red-600 hover:text-red-800 transition flex items-center gap-1"
-                                            title="Mover a la papelera"
-                                        >
-                                            <x-lucide-trash-2 class="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            @include('livewire.kanban.card', ['order' => $order, 'allColumns' => $allColumns])
                         @endforeach
                     @endif
                 </div>
@@ -1088,9 +665,47 @@
                     <button wire:click="cancelOnHold" class="px-3 py-1.5 rounded-md bg-stone-100 text-zinc-700 text-xs font-medium hover:bg-stone-200 transition">
                         Cancelar
                     </button>
-                    <button wire:click="confirmOnHold" class="px-3.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1">
+                    <button wire:click="confirmOnHold" class="px-3.5 py-1.5 rounded-md bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
                         <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
                         <span>Poner en On Hold</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- Resume Order Modal -->
+    @if($showResumeModal)
+        <div class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h3 class="text-base font-semibold text-zinc-900 flex items-center gap-1.5">
+                            <x-lucide-play-circle class="w-5 h-5 text-emerald-600 shrink-0" />
+                            <span>Motivo para Reanudar Orden</span>
+                        </h3>
+                        <p class="text-xs text-zinc-500 mt-0.5">Ingresa el motivo por el cual la orden sale de On Hold y retoma trabajo.</p>
+                    </div>
+                    <button wire:click="cancelResume" class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-1.5 text-xs">
+                    <label class="font-medium text-zinc-700 block">Motivo / Nota de Reanudación:</label>
+                    <textarea wire:model="resumeReason" rows="3" placeholder="Ej: Cliente aprobó presupuesto / Se recibieron las medidas del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    @error('resumeReason')
+                        <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-2">
+                    <button wire:click="cancelResume" class="px-3 py-1.5 rounded-md bg-stone-100 text-zinc-700 text-xs font-medium hover:bg-stone-200 transition">
+                        Cancelar
+                    </button>
+                    <button wire:click="confirmResume" class="px-3.5 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
+                        <x-lucide-play class="w-3.5 h-3.5" />
+                        <span>Reanudar Orden</span>
                     </button>
                 </div>
             </div>

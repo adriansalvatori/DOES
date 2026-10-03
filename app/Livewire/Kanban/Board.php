@@ -10,9 +10,10 @@ use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use App\Services\OrderTitleParserService;
-use App\Services\SlaEngine;
 use App\Services\TrelloSyncService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -35,6 +36,14 @@ class Board extends Component
     public ?int $pendingOnHoldOrderId = null;
 
     public string $onHoldReason = '';
+
+    public bool $showResumeModal = false;
+
+    public ?int $pendingResumeOrderId = null;
+
+    public ?string $pendingResumeNewStatus = null;
+
+    public string $resumeReason = '';
 
     public bool $showBlockModal = false;
 
@@ -97,6 +106,15 @@ class Board extends Component
             $this->pendingOnHoldOrderId = $orderId;
             $this->onHoldReason = '';
             $this->showOnHoldModal = true;
+
+            return;
+        }
+
+        if ($previousStatus === CoreStatus::ON_HOLD && $newStatus !== CoreStatus::ON_HOLD && $newStatus !== CoreStatus::ARCHIVED) {
+            $this->pendingResumeOrderId = $orderId;
+            $this->pendingResumeNewStatus = $newStatusValue;
+            $this->resumeReason = '';
+            $this->showResumeModal = true;
 
             return;
         }
@@ -285,6 +303,77 @@ class Board extends Component
         $this->onHoldReason = '';
     }
 
+    public function cancelResume()
+    {
+        $this->showResumeModal = false;
+        $this->pendingResumeOrderId = null;
+        $this->pendingResumeNewStatus = null;
+        $this->resumeReason = '';
+    }
+
+    public function confirmResume()
+    {
+        if (! $this->pendingResumeOrderId || ! $this->pendingResumeNewStatus) {
+            return;
+        }
+
+        $this->validate([
+            'resumeReason' => 'required|string|min:3',
+        ], [
+            'resumeReason.required' => 'Debes ingresar un motivo para reanudar la orden.',
+            'resumeReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+        ]);
+
+        $order = Order::findOrFail($this->pendingResumeOrderId);
+        $previousStatus = $order->core_status;
+        $newStatus = CoreStatus::from($this->pendingResumeNewStatus);
+
+        if ($newStatus === CoreStatus::EN_PRODUCCION) {
+            $order->update([
+                'core_status' => $newStatus,
+                'substatus' => Substatus::ENVIADO_EN_ALTA,
+                'done_today' => true,
+            ]);
+        } elseif (in_array($newStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE], true)) {
+            $order->update([
+                'core_status' => $newStatus,
+                'done_today' => true,
+            ]);
+        } else {
+            $order->update(['core_status' => $newStatus]);
+        }
+
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'RESUMED_FROM_ON_HOLD',
+            'actor' => auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $previousStatus ? $previousStatus->value : null,
+            'new_value' => $newStatus->value,
+            'metadata' => [
+                'reason' => $this->resumeReason,
+                'comment' => $this->resumeReason,
+            ],
+        ]);
+
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
+            try {
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $pushed = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($pushed) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $this->cancelResume();
+        $this->dispatch('order-updated');
+        session()->flash('message', "Orden {$order->company_name} reanudada.");
+    }
+
     public function duplicateOrder($orderId)
     {
         // Dispatch to CreateOrderModal's open-duplicate-order so user can edit before saving
@@ -356,7 +445,8 @@ class Board extends Component
         $this->dispatch('order-updated');
     }
 
-    public function render()
+    #[Computed]
+    public function orders(): Collection
     {
         $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee', 'clientLocation']);
 
@@ -383,27 +473,72 @@ class Board extends Component
             $query->where('responsible_person', $this->responsibleFilter);
         }
 
-        $orders = $query->get();
+        return $query->get();
+    }
 
-        foreach ($orders as $order) {
-            app(SlaEngine::class)->checkOverdue($order);
+    #[Computed]
+    public function relatedTasks(): Collection
+    {
+        if (! $this->showStandaloneTaskCards) {
+            return collect();
         }
 
-        if ($this->showStandaloneTaskCards) {
-            $tasksQuery = RelatedTask::whereHas('order', function ($q) {
-                $q->inWorkspace()->whereNotIn('core_status', [CoreStatus::ARCHIVED->value, CoreStatus::ON_HOLD->value]);
-                if ($this->designerFilter !== 'all') {
-                    $q->where('designer_id', $this->designerFilter);
-                }
-            })->with(['order', 'assignee']);
-            if (! empty($this->search)) {
-                $tasksQuery->search($this->search);
+        $tasksQuery = RelatedTask::whereHas('order', function ($q) {
+            $q->inWorkspace()->whereNotIn('core_status', [CoreStatus::ARCHIVED->value, CoreStatus::ON_HOLD->value]);
+            if ($this->designerFilter !== 'all') {
+                $q->where('designer_id', $this->designerFilter);
             }
-            $relatedTasks = $tasksQuery->get();
-        } else {
-            $relatedTasks = collect();
+        })->with(['order', 'assignee']);
+
+        if (! empty($this->search)) {
+            $tasksQuery->search($this->search);
         }
 
+        return $tasksQuery->get();
+    }
+
+    #[Computed]
+    public function designers(): Collection
+    {
+        return Designer::where('active', true)->internal()->get();
+    }
+
+    #[Computed]
+    public function existingCompanies(): Collection
+    {
+        return Order::inWorkspace()
+            ->whereNotNull('company_name')
+            ->where('company_name', '!=', '')
+            ->distinct()
+            ->orderBy('company_name')
+            ->pluck('company_name');
+    }
+
+    #[Computed]
+    public function existingResponsibles(): Collection
+    {
+        return Order::inWorkspace()
+            ->whereNotNull('responsible_person')
+            ->where('responsible_person', '!=', '')
+            ->distinct()
+            ->orderBy('responsible_person')
+            ->pluck('responsible_person');
+    }
+
+    #[Computed]
+    public function newOrdersCount(): int
+    {
+        return Order::inBacklog()->newFromTrello()->count();
+    }
+
+    #[Computed]
+    public function archivedCount(): int
+    {
+        return Order::archived()->count();
+    }
+
+    public function render()
+    {
         $allColumns = array_merge(
             [CoreStatus::ENTRANTE],
             CoreStatus::designerQueueStatuses(),
@@ -435,22 +570,6 @@ class Board extends Component
         return view('livewire.kanban.board', [
             'columns' => $columns,
             'allColumns' => $allColumns,
-            'orders' => $orders,
-            'relatedTasks' => $relatedTasks,
-            'newOrdersCount' => Order::inBacklog()->newFromTrello()->count(),
-            'designers' => Designer::where('active', true)->internal()->get(),
-            'existingCompanies' => Order::inWorkspace()
-                ->whereNotNull('company_name')
-                ->where('company_name', '!=', '')
-                ->distinct()
-                ->orderBy('company_name')
-                ->pluck('company_name'),
-            'existingResponsibles' => Order::inWorkspace()
-                ->whereNotNull('responsible_person')
-                ->where('responsible_person', '!=', '')
-                ->distinct()
-                ->orderBy('responsible_person')
-                ->pluck('responsible_person'),
         ])->layout('components.layouts.app', ['title' => __('Kanban Board - ').config('app.name')]);
     }
 }

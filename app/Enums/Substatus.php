@@ -7,7 +7,7 @@ enum Substatus: string
     case BLOQUEADA = 'BLOQUEADA';
     case OVERDUE = 'OVERDUE';
     case ALMOST_OVERDUE = 'ALMOST OVERDUE';
-    case CAMBIOS_CAMILA = 'CAMBIOS CAMILA';
+    case CAMBIOS_CAMILA = 'ENVIAR A CAMILA';
     case CAMBIOS_CLIENTE = 'CAMBIOS CLIENTE';
     case PONER_EN_ALTA = 'PONER EN ALTA';
     case FALTA_APROBACION_ESTIMADO = 'FALTA APROBACIÓN DE ESTIMADO';
@@ -39,7 +39,7 @@ enum Substatus: string
             self::BLOQUEADA => __('Bloqueada'),
             self::OVERDUE => __('Overdue'),
             self::ALMOST_OVERDUE => __('Casi Vencida'),
-            self::CAMBIOS_CAMILA => __('Cambios Camila'),
+            self::CAMBIOS_CAMILA => __('Enviar a Camila'),
             self::CAMBIOS_CLIENTE => __('Cambios Cliente'),
             self::PONER_EN_ALTA => __('Poner en Alta'),
             self::FALTA_APROBACION_ESTIMADO => __('Falta Aprobación Estimado'),

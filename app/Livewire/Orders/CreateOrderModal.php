@@ -48,6 +48,10 @@ class CreateOrderModal extends Component
 
     public $dueDate = '';
 
+    public bool $showOnHoldModal = false;
+
+    public string $onHoldReason = '';
+
     protected $rules = [
         'companyName' => 'required|string|max:255',
         'taskName' => 'required|string|max:255',
@@ -126,6 +130,8 @@ class CreateOrderModal extends Component
     public function closeModal()
     {
         $this->showModal = false;
+        $this->showOnHoldModal = false;
+        $this->onHoldReason = '';
         $this->isDuplicating = false;
         $this->originalOrderId = null;
         $this->designerIds = [];
@@ -145,6 +151,9 @@ class CreateOrderModal extends Component
     {
         if ($value === Substatus::ENVIADO_EN_ALTA->value || $value === 'ENVIADO EN ALTA') {
             $this->coreStatus = CoreStatus::EN_PRODUCCION->value;
+        } elseif ($value === Substatus::PAUSADO->value || $value === 'PAUSADO') {
+            $this->coreStatus = CoreStatus::ON_HOLD->value;
+            $this->openOnHoldModal();
         }
     }
 
@@ -154,6 +163,35 @@ class CreateOrderModal extends Component
         if ($defaultSub) {
             $this->substatus = $defaultSub->value;
         }
+
+        if ($value === CoreStatus::ON_HOLD->value || $value === 'ON HOLD' || $value === 'PAUSA') {
+            $this->openOnHoldModal();
+        }
+    }
+
+    public function openOnHoldModal(): void
+    {
+        $this->onHoldReason = '';
+        $this->showOnHoldModal = true;
+    }
+
+    public function closeOnHoldModal(): void
+    {
+        $this->showOnHoldModal = false;
+        $this->onHoldReason = '';
+    }
+
+    public function confirmOnHold(): void
+    {
+        $this->validate([
+            'onHoldReason' => 'required|string|min:3',
+        ], [
+            'onHoldReason.required' => 'Debes ingresar un motivo para poner la orden en On Hold.',
+            'onHoldReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+        ]);
+
+        $this->showOnHoldModal = false;
+        $this->save();
     }
 
     public function save()
@@ -172,6 +210,12 @@ class CreateOrderModal extends Component
         }
 
         $statusEnum = CoreStatus::tryFrom($this->coreStatus) ?: CoreStatus::ENTRANTE;
+        if ($statusEnum === CoreStatus::ON_HOLD && empty($this->onHoldReason)) {
+            $this->openOnHoldModal();
+
+            return;
+        }
+
         $substatusEnum = ! empty($this->substatus) ? Substatus::tryFrom($this->substatus) : null;
         $cleanWo = trim(preg_replace('/^WO\s*/i', '', $this->woNumber ?? ''));
 
@@ -216,6 +260,20 @@ class CreateOrderModal extends Component
                 'metadata' => [
                     'duplicated_from_id' => $this->originalOrderId,
                     'comment' => "Duplicada a partir de la orden #{$this->originalOrderId}",
+                ],
+            ]);
+        }
+
+        if ($statusEnum === CoreStatus::ON_HOLD && ! empty($this->onHoldReason)) {
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'MOVED_TO_ON_HOLD',
+                'actor' => auth()->user()?->name ?? 'Usuario',
+                'previous_value' => null,
+                'new_value' => CoreStatus::ON_HOLD->value,
+                'metadata' => [
+                    'reason' => $this->onHoldReason,
+                    'comment' => $this->onHoldReason,
                 ],
             ]);
         }

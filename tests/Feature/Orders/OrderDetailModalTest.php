@@ -9,6 +9,7 @@ use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\Substatus as SubstatusModel;
+use App\Models\SubtaskPreset;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -667,5 +668,122 @@ class OrderDetailModalTest extends TestCase
             ->assertSuccessful()
             ->assertSee('EN ESPERA DE ARCHIVO')
             ->assertSee('background-color: #fef3c7');
+    }
+
+    public function test_changing_status_to_on_hold_triggers_modal_and_records_reason(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA PAUSA',
+            'task_name' => 'DISENO STAND',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('changeCoreStatus', CoreStatus::ON_HOLD->value)
+            ->assertSet('showOnHoldModal', true)
+            ->set('onHoldReason', 'Esperando respuesta del cliente sobre medidas')
+            ->call('confirmOnHold')
+            ->assertSet('showOnHoldModal', false)
+            ->assertDispatched('order-updated');
+
+        $order->refresh();
+        $this->assertEquals(CoreStatus::ON_HOLD, $order->core_status);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'MOVED_TO_ON_HOLD',
+            'new_value' => CoreStatus::ON_HOLD->value,
+        ]);
+    }
+
+    public function test_resuming_status_from_on_hold_triggers_modal_and_records_reason(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA REANUDAR',
+            'task_name' => 'DISENO VALLA',
+            'core_status' => CoreStatus::ON_HOLD,
+            'substatus' => Substatus::PAUSADO,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('changeCoreStatus', CoreStatus::EN_PRODUCCION->value)
+            ->assertSet('showResumeModal', true)
+            ->set('resumeReason', 'Cliente aprobó el diseño final y presupuesto')
+            ->call('confirmResume')
+            ->assertSet('showResumeModal', false)
+            ->assertDispatched('order-updated');
+
+        $order->refresh();
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $order->core_status);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'RESUMED_FROM_ON_HOLD',
+            'new_value' => CoreStatus::EN_PRODUCCION->value,
+        ]);
+    }
+
+    public function test_adding_work_subtask_for_today_updates_core_status_to_working_today(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA TRABAJO HOY',
+            'task_name' => 'DISENO LOGO',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('newTaskTitle', 'Ajustes cliente urgente')
+            ->set('newTaskIsWork', true)
+            ->set('newTaskDate', today()->toDateString())
+            ->call('addTask')
+            ->assertDispatched('order-updated');
+
+        $order->refresh();
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->core_status);
+        $this->assertEquals(CoreStatus::ENVIADO_AL_CLIENTE, $order->origin_core_status);
+        $this->assertDatabaseHas('related_tasks', [
+            'order_id' => $order->id,
+            'title' => 'Ajustes cliente urgente',
+            'is_work_task' => true,
+        ]);
+    }
+
+    public function test_adding_subtask_uses_preset_and_passes_presets_to_view(): void
+    {
+        $preset = SubtaskPreset::create([
+            'title' => 'Confirmar Medidas',
+            'color_theme' => 'emerald',
+            'is_work_task' => true,
+            'is_active' => true,
+            'sort_order' => 1,
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'EMPRESA PRESET',
+            'task_name' => 'DISENO MEDIDAS',
+            'core_status' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertViewHas('subtaskPresets', function ($presets) use ($preset) {
+                return $presets->pluck('id')->contains($preset->id);
+            })
+            ->set('newTaskTitle', 'Confirmar Medidas')
+            ->call('addTask')
+            ->assertDispatched('order-updated');
+
+        $this->assertDatabaseHas('related_tasks', [
+            'order_id' => $order->id,
+            'title' => 'Confirmar Medidas',
+            'is_work_task' => true,
+        ]);
     }
 }

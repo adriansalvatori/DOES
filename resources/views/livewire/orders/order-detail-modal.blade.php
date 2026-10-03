@@ -1,3 +1,14 @@
+@php
+    $presetDataList = isset($subtaskPresets) ? $subtaskPresets->map(function($p) {
+        return [
+            'id' => $p->id,
+            'title' => $p->title,
+            'badge_style' => $p->badgeStyle(),
+            'category' => $p->category?->value ?? 'new_design',
+            'is_work_task' => (bool) $p->is_work_task,
+        ];
+    })->values()->toArray() : [];
+@endphp
 <div>
     <!-- Notion Side Flyout Drawer (Light Mode Panel) -->
     @if($showModal && $order)
@@ -1797,7 +1808,50 @@
                         </div>
 
                         <!-- Add Manual Subtask Form -->
-                        <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs">
+                        <div 
+                            x-data="{
+                                presetDropdownOpen: false,
+                                presetHighlightedIndex: -1,
+                                subtaskPresetsList: @js($presetDataList),
+                                subtaskTitle: @entangle('newTaskTitle'),
+                                getFilteredPresets() {
+                                    const list = this.subtaskPresetsList || [];
+                                    const q = (this.subtaskTitle || '').toLowerCase().trim();
+                                    if (!q) return list;
+                                    return list.filter(p => p.title.toLowerCase().includes(q));
+                                },
+                                selectPreset(preset) {
+                                    this.subtaskTitle = preset.title;
+                                    if (preset.is_work_task !== undefined && preset.is_work_task !== null) {
+                                        $wire.set('newTaskIsWork', Boolean(preset.is_work_task));
+                                    }
+                                    if (preset.category) {
+                                        $wire.set('newTaskCategory', preset.category);
+                                    }
+                                    this.presetDropdownOpen = false;
+                                    this.presetHighlightedIndex = -1;
+                                },
+                                navigatePreset(step) {
+                                    const list = this.getFilteredPresets();
+                                    if (!list.length) return;
+                                    if (this.presetHighlightedIndex === -1) {
+                                        this.presetHighlightedIndex = step > 0 ? 0 : list.length - 1;
+                                    } else {
+                                        this.presetHighlightedIndex = (this.presetHighlightedIndex + step + list.length) % list.length;
+                                    }
+                                    this.$nextTick(() => {
+                                        const container = this.$refs.presetDropdownPanel;
+                                        if (container) {
+                                            const items = container.querySelectorAll('.preset-item-btn');
+                                            if (items[this.presetHighlightedIndex]) {
+                                                items[this.presetHighlightedIndex].scrollIntoView({ block: 'nearest' });
+                                            }
+                                        }
+                                    });
+                                }
+                            }"
+                            @click.outside="presetDropdownOpen = false"
+                            class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3 space-y-2.5 shadow-2xs relative">
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
                                     <x-lucide-plus-circle class="w-3.5 h-3.5 text-zinc-500" />
@@ -1890,19 +1944,77 @@
                             @endif
 
                             <div class="flex flex-col sm:flex-row items-center gap-2">
-                                <input 
-                                    type="text" 
-                                    wire:model="newTaskTitle" 
-                                    wire:keydown.enter="addTask" 
-                                    placeholder="Nombre de la subtarea (ej: Ajustes cliente, Confirmar medidas...)" 
-                                    class="bg-white border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 flex-1 font-normal w-full">
+                                <div class="relative flex-1 w-full min-w-0">
+                                    <input 
+                                        type="text" 
+                                        x-model="subtaskTitle"
+                                        @focus="presetDropdownOpen = true"
+                                        @input="presetDropdownOpen = true; presetHighlightedIndex = -1;"
+                                        @keydown.arrow-down.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(1);"
+                                        @keydown.arrow-up.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(-1);"
+                                        @keydown.enter.prevent="if (presetDropdownOpen && presetHighlightedIndex >= 0 && getFilteredPresets()[presetHighlightedIndex]) { selectPreset(getFilteredPresets()[presetHighlightedIndex]); } else { $wire.addTask(); presetDropdownOpen = false; }"
+                                        @keydown.escape.stop="presetDropdownOpen = false; presetHighlightedIndex = -1;"
+                                        placeholder="Nombre de la subtarea (ej: Ajustes cliente, Confirmar medidas...)" 
+                                        class="bg-white border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 font-normal w-full">
+
+                                    <!-- Dropdown Menu for Subtask Presets -->
+                                    <div 
+                                        x-ref="presetDropdownPanel"
+                                        x-show="presetDropdownOpen && getFilteredPresets().length > 0"
+                                        x-cloak
+                                        x-transition:enter="transition ease-out duration-100"
+                                        x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                                        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                        x-transition:leave="transition ease-in duration-75"
+                                        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                                        x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+                                        class="absolute left-0 top-full mt-1 z-50 bg-white/95 backdrop-blur-xs border border-stone-200 rounded-lg shadow-xl max-h-48 overflow-y-auto p-1 text-[11px] min-w-[220px] w-full max-w-md space-y-0.5 divide-y divide-stone-100"
+                                        style="display: none;">
+                                        <div class="px-2 py-1 text-[9px] font-bold text-stone-400 uppercase tracking-wider flex items-center justify-between select-none pb-0.5">
+                                            <span>{{ __('Plantillas predeterminadas') }}</span>
+                                            <span class="text-[8.5px] text-stone-300 font-mono">↑↓ Enter</span>
+                                        </div>
+                                        <div class="pt-0.5 space-y-0.5">
+                                            <template x-for="(preset, idx) in getFilteredPresets()" :key="preset.id || idx">
+                                                <button 
+                                                    type="button" 
+                                                    @click="selectPreset(preset)" 
+                                                    @mouseenter="presetHighlightedIndex = idx"
+                                                    :class="{ 'bg-amber-50 text-amber-950 font-semibold ring-1 ring-amber-200': presetHighlightedIndex === idx, 'text-zinc-700 hover:bg-stone-50': presetHighlightedIndex !== idx }"
+                                                    class="preset-item-btn w-full text-left px-2 py-1 rounded-md transition flex items-center justify-between gap-2 cursor-pointer group">
+                                                    <div class="flex items-center gap-1.5 min-w-0">
+                                                        <span 
+                                                            :class="preset.badge_style || 'bg-stone-100 text-stone-700 border-stone-200'"
+                                                            class="px-1.5 py-0.5 rounded text-[10px] font-medium border shrink-0 inline-flex items-center gap-1 shadow-2xs">
+                                                            <span x-text="preset.title"></span>
+                                                        </span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1 shrink-0">
+                                                        <span 
+                                                            :class="preset.is_work_task ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200'"
+                                                            class="px-1 py-0.2 rounded text-[8.5px] font-bold border">
+                                                            <span x-text="preset.is_work_task ? 'Trabajo' : 'Gestión'"></span>
+                                                        </span>
+                                                        <span class="text-[9px] text-amber-700 font-medium opacity-0 group-hover:opacity-100 transition">
+                                                            ↵
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div class="flex items-center gap-1.5 w-full sm:w-auto shrink-0">
                                     <input 
                                         type="date" 
                                         wire:model="newTaskDate" 
                                         class="bg-white border border-[#e9e9e7] rounded-lg px-2 py-1.5 text-xs text-zinc-700 font-medium focus:outline-none focus:border-stone-400 shrink-0">
-                                    <button wire:click="addTask" class="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                    <button 
+                                        type="button"
+                                        wire:click="addTask" 
+                                        @click="presetDropdownOpen = false"
+                                        class="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
                                         <x-lucide-plus class="w-3.5 h-3.5" />
                                         <span>Añadir</span>
                                     </button>
@@ -3051,6 +3163,94 @@
                     <button wire:click="confirmBlock" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition flex items-center gap-1.5">
                         <x-lucide-alert-octagon class="w-3.5 h-3.5" />
                         <span>{{ __('Bloquear Orden') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- ON HOLD REASON MODAL -->
+    @if($showOnHoldModal)
+        <div 
+            class="fixed inset-0 z-[360] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            @keydown.window.escape.prevent="$wire.closeOnHoldModal()"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmOnHold()"
+            wire:keydown.escape="closeOnHoldModal">
+            <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                            <x-lucide-pause-circle class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Motivo para Poner en On Hold') }}</h3>
+                            <p class="text-xs text-zinc-500 uppercase">{{ $order->company_name ?? '' }} &mdash; {{ $order->task_name ?? '' }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeOnHoldModal" type="button" class="text-zinc-400 hover:text-zinc-600 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-1.5 text-xs">
+                    <label class="font-medium text-zinc-700 block">{{ __('Motivo / Comentario:') }}</label>
+                    <textarea wire:model="onHoldReason" rows="3" placeholder="Ej: Esperando confirmación de presupuesto por parte del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    @error('onHoldReason')
+                        <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e9e9e7]">
+                    <button wire:click="closeOnHoldModal" type="button" class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmOnHold" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
+                        <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
+                        <span>{{ __('Poner en On Hold') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- RESUME ORDER MODAL -->
+    @if($showResumeModal)
+        <div 
+            class="fixed inset-0 z-[360] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            @keydown.window.escape.prevent="$wire.closeResumeModal()"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmResume()"
+            wire:keydown.escape="closeResumeModal">
+            <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                            <x-lucide-play-circle class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Motivo para Reanudar Orden') }}</h3>
+                            <p class="text-xs text-zinc-500 uppercase">{{ $order->company_name ?? '' }} &mdash; {{ $order->task_name ?? '' }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeResumeModal" type="button" class="text-zinc-400 hover:text-zinc-600 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-1.5 text-xs">
+                    <label class="font-medium text-zinc-700 block">{{ __('Motivo / Nota de Reanudación:') }}</label>
+                    <textarea wire:model="resumeReason" rows="3" placeholder="Ej: Cliente aprobó presupuesto / Se recibieron las medidas del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    @error('resumeReason')
+                        <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e9e9e7]">
+                    <button wire:click="closeResumeModal" type="button" class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmResume" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
+                        <x-lucide-play class="w-3.5 h-3.5" />
+                        <span>{{ __('Reanudar Orden') }}</span>
                     </button>
                 </div>
             </div>

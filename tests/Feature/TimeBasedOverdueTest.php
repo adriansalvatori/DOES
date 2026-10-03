@@ -209,4 +209,34 @@ class TimeBasedOverdueTest extends TestCase
 
         $this->assertTrue($order->isOverdue());
     }
+
+    public function test_resuming_order_from_on_hold_resets_sla_due_date_by_two_weekdays(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-24 10:00:00')); // Monday
+
+        $order = Order::create([
+            'wo_number' => 'WO-108',
+            'company_name' => 'Test Company',
+            'task_name' => 'Task 108',
+            'current_due_date' => '2026-08-10', // Past date from 2 weeks ago
+            'core_status' => CoreStatus::ON_HOLD,
+            'substatus' => Substatus::PAUSADO,
+            'done_today' => false,
+            'in_workspace' => true,
+        ]);
+
+        app(AutomationEngine::class)->handleStatusChanged($order, CoreStatus::ON_HOLD, CoreStatus::EURALIZ_ORDERS_RECEIVED);
+
+        $order->refresh();
+
+        // 2 weekdays from Monday 2026-08-24 is Wednesday 2026-08-26
+        $this->assertEquals('2026-08-26', $order->current_due_date->toDateString());
+        $this->assertFalse($order->isOverdue());
+        $this->assertNull($order->substatus);
+        $this->assertDatabaseHas('due_date_histories', [
+            'order_id' => $order->id,
+            'trigger_event' => 'RESUMED_FROM_ON_HOLD',
+        ]);
+        $this->assertEquals('2026-08-26', $order->dueDateHistories->first()->new_due_date->toDateString());
+    }
 }

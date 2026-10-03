@@ -639,4 +639,48 @@
             </div>
         </div>
     @endif
+
+    <!-- ON HOLD REASON MODAL -->
+    @if($showOnHoldModal)
+        <div 
+            class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            @keydown.window.escape.prevent="$wire.closeOnHoldModal()"
+            @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmOnHold()"
+            wire:keydown.escape="closeOnHoldModal">
+            <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
+                            <x-lucide-pause-circle class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Motivo para Poner en On Hold') }}</h3>
+                            <p class="text-xs text-zinc-500 uppercase">{{ $companyName ?: __('Nueva Orden') }} &mdash; {{ $taskName ?: '' }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeOnHoldModal" type="button" class="text-zinc-400 hover:text-zinc-600 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-1.5 text-xs">
+                    <label class="font-medium text-zinc-700 block">{{ __('Motivo / Comentario:') }}</label>
+                    <textarea wire:model="onHoldReason" rows="3" placeholder="Ej: Esperando confirmación de presupuesto por parte del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    @error('onHoldReason')
+                        <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e9e9e7]">
+                    <button wire:click="closeOnHoldModal" type="button" class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmOnHold" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
+                        <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
+                        <span>{{ __('Poner en On Hold') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

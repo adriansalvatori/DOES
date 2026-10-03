@@ -66,13 +66,19 @@ class AutocompleteAndFilterTest extends TestCase
             'core_status' => CoreStatus::ENTRANTE,
         ]);
 
-        Livewire::test(Board::class)
-            ->set('companyFilter', 'TAQUERIA LA CHULA')
-            ->assertViewHas('orders', fn ($orders) => $orders->count() === 1 && $orders->first()->id === $order1->id);
+        $component = Livewire::test(Board::class)
+            ->set('companyFilter', 'TAQUERIA LA CHULA');
 
-        Livewire::test(Board::class)
-            ->set('responsibleFilter', 'MARCELA')
-            ->assertViewHas('orders', fn ($orders) => $orders->count() === 1 && $orders->first()->id === $order2->id);
+        $orders = $component->instance()->orders;
+        $this->assertCount(1, $orders);
+        $this->assertEquals($order1->id, $orders->first()->id);
+
+        $component = Livewire::test(Board::class)
+            ->set('responsibleFilter', 'MARCELA');
+
+        $orders = $component->instance()->orders;
+        $this->assertCount(1, $orders);
+        $this->assertEquals($order2->id, $orders->first()->id);
     }
 
     public function test_backlog_filters_by_company_and_responsible(): void

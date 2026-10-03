@@ -49,11 +49,11 @@ class SlaEngineTest extends TestCase
         // 2026-08-22 is a Saturday.
         $saturday = Carbon::parse('2026-08-22');
 
-        // 2-weekday SLA for ENTRANTE starting on Saturday:
-        // Saturday rolls to Monday (start) -> Tuesday (day 1) -> Wednesday (day 2 = 2026-08-26)
+        // 3-weekday SLA starting on Saturday:
+        // Saturday rolls to Monday (start) -> Tuesday (day 1) -> Wednesday (day 2) -> Thursday (day 3 = 2026-08-27)
         $dueDate = $slaEngine->calculateDueDate(CoreStatus::ENTRANTE, $saturday);
 
-        $this->assertEquals('2026-08-26', $dueDate->toDateString());
-        $this->assertEquals('Wednesday', $dueDate->format('l'));
+        $this->assertEquals('2026-08-27', $dueDate->toDateString());
+        $this->assertEquals('Thursday', $dueDate->format('l'));
     }
 }

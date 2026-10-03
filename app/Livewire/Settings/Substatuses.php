@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Enums\CoreStatus;
+use App\Models\Order;
 use App\Models\Substatus;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
@@ -153,7 +154,14 @@ class Substatuses extends Component
 
         if ($this->editingId) {
             $sub = Substatus::findOrFail($this->editingId);
+            $oldName = $sub->name;
             $sub->update($validated);
+
+            if ($oldName && $oldName !== $validated['name']) {
+                Order::where('substatus', $oldName)->update(['substatus' => $validated['name']]);
+                Order::where('origin_substatus', $oldName)->update(['origin_substatus' => $validated['name']]);
+            }
+
             session()->flash('message', 'Subestatus actualizado correctamente.');
         } else {
             $maxSort = Substatus::max('sort_order') ?? 0;
