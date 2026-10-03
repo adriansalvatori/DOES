@@ -32,19 +32,19 @@ class AuditDesignersCommand extends Command
         // 1. Verificar diseñador Lead
         $leads = Designer::where('is_lead', true)->get();
         if ($leads->count() === 0) {
-            $this->error('⚠️ ALERTA: No hay ningún Lead Designer configurado en el sistema.');
+            $this->error('ALERTA: No hay ningún Lead Designer configurado en el sistema.');
         } elseif ($leads->count() > 1) {
-            $this->warn("⚠️ ADVERTENCIA: Se encontraron múltiples Lead Designers ({$leads->count()}).");
+            $this->warn("ADVERTENCIA: Se encontraron múltiples Lead Designers ({$leads->count()}).");
         } else {
-            $this->info("✓ Lead Designer activo: {$leads->first()->name}");
+            $this->info("Lead Designer activo: {$leads->first()->name}");
         }
 
         // 2. Verificar diseñadores sin slug
         $missingSlug = Designer::whereNull('slug')->get();
         if ($missingSlug->isNotEmpty()) {
-            $this->warn("⚠️ Se encontraron {$missingSlug->count()} diseñadores sin slug. Ejecuta 'php artisan designers:optimize'.");
+            $this->warn("Se encontraron {$missingSlug->count()} diseñadores sin slug. Ejecuta 'php artisan designers:optimize'.");
         } else {
-            $this->info('✓ Todos los diseñadores tienen slug configurado.');
+            $this->info('Todos los diseñadores tienen slug configurado.');
         }
 
         // 3. Auditar desalineaciones de órdenes en cola de recepción
@@ -61,13 +61,21 @@ class AuditDesignersCommand extends Command
                 ->count();
 
             if ($wrongOrders > 0) {
-                $this->warn("  ⚠️ {$wrongOrders} órdenes en cola '{$queueStatus->value}' no están asignadas al diseñador '{$designer->name}'.");
+                $this->warn("  {$wrongOrders} órdenes en cola '{$queueStatus->value}' no están asignadas al diseñador '{$designer->name}'.");
                 $misalignedCount += $wrongOrders;
             }
         }
 
         if ($misalignedCount === 0) {
-            $this->info('✓ Todas las órdenes en colas de recepción están correctamente alineadas con sus diseñadores.');
+            $this->info('Todas las órdenes en colas de recepción están correctamente alineadas con sus diseñadores.');
+        }
+
+        // 4. Auditar órdenes con diseñadores en tabla pivote pero designer_id nulo
+        $missingDesignerId = Order::whereNull('designer_id')->whereHas('designers')->count();
+        if ($missingDesignerId > 0) {
+            $this->warn("ADVERTENCIA: {$missingDesignerId} órdenes tienen diseñador en tabla pivote pero 'designer_id' nulo.");
+        } else {
+            $this->info('Todas las órdenes con diseñadores en tabla pivote tienen su primary designer_id asignado.');
         }
 
         return Command::SUCCESS;

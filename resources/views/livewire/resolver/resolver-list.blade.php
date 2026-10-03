@@ -186,17 +186,21 @@
                     </label>
 
                     <div class="flex flex-wrap gap-1.5">
-                        <button type="button" wire:click="selectPresetReason('Medidas confirmadas y recibidas')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Medidas confirmadas') }}
+                        <button type="button" wire:click="selectPresetReason('Medidas confirmadas y recibidas')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Medidas confirmadas') }}</span>
                         </button>
-                        <button type="button" wire:click="selectPresetReason('Cliente aprobó información')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Cliente aprobó información') }}
+                        <button type="button" wire:click="selectPresetReason('Cliente aprobó información')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Cliente aprobó información') }}</span>
                         </button>
-                        <button type="button" wire:click="selectPresetReason('Estimado aprobado')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Estimado aprobado') }}
+                        <button type="button" wire:click="selectPresetReason('Estimado aprobado')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Estimado aprobado') }}</span>
                         </button>
-                        <button type="button" wire:click="selectPresetReason('Resuelto por Atención a Clientes')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Resuelto por Atención a Clientes') }}
+                        <button type="button" wire:click="selectPresetReason('Resuelto por Atención a Clientes')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Resuelto por Atención a Clientes') }}</span>
                         </button>
                     </div>
 

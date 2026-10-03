@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Overview;
 
+use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Models\Client;
 use App\Models\Designer;
@@ -32,27 +33,31 @@ class OverviewIndex extends Component
     #[Computed]
     public function metrics(): array
     {
-        $version = Cache::store('file')->get('overview_cache_version', 1);
+        $result = Order::query()->selectRaw("
+            COUNT(CASE WHEN in_workspace = 1 AND core_status != 'ARCHIVED' THEN 1 END) as totalWorkspaceCount,
+            COUNT(CASE WHEN in_workspace = 0 AND core_status != 'ARCHIVED' THEN 1 END) as totalBacklogCount,
+            COUNT(CASE WHEN core_status = 'ARCHIVED' THEN 1 END) as totalArchivedCount,
+            COUNT(CASE WHEN core_status = 'ARCHIVED' AND substatus = 'FINALIZADA !' THEN 1 END) as archivedFinalizadaCount,
+            COUNT(CASE WHEN core_status = 'ARCHIVED' AND substatus IN ('CANCELADA', 'CANCELADA POR CLIENTE', 'CANCELADA POR CAMILA', 'NO REALIZADA / TRANSFERIDA') THEN 1 END) as archivedCanceladaCount,
+            COUNT(CASE WHEN core_status = 'ARCHIVED' AND substatus = 'CLIENTE NO RESPONSIVE' THEN 1 END) as archivedNoResponsiveCount,
+            COUNT(CASE WHEN in_workspace = 1 AND (wo_number IS NULL OR wo_number = '' OR wo_number LIKE 'WO 00%') THEN 1 END) as missingWoCount,
+            COUNT(CASE WHEN core_status = 'EN PRODUCCIÓN' THEN 1 END) as inProductionCount,
+            COUNT(CASE WHEN in_workspace = 1 AND core_status = 'EN PRODUCCIÓN' THEN 1 END) as inWorkspaceProductionCount,
+            COUNT(CASE WHEN in_workspace = 1 AND done_today = 1 THEN 1 END) as doneTodayCount
+        ")->first();
 
-        return Cache::store('file')->remember("overview_metrics_v{$version}", now()->addMinutes(15), function () {
-            $result = Order::query()->selectRaw("
-                COUNT(CASE WHEN in_workspace = 1 AND core_status != 'ARCHIVED' THEN 1 END) as totalWorkspaceCount,
-                COUNT(CASE WHEN in_workspace = 0 AND core_status != 'ARCHIVED' THEN 1 END) as totalBacklogCount,
-                COUNT(CASE WHEN core_status = 'ARCHIVED' THEN 1 END) as totalArchivedCount,
-                COUNT(CASE WHEN in_workspace = 1 AND (wo_number IS NULL OR wo_number = '' OR wo_number LIKE 'WO 00%') THEN 1 END) as missingWoCount,
-                COUNT(CASE WHEN in_workspace = 1 AND core_status = 'EN PRODUCCIÓN' THEN 1 END) as inProductionCount,
-                COUNT(CASE WHEN in_workspace = 1 AND done_today = 1 THEN 1 END) as doneTodayCount
-            ")->first();
-
-            return [
-                'totalWorkspaceCount' => (int) ($result->totalWorkspaceCount ?? 0),
-                'totalBacklogCount' => (int) ($result->totalBacklogCount ?? 0),
-                'totalArchivedCount' => (int) ($result->totalArchivedCount ?? 0),
-                'missingWoCount' => (int) ($result->missingWoCount ?? 0),
-                'inProductionCount' => (int) ($result->inProductionCount ?? 0),
-                'doneTodayCount' => (int) ($result->doneTodayCount ?? 0),
-            ];
-        });
+        return [
+            'totalWorkspaceCount' => (int) ($result->totalWorkspaceCount ?? 0),
+            'totalBacklogCount' => (int) ($result->totalBacklogCount ?? 0),
+            'totalArchivedCount' => (int) ($result->totalArchivedCount ?? 0),
+            'archivedFinalizadaCount' => (int) ($result->archivedFinalizadaCount ?? 0),
+            'archivedCanceladaCount' => (int) ($result->archivedCanceladaCount ?? 0),
+            'archivedNoResponsiveCount' => (int) ($result->archivedNoResponsiveCount ?? 0),
+            'missingWoCount' => (int) ($result->missingWoCount ?? 0),
+            'inProductionCount' => (int) ($result->inProductionCount ?? 0),
+            'inWorkspaceProductionCount' => (int) ($result->inWorkspaceProductionCount ?? 0),
+            'doneTodayCount' => (int) ($result->doneTodayCount ?? 0),
+        ];
     }
 
     #[On('order-updated')]
@@ -65,6 +70,7 @@ class OverviewIndex extends Component
 
     public function clearOverviewCache(): void
     {
+        unset($this->metrics);
         if (! Cache::store('file')->has('overview_cache_version')) {
             Cache::store('file')->forever('overview_cache_version', 1);
         }
@@ -97,8 +103,10 @@ class OverviewIndex extends Component
 
     public string $sortDirection = 'desc';
 
-    // Active View Tab (all, workspace, backlog, archived)
+    // Active View Tab (all, workspace, production, backlog, archived)
     public string $activeTab = 'all';
+
+    public string $archivedSubstatus = 'all';
 
     // Pagination / Chunked Loading (batches of 100 in background)
     public int $perPage = 0;
@@ -126,6 +134,7 @@ class OverviewIndex extends Component
 
     protected $queryString = [
         'activeTab' => ['except' => 'all'],
+        'archivedSubstatus' => ['except' => 'all'],
         'perPage' => ['except' => 0],
         'search' => ['except' => ''],
         'filterWo' => ['except' => ''],
@@ -198,13 +207,26 @@ class OverviewIndex extends Component
         $this->resetPage();
     }
 
-    public function setTab(string $tab): void
+    public function setTab(string $tab, string $substatus = 'all'): void
     {
-        if (in_array($tab, ['all', 'workspace', 'backlog', 'archived'], true)) {
+        if (in_array($tab, ['all', 'workspace', 'production', 'backlog', 'archived'], true)) {
             $this->activeTab = $tab;
+            if ($tab === 'archived') {
+                $this->archivedSubstatus = $substatus;
+            } else {
+                $this->archivedSubstatus = 'all';
+            }
             $this->loadedCount = self::CHUNK_SIZE;
             $this->resetPage();
         }
+    }
+
+    public function setArchivedSubstatus(string $substatus): void
+    {
+        $this->activeTab = 'archived';
+        $this->archivedSubstatus = $substatus;
+        $this->loadedCount = self::CHUNK_SIZE;
+        $this->resetPage();
     }
 
     public function toggleSection(string $section): void
@@ -226,6 +248,7 @@ class OverviewIndex extends Component
             'filterReviewStatus',
             'filterInstallation',
             'filterDateRange',
+            'archivedSubstatus',
             'sortBy',
             'sortDirection',
             'perPage',
@@ -250,7 +273,7 @@ class OverviewIndex extends Component
             'task_name' => $order->task_name ?: $order->trello_title,
             'client_id' => $order->client_id,
             'company_name' => $order->company_name,
-            'designer_id' => $order->designer_id,
+            'designer_id' => $order->designer_id ?? $order->primary_designer?->id,
             'manual_creation_date' => $order->manual_creation_date ? $order->manual_creation_date->format('Y-m-d') : ($order->created_at ? $order->created_at->format('Y-m-d') : ''),
             'production_sent_at' => $order->production_sent_at ? $order->production_sent_at->format('Y-m-d') : '',
             'email_date' => $order->email_date ? $order->email_date->format('Y-m-d') : '',
@@ -398,6 +421,7 @@ class OverviewIndex extends Component
         $order->toggleFlag($flagName);
         $order->save();
 
+        $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Bandera actualizada.'));
     }
@@ -430,6 +454,7 @@ class OverviewIndex extends Component
         }
 
         $this->syncTrelloAndLog($order, 'DESIGNER_ASSIGNED', 'Diseñador asignado actualizado');
+        $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Diseñador actualizado.'));
     }
@@ -443,6 +468,7 @@ class OverviewIndex extends Component
 
         $order->update(['in_workspace' => true]);
         $this->syncTrelloAndLog($order, 'MOVED_TO_WORKSPACE', 'Orden movida al workspace activo');
+        $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden movida al Workspace activo.'));
     }
@@ -456,6 +482,7 @@ class OverviewIndex extends Component
 
         $order->update(['in_workspace' => false]);
         $this->syncTrelloAndLog($order, 'MOVED_TO_BACKLOG', 'Orden movida al backlog');
+        $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden movida al Backlog.'));
     }
@@ -557,15 +584,29 @@ class OverviewIndex extends Component
 
     public function render()
     {
-        $version = app()->environment('testing')
-            ? 'test_'.uniqid('', true)
-            : Cache::store('file')->get('overview_cache_version', 1);
-
         // Build query exclusively for the active tab (lazy loading)
         $baseQuery = match ($this->activeTab) {
             'workspace' => Order::query()->inWorkspace(),
+            'production' => Order::query()->where('core_status', CoreStatus::EN_PRODUCCION),
+            'archived' => (function () {
+                $query = Order::query()->archived();
+                if ($this->archivedSubstatus !== 'all') {
+                    match ($this->archivedSubstatus) {
+                        'finalizada', Substatus::FINALIZADA->value => $query->where('substatus', Substatus::FINALIZADA->value),
+                        'cancelada' => $query->whereIn('substatus', [
+                            Substatus::CANCELADA->value,
+                            Substatus::CANCELADA_POR_CLIENTE->value,
+                            Substatus::CANCELADA_POR_CAMILA->value,
+                            Substatus::NO_REALIZADA_TRANSFERIDA->value,
+                        ]),
+                        'no_responsive', Substatus::CLIENTE_NO_RESPONSIVE->value => $query->where('substatus', Substatus::CLIENTE_NO_RESPONSIVE->value),
+                        default => $query->where('substatus', $this->archivedSubstatus),
+                    };
+                }
+
+                return $query;
+            })(),
             'backlog' => Order::query()->inBacklog(),
-            'archived' => Order::query()->archived(),
             default => Order::query(),
         };
 
@@ -602,6 +643,7 @@ class OverviewIndex extends Component
             'editingOrderId' => $this->editingOrderId,
             'editingField' => $this->editingField,
             'editingValue' => $this->editingValue,
+            'archivedSubstatus' => $this->archivedSubstatus,
         ], $this->metrics))->layout('components.layouts.app', ['title' => 'Overview Operativo']);
     }
 }

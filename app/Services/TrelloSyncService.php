@@ -414,7 +414,7 @@ class TrelloSyncService
             'responsible_person' => $parsed['responsible_person'],
             'task_name' => $parsed['task_name'],
             'trello_title' => $parsed['trello_title'],
-            'designer_id' => $designerId,
+            'designer_id' => $designerId ?: ($existing?->designer_id ?? $existing?->designers?->first()?->id),
             'core_status' => $targetStatus,
             'current_due_date' => $dueDate,
             'original_due_date' => $dueDate,
@@ -458,6 +458,8 @@ class TrelloSyncService
 
         if ($designerId) {
             $order->syncDesigners([$designerId]);
+        } elseif ($existing && ! empty($attributes['designer_id']) && $order->designers()->doesntExist()) {
+            $order->syncDesigners([$attributes['designer_id']]);
         }
 
         if ($isNew) {

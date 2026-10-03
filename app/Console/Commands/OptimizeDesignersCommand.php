@@ -88,7 +88,7 @@ class OptimizeDesignersCommand extends Command
                     'queue_status_value' => $data['queue_status_value'],
                     'aliases' => $data['aliases'],
                 ]);
-                $this->line("  ✓ Actualizado diseñador: {$designer->name} [Slug: {$data['slug']}, Lead: ".($data['is_lead'] ? 'SI' : 'NO').']');
+                $this->line("  Actualizado diseñador: {$designer->name} [Slug: {$data['slug']}, Lead: ".($data['is_lead'] ? 'SI' : 'NO').']');
             } else {
                 $slug = Str::slug($designer->name);
                 $isExternal = str_contains(mb_strtolower($designer->name), 'extern') || $designer->color_type === 'yellow';
@@ -102,7 +102,7 @@ class OptimizeDesignersCommand extends Command
                     'queue_status_value' => null,
                     'aliases' => [$slug, mb_strtolower($designer->name)],
                 ]);
-                $this->line("  ✓ Configurado diseñador genérico/externo: {$designer->name}");
+                $this->line("  Configurado diseñador genérico/externo: {$designer->name}");
             }
         }
 
@@ -111,7 +111,7 @@ class OptimizeDesignersCommand extends Command
             $lead = Designer::where('active', true)->first();
             if ($lead) {
                 $lead->update(['is_lead' => true]);
-                $this->info("✓ Marcado {$lead->name} como Lead Designer automático.");
+                $this->info("Marcado {$lead->name} como Lead Designer automático.");
             }
         }
 
@@ -126,7 +126,17 @@ class OptimizeDesignersCommand extends Command
 
             foreach ($misalignedOrders as $order) {
                 $order->syncDesigners([$des->id]);
-                $this->line("  ✓ Re-alineada orden #{$order->id} (WO: {$order->wo_number}) a diseñador {$des->name}");
+                $this->line("  Re-alineada orden #{$order->id} (WO: {$order->wo_number}) a diseñador {$des->name}");
+            }
+        }
+
+        // Sincronizar designer_id para órdenes con registros en tabla pivote pero designer_id nulo
+        $pivotOnlyOrders = Order::whereNull('designer_id')->whereHas('designers')->get();
+        foreach ($pivotOnlyOrders as $order) {
+            $primaryId = $order->designers->first()?->id;
+            if ($primaryId) {
+                $order->updateQuietly(['designer_id' => $primaryId]);
+                $this->line("  Sincronizado designer_id #{$primaryId} para orden #{$order->id} ({$order->trello_title})");
             }
         }
 

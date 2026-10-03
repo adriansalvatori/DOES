@@ -712,6 +712,83 @@
         </div>
     @endif
 
+    <!-- Archive Order Substatus Selection Modal -->
+    @if($showArchiveModal)
+        <div class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                            <x-lucide-archive class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-zinc-900">{{ __('Archivar Orden') }}</h3>
+                            <p class="text-xs text-zinc-500">{{ __('Selecciona el subestatus de cierre para esta orden.') }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeArchiveModal" class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <label class="font-bold text-zinc-700 block">{{ __('Razón o subestatus de cierre:') }}</label>
+                    
+                    <div class="space-y-2">
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/40 cursor-pointer transition" :class="$wire.archiveSubstatus === 'FINALIZADA !' ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400' : 'bg-[#fbfbfa]'">
+                            <div class="flex items-center gap-2.5">
+                                <input type="radio" wire:model="archiveSubstatus" value="FINALIZADA !" class="text-emerald-600 focus:ring-emerald-500">
+                                <div>
+                                    <span class="font-bold text-zinc-900 flex items-center gap-1.5">
+                                        <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
+                                        <span>{{ __('Finalizada con Éxito') }}</span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Trabajo completado y entregado al cliente.') }}</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-amber-300 hover:bg-amber-50/40 cursor-pointer transition" :class="$wire.archiveSubstatus === 'CLIENTE NO RESPONSIVE' ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-400' : 'bg-[#fbfbfa]'">
+                            <div class="flex items-center gap-2.5">
+                                <input type="radio" wire:model="archiveSubstatus" value="CLIENTE NO RESPONSIVE" class="text-amber-600 focus:ring-amber-500">
+                                <div>
+                                    <span class="font-bold text-zinc-900 flex items-center gap-1.5">
+                                        <x-lucide-user-x class="w-4 h-4 text-amber-600 shrink-0" />
+                                        <span>{{ __('Cliente No Responsive') }}</span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Sin respuesta o no retiró la orden tras largo tiempo.') }}</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-red-300 hover:bg-red-50/40 cursor-pointer transition" :class="$wire.archiveSubstatus === 'CANCELADA' ? 'bg-red-50 border-red-300 ring-1 ring-red-400' : 'bg-[#fbfbfa]'">
+                            <div class="flex items-center gap-2.5">
+                                <input type="radio" wire:model="archiveSubstatus" value="CANCELADA" class="text-red-600 focus:ring-red-500">
+                                <div>
+                                    <span class="font-bold text-zinc-900 flex items-center gap-1.5">
+                                        <x-lucide-x-circle class="w-4 h-4 text-red-600 shrink-0" />
+                                        <span>{{ __('Cancelada') }}</span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Orden anulada o no realizada.') }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e9e9e7]">
+                    <button wire:click="closeArchiveModal" class="px-3 py-1.5 rounded-md bg-stone-100 text-zinc-700 text-xs font-medium hover:bg-stone-200 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmArchive" class="px-3.5 py-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                        <x-lucide-archive class="w-3.5 h-3.5" />
+                        <span>{{ __('Archivar Orden') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Block Order Modal -->
     @if($showBlockModal)
         <div class="fixed inset-0 z-[100] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">

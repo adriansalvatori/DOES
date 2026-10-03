@@ -3,6 +3,7 @@
 namespace App\Livewire\Orders;
 
 use App\Enums\CoreStatus;
+use App\Enums\Substatus;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -18,18 +19,59 @@ class ArchivedOrders extends Component
 
     public string $timeFilter = 'all'; // all, this_month, this_week
 
-    public function archiveOrder(int $orderId): void
+    public string $substatusFilter = 'all'; // all, finalizada, cancelada, no_responsive
+
+    public bool $showArchiveModal = false;
+
+    public ?int $pendingArchiveOrderId = null;
+
+    public string $archiveSubstatus = 'FINALIZADA !';
+
+    public function updateSubstatus(int $orderId, string $substatusValue): void
     {
         $order = Order::findOrFail($orderId);
+        $subEnum = Substatus::tryFrom($substatusValue) ?? $substatusValue;
+
+        $order->update(['substatus' => $subEnum]);
+
+        $this->dispatch('order-updated');
+        session()->flash('message', "Subestatus de la orden '{$order->company_name}' actualizado.");
+    }
+
+    public function archiveOrder(int $orderId): void
+    {
+        $this->pendingArchiveOrderId = $orderId;
+        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->showArchiveModal = true;
+    }
+
+    public function closeArchiveModal(): void
+    {
+        $this->showArchiveModal = false;
+        $this->pendingArchiveOrderId = null;
+        $this->archiveSubstatus = 'FINALIZADA !';
+    }
+
+    public function confirmArchive(): void
+    {
+        if (! $this->pendingArchiveOrderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->pendingArchiveOrderId);
         $previousStatus = $order->core_status;
+        $subEnum = Substatus::tryFrom($this->archiveSubstatus) ?? $this->archiveSubstatus;
 
         $order->update([
             'core_status' => CoreStatus::ARCHIVED,
+            'substatus' => $subEnum,
             'archived_at' => now(),
         ]);
 
         app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, CoreStatus::ARCHIVED);
 
+        $this->showArchiveModal = false;
+        $this->pendingArchiveOrderId = null;
         $this->dispatch('order-updated');
         session()->flash('message', "Orden '{$order->company_name}' archivada y cerrada exitosamente.");
     }
@@ -84,8 +126,38 @@ class ArchivedOrders extends Component
             $query->where('archived_at', '>=', now()->startOfWeek());
         }
 
+        if ($this->substatusFilter !== 'all') {
+            match ($this->substatusFilter) {
+                'finalizada' => $query->where('substatus', Substatus::FINALIZADA->value),
+                'cancelada' => $query->whereIn('substatus', [
+                    Substatus::CANCELADA->value,
+                    Substatus::CANCELADA_POR_CLIENTE->value,
+                    Substatus::CANCELADA_POR_CAMILA->value,
+                    Substatus::NO_REALIZADA_TRANSFERIDA->value,
+                ]),
+                'no_responsive' => $query->where('substatus', Substatus::CLIENTE_NO_RESPONSIVE->value),
+                default => null,
+            };
+        }
+
         $allArchived = $query->get();
         $totalArchivedCount = $allArchived->count();
+
+        // Calculate substatus breakdown counts across all archived orders
+        $unfilteredArchived = Order::archived()->get();
+        $successfulCount = $unfilteredArchived->filter(fn ($o) => $o->substatus === Substatus::FINALIZADA || ($o->substatus?->value ?? '') === Substatus::FINALIZADA->value)->count();
+        $canceledCount = $unfilteredArchived->filter(fn ($o) => in_array($o->substatus, [
+            Substatus::CANCELADA,
+            Substatus::CANCELADA_POR_CLIENTE,
+            Substatus::CANCELADA_POR_CAMILA,
+            Substatus::NO_REALIZADA_TRANSFERIDA,
+        ], true) || in_array($o->substatus?->value ?? '', [
+            Substatus::CANCELADA->value,
+            Substatus::CANCELADA_POR_CLIENTE->value,
+            Substatus::CANCELADA_POR_CAMILA->value,
+            Substatus::NO_REALIZADA_TRANSFERIDA->value,
+        ], true))->count();
+        $nonResponsiveCount = $unfilteredArchived->filter(fn ($o) => $o->substatus === Substatus::CLIENTE_NO_RESPONSIVE || ($o->substatus?->value ?? '') === Substatus::CLIENTE_NO_RESPONSIVE->value)->count();
 
         // Group archived orders by designer
         $designers = Designer::where('active', true)->internal()->get();
@@ -129,6 +201,9 @@ class ArchivedOrders extends Component
         return view('livewire.orders.archived-orders', [
             'archivedOrders' => $allArchived,
             'totalArchivedCount' => $totalArchivedCount,
+            'successfulCount' => $successfulCount,
+            'canceledCount' => $canceledCount,
+            'nonResponsiveCount' => $nonResponsiveCount,
             'designerStats' => $designerStats,
             'unassignedOrders' => $unassignedOrders,
             'inProductionOrders' => $inProductionOrders,

@@ -257,4 +257,107 @@ class OverviewTest extends TestCase
             ->assertSet('loadedCount', 200)
             ->assertViewHas('hasMore', false);
     }
+
+    public function test_overview_can_toggle_global_flags(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 99999',
+            'task_name' => 'Flag Test Order',
+            'company_name' => 'Flag Client',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('toggleFlag', $order->id, 'URGENTE')
+            ->assertSee('URG');
+
+        $this->assertTrue($order->fresh()->hasFlag('URGENTE'));
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('toggleFlag', $order->id, 'URGENTE');
+
+        $this->assertFalse($order->fresh()->hasFlag('URGENTE'));
+    }
+
+    public function test_overview_shows_assigned_designer_from_relation_when_designer_id_is_null(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 77112',
+            'task_name' => 'Designer Relation Test',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => null,
+        ]);
+
+        $order->designers()->attach($this->designer->id);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSee('Adrián');
+    }
+
+    public function test_overview_can_update_designer(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 77113',
+            'task_name' => 'Update Designer Test',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('updateDesigner', $order->id, $this->designer->id);
+
+        $fresh = $order->fresh();
+        $this->assertEquals($this->designer->id, $fresh->designer_id);
+        $this->assertTrue($fresh->designers->contains('id', $this->designer->id));
+    }
+
+    public function test_overview_filters_production_and_archived_with_substatuses(): void
+    {
+        $prodOrder = Order::create([
+            'wo_number' => 'WO 50001',
+            'task_name' => 'Prod Test Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::EN_PRODUCCION,
+            'in_workspace' => true,
+        ]);
+
+        $archivedFinalizada = Order::create([
+            'wo_number' => 'WO 50002',
+            'task_name' => 'Archived Finalizada Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ARCHIVED,
+            'substatus' => Substatus::FINALIZADA,
+            'in_workspace' => false,
+        ]);
+
+        $archivedCancelada = Order::create([
+            'wo_number' => 'WO 50003',
+            'task_name' => 'Archived Cancelada Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ARCHIVED,
+            'substatus' => Substatus::CANCELADA,
+            'in_workspace' => false,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('setTab', 'production')
+            ->assertSee('PROD TEST ORDER')
+            ->assertDontSee('ARCHIVED FINALIZADA ORDER')
+            ->call('setTab', 'archived', 'finalizada')
+            ->assertSee('ARCHIVED FINALIZADA ORDER')
+            ->assertDontSee('ARCHIVED CANCELADA ORDER')
+            ->assertDontSee('PROD TEST ORDER')
+            ->call('setArchivedSubstatus', 'cancelada')
+            ->assertSee('ARCHIVED CANCELADA ORDER')
+            ->assertDontSee('ARCHIVED FINALIZADA ORDER');
+    }
 }

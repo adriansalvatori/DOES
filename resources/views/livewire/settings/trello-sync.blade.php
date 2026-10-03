@@ -368,7 +368,7 @@
                     <div class="bg-rose-50 border border-rose-300 text-rose-900 p-3 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 shadow-2xs animate-pulse">
                         <div class="flex items-center gap-2">
                             <x-lucide-alert-octagon class="w-4 h-4 text-rose-600 shrink-0" />
-                            <span>{{ __('⚠️ No se pudo enviar la tarjeta a Trello. Verifica tu conexión o token API y vuelve a intentarlo.') }}</span>
+                            <span>{{ __('No se pudo enviar la tarjeta a Trello. Verifica tu conexión o token API y vuelve a intentarlo.') }}</span>
                         </div>
                         <button wire:click="resolveUseWorkspace({{ $selectedConflict['order_id'] }})" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[11px] shrink-0 transition shadow-2xs">
                             {{ __('Reintentar Envío a Trello') }}
@@ -395,8 +395,9 @@
                                 <div class="flex items-center justify-between">
                                     <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
                                     @if(!empty($selectedConflict['workspace_data']['is_client_linked']))
-                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                            ✓ {{ __('Cliente Vinculado DB') }}
+                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                                            <x-lucide-check class="w-3 h-3 text-emerald-700 shrink-0" />
+                                            <span>{{ __('Cliente Vinculado DB') }}</span>
                                         </span>
                                     @endif
                                 </div>
@@ -433,23 +434,26 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('FECHA DE ENTREGA') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
-                                        📅 {{ $selectedConflict['workspace_data']['due_date'] ?? 'Sin fecha' }}
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium flex items-center gap-1 {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                        <x-lucide-calendar class="w-3.5 h-3.5 text-amber-800 shrink-0" />
+                                        <span>{{ $selectedConflict['workspace_data']['due_date'] ?? 'Sin fecha' }}</span>
                                     </p>
                                 </div>
 
                                 <div>
                                     <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('ESTADO LOCAL') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
-                                        📌 {{ $selectedConflict['workspace_data']['core_status'] ?? 'Sin estado' }}
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold flex items-center gap-1 {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                        <x-lucide-pin class="w-3.5 h-3.5 text-amber-800 shrink-0" />
+                                        <span>{{ $selectedConflict['workspace_data']['core_status'] ?? 'Sin estado' }}</span>
                                     </p>
                                 </div>
                             </div>
 
                             <div>
                                 <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('CONTACTO / RESPONSABLE') }}</span>
-                                <p class="text-zinc-800 p-1.5 rounded mt-0.5 bg-amber-100/40 font-medium">
-                                    👤 {{ $selectedConflict['workspace_data']['responsible_person'] ?? 'Sin contacto' }}
+                                <p class="text-zinc-800 p-1.5 rounded mt-0.5 bg-amber-100/40 font-medium flex items-center gap-1">
+                                    <x-lucide-user class="w-3.5 h-3.5 text-amber-800 shrink-0" />
+                                    <span>{{ $selectedConflict['workspace_data']['responsible_person'] ?? 'Sin contacto' }}</span>
                                 </p>
                             </div>
                         </div>
@@ -462,8 +466,9 @@
                                 <x-lucide-trello class="w-4 h-4 text-blue-700" />
                                 {{ __('Tablero Trello') }}
                             </span>
-                            <span class="text-[10px] text-blue-800 font-mono font-medium">
-                                🕒 {{ $selectedConflict['trello_updated_at'] ?? 'N/A' }}
+                            <span class="text-[10px] text-blue-800 font-mono font-medium flex items-center gap-1">
+                                <x-lucide-clock class="w-3 h-3 text-blue-700 shrink-0" />
+                                <span>{{ $selectedConflict['trello_updated_at'] ?? 'N/A' }}</span>
                             </span>
                         </div>
 
@@ -503,15 +508,17 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
                                     <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('FECHA DE ENTREGA') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
-                                        📅 {{ $selectedConflict['trello_data']['due_date'] ?? 'Sin fecha' }}
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium flex items-center gap-1 {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                        <x-lucide-calendar class="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                                        <span>{{ $selectedConflict['trello_data']['due_date'] ?? 'Sin fecha' }}</span>
                                     </p>
                                 </div>
 
                                 <div>
                                     <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('LISTA EN TRELLO') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
-                                        📌 {{ $selectedConflict['trello_data']['core_status'] ?? 'Sin estado' }}
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold flex items-center gap-1 {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                        <x-lucide-pin class="w-3.5 h-3.5 text-blue-800 shrink-0" />
+                                        <span>{{ $selectedConflict['trello_data']['core_status'] ?? 'Sin estado' }}</span>
                                     </p>
                                 </div>
                             </div>

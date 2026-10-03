@@ -46,7 +46,7 @@ class TrelloSync extends Component
         });
 
         $timestamp = now()->format('H:i:s');
-        $this->syncLog[] = "[$timestamp] 🗑️ Todos los datos de prueba eliminados. La base de datos está limpia.";
+        $this->syncLog[] = "[$timestamp] Todos los datos de prueba eliminados. La base de datos está limpia.";
         session()->flash('message', 'Datos de prueba eliminados correctamente.');
     }
 
@@ -133,7 +133,7 @@ class TrelloSync extends Component
             if ($success) {
                 $order->update(['trello_title' => $pushedTitle]);
             } else {
-                session()->flash('error', '⚠️ No se pudo actualizar en Trello. Verifica tu conexión o token y vuelve a intentarlo.');
+                session()->flash('error', 'No se pudo actualizar en Trello. Verifica tu conexión o token y vuelve a intentarlo.');
             }
         }
 
@@ -146,10 +146,10 @@ class TrelloSync extends Component
                     $change['push_error'] = false;
                 } else {
                     $change['push_error'] = true;
-                    $change['details'] = ['⚠️ Error al enviar a Trello. Puedes reintentar.'];
+                    $change['details'] = ['Error al enviar a Trello. Puedes reintentar.'];
                     if ($this->selectedConflict && ($this->selectedConflict['order_id'] ?? null) == $orderId) {
                         $this->selectedConflict['push_error'] = true;
-                        $this->selectedConflict['details'] = ['⚠️ Error al enviar a Trello. Puedes reintentar.'];
+                        $this->selectedConflict['details'] = ['Error al enviar a Trello. Puedes reintentar.'];
                     }
                 }
                 break;
@@ -289,11 +289,11 @@ class TrelloSync extends Component
         // Fetch lists
         $listsRes = $syncService->getBoardLists($extractedBoardId, $this->apiKey, $this->userToken);
         if (! $listsRes['success']) {
-            $this->syncLog[] = "[$timestamp] ❌ Error Trello API (Listas) - Status {$listsRes['status']}: {$listsRes['error']}";
+            $this->syncLog[] = "[$timestamp] Error Trello API (Listas) - Status {$listsRes['status']}: {$listsRes['error']}";
             if ($listsRes['status'] == 401) {
-                $this->syncLog[] = "[$timestamp] 💡 NOTA DE AUTENTICACIÓN: Tableros privados de Trello requieren un User Token. Haz clic en 'Generar Token de Usuario Trello' abajo e ingrésalo aquí.";
+                $this->syncLog[] = "[$timestamp] NOTA DE AUTENTICACIÓN: Tableros privados de Trello requieren un User Token. Haz clic en 'Generar Token de Usuario Trello' abajo e ingrésalo aquí.";
             } elseif ($listsRes['status'] == 404) {
-                $this->syncLog[] = "[$timestamp] ⚠️ Tablero no encontrado. Revisa la URL o ID del tablero Trello.";
+                $this->syncLog[] = "[$timestamp] Tablero no encontrado. Revisa la URL o ID del tablero Trello.";
             }
             session()->flash('error', 'No se pudo sincronizar con Trello. Revisa el log de consola.');
 
@@ -305,12 +305,12 @@ class TrelloSync extends Component
         foreach ($lists as $list) {
             $listsMap[$list['id']] = $list['name'];
         }
-        $this->syncLog[] = "[$timestamp] ✓ ".count($lists).' listas de Trello obtenidas ('.implode(', ', array_slice(array_values($listsMap), 0, 4)).'...).';
+        $this->syncLog[] = "[$timestamp] ".count($lists).' listas de Trello obtenidas ('.implode(', ', array_slice(array_values($listsMap), 0, 4)).'...).';
 
         // Fetch cards
         $cardsRes = $syncService->getBoardCards($extractedBoardId, $this->apiKey, $this->userToken);
         if (! $cardsRes['success']) {
-            $this->syncLog[] = "[$timestamp] ❌ Error Trello API (Tarjetas) - Status {$cardsRes['status']}: {$cardsRes['error']}";
+            $this->syncLog[] = "[$timestamp] Error Trello API (Tarjetas) - Status {$cardsRes['status']}: {$cardsRes['error']}";
             session()->flash('error', 'Error al obtener tarjetas de Trello.');
 
             return;
@@ -385,7 +385,7 @@ class TrelloSync extends Component
             'changes' => $changesList,
         ];
 
-        $this->syncLog[] = "[$timestamp] 🎉 Sincronización procesada: {$totalSynced} tarjetas ({$addedCount} nuevas, {$pushedCount} enviadas a Trello, {$movedCount} movidas, {$updatedCount} actualizadas, {$conflictCount} conflictos, {$deletedCount} faltantes en Trello).";
+        $this->syncLog[] = "[$timestamp] Sincronización procesada: {$totalSynced} tarjetas ({$addedCount} nuevas, {$pushedCount} enviadas a Trello, {$movedCount} movidas, {$updatedCount} actualizadas, {$conflictCount} conflictos, {$deletedCount} faltantes en Trello).";
         session()->flash('message', "Sincronización con Trello completada. ({$conflictCount} conflictos pendientes por resolver).");
     }
 

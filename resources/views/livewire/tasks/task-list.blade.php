@@ -162,7 +162,7 @@
                             <td class="p-3">
                                 <button wire:click="toggleTaskStatus({{ $task->id }})" class="px-2.5 py-1 rounded text-[10px] font-medium transition flex items-center gap-1.5 {{ $task->isDone() ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
                                     <x-lucide-check-circle-2 class="w-3 h-3" />
-                                    <span>{{ $task->isDone() ? 'Done ✓' : 'To Do' }}</span>
+                                    <span>{{ $task->isDone() ? 'Done' : 'To Do' }}</span>
                                 </button>
                             </td>
                             <td class="p-3 font-medium text-zinc-900">

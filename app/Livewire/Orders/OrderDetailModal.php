@@ -62,6 +62,10 @@ class OrderDetailModal extends Component
 
     public ?string $pendingResumeStatus = null;
 
+    public bool $showArchiveModal = false;
+
+    public string $archiveSubstatus = 'FINALIZADA !';
+
     // Edit Mode state
     public $isEditing = false;
 
@@ -466,6 +470,12 @@ class OrderDetailModal extends Component
             return;
         }
 
+        if ($newCoreStatus === CoreStatus::ARCHIVED) {
+            $this->openArchiveModal();
+
+            return;
+        }
+
         $previousStatus = $order->core_status;
 
         if ($previousStatus === CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ARCHIVED) {
@@ -565,12 +575,76 @@ class OrderDetailModal extends Component
             $this->openBlockModal();
         } elseif ($value === CoreStatus::ON_HOLD->value || $value === 'ON HOLD' || $value === 'PAUSA') {
             $this->openOnHoldModal();
+        } elseif ($value === CoreStatus::ARCHIVED->value || $value === 'ARCHIVED') {
+            $this->openArchiveModal();
         } else {
             $order = Order::find($this->orderId);
             if ($order && $order->core_status === CoreStatus::ON_HOLD && $value !== CoreStatus::ARCHIVED->value && $value !== 'ARCHIVED') {
                 $this->openResumeModal($value);
             }
         }
+    }
+
+    public function openArchiveModal(): void
+    {
+        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->showArchiveModal = true;
+    }
+
+    public function closeArchiveModal(): void
+    {
+        $this->showArchiveModal = false;
+        $this->archiveSubstatus = 'FINALIZADA !';
+    }
+
+    public function confirmArchive(): void
+    {
+        if (! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        $previousStatus = $order->core_status;
+        $newCoreStatus = CoreStatus::ARCHIVED;
+        $subEnum = Substatus::tryFrom($this->archiveSubstatus) ?? $this->archiveSubstatus;
+
+        $this->showArchiveModal = false;
+
+        if ($this->isEditing) {
+            $this->editCoreStatus = CoreStatus::ARCHIVED->value;
+            $this->editSubstatus = $subEnum instanceof Substatus ? $subEnum->value : (string) $subEnum;
+            $this->saveOrder();
+
+            return;
+        }
+
+        $order->update([
+            'core_status' => $newCoreStatus,
+            'substatus' => $subEnum,
+            'archived_at' => now(),
+        ]);
+
+        $this->editCoreStatus = $newCoreStatus->value;
+        $this->editSubstatus = $subEnum instanceof Substatus ? $subEnum->value : (string) $subEnum;
+
+        if ($previousStatus !== $newCoreStatus) {
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+        }
+
+        $freshOrder = $order->fresh();
+        if ($freshOrder && $freshOrder->trello_card_id) {
+            try {
+                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
+                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                if ($success) {
+                    $freshOrder->update(['trello_title' => $pushedTitle]);
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+
+        $this->dispatch('order-updated');
+        session()->flash('message', __('Orden archivada exitosamente con el subestatus seleccionado.'));
     }
 
     public function openOnHoldModal(): void

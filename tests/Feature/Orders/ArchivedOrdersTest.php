@@ -39,7 +39,8 @@ class ArchivedOrdersTest extends TestCase
         ]);
 
         Livewire::test(Board::class)
-            ->call('moveOrder', $order->id, 'ARCHIVED');
+            ->call('moveOrder', $order->id, 'ARCHIVED')
+            ->call('confirmArchive');
 
         $fresh = $order->fresh();
 
@@ -105,7 +106,8 @@ class ArchivedOrdersTest extends TestCase
         ]);
 
         Livewire::test(ArchivedOrders::class)
-            ->call('archiveOrder', $prodOrder->id);
+            ->call('archiveOrder', $prodOrder->id)
+            ->call('confirmArchive');
 
         $fresh = $prodOrder->fresh();
         $this->assertEquals(CoreStatus::ARCHIVED, $fresh->core_status);

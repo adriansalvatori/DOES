@@ -123,8 +123,9 @@
                         </td>
                         <td class="py-3 px-4 font-mono text-[11px]">
                             @if($u->designer)
-                                <span class="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium">
-                                    🎨 {{ $u->designer->name }}
+                                <span class="px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 font-medium inline-flex items-center gap-1.5">
+                                    <x-lucide-palette class="w-3 h-3 text-purple-600 shrink-0" />
+                                    <span>{{ $u->designer->name }}</span>
                                 </span>
                             @else
                                 <span class="text-zinc-400 italic">{{ __('Sin vincular') }}</span>

@@ -199,6 +199,17 @@ class SubstatusSeeder extends Seeder
                 'sort_order' => 16,
             ],
             [
+                'name' => 'FINALIZADA !',
+                'core_status' => CoreStatus::ARCHIVED->value,
+                'is_default' => true,
+                'is_global' => false,
+                'bg_color' => '#D1FAE5',
+                'text_color' => '#065F46',
+                'border_color' => '#A7F3D0',
+                'is_system' => true,
+                'sort_order' => 24,
+            ],
+            [
                 'name' => 'CANCELADA',
                 'core_status' => CoreStatus::ARCHIVED->value,
                 'is_default' => false,
@@ -210,6 +221,17 @@ class SubstatusSeeder extends Seeder
                 'sort_order' => 25,
             ],
             [
+                'name' => 'CLIENTE NO RESPONSIVE',
+                'core_status' => CoreStatus::ARCHIVED->value,
+                'is_default' => false,
+                'is_global' => false,
+                'bg_color' => '#FEF3C7',
+                'text_color' => '#78350F',
+                'border_color' => '#FDE68A',
+                'is_system' => true,
+                'sort_order' => 26,
+            ],
+            [
                 'name' => 'NO REALIZADA / TRANSFERIDA',
                 'core_status' => CoreStatus::ARCHIVED->value,
                 'is_default' => false,
@@ -218,7 +240,7 @@ class SubstatusSeeder extends Seeder
                 'text_color' => '#57534E',
                 'border_color' => '#E7E5E4',
                 'is_system' => true,
-                'sort_order' => 26,
+                'sort_order' => 27,
             ],
         ];
 

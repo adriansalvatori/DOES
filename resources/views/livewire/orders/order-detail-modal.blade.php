@@ -3071,17 +3071,21 @@
                     </label>
 
                     <div class="flex flex-wrap gap-1.5">
-                        <button type="button" wire:click="selectPresetReason('Medidas confirmadas y recibidas')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Medidas confirmadas') }}
+                        <button type="button" wire:click="selectPresetReason('Medidas confirmadas y recibidas')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Medidas confirmadas') }}</span>
                         </button>
-                        <button type="button" wire:click="selectPresetReason('Cliente aprobó información')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Cliente aprobó información') }}
+                        <button type="button" wire:click="selectPresetReason('Cliente aprobó información')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Cliente aprobó información') }}</span>
                         </button>
-                        <button type="button" wire:click="selectPresetReason('Estimado aprobado')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Estimado aprobado') }}
+                        <button type="button" wire:click="selectPresetReason('Estimado aprobado')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Estimado aprobado') }}</span>
                         </button>
-                        <button type="button" wire:click="selectPresetReason('Resuelto por Atención a Clientes')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition">
-                            ✓ {{ __('Resuelto por Atención a Clientes') }}
+                        <button type="button" wire:click="selectPresetReason('Resuelto por Atención a Clientes')" class="px-2 py-1 rounded bg-stone-100 hover:bg-emerald-50 hover:border-emerald-300 text-stone-700 hover:text-emerald-800 border border-stone-200 text-[11px] transition inline-flex items-center gap-1">
+                            <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
+                            <span>{{ __('Resuelto por Atención a Clientes') }}</span>
                         </button>
                     </div>
 
@@ -3267,6 +3271,87 @@
                     <button wire:click="confirmResume" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
                         <x-lucide-play class="w-3.5 h-3.5" />
                         <span>{{ __('Reanudar Orden') }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <!-- ARCHIVE ORDER SUBSTATUS SELECTION MODAL -->
+    @if($showArchiveModal)
+        <div 
+            class="fixed inset-0 z-[360] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+            @keydown.window.escape.prevent="$wire.closeArchiveModal()"
+            @keydown.window.enter.prevent="$wire.confirmArchive()"
+            wire:keydown.escape="closeArchiveModal">
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0">
+                            <x-lucide-archive class="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Subestatus para Archivar Orden') }}</h3>
+                            <p class="text-xs text-zinc-500 uppercase">{{ $order->company_name ?? '' }} &mdash; {{ $order->task_name ?? '' }}</p>
+                        </div>
+                    </div>
+                    <button wire:click="closeArchiveModal" type="button" class="text-zinc-400 hover:text-zinc-600 transition">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="space-y-3 text-xs">
+                    <label class="font-bold text-zinc-700 block">{{ __('Selecciona la razón o subestatus de cierre:') }}</label>
+                    
+                    <div class="space-y-2">
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-emerald-300 hover:bg-emerald-50/40 cursor-pointer transition" :class="$wire.archiveSubstatus === 'FINALIZADA !' ? 'bg-emerald-50 border-emerald-300 ring-1 ring-emerald-400' : 'bg-[#fbfbfa]'">
+                            <div class="flex items-center gap-2.5">
+                                <input type="radio" wire:model="archiveSubstatus" value="FINALIZADA !" class="text-emerald-600 focus:ring-emerald-500">
+                                <div>
+                                    <span class="font-bold text-zinc-900 flex items-center gap-1.5">
+                                        <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
+                                        <span>{{ __('Finalizada con Éxito') }}</span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Trabajo completado y entregado al cliente.') }}</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-amber-300 hover:bg-amber-50/40 cursor-pointer transition" :class="$wire.archiveSubstatus === 'CLIENTE NO RESPONSIVE' ? 'bg-amber-50 border-amber-300 ring-1 ring-amber-400' : 'bg-[#fbfbfa]'">
+                            <div class="flex items-center gap-2.5">
+                                <input type="radio" wire:model="archiveSubstatus" value="CLIENTE NO RESPONSIVE" class="text-amber-600 focus:ring-amber-500">
+                                <div>
+                                    <span class="font-bold text-zinc-900 flex items-center gap-1.5">
+                                        <x-lucide-user-x class="w-4 h-4 text-amber-600 shrink-0" />
+                                        <span>{{ __('Cliente No Responsive') }}</span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Sin respuesta o no retiró la orden tras largo tiempo.') }}</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="flex items-center justify-between p-3 rounded-xl border border-stone-200 hover:border-red-300 hover:bg-red-50/40 cursor-pointer transition" :class="$wire.archiveSubstatus === 'CANCELADA' ? 'bg-red-50 border-red-300 ring-1 ring-red-400' : 'bg-[#fbfbfa]'">
+                            <div class="flex items-center gap-2.5">
+                                <input type="radio" wire:model="archiveSubstatus" value="CANCELADA" class="text-red-600 focus:ring-red-500">
+                                <div>
+                                    <span class="font-bold text-zinc-900 flex items-center gap-1.5">
+                                        <x-lucide-x-circle class="w-4 h-4 text-red-600 shrink-0" />
+                                        <span>{{ __('Cancelada') }}</span>
+                                    </span>
+                                    <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Orden anulada o no realizada.') }}</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-[#e9e9e7]">
+                    <button wire:click="closeArchiveModal" type="button" class="px-3.5 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button wire:click="confirmArchive" wire:loading.attr="disabled" type="button" class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
+                        <x-lucide-archive class="w-3.5 h-3.5" />
+                        <span>{{ __('Archivar Orden') }}</span>
                     </button>
                 </div>
             </div>

@@ -193,7 +193,14 @@ enum CoreStatus: string
                 Substatus::ENVIADO_EN_ALTA,
                 Substatus::AJUSTES_PRODUCCION,
             ],
-            self::ARCHIVED => [],
+            self::ARCHIVED => [
+                Substatus::FINALIZADA,
+                Substatus::CANCELADA,
+                Substatus::CANCELADA_POR_CLIENTE,
+                Substatus::CANCELADA_POR_CAMILA,
+                Substatus::NO_REALIZADA_TRANSFERIDA,
+                Substatus::CLIENTE_NO_RESPONSIVE,
+            ],
         };
     }
 
@@ -208,6 +215,7 @@ enum CoreStatus: string
             self::ENVIADO_AL_CLIENTE => Substatus::WAITING_FOR_CLIENT,
             self::ON_HOLD => Substatus::PAUSADO,
             self::EN_PRODUCCION => Substatus::ENVIADO_EN_ALTA,
+            self::ARCHIVED => Substatus::FINALIZADA,
             default => null,
         };
     }

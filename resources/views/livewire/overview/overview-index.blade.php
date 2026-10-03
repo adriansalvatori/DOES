@@ -63,7 +63,7 @@
             this.activeMenu = type;
             this.targetOrderId = orderId;
             this.targetSubstatus = extraData.substatus !== undefined ? extraData.substatus : null;
-            this.targetFlags = extraData.flags || [];
+            this.targetFlags = Array.isArray(extraData.flags) ? extraData.flags : [];
 
             const rect = triggerEl.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
@@ -89,86 +89,166 @@
         closeMenu() {
             this.activeMenu = null;
             this.targetOrderId = null;
+            this.targetSubstatus = null;
+            this.targetFlags = [];
         },
         setDesigner(dId) {
-            $wire.updateDesigner(this.targetOrderId, dId);
             this.closeMenu();
+            $wire.updateDesigner(this.targetOrderId, dId);
         },
         setReviewStatus(status) {
-            $wire.updateReviewStatus(this.targetOrderId, status);
             this.closeMenu();
+            $wire.updateReviewStatus(this.targetOrderId, status);
         },
         setInstallationType(type) {
-            $wire.updateInstallationType(this.targetOrderId, type);
             this.closeMenu();
+            $wire.updateInstallationType(this.targetOrderId, type);
         },
         setSubstatus(status) {
-            $wire.updateSubstatus(this.targetOrderId, status);
             this.closeMenu();
+            $wire.updateSubstatus(this.targetOrderId, status);
         },
         toggleGlobalFlag(flag) {
-            $wire.toggleFlag(this.targetOrderId, flag);
             this.closeMenu();
+            $wire.toggleFlag(this.targetOrderId, flag);
         }
     }"
+    @keydown.escape.window="closeMenu()"
+    @click.window="if (activeMenu && !$el.contains($event.target) && !$event.target.closest('[data-popover-trigger]')) closeMenu()"
     @scroll.window.passive="closeMenu()"
-    @click="closeMenu()"
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
-    <!-- Top Summary Metrics Cards Bar (Full Screen Width) -->
-    @island(name: 'overview-metrics')
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 w-full">
-        <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
-            <div>
-                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Workspace Activas') }}</span>
-                <span class="text-xl font-extrabold text-stone-900">{{ $this->metrics['totalWorkspaceCount'] }}</span>
+    <!-- Top Summary Metrics & Filtering Cards Bar (Full Screen Width) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
+        <!-- 1. Órdenes Activas (Workspace) -->
+        <div 
+            wire:click="setTab('workspace')"
+            class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'workspace' ? 'bg-emerald-50/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
+            title="{{ __('Clic para filtrar Órdenes Activas en Workspace') }}">
+            <div class="flex items-start justify-between gap-2">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'workspace' ? 'text-emerald-800' : 'text-stone-500 group-hover:text-stone-700' }}">
+                        {{ __('Órdenes Activas') }}
+                    </span>
+                    <div class="flex items-baseline gap-2 mt-0.5">
+                        <span class="text-2xl font-extrabold text-stone-900 leading-tight">
+                            {{ $totalWorkspaceCount }}
+                        </span>
+                        <span class="text-[11px] text-stone-400 font-medium lowercase">
+                            {{ __('en workspace') }}
+                        </span>
+                    </div>
+                </div>
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'workspace' ? 'bg-emerald-500 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' }}">
+                    <x-lucide-activity class="w-5 h-5" />
+                </div>
             </div>
-            <div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                <x-lucide-activity class="w-5 h-5" />
-            </div>
-        </div>
-
-        <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
-            <div>
-                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Backlog') }}</span>
-                <span class="text-xl font-extrabold text-amber-600">{{ $this->metrics['totalBacklogCount'] }}</span>
-            </div>
-            <div class="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                <x-lucide-box class="w-5 h-5" />
-            </div>
-        </div>
-
-        <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
-            <div>
-                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Sin WO') }}</span>
-                <span class="text-xl font-extrabold {{ $this->metrics['missingWoCount'] > 0 ? 'text-red-600' : 'text-stone-700' }}">{{ $this->metrics['missingWoCount'] }}</span>
-            </div>
-            <div class="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center font-bold">
-                <x-lucide-alert-circle class="w-5 h-5" />
-            </div>
-        </div>
-
-        <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
-            <div>
-                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('En Producción') }}</span>
-                <span class="text-xl font-extrabold text-pink-600">{{ $this->metrics['inProductionCount'] }}</span>
-            </div>
-            <div class="w-9 h-9 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center font-bold">
-                <x-lucide-layers class="w-5 h-5" />
+            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <span class="flex items-center gap-1 font-medium {{ $activeTab === 'workspace' ? 'text-emerald-700 font-semibold' : 'text-stone-500' }}">
+                    <x-lucide-zap class="w-3.5 h-3.5 {{ $activeTab === 'workspace' ? 'text-emerald-600' : 'text-stone-400' }}" />
+                    {{ __('Filtrar Activas') }}
+                </span>
+                @if(!empty($missingWoCount) && $missingWoCount > 0)
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="{{ __('Órdenes activas sin número WO') }}">
+                        <x-lucide-alert-circle class="w-3 h-3 text-amber-500" />
+                        {{ $missingWoCount }} {{ __('Sin WO') }}
+                    </span>
+                @endif
             </div>
         </div>
 
-        <div class="bg-white p-3 rounded-xl border border-stone-200 shadow-2xs flex items-center justify-between">
-            <div>
-                <span class="text-[11px] font-semibold uppercase tracking-wider text-stone-500 block">{{ __('Listas Hoy') }}</span>
-                <span class="text-xl font-extrabold text-blue-600">{{ $this->metrics['doneTodayCount'] }}</span>
+        <!-- 2. En Producción -->
+        <div 
+            wire:click="setTab('production')"
+            class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'production' ? 'bg-pink-50/40 border-pink-500 ring-2 ring-pink-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
+            title="{{ __('Clic para filtrar Órdenes En Producción') }}">
+            <div class="flex items-start justify-between gap-2">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'production' ? 'text-pink-800' : 'text-stone-500 group-hover:text-stone-700' }}">
+                        {{ __('En Producción') }}
+                    </span>
+                    <div class="flex items-baseline gap-2 mt-0.5">
+                        <span class="text-2xl font-extrabold text-pink-600 leading-tight">
+                            {{ $inProductionCount }}
+                        </span>
+                        @if(!empty($inWorkspaceProductionCount) && $inWorkspaceProductionCount > 0)
+                            <span class="text-[11px] text-stone-400 font-medium">
+                                ({{ $inWorkspaceProductionCount }} {{ __('en workspace') }})
+                            </span>
+                        @endif
+                    </div>
+                </div>
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'production' ? 'bg-pink-600 text-white shadow-2xs' : 'bg-pink-50 text-pink-600 group-hover:bg-pink-100' }}">
+                    <x-lucide-layers class="w-5 h-5" />
+                </div>
             </div>
-            <div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                <x-lucide-check-circle-2 class="w-5 h-5" />
+            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <span class="flex items-center gap-1 font-medium {{ $activeTab === 'production' ? 'text-pink-700 font-semibold' : 'text-stone-500' }}">
+                    <x-lucide-filter class="w-3.5 h-3.5 {{ $activeTab === 'production' ? 'text-pink-600' : 'text-stone-400' }}" />
+                    {{ __('Filtrar Producción') }}
+                </span>
+                <span class="text-[10px] text-stone-400 font-medium">
+                    {{ __('Fabricación activa') }}
+                </span>
+            </div>
+        </div>
+
+        <!-- 3. Órdenes Archivadas (con sus subestatus) -->
+        <div 
+            wire:click="setTab('archived', 'all')"
+            class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'archived' ? 'bg-cyan-50/40 border-cyan-500 ring-2 ring-cyan-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
+            title="{{ __('Clic para filtrar Órdenes Archivadas') }}">
+            <div class="flex items-start justify-between gap-2">
+                <div>
+                    <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'archived' ? 'text-cyan-800' : 'text-stone-500 group-hover:text-stone-700' }}">
+                        {{ __('Órdenes Archivadas') }}
+                    </span>
+                    <div class="flex items-baseline gap-2 mt-0.5">
+                        <span class="text-2xl font-extrabold text-cyan-800 leading-tight">
+                            {{ $totalArchivedCount }}
+                        </span>
+                        <span class="text-[11px] text-stone-400 font-medium lowercase">
+                            {{ __('histórico') }}
+                        </span>
+                    </div>
+                </div>
+                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'archived' ? 'bg-cyan-600 text-white shadow-2xs' : 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' }}">
+                    <x-lucide-archive class="w-5 h-5" />
+                </div>
+            </div>
+            <!-- Subestatus Pills Bar -->
+            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5 flex-wrap">
+                <button 
+                    type="button"
+                    wire:click.stop="setArchivedSubstatus('all')"
+                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'all' ? 'bg-cyan-700 text-white shadow-2xs' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}"
+                    title="{{ __('Ver todas las archivadas') }}">
+                    {{ __('Todas') }} ({{ $totalArchivedCount }})
+                </button>
+                <button 
+                    type="button"
+                    wire:click.stop="setArchivedSubstatus('finalizada')"
+                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'finalizada' ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60' }}"
+                    title="{{ __('Archivadas finalizadas') }}">
+                    {{ __('Finalizadas') }} ({{ $archivedFinalizadaCount }})
+                </button>
+                <button 
+                    type="button"
+                    wire:click.stop="setArchivedSubstatus('cancelada')"
+                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'cancelada' ? 'bg-rose-600 text-white shadow-2xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60' }}"
+                    title="{{ __('Archivadas canceladas') }}">
+                    {{ __('Canceladas') }} ({{ $archivedCanceladaCount }})
+                </button>
+                <button 
+                    type="button"
+                    wire:click.stop="setArchivedSubstatus('no_responsive')"
+                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'no_responsive' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200/60' }}"
+                    title="{{ __('Archivadas por cliente no responsive') }}">
+                    {{ __('No Responsive') }} ({{ $archivedNoResponsiveCount }})
+                </button>
             </div>
         </div>
     </div>
-    @endisland
 
     <!-- Toolbar Filters Bar -->
     <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
@@ -178,8 +258,8 @@
                     <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Overview Operativo') }}</h1>
                 </div>
 
-                <!-- View Mode Tabs (TODAS | WORKSPACE | BACKLOG | ARCHIVADAS) -->
-                <div class="inline-flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200">
+                <!-- View Mode Tabs (TODAS | ÓRDENES ACTIVAS | EN PRODUCCIÓN | ARCHIVADAS | BACKLOG) -->
+                <div class="inline-flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200 flex-wrap">
                     <button 
                         wire:click="setTab('all')"
                         class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer {{ $activeTab === 'all' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
@@ -188,20 +268,30 @@
                     <button 
                         wire:click="setTab('workspace')"
                         class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'workspace' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
-                        <span>⚡ {{ __('WORKSPACE') }}</span>
+                        <x-lucide-zap class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{{ __('ÓRDENES ACTIVAS') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-extrabold">{{ $totalWorkspaceCount }}</span>
+                    </button>
+                    <button 
+                        wire:click="setTab('production')"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'production' ? 'bg-white text-pink-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        <x-lucide-layers class="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                        <span>{{ __('EN PRODUCCIÓN') }}</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-pink-100 text-pink-800 font-extrabold">{{ $inProductionCount }}</span>
+                    </button>
+                    <button 
+                        wire:click="setTab('archived', 'all')"
+                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'archived' ? 'bg-white text-cyan-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        <x-lucide-archive class="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                        <span>{{ __('ARCHIVADAS') }}</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-cyan-100 text-cyan-800 font-extrabold">{{ $totalArchivedCount }}</span>
                     </button>
                     <button 
                         wire:click="setTab('backlog')"
                         class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'backlog' ? 'bg-white text-amber-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
-                        <span>📦 {{ __('BACKLOG') }}</span>
+                        <x-lucide-inbox class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>{{ __('BACKLOG') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-extrabold">{{ $totalBacklogCount }}</span>
-                    </button>
-                    <button 
-                        wire:click="setTab('archived')"
-                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'archived' ? 'bg-white text-cyan-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
-                        <span>🗄️ {{ __('ARCHIVADAS') }}</span>
-                        <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-cyan-100 text-cyan-800 font-extrabold">{{ $totalArchivedCount }}</span>
                     </button>
                 </div>
             </div>
@@ -225,7 +315,7 @@
                     <select 
                         wire:model.live="perPage" 
                         class="bg-transparent text-xs font-bold text-stone-800 focus:outline-none cursor-pointer">
-                        <option value="0">⚡ Todas (Sin paginación)</option>
+                        <option value="0">Todas (Sin paginación)</option>
                         <option value="25">25 / pág</option>
                         <option value="50">50 / pág</option>
                         <option value="100">100 / pág</option>
@@ -340,21 +430,32 @@
         <div class="w-full px-4 py-3 bg-[#f7f7f5] border-b border-stone-200 flex items-center justify-between rounded-t-xl">
             <div class="flex items-center gap-2.5">
                 <div class="w-7 h-7 rounded-lg bg-stone-900 text-white flex items-center justify-center font-bold text-xs">
-                    @if($activeTab === 'workspace') ⚡
-                    @elseif($activeTab === 'backlog') 📦
-                    @elseif($activeTab === 'archived') 🗄️
-                    @else 📋
+                    @if($activeTab === 'workspace')
+                        <x-lucide-zap class="w-4 h-4 text-emerald-400" />
+                    @elseif($activeTab === 'production')
+                        <x-lucide-layers class="w-4 h-4 text-pink-400" />
+                    @elseif($activeTab === 'backlog')
+                        <x-lucide-inbox class="w-4 h-4 text-amber-400" />
+                    @elseif($activeTab === 'archived')
+                        <x-lucide-archive class="w-4 h-4 text-cyan-400" />
+                    @else
+                        <x-lucide-layout-grid class="w-4 h-4 text-stone-300" />
                     @endif
                 </div>
                 <h3 class="font-bold text-sm text-stone-900 tracking-tight">
                     @if($activeTab === 'workspace')
-                        {{ __('Órdenes en Workspace') }}
+                        {{ __('Órdenes Activas en Workspace') }}
+                    @elseif($activeTab === 'production')
+                        {{ __('Órdenes en Producción') }}
                     @elseif($activeTab === 'backlog')
                         {{ __('Órdenes en Backlog') }}
                     @elseif($activeTab === 'archived')
                         {{ __('Órdenes Archivadas') }}
+                        @if(!empty($archivedSubstatus) && $archivedSubstatus !== 'all')
+                            <span class="text-cyan-700 font-semibold">• {{ ucfirst(str_replace('_', ' ', $archivedSubstatus)) }}</span>
+                        @endif
                     @else
-                        {{ __('Todas las Órdenes (Workspace + Backlog + Archivadas)') }}
+                        {{ __('Todas las Órdenes (Workspace + Producción + Backlog + Archivadas)') }}
                     @endif
                 </h3>
                 <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
@@ -365,11 +466,13 @@
             <div class="text-xs text-stone-500 font-medium hidden sm:block">
                 @if($activeTab === 'all')
                     <span class="inline-flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold">⚡ {{ $totalWorkspaceCount }} {{ __('Workspace') }}</span>
+                        <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold"><x-lucide-zap class="w-3.5 h-3.5 text-emerald-600" /> {{ $totalWorkspaceCount }} {{ __('Activas') }}</span>
                         <span>•</span>
-                        <span class="inline-flex items-center gap-1 text-amber-700 font-semibold">📦 {{ $totalBacklogCount }} {{ __('Backlog') }}</span>
+                        <span class="inline-flex items-center gap-1 text-pink-700 font-semibold"><x-lucide-layers class="w-3.5 h-3.5 text-pink-600" /> {{ $inProductionCount }} {{ __('Producción') }}</span>
                         <span>•</span>
-                        <span class="inline-flex items-center gap-1 text-cyan-700 font-semibold">🗄️ {{ $totalArchivedCount }} {{ __('Archivadas') }}</span>
+                        <span class="inline-flex items-center gap-1 text-amber-700 font-semibold"><x-lucide-inbox class="w-3.5 h-3.5 text-amber-600" /> {{ $totalBacklogCount }} {{ __('Backlog') }}</span>
+                        <span>•</span>
+                        <span class="inline-flex items-center gap-1 text-cyan-700 font-semibold"><x-lucide-archive class="w-3.5 h-3.5 text-cyan-600" /> {{ $totalArchivedCount }} {{ __('Archivadas') }}</span>
                     </span>
                 @endif
             </div>
@@ -546,7 +649,7 @@
                             :style="'width: ' + (colWidths['check'] || 3.5) + '%;'"
                             class="relative py-2 px-0.5 text-center select-none group/col">
                             <div class="flex items-center justify-center gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate">✓</span>
+                                <x-lucide-check class="w-3.5 h-3.5 text-stone-400" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'check')"
@@ -662,7 +765,7 @@
                                             wire:click="moveToWorkspace({{ $order->id }})"
                                             class="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition cursor-pointer shrink-0"
                                             title="En Backlog - Clic para mover al Workspace">
-                                            📦
+                                            <x-lucide-inbox class="w-3 h-3 text-amber-800" />
                                         </button>
                                     @endif
 
@@ -722,11 +825,12 @@
                             <td class="py-1 px-1 truncate">
                                 <button 
                                     type="button"
+                                    data-popover-trigger="designer"
                                     @click.stop="openMenu('designer', {{ $order->id }}, $el)"
                                     class="px-1 py-0.5 rounded-sm border text-[10px] font-semibold cursor-pointer truncate transition w-full text-center block {{ $order->getDesignerBadgeStyle() }}"
                                     style="{{ $order->getDesignerBadgeInlineStyle() }}"
-                                    title="{{ $order->designer?->name ?? 'Sin Asignar' }}">
-                                    <span class="truncate block">{{ $order->designer?->name ?? 'Sin Asignar' }}</span>
+                                    title="{{ $order->designer_name }}">
+                                    <span class="truncate block">{{ $order->designer_name }}</span>
                                 </button>
                             </td>
 
@@ -806,6 +910,7 @@
 
                                     <button 
                                         type="button"
+                                        data-popover-trigger="review"
                                         @click.stop="openMenu('review', {{ $order->id }}, $el)"
                                         class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none {{ $checkIconColor }}"
                                         @if(!empty($checkIconStyle)) style="{{ $checkIconStyle }}" @endif
@@ -857,6 +962,7 @@
                             <td class="py-1 px-1 truncate transition {{ $instCellBg }}">
                                 <button 
                                     type="button"
+                                    data-popover-trigger="installation"
                                     @click.stop="openMenu('installation', {{ $order->id }}, $el)"
                                     class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
                                     title="Clic para cambiar instalación: {{ $instDisplayText }}">
@@ -938,7 +1044,8 @@
                                 class="py-1 px-1.5 truncate transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
                                 <button 
                                     type="button"
-                                    @click.stop="openMenu('substatus', {{ $order->id }}, $el, { substatus: '{{ addslashes($subVal ?? '') }}', flags: JSON.parse('{{ htmlspecialchars(json_encode($order->flags ?? []), ENT_QUOTES, 'UTF-8') }}') })"
+                                    data-popover-trigger="substatus"
+                                    @click.stop="openMenu('substatus', {{ $order->id }}, $el, { substatus: {{ \Illuminate\Support\Js::from($subVal ?? '') }}, flags: {{ \Illuminate\Support\Js::from($order->flags ?? []) }} })"
                                     class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
                                     title="Clic para cambiar subestatus / banderas: {{ $subLabel }}">
                                     <div class="flex items-center gap-0.5 overflow-hidden truncate">
@@ -1017,19 +1124,23 @@
         @endif
     </div>
 
-    <!-- Centralized Global Popovers (Single instance for entire table) -->
-    <template x-teleport="body">
-        <div>
-            <!-- 1. Designer Popover -->
-            <div 
-                x-show="activeMenu === 'designer'" 
-                x-transition:enter="transition ease-out duration-100"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                @click.outside="closeMenu()"
-                :style="menuStyle"
-                class="bg-white shadow-2xl border border-stone-200 rounded-lg p-1 min-w-[150px] space-y-0.5 text-stone-900 overflow-y-auto"
-                style="display: none;">
+    <!-- Single Centralized Unified Popover Container (No teleport leaks, max 1 active popover) -->
+    <div 
+        x-show="activeMenu !== null"
+        x-transition:enter="transition ease-out duration-100"
+        x-transition:enter-start="opacity-0 scale-95"
+        x-transition:enter-end="opacity-100 scale-100"
+        x-transition:leave="transition ease-in duration-75"
+        x-transition:leave-start="opacity-100 scale-100"
+        x-transition:leave-end="opacity-0 scale-95"
+        @click.outside="closeMenu()"
+        :style="menuStyle"
+        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-1.5 min-w-[190px] z-[99999] overflow-y-auto max-h-[360px] scrollbar-thin text-stone-900"
+        style="display: none;">
+
+        <!-- 1. Designer Popover Content -->
+        <template x-if="activeMenu === 'designer'">
+            <div class="space-y-0.5">
                 <div class="px-2 py-1 text-[10px] font-bold text-stone-400 uppercase">Seleccionar Diseñador</div>
                 <button 
                     type="button"
@@ -1052,17 +1163,11 @@
                     </button>
                 @endforeach
             </div>
+        </template>
 
-            <!-- 2. Review Status Popover -->
-            <div 
-                x-show="activeMenu === 'review'" 
-                x-transition:enter="transition ease-out duration-100"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                @click.outside="closeMenu()"
-                :style="menuStyle"
-                class="bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[190px] space-y-1 text-stone-900"
-                style="display: none;">
+        <!-- 2. Review Status Popover Content -->
+        <template x-if="activeMenu === 'review'">
+            <div class="space-y-1">
                 <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Revisión</div>
                 <button 
                     type="button"
@@ -1084,17 +1189,11 @@
                     Sin revisión (Blanco / EST)
                 </button>
             </div>
+        </template>
 
-            <!-- 3. Installation Popover -->
-            <div 
-                x-show="activeMenu === 'installation'" 
-                x-transition:enter="transition ease-out duration-100"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                @click.outside="closeMenu()"
-                :style="menuStyle"
-                class="bg-white shadow-2xl border border-stone-200 rounded-lg p-1.5 min-w-[190px] space-y-1 text-stone-900"
-                style="display: none;">
+        <!-- 3. Installation Popover Content -->
+        <template x-if="activeMenu === 'installation'">
+            <div class="space-y-1">
                 <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Instalación</div>
                 
                 <button 
@@ -1128,18 +1227,11 @@
                     Vacío (Sin información)
                 </button>
             </div>
+        </template>
 
-            <!-- 4. Substatus & Global Flags Popover -->
-            <div 
-                x-show="activeMenu === 'substatus'" 
-                x-transition:enter="transition ease-out duration-100"
-                x-transition:enter-start="opacity-0 scale-95"
-                x-transition:enter-end="opacity-100 scale-100"
-                @click.outside="closeMenu()"
-                :style="menuStyle"
-                class="bg-white shadow-2xl border border-stone-200 rounded-xl p-1.5 min-w-[240px] overflow-y-auto space-y-1.5 text-stone-900 scrollbar-thin"
-                style="display: none;">
-                
+        <!-- 4. Substatus & Global Flags Popover Content -->
+        <template x-if="activeMenu === 'substatus'">
+            <div class="space-y-1.5">
                 <div class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1">
                     {{ __('Clasificación de Proceso (1 Selección)') }}
                 </div>
@@ -1223,6 +1315,6 @@
                     </button>
                 @endforeach
             </div>
-        </div>
-    </template>
+        </template>
+    </div>
 </div>

@@ -117,4 +117,52 @@ class StatusTransitionServiceTest extends TestCase
 
         $this->assertEquals(SubstatusEnum::EXTERNO, $order->fresh()->substatus);
     }
+
+    public function test_archived_substatuses_handling_and_normalization(): void
+    {
+        $service = app(StatusTransitionService::class);
+        $validArchived = $service->getValidSubstatuses(CoreStatus::ARCHIVED)->pluck('name')->toArray();
+
+        $this->assertContains('FINALIZADA !', $validArchived);
+        $this->assertContains('CANCELADA', $validArchived);
+        $this->assertContains('CLIENTE NO RESPONSIVE', $validArchived);
+
+        // Order archived from production normalizes to default FINALIZADA ! and sets archived_at
+        $order = Order::create([
+            'company_name' => 'Empresa Archivar',
+            'task_name' => 'Tarea Archivar',
+            'core_status' => CoreStatus::EN_PRODUCCION,
+            'substatus' => SubstatusEnum::ENVIADO_EN_ALTA,
+            'in_workspace' => true,
+        ]);
+
+        $order->update(['core_status' => CoreStatus::ARCHIVED]);
+
+        $fresh = $order->fresh();
+        $this->assertEquals(SubstatusEnum::FINALIZADA, $fresh->substatus);
+        $this->assertNotNull($fresh->archived_at);
+
+        // Setting CLIENTE_NO_RESPONSIVE substatus sets core_status to ARCHIVED
+        $order2 = Order::create([
+            'company_name' => 'Empresa No Responsive',
+            'task_name' => 'Tarea No Responsive',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'substatus' => SubstatusEnum::WAITING_FOR_CLIENT,
+            'in_workspace' => true,
+        ]);
+
+        $order2->update(['substatus' => SubstatusEnum::CLIENTE_NO_RESPONSIVE]);
+
+        $fresh2 = $order2->fresh();
+        $this->assertEquals(CoreStatus::ARCHIVED, $fresh2->core_status);
+        $this->assertEquals(SubstatusEnum::CLIENTE_NO_RESPONSIVE, $fresh2->substatus);
+        $this->assertNotNull($fresh2->archived_at);
+
+        // Restoring order from ARCHIVED to EN_PRODUCCION resets substatus and clears archived_at
+        $fresh2->update(['core_status' => CoreStatus::EN_PRODUCCION]);
+
+        $freshRestored = $fresh2->fresh();
+        $this->assertEquals(SubstatusEnum::ENVIADO_EN_ALTA, $freshRestored->substatus);
+        $this->assertNull($freshRestored->archived_at);
+    }
 }

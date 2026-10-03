@@ -269,6 +269,21 @@ class Order extends Model
         return $designers;
     }
 
+    public function getPrimaryDesignerAttribute(): ?Designer
+    {
+        return $this->designer ?? $this->designers->first();
+    }
+
+    public function getDesignerNameAttribute(): string
+    {
+        $designers = $this->assigned_designers;
+        if ($designers->isEmpty()) {
+            return __('Sin Asignar');
+        }
+
+        return $designers->pluck('name')->join(', ');
+    }
+
     public function syncDesigners(array $designerIds): void
     {
         $cleanIds = array_values(array_unique(array_filter(array_map('intval', $designerIds))));
@@ -640,38 +655,42 @@ class Order extends Model
 
     public function getDesignerBadgeStyle(): string
     {
-        if (! $this->designer) {
+        $designer = $this->primary_designer;
+        if (! $designer) {
             return 'bg-amber-100 text-amber-800 border-amber-300 font-semibold';
         }
 
-        return $this->designer->badge_style;
+        return $designer->badge_style;
     }
 
     public function getDesignerBadgeInlineStyle(): string
     {
-        if (! $this->designer) {
+        $designer = $this->primary_designer;
+        if (! $designer) {
             return 'background-color: #fef3c7; color: #92400e; border-color: #fde68a; font-weight: 600;';
         }
 
-        return $this->designer->badge_inline_style;
+        return $designer->badge_inline_style;
     }
 
     public function getDesignerDotColorClass(): string
     {
-        if (! $this->designer) {
+        $designer = $this->primary_designer;
+        if (! $designer) {
             return 'bg-amber-400';
         }
 
-        return $this->designer->dot_color_class;
+        return $designer->dot_color_class;
     }
 
     public function getDesignerDotStyle(): string
     {
-        if (! $this->designer) {
+        $designer = $this->primary_designer;
+        if (! $designer) {
             return 'background-color: #fbbf24;';
         }
 
-        return $this->designer->dot_inline_style;
+        return $designer->dot_inline_style;
     }
 
     public function isApproved(): bool

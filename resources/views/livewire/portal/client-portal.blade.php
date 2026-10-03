@@ -336,7 +336,7 @@
                             <div class="font-bold flex items-center gap-1.5 {{ $selectedOrder->approved ? 'text-lime-700' : 'text-zinc-700' }}">
                                 @if($selectedOrder->approved)
                                     <x-lucide-check-circle class="w-4 h-4 text-lime-600" />
-                                    <span>{{ __('Aprobado ✓') }}</span>
+                                    <span>{{ __('Aprobado') }}</span>
                                 @else
                                     <x-lucide-clock class="w-4 h-4 text-zinc-400" />
                                     <span>{{ __('En Proceso') }}</span>

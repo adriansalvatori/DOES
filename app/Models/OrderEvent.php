@@ -249,7 +249,7 @@ class OrderEvent extends Model
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
             $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
 
-            return __('":title" completada ✓', ['title' => $taskTitle]);
+            return __('":title" completada', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'ORDER_CREATED') || str_contains($type, 'CREATED')) {
             $source = $this->metadata['source'] ?? null;

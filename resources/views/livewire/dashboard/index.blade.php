@@ -296,7 +296,7 @@
                                             </button>
                                         @endif
                                         <button wire:click="openCamilaModal({{ $task->id }})" class="px-3 py-1 rounded font-semibold text-xs transition shadow-2xs cursor-pointer" style="background-color: var(--cc-camila-solid); color: var(--cc-camila-text-on-solid);">
-                                            {{ __('Completar ✓') }}
+                                            {{ __('Completar') }}
                                         </button>
                                     </div>
                                 </div>
@@ -524,7 +524,7 @@
                                             </button>
                                         @endif
                                         <button wire:click="openCamilaModal({{ $task->id }})" class="px-3 py-1 rounded font-semibold text-xs transition shadow-2xs cursor-pointer" style="background-color: var(--cc-camila-solid); color: var(--cc-camila-text-on-solid);">
-                                            {{ __('Completar ✓') }}
+                                            {{ __('Completar') }}
                                         </button>
                                     </div>
                                 </div>
@@ -771,7 +771,7 @@
                                             </button>
                                         @endif
                                         <button wire:click="completeTask({{ $task->id }})" class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition shadow-2xs cursor-pointer">
-                                            {{ __('Completar ✓') }}
+                                            {{ __('Completar') }}
                                         </button>
                                     </div>
                                 </div>

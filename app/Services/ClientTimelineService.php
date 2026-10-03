@@ -173,7 +173,7 @@ class ClientTimelineService
             if (str_contains($type, 'APPROVED') || str_contains($type, 'APPROVAL_SUBMITTED') || (is_string($event->new_value) && str_contains(strtolower($event->new_value), 'estimate: yes'))) {
                 $milestones->push([
                     'type' => 'approved',
-                    'title' => __('Diseño aprobado ✓'),
+                    'title' => __('Diseño aprobado'),
                     'subtitle' => __('¡Recibimos tu aprobación! Tu orden está siendo preparada para producción'),
                     'date' => $eventDate,
                     'color' => 'lime',
@@ -218,7 +218,7 @@ class ClientTimelineService
         if (! $hasApproved && $order->approved) {
             $milestones->push([
                 'type' => 'approved',
-                'title' => __('Diseño aprobado ✓'),
+                'title' => __('Diseño aprobado'),
                 'subtitle' => __('¡Recibimos tu aprobación! Tu orden está siendo preparada para producción'),
                 'date' => $order->updated_at,
                 'color' => 'lime',

@@ -63,6 +63,12 @@ class Board extends Component
 
     public string $unblockReason = '';
 
+    public bool $showArchiveModal = false;
+
+    public ?int $pendingArchiveOrderId = null;
+
+    public string $archiveSubstatus = 'FINALIZADA !';
+
     public bool $showStandaloneTaskCards = false;
 
     public function mount(): void
@@ -101,6 +107,14 @@ class Board extends Component
         $order = Order::findOrFail($orderId);
         $previousStatus = $order->core_status;
         $newStatus = CoreStatus::from($newStatusValue);
+
+        if ($newStatus === CoreStatus::ARCHIVED) {
+            $this->pendingArchiveOrderId = $orderId;
+            $this->archiveSubstatus = 'FINALIZADA !';
+            $this->showArchiveModal = true;
+
+            return;
+        }
 
         if ($newStatus === CoreStatus::ON_HOLD) {
             $this->pendingOnHoldOrderId = $orderId;
@@ -208,6 +222,37 @@ class Board extends Component
         $this->blockReasonOther = '';
         $this->blockComment = '';
         $this->requireCustomerService = false;
+    }
+
+    public function closeArchiveModal(): void
+    {
+        $this->showArchiveModal = false;
+        $this->pendingArchiveOrderId = null;
+        $this->archiveSubstatus = 'FINALIZADA !';
+    }
+
+    public function confirmArchive(): void
+    {
+        if (! $this->pendingArchiveOrderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->pendingArchiveOrderId);
+        $previousStatus = $order->core_status;
+        $subEnum = Substatus::tryFrom($this->archiveSubstatus) ?? $this->archiveSubstatus;
+
+        $order->update([
+            'core_status' => CoreStatus::ARCHIVED,
+            'substatus' => $subEnum,
+            'archived_at' => now(),
+        ]);
+
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, CoreStatus::ARCHIVED);
+
+        $this->showArchiveModal = false;
+        $this->pendingArchiveOrderId = null;
+        $this->dispatch('order-updated');
+        $this->dispatch('toast', message: __('Orden archivada exitosamente.'));
     }
 
     public function openUnblockModal($orderId)

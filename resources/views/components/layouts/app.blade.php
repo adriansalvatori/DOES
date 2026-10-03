@@ -125,22 +125,6 @@
                     </a>
                 @endif
 
-                <!-- Acciones requeridas -->
-                @if(!auth()->user()?->isDesigner())
-                    @php
-                        $actionRequiredCount = \App\Models\Order::getActionRequiredCount();
-                        $hasActionRequired = $actionRequiredCount > 0;
-                    @endphp
-                    <a href="/resolver" title="{{ __('Acción Requerida') }}" class="w-full px-2.5 py-1.5 rounded-md flex items-center gap-2.5 transition text-xs {{ request()->is('resolver*') ? 'bg-[#ebebeb] font-semibold' : '' }} {{ $hasActionRequired ? (request()->is('resolver*') ? 'text-orange-600 bg-orange-50/80 border border-orange-200/80' : 'text-orange-600 hover:bg-orange-50/60 hover:text-orange-700 font-medium') : (request()->is('resolver*') ? 'text-zinc-700' : 'text-zinc-400 hover:bg-[#efefed] hover:text-zinc-600 font-medium') }}">
-                        <x-lucide-alert-triangle class="w-4 h-4 shrink-0 {{ $hasActionRequired ? 'text-orange-500' : 'text-zinc-400' }}" />
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate flex-1">{{ __('Acción Requerida') }}</span>
-                        @if($hasActionRequired)
-                            <span x-show="sidebarOpen" x-transition.opacity class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 shrink-0">
-                                {{ $actionRequiredCount }}
-                            </span>
-                        @endif
-                    </a>
-                @endif
 
                 <!-- (separador) -->
                 <div class="my-2 border-t border-[#e9e9e7]"></div>

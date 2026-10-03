@@ -30,6 +30,7 @@ enum Substatus: string
     case CANCELADA = 'CANCELADA';
     case NO_REALIZADA_TRANSFERIDA = 'NO REALIZADA / TRANSFERIDA';
     case FINALIZADA = 'FINALIZADA !';
+    case CLIENTE_NO_RESPONSIVE = 'CLIENTE NO RESPONSIVE';
     case EXTERNO = 'EXTERNO';
 
     public function label(): string
@@ -61,6 +62,7 @@ enum Substatus: string
             self::CANCELADA => __('Cancelada'),
             self::NO_REALIZADA_TRANSFERIDA => __('No realizada / Transferida'),
             self::FINALIZADA => __('Finalizada'),
+            self::CLIENTE_NO_RESPONSIVE => __('Cliente No Responsive'),
             self::EXTERNO => __('Externo'),
         };
     }
@@ -127,6 +129,7 @@ enum Substatus: string
             self::CANCELADA => 'bg-red-100 text-red-800 border-red-300 font-bold',
             self::NO_REALIZADA_TRANSFERIDA => 'bg-stone-200 text-stone-700 border-stone-300 font-medium',
             self::FINALIZADA => 'bg-emerald-100 text-emerald-800 border-emerald-300 font-bold',
+            self::CLIENTE_NO_RESPONSIVE => 'bg-amber-100 text-amber-900 border-amber-300 font-bold',
             self::EXTERNO => 'bg-amber-100 text-amber-800 border-amber-300 font-bold',
         };
     }
@@ -147,7 +150,7 @@ enum Substatus: string
             self::WAITING_FOR_CLIENT, self::CAMBIOS_CLIENTE, self::NO_RESPUESTA => CoreStatus::ENVIADO_AL_CLIENTE,
             self::PAUSADO, self::ESPERANDO_PERMISO, self::CUSTOMER_SERVICE_REQUIRED => CoreStatus::ON_HOLD,
             self::ENVIADO_EN_ALTA => CoreStatus::EN_PRODUCCION,
-            self::CANCELADA, self::NO_REALIZADA_TRANSFERIDA => CoreStatus::ARCHIVED,
+            self::CANCELADA, self::CANCELADA_POR_CLIENTE, self::CANCELADA_POR_CAMILA, self::NO_REALIZADA_TRANSFERIDA, self::FINALIZADA, self::CLIENTE_NO_RESPONSIVE => CoreStatus::ARCHIVED,
             default => null,
         };
     }

@@ -112,6 +112,13 @@ class StatusTransitionService
             return;
         }
 
+        // Handle archived_at timestamp
+        if ($statusEnum === CoreStatus::ARCHIVED && ! $order->archived_at) {
+            $order->archived_at = now();
+        } elseif ($statusEnum !== CoreStatus::ARCHIVED && $order->archived_at) {
+            $order->archived_at = null;
+        }
+
         // Check if current substatus belongs to the new CoreStatus
         $validEnumCases = $statusEnum->validSubstatuses();
         $isValid = in_array($currentSubstatus, $validEnumCases, true);
@@ -164,6 +171,11 @@ class StatusTransitionService
 
         if ($order->core_status !== $targetCoreStatus) {
             $order->core_status = $targetCoreStatus;
+            if ($targetCoreStatus === CoreStatus::ARCHIVED && ! $order->archived_at) {
+                $order->archived_at = now();
+            } elseif ($targetCoreStatus !== CoreStatus::ARCHIVED && $order->archived_at) {
+                $order->archived_at = null;
+            }
         }
     }
 }
