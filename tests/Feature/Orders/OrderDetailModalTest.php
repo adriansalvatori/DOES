@@ -217,6 +217,7 @@ class OrderDetailModalTest extends TestCase
             'company_name' => 'EMPRESA CAMBIO ESTADO',
             'task_name' => 'DISENO AFICHE',
             'core_status' => CoreStatus::CESAR_ORDERS_RECEIVED,
+            'approved' => true,
             'in_workspace' => true,
         ]);
 
@@ -785,5 +786,39 @@ class OrderDetailModalTest extends TestCase
             'title' => 'Confirmar Medidas',
             'is_work_task' => true,
         ]);
+    }
+
+    public function test_unapproved_order_cannot_move_to_production_without_approval_modal(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA UNAPPROVED',
+            'task_name' => 'PRODUCCION VALIDATION',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => false,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('changeCoreStatus', CoreStatus::EN_PRODUCCION->value)
+            ->assertSet('showApprovalModal', true)
+            ->assertSet('pendingProductionStatus', CoreStatus::EN_PRODUCCION->value);
+
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->fresh()->core_status);
+        $this->assertFalse($order->fresh()->approved);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('showApprovalModal', true)
+            ->set('pendingProductionStatus', CoreStatus::EN_PRODUCCION->value)
+            ->set('approvalComment', 'Aprobado por cliente vía WhatsApp con el OK final.')
+            ->call('submitApproval')
+            ->assertDispatched('order-updated');
+
+        $fresh = $order->fresh();
+        $this->assertTrue($fresh->approved);
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $fresh->core_status);
+        $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $fresh->substatus);
+        $this->assertEquals('Aprobado por cliente vía WhatsApp con el OK final.', $fresh->approval_note);
     }
 }

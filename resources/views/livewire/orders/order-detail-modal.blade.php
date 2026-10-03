@@ -2767,13 +2767,29 @@
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[92vh] flex flex-col">
                 <div class="shrink-0 flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="text-base font-semibold text-zinc-900">Confirmación de Aprobación</h3>
+                        <h3 class="text-base font-semibold text-zinc-900">
+                            @if($pendingProductionStatus === \App\Enums\CoreStatus::EN_PRODUCCION->value || $pendingProductionStatus === 'EN PRODUCCIÓN')
+                                Aprobación Requerida para Producción
+                            @else
+                                Confirmación de Aprobación
+                            @endif
+                        </h3>
                         <p class="text-xs text-zinc-500 mt-0.5">Valida el visto bueno y registra el soporte de aprobación para continuar.</p>
                     </div>
                     <button type="button" wire:click="closeApprovalModal" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-stone-100 transition cursor-pointer">
                         <x-lucide-x class="w-4 h-4" />
                     </button>
                 </div>
+
+                @if($pendingProductionStatus === \App\Enums\CoreStatus::EN_PRODUCCION->value || $pendingProductionStatus === 'EN PRODUCCIÓN')
+                    <div class="p-3 rounded-xl bg-pink-50 border border-pink-200 text-pink-900 text-xs flex items-start gap-2.5 shrink-0">
+                        <x-lucide-alert-circle class="w-4 h-4 text-pink-600 shrink-0 mt-0.5" />
+                        <div>
+                            <span class="font-semibold block">Pase a Producción Requerido</span>
+                            Para enviar esta orden a Producción debe ser aprobada previamente. Registra quién la aprobó e ingresa el comentario o soporte de aprobación.
+                        </div>
+                    </div>
+                @endif
 
                 <div class="overflow-y-auto pr-1 space-y-4 text-xs scrollbar-thin flex-1">
                     <!-- Validation Type Selection -->

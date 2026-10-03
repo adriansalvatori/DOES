@@ -123,6 +123,14 @@ class ResolverList extends Component
     public function sendToProduction($orderId)
     {
         $order = Order::findOrFail($orderId);
+
+        if (! $order->approved) {
+            $this->dispatch('open-order-detail', orderId: $orderId, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+            session()->flash('message', __('La orden requiere aprobación antes de pasar a Producción.'));
+
+            return;
+        }
+
         $prev = $order->core_status;
         $order->update([
             'core_status' => CoreStatus::EN_PRODUCCION,

@@ -71,6 +71,7 @@ class KanbanBoardTest extends TestCase
             'company_name' => 'Acme Corp',
             'task_name' => 'Banner Design',
             'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => true,
             'in_workspace' => true,
         ]);
 
@@ -83,6 +84,23 @@ class KanbanBoardTest extends TestCase
         $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $freshOrder->substatus);
     }
 
+    public function test_unapproved_order_cannot_be_moved_to_production_on_board(): void
+    {
+        $order = Order::create([
+            'company_name' => 'Acme Corp Unapproved',
+            'task_name' => 'Banner Design Unapproved',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => false,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(Board::class)
+            ->call('moveOrder', $order->id, CoreStatus::EN_PRODUCCION->value)
+            ->assertDispatched('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->fresh()->core_status);
+    }
+
     public function test_updating_substatus_to_enviado_en_alta_in_card_detail_sets_core_status_to_in_production(): void
     {
         $order = Order::create([
@@ -90,6 +108,7 @@ class KanbanBoardTest extends TestCase
             'task_name' => 'Flyer Design',
             'core_status' => CoreStatus::TO_DO_TODAY,
             'substatus' => Substatus::CAMBIOS_CLIENTE,
+            'approved' => true,
             'in_workspace' => true,
         ]);
 

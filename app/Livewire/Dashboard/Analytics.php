@@ -71,6 +71,20 @@ class Analytics extends Component
         // Designer Workload & Performance (Active Workspace Orders)
         $designers = Designer::where('active', true)->get();
         $designerStats = [];
+        $designerAvailabilityStats = [];
+
+        // Internal team designers only for Availability graphic (excluding external)
+        $internalDesigners = Designer::where('active', true)->internal()->get();
+
+        // Core statuses defining immediate designer availability & active working load
+        $availableCoreStatuses = [
+            CoreStatus::EURALIZ_ORDERS_RECEIVED,
+            CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            CoreStatus::CESAR_ORDERS_RECEIVED,
+            CoreStatus::TO_DO_TODAY,
+            CoreStatus::ENVIADO_A_CAMILA,
+        ];
+
         foreach ($designers as $des) {
             $assignedOrders = $activeOrders->filter(function (Order $o) use ($des): bool {
                 return $o->designer_id === $des->id
@@ -89,8 +103,49 @@ class Analytics extends Component
             ];
         }
 
+        foreach ($internalDesigners as $des) {
+            $assignedOrders = $activeOrders->filter(function (Order $o) use ($des): bool {
+                return $o->designer_id === $des->id
+                    || $o->designers->contains('id', $des->id);
+            });
+
+            // Availability stats: Only count ENTRANTE (queue), WORKING TODAY, SENT TO CAMILA
+            $availableOrders = $assignedOrders->filter(fn (Order $o): bool => in_array($o->core_status, $availableCoreStatuses, true));
+            $availableCount = $availableOrders->count();
+
+            $incomingQueueCount = $availableOrders->filter(fn (Order $o): bool => in_array($o->core_status, CoreStatus::designerQueueStatuses(), true))->count();
+            $workingTodayCount = $availableOrders->where('core_status', CoreStatus::TO_DO_TODAY)->count();
+            $sentToCamilaCount = $availableOrders->where('core_status', CoreStatus::ENVIADO_A_CAMILA)->count();
+
+            $queueStatus = $des->getQueueStatus();
+
+            $designerAvailabilityStats[] = [
+                'designer' => $des,
+                'queue_status' => $queueStatus,
+                'queue_color' => $queueStatus->hexColor(),
+                'total_active' => $availableCount,
+                'incoming_count' => $incomingQueueCount,
+                'working_today_count' => $workingTodayCount,
+                'sent_to_camila_count' => $sentToCamilaCount,
+                'orders' => $availableOrders->values(),
+            ];
+        }
+
+        $maxAvailableOrders = max(array_column($designerAvailabilityStats, 'total_active') ?: [0]);
+        if ($maxAvailableOrders < 1) {
+            $maxAvailableOrders = 1;
+        }
+
+        $minAvailableOrders = min(array_column($designerAvailabilityStats, 'total_active') ?: [0]);
+
         $unassignedCount = $activeOrders->filter(function (Order $o): bool {
             return is_null($o->designer_id) && $o->designers->isEmpty();
+        })->count();
+
+        $unassignedAvailableCount = $activeOrders->filter(function (Order $o) use ($availableCoreStatuses): bool {
+            return is_null($o->designer_id)
+                && $o->designers->isEmpty()
+                && in_array($o->core_status, $availableCoreStatuses, true);
         })->count();
 
         return view('livewire.dashboard.analytics', [
@@ -103,7 +158,13 @@ class Analytics extends Component
             'slaComplianceRate' => $slaComplianceRate,
             'coreStatusCounts' => $coreStatusCounts,
             'designerStats' => $designerStats,
+            'designerAvailabilityStats' => $designerAvailabilityStats,
+            'workingTodayHex' => CoreStatus::TO_DO_TODAY->hexColor(),
+            'sentToCamilaHex' => CoreStatus::ENVIADO_A_CAMILA->hexColor(),
+            'maxAvailableOrders' => $maxAvailableOrders,
+            'minAvailableOrders' => $minAvailableOrders,
             'unassignedCount' => $unassignedCount,
+            'unassignedAvailableCount' => $unassignedAvailableCount,
         ])->layout('components.layouts.app', ['title' => __('Analytics Dashboard - ').config('app.name')]);
     }
 }

@@ -130,6 +130,13 @@ class Board extends Component
             return;
         }
 
+        if ($newStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
+            $this->dispatch('open-order-detail', orderId: $orderId, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.');
+
+            return;
+        }
+
         // Update local state instantly
         if ($newStatus === CoreStatus::EN_PRODUCCION) {
             $order->update([
@@ -327,6 +334,14 @@ class Board extends Component
         $order = Order::findOrFail($this->pendingResumeOrderId);
         $previousStatus = $order->core_status;
         $newStatus = CoreStatus::from($this->pendingResumeNewStatus);
+
+        if ($newStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
+            $this->showResumeModal = false;
+            $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.');
+
+            return;
+        }
 
         if ($newStatus === CoreStatus::EN_PRODUCCION) {
             $order->update([

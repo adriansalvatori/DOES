@@ -34,6 +34,8 @@ class OrderDetailModal extends Component
 
     public $showApprovalModal = false;
 
+    public $pendingProductionStatus = null;
+
     public $showDelayModal = false;
 
     public $showUnblockModal = false;
@@ -181,7 +183,7 @@ class OrderDetailModal extends Component
     }
 
     #[On('open-order-detail')]
-    public function openModal($orderId = null, $startEdit = false)
+    public function openModal($orderId = null, $startEdit = false, $openApproval = false, $targetStatus = null)
     {
         if ($orderId) {
             $this->orderId = $orderId;
@@ -198,6 +200,10 @@ class OrderDetailModal extends Component
         }
 
         $this->refreshTrelloData();
+
+        if ($openApproval) {
+            $this->openApprovalModal($targetStatus);
+        }
     }
 
     #[On('client-updated')]
@@ -464,6 +470,12 @@ class OrderDetailModal extends Component
 
         if ($previousStatus === CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ON_HOLD && $newCoreStatus !== CoreStatus::ARCHIVED) {
             $this->openResumeModal($statusValue);
+
+            return;
+        }
+
+        if ($newCoreStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
+            $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
 
             return;
         }
@@ -905,6 +917,12 @@ class OrderDetailModal extends Component
         $previousStatus = $order->core_status;
         $newCoreStatus = ! empty($this->editCoreStatus) ? CoreStatus::tryFrom($this->editCoreStatus) : $order->core_status;
 
+        if ($newCoreStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
+            $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
+
+            return;
+        }
+
         if ($newCoreStatus === CoreStatus::ON_HOLD && $previousStatus !== CoreStatus::ON_HOLD && empty($this->onHoldReason)) {
             $this->openOnHoldModal();
 
@@ -1235,9 +1253,10 @@ class OrderDetailModal extends Component
         session()->flash('message', "Orden {$order->company_name} añadida al Workspace activo.");
     }
 
-    public function openApprovalModal(): void
+    public function openApprovalModal(?string $targetStatus = null): void
     {
         $this->resetErrorBag();
+        $this->pendingProductionStatus = $targetStatus;
         if ($this->orderId) {
             $order = Order::find($this->orderId);
             $this->approvalType = ($order && $order->core_status === CoreStatus::ENVIADO_A_CAMILA) ? 'camila' : 'cliente';
@@ -1254,6 +1273,7 @@ class OrderDetailModal extends Component
     public function closeApprovalModal(): void
     {
         $this->showApprovalModal = false;
+        $this->pendingProductionStatus = null;
         $this->approvalComment = '';
         $this->approvalImage = null;
         $this->resetErrorBag();
@@ -1297,15 +1317,22 @@ class OrderDetailModal extends Component
             $imagePath = $this->approvalImage->store('approvals', 'public');
         }
 
+        $targetStatus = ($this->pendingProductionStatus === CoreStatus::EN_PRODUCCION->value || $this->pendingProductionStatus === 'EN PRODUCCIÓN')
+            ? CoreStatus::EN_PRODUCCION
+            : null;
+
         app(AutomationEngine::class)->processApproval(
             $order,
             (bool) $this->measuresConfirmed,
             (bool) $this->estimateApproved,
             $this->approvalType,
             trim((string) $this->approvalComment) ?: null,
-            $imagePath
+            $imagePath,
+            $targetStatus
         );
 
+        $this->showApprovalModal = false;
+        $this->pendingProductionStatus = null;
         $this->closeModal();
         $this->dispatch('order-updated');
         session()->flash('message', "Aprobación procesada para {$order->company_name}.");

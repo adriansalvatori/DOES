@@ -99,4 +99,116 @@ class AnalyticsTest extends TestCase
             ->assertSee('Diseñador Prueba')
             ->assertSee('50%');
     }
+
+    public function test_analytics_dashboard_designer_availability_counts_only_active_core_statuses(): void
+    {
+        $designerA = Designer::create([
+            'name' => 'Diseñador A',
+            'active' => true,
+        ]);
+
+        $designerB = Designer::create([
+            'name' => 'Diseñador B',
+            'active' => true,
+        ]);
+
+        // Included statuses for Designer A (total 3)
+        Order::create([
+            'company_name' => 'ENTRANTE A',
+            'task_name' => 'TAREA 1',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+            'in_workspace' => true,
+        ]);
+
+        Order::create([
+            'company_name' => 'WORKING TODAY A',
+            'task_name' => 'TAREA 2',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Order::create([
+            'company_name' => 'SENT TO CAMILA A',
+            'task_name' => 'TAREA 3',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::ENVIADO_A_CAMILA,
+            'in_workspace' => true,
+        ]);
+
+        // Excluded statuses for Designer A (should NOT count towards availability)
+        Order::create([
+            'company_name' => 'BLOCKED A',
+            'task_name' => 'TAREA BLOQUEADA',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::ENTRANTE, // Blocked
+            'in_workspace' => true,
+        ]);
+
+        Order::create([
+            'company_name' => 'CLIENT A',
+            'task_name' => 'TAREA CLIENTE',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'in_workspace' => true,
+        ]);
+
+        Order::create([
+            'company_name' => 'HOLD A',
+            'task_name' => 'TAREA HOLD',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::ON_HOLD,
+            'in_workspace' => true,
+        ]);
+
+        Order::create([
+            'company_name' => 'PROD A',
+            'task_name' => 'TAREA PRODUCCION',
+            'designer_id' => $designerA->id,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+            'in_workspace' => true,
+        ]);
+
+        // Designer B has 1 included order
+        Order::create([
+            'company_name' => 'WORKING TODAY B',
+            'task_name' => 'TAREA B',
+            'designer_id' => $designerB->id,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $test = Livewire::test(Analytics::class);
+
+        $test->assertSee(__('Disponibilidad Real por Diseñador'));
+        $test->assertSee('Diseñador A');
+        $test->assertSee('Diseñador B');
+
+        /** @var array $stats */
+        $stats = $test->viewData('designerAvailabilityStats');
+
+        $statsA = collect($stats)->firstWhere(function ($s) use ($designerA) {
+            $id = is_array($s['designer']) ? $s['designer']['id'] : $s['designer']->id;
+
+            return $id === $designerA->id;
+        });
+        $statsB = collect($stats)->firstWhere(function ($s) use ($designerB) {
+            $id = is_array($s['designer']) ? $s['designer']['id'] : $s['designer']->id;
+
+            return $id === $designerB->id;
+        });
+
+        $this->assertNotNull($statsA);
+        $this->assertEquals(3, $statsA['total_active']);
+        $this->assertEquals(1, $statsA['incoming_count']);
+        $this->assertEquals(1, $statsA['working_today_count']);
+        $this->assertEquals(1, $statsA['sent_to_camila_count']);
+
+        $this->assertNotNull($statsB);
+        $this->assertEquals(1, $statsB['total_active']);
+        $this->assertEquals(0, $statsB['incoming_count']);
+        $this->assertEquals(1, $statsB['working_today_count']);
+        $this->assertEquals(0, $statsB['sent_to_camila_count']);
+    }
 }

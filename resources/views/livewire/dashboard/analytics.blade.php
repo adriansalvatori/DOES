@@ -77,7 +77,211 @@
         </div>
     </div>
 
-    <!-- 2. Abajo de eso: Carga de Trabajo por Diseñador (Izquierda) & Conteo / Cumplimiento SLA (Derecha) -->
+    <!-- 2. Disponibilidad Real por Diseñador (1/3 Gráfico Vertical | 2/3 Tres Columnas por Diseñador) -->
+    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-4 sm:p-5 space-y-3.5 shadow-2xs">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e9e9e7] pb-3">
+            <div class="space-y-0.5">
+                <h3 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
+                    <x-lucide-bar-chart-2 class="w-4 h-4 text-zinc-600" />
+                    <span>{{ __('Disponibilidad Real por Diseñador') }}</span>
+                </h3>
+                <p class="text-[11px] text-zinc-500">
+                    {{ __('Conteo exclusivo de órdenes en proceso activo (Orden Entrante, Working Today y Sent to Camila). Excluye órdenes en cliente, pausadas, bloqueadas o en taller.') }}
+                </p>
+            </div>
+
+            <!-- Color Coding Legend -->
+            <div class="flex flex-wrap items-center gap-2 text-[10px] font-mono font-medium">
+                <span class="flex items-center gap-1 px-2 py-0.5 rounded-md border text-zinc-800 bg-stone-100 border-stone-200">
+                    <span class="w-2 h-2 rounded-full bg-stone-500"></span>
+                    <span>{{ __('Orden Entrante (Cola)') }}</span>
+                </span>
+                <span class="flex items-center gap-1 px-2 py-0.5 rounded-md border font-semibold" style="background-color: {{ $workingTodayHex }}15; color: {{ $workingTodayHex }}; border-color: {{ $workingTodayHex }}40;">
+                    <span class="w-2 h-2 rounded-full" style="background-color: {{ $workingTodayHex }}"></span>
+                    <span>{{ __('Working Today') }}</span>
+                </span>
+                <span class="flex items-center gap-1 px-2 py-0.5 rounded-md border font-semibold" style="background-color: {{ $sentToCamilaHex }}15; color: {{ $sentToCamilaHex }}; border-color: {{ $sentToCamilaHex }}40;">
+                    <span class="w-2 h-2 rounded-full" style="background-color: {{ $sentToCamilaHex }}"></span>
+                    <span>{{ __('Sent to Camila') }}</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch pt-0.5">
+            
+            <!-- 1/3 ESPACIO A LA IZQUIERDA: Gráfico de Barras Verticales (Espacio vertical completo sin huecos) -->
+            <div class="lg:col-span-4 bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col justify-between space-y-3">
+                <div class="flex items-center justify-between border-b border-stone-200/60 pb-2">
+                    <span class="text-[10px] font-bold text-zinc-700 uppercase tracking-wider">
+                        {{ __('Comparativa de Carga') }}
+                    </span>
+                    <span class="text-[10px] text-zinc-400 font-mono">
+                        {{ __('Máx:') }} <strong>{{ $maxAvailableOrders }}</strong> {{ __('órdenes') }}
+                    </span>
+                </div>
+
+                <!-- Vertical Canvas: Full Vertical Fill without top gap -->
+                <div class="h-64 sm:h-72 flex items-end justify-around gap-2 pt-4 pb-1 px-1 border-b border-stone-200/80 relative">
+                    <!-- Subtle Reference Grid Lines -->
+                    <div class="absolute inset-x-0 top-0 border-b border-stone-200/40 border-dashed text-[8px] font-mono text-zinc-400 pl-1">
+                        {{ $maxAvailableOrders }}
+                    </div>
+                    <div class="absolute inset-x-0 top-1/2 border-b border-stone-200/40 border-dashed text-[8px] font-mono text-zinc-400 pl-1">
+                        {{ round($maxAvailableOrders / 2, 1) }}
+                    </div>
+
+                    @foreach($designerAvailabilityStats as $st)
+                        @php
+                            $des = $st['designer'];
+                            $totalActive = $st['total_active'];
+                            $hexColor = $des->hex_color ?: '#3b82f6';
+                            $queueColor = $st['queue_color'];
+                            $isLowestCount = ($totalActive === $minAvailableOrders);
+
+                            $barHeightPct = $maxAvailableOrders > 0 ? round(($totalActive / $maxAvailableOrders) * 100, 1) : 0;
+
+                            $incPct = $totalActive > 0 ? ($st['incoming_count'] / $totalActive) * 100 : 0;
+                            $workPct = $totalActive > 0 ? ($st['working_today_count'] / $totalActive) * 100 : 0;
+                            $camPct = $totalActive > 0 ? ($st['sent_to_camila_count'] / $totalActive) * 100 : 0;
+                        @endphp
+
+                        <div class="flex flex-col items-center h-full justify-end flex-1 max-w-[68px] z-10 group">
+                            <!-- Value Label on Top of Bar -->
+                            <span class="text-xs font-bold font-mono text-zinc-900 mb-1 group-hover:scale-110 transition-transform">
+                                {{ $totalActive }}
+                            </span>
+
+                            <!-- Vertical Bar Track (Full vertical utilization with subtle lowest highlight) -->
+                            <div class="w-full bg-stone-200/60 rounded-t-md overflow-hidden border {{ $isLowestCount ? 'border-emerald-400 ring-2 ring-emerald-400/30' : 'border-stone-300/70' }} flex flex-col justify-end transition-all duration-300 relative shadow-inner" style="height: 100%;">
+                                @if($totalActive > 0)
+                                    <div class="w-full flex flex-col transition-all duration-500 rounded-t-md overflow-hidden" style="height: {{ max($barHeightPct, 6) }}%;">
+                                        @if($st['sent_to_camila_count'] > 0)
+                                            <div class="w-full transition-colors" 
+                                                 style="height: {{ $camPct }}%; background-color: {{ $sentToCamilaHex }};" 
+                                                 title="{{ __('Sent to Camila:') }} {{ $st['sent_to_camila_count'] }}"></div>
+                                        @endif
+                                        @if($st['working_today_count'] > 0)
+                                            <div class="w-full transition-colors" 
+                                                 style="height: {{ $workPct }}%; background-color: {{ $workingTodayHex }};" 
+                                                 title="{{ __('Working Today:') }} {{ $st['working_today_count'] }}"></div>
+                                        @endif
+                                        @if($st['incoming_count'] > 0)
+                                            <div class="w-full transition-colors" 
+                                                 style="height: {{ $incPct }}%; background-color: {{ $queueColor }};" 
+                                                 title="{{ $st['queue_status']->label() }}: {{ $st['incoming_count'] }}"></div>
+                                        @endif
+                                    </div>
+                                @else
+                                    <div class="w-full h-1 bg-stone-300"></div>
+                                @endif
+                            </div>
+
+                            <!-- X-Axis Label Below Bar -->
+                            <div class="mt-2 text-center">
+                                <div class="flex items-center justify-center gap-1">
+                                    <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: {{ $hexColor }}"></span>
+                                    <span class="font-bold text-zinc-800 text-[11px] truncate max-w-[60px]" title="{{ $des->name }}">
+                                        {{ Str::before($des->name, ' ') }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- 2/3 ESPACIO A LA DERECHA: Tres Columnas (Una por Diseñador) -->
+            <div class="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-3.5 items-stretch">
+                @foreach($designerAvailabilityStats as $st)
+                    @php
+                        $des = $st['designer'];
+                        $totalActive = $st['total_active'];
+                        $hexColor = $des->hex_color ?: '#3b82f6';
+                        $queueColor = $st['queue_color'];
+                        $isLowestCount = ($totalActive === $minAvailableOrders);
+                    @endphp
+
+                    <div class="relative bg-[#fbfbfa] rounded-xl p-3 flex flex-col justify-between space-y-3 transition-all duration-300 shadow-2xs {{ $isLowestCount ? 'border-2 border-emerald-500/70 ring-4 ring-emerald-500/10 bg-gradient-to-b from-emerald-50/20 via-[#fbfbfa] to-[#fbfbfa]' : 'border border-[#e9e9e7] hover:border-stone-300' }}">
+                        
+                        <!-- Column Header: Designer info & order count -->
+                        <div class="space-y-2 border-b border-stone-200/60 pb-2.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="w-3 h-3 rounded-full shrink-0 ring-2 ring-stone-200" style="background-color: {{ $hexColor }}"></span>
+                                    <span class="font-bold text-zinc-900 text-xs truncate" title="{{ $des->name }}">{{ $des->name }}</span>
+                                    @if($isLowestCount)
+                                        <span class="px-1.5 py-0.5 rounded-full font-sans text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/90 flex items-center gap-1 shrink-0 shadow-2xs" title="{{ __('Diseñador con menor número de órdenes activas') }}">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            <span>{{ __('Menor Carga') }}</span>
+                                        </span>
+                                    @endif
+                                </div>
+                                <span class="px-2 py-0.5 rounded-md font-mono font-bold text-xs {{ $isLowestCount ? 'bg-emerald-100 text-emerald-900 border border-emerald-300/80' : 'bg-stone-100 text-zinc-900 border border-stone-200/90' }} shrink-0">
+                                    {{ $totalActive }} {{ __('activas') }}
+                                </span>
+                            </div>
+
+                            <!-- Mini Legend / Breakdown -->
+                            <div class="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                                <span class="px-1.5 py-0.5 rounded border flex items-center gap-1" style="background-color: {{ $queueColor }}15; color: {{ $queueColor }}; border-color: {{ $queueColor }}40;">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $queueColor }}"></span>
+                                    <span>{{ __('Entrante:') }} <strong>{{ $st['incoming_count'] }}</strong></span>
+                                </span>
+                                <span class="px-1.5 py-0.5 rounded border flex items-center gap-1" style="background-color: {{ $workingTodayHex }}15; color: {{ $workingTodayHex }}; border-color: {{ $workingTodayHex }}40;">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $workingTodayHex }}"></span>
+                                    <span>{{ __('Working:') }} <strong>{{ $st['working_today_count'] }}</strong></span>
+                                </span>
+                                <span class="px-1.5 py-0.5 rounded border flex items-center gap-1" style="background-color: {{ $sentToCamilaHex }}15; color: {{ $sentToCamilaHex }}; border-color: {{ $sentToCamilaHex }}40;">
+                                    <span class="w-1.5 h-1.5 rounded-full" style="background-color: {{ $sentToCamilaHex }}"></span>
+                                    <span>{{ __('Camila:') }} <strong>{{ $st['sent_to_camila_count'] }}</strong></span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Minimalist List of Active Orders in Process -->
+                        <div class="space-y-1.5 flex-1 overflow-y-auto max-h-60 pr-0.5 custom-vertical-scrollbar">
+                            @forelse($st['orders'] as $order)
+                                @php
+                                    $statusHex = $order->core_status->hexColor();
+                                @endphp
+                                <div wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
+                                     class="p-2 rounded-lg bg-white border border-[#e9e9e7] hover:border-stone-400 hover:shadow-2xs transition flex items-center justify-between text-xs gap-2 group cursor-pointer">
+                                    <div class="min-w-0 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ $statusHex }}" title="{{ $order->core_status->label() }}"></span>
+                                        <div class="min-w-0 space-y-0.5">
+                                            <div class="flex items-center gap-1.5">
+                                                @if($order->wo_number)
+                                                    <span class="font-mono text-[10px] font-bold text-zinc-500">WO#{{ $order->wo_number }}</span>
+                                                @endif
+                                                <span class="font-bold text-zinc-900 text-[11px] truncate group-hover:text-blue-600 transition-colors">
+                                                    {{ $order->company_name }}
+                                                </span>
+                                            </div>
+                                            <p class="text-[10px] text-zinc-500 truncate" title="{{ $order->clean_task_name }}">
+                                                {{ $order->clean_task_name }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="p-1 rounded text-zinc-400 group-hover:text-zinc-700 hover:bg-stone-100 transition shrink-0" title="{{ __('Ver detalle de orden') }}">
+                                        <x-lucide-external-link class="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            @empty
+                                <div class="p-3 text-center text-[11px] text-zinc-400 font-medium bg-white/70 rounded-lg border border-dashed border-stone-200">
+                                    {{ __('Sin órdenes en proceso') }}
+                                </div>
+                            @endforelse
+                        </div>
+
+                    </div>
+                @endforeach
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 3. Abajo de eso: Carga de Trabajo por Diseñador (Izquierda) & Conteo / Cumplimiento SLA (Derecha) -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         
         <!-- A la izquierda: Carga de trabajo por diseñador (existente) -->

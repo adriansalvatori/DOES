@@ -293,7 +293,8 @@ class AutomationEngine
         bool $estimateApproved,
         string $approvalType = 'cliente',
         ?string $approvalNote = null,
-        ?string $approvalImagePath = null
+        ?string $approvalImagePath = null,
+        ?CoreStatus $targetStatus = null
     ): void {
         $isUrgente = $order->isUrgente();
         $targetDate = $isUrgente ? now() : now()->addWeekdays(1);
@@ -348,12 +349,12 @@ class AutomationEngine
         ]);
 
         if ($measuresConfirmed && $estimateApproved) {
-            // Fully Approved -> Move to designer Orders Received + PONER EN ALTA
-            $targetStatus = $order->getDesignerOrdersReceivedStatus();
+            $finalStatus = $targetStatus ?? $order->getDesignerOrdersReceivedStatus();
+            $finalSubstatus = ($finalStatus === CoreStatus::EN_PRODUCCION) ? Substatus::ENVIADO_EN_ALTA : Substatus::PONER_EN_ALTA;
 
             $order->update([
-                'core_status' => $targetStatus,
-                'substatus' => Substatus::PONER_EN_ALTA,
+                'core_status' => $finalStatus,
+                'substatus' => $finalSubstatus,
             ]);
 
             RelatedTask::create([
