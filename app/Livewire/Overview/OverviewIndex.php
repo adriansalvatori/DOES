@@ -6,6 +6,7 @@ use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Models\Client;
 use App\Models\Designer;
+use App\Models\InstallationType;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Services\TrelloSyncService;
@@ -358,8 +359,12 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Orden actualizada exitosamente.'));
     }
 
-    public function updateReviewStatus(int $orderId, ?string $status): void
+    public function updateReviewStatus(?int $orderId, ?string $status): void
     {
+        if (! $orderId) {
+            return;
+        }
+
         $order = Order::find($orderId);
         if (! $order) {
             return;
@@ -372,8 +377,12 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Estado de revisión actualizado.'));
     }
 
-    public function updateInstallationType(int $orderId, ?string $type): void
+    public function updateInstallationType(?int $orderId, ?string $type): void
     {
+        if (! $orderId) {
+            return;
+        }
+
         $order = Order::find($orderId);
         if (! $order) {
             return;
@@ -386,8 +395,12 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Instalación actualizada.'));
     }
 
-    public function updateSubstatus(int $orderId, ?string $substatusValue): void
+    public function updateSubstatus(?int $orderId, ?string $substatusValue): void
     {
+        if (! $orderId) {
+            return;
+        }
+
         $order = Order::find($orderId);
         if (! $order) {
             return;
@@ -411,8 +424,12 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Subestatus / Bandera actualizada.'));
     }
 
-    public function toggleFlag(int $orderId, string $flagName): void
+    public function toggleFlag(?int $orderId, string $flagName): void
     {
+        if (! $orderId) {
+            return;
+        }
+
         $order = Order::find($orderId);
         if (! $order) {
             return;
@@ -426,8 +443,12 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Bandera actualizada.'));
     }
 
-    public function toggleOverviewChecked(int $orderId): void
+    public function toggleOverviewChecked(?int $orderId): void
     {
+        if (! $orderId) {
+            return;
+        }
+
         $order = Order::find($orderId);
         if (! $order) {
             return;
@@ -439,8 +460,12 @@ class OverviewIndex extends Component
         $this->dispatch('order-updated');
     }
 
-    public function updateDesigner(int $orderId, ?int $designerId): void
+    public function updateDesigner(?int $orderId, ?int $designerId): void
     {
+        if (! $orderId) {
+            return;
+        }
+
         $order = Order::find($orderId);
         if (! $order) {
             return;
@@ -637,6 +662,7 @@ class OverviewIndex extends Component
             'designers' => $designers,
             'filterDesigners' => $filterDesigners,
             'substatuses' => $substatuses,
+            'installationTypes' => InstallationType::getAllCached(),
             'hasMore' => $hasMore,
             'totalFilteredCount' => $totalFilteredCount,
             'loadedCount' => $this->loadedCount,

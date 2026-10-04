@@ -44,7 +44,7 @@
             <p class="text-[10px] text-emerald-800 leading-tight">
                 {{ __('Las acciones futuras se enviarán a Trello.') }}
             </p>
-            <a href="/trello-sync" class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline">
+            <a href="/trello-sync" wire:navigate class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline">
                 <x-lucide-arrow-right class="w-3 h-3" />
                 {{ __('Ir a Conciliar / Sincronizar Tablero') }}
             </a>

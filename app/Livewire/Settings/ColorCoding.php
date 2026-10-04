@@ -126,7 +126,7 @@ class ColorCoding extends Component
                 'count' => count(array_filter($allItems, fn ($i) => $i['category'] === 'supervision')),
             ],
             'production' => [
-                'name' => __('Producción & Taller'),
+                'name' => __('Producción & Talle'),
                 'count' => count(array_filter($allItems, fn ($i) => $i['category'] === 'production')),
             ],
             'designers' => [

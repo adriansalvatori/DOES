@@ -30,6 +30,58 @@
     @fluxAppearance
     
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
+        /* Livewire wire:navigate Loading Progress Bar */
+        #nprogress {
+            pointer-events: none;
+        }
+        #nprogress .bar {
+            background: #eda621 !important;
+            background: linear-gradient(90deg, #f59e0b 0%, #eda621 50%, #10b981 100%) !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: 3.5px !important;
+            z-index: 999999 !important;
+            box-shadow: 0 0 10px rgba(237, 166, 33, 0.8), 0 0 5px rgba(245, 158, 11, 0.6) !important;
+        }
+        #nprogress .peg {
+            display: block !important;
+            position: absolute !important;
+            right: 0px !important;
+            width: 120px !important;
+            height: 100% !important;
+            box-shadow: 0 0 14px #eda621, 0 0 8px #f59e0b !important;
+            opacity: 1 !important;
+        }
+        /* Anti-layout shift: Pre-set widths before Alpine hydrates */
+        aside.app-sidebar {
+            width: 16rem;
+        }
+        html.sidebar-collapsed aside.app-sidebar {
+            width: 4rem !important;
+        }
+        div.app-main-container {
+            padding-left: 16rem;
+        }
+        html.sidebar-collapsed div.app-main-container {
+            padding-left: 4rem !important;
+        }
+        /* Prevent 200ms transition flash while page is booting */
+        body.is-booting aside.app-sidebar,
+        body.is-booting div.app-main-container {
+            transition: none !important;
+        }
+        @keyframes appFadeIn {
+            from { opacity: 0.5; transform: translateY(1px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        main.app-main-content {
+            animation: appFadeIn 0.12s ease-out;
+        }
         body {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #fbfbfa;
@@ -40,6 +92,15 @@
         }
         {!! app(\App\Services\ColorCodingService::class)->generateCssVariables() !!}
     </style>
+    <script>
+        (function() {
+            try {
+                if (localStorage.getItem('sidebar_open') === 'false') {
+                    document.documentElement.classList.add('sidebar-collapsed');
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body 
     x-data="{ 
@@ -48,20 +109,28 @@
         configPopover: false 
     }"
     x-init="
-        $watch('sidebarOpen', val => localStorage.setItem('sidebar_open', val));
+        $watch('sidebarOpen', val => {
+            localStorage.setItem('sidebar_open', val);
+            document.documentElement.classList.toggle('sidebar-collapsed', !val);
+        });
         $watch('configOpen', val => localStorage.setItem('config_open', val));
+        document.documentElement.classList.toggle('sidebar-collapsed', !sidebarOpen);
+        requestAnimationFrame(() => {
+            document.body.classList.remove('is-booting');
+        });
     "
-    class="h-full bg-[#fbfbfa] text-zinc-800 flex antialiased selection:bg-stone-200">
+    class="is-booting h-full bg-[#fbfbfa] text-zinc-800 flex antialiased selection:bg-stone-200">
 
     <!-- Notion Left Sidebar Navigation (Collapsible) -->
     <aside 
+        id="app-sidebar"
         :class="sidebarOpen ? 'w-64' : 'w-16'"
-        class="fixed inset-y-0 left-0 bg-[#f7f7f5] border-r border-[#e9e9e7] flex flex-col justify-between z-40 select-none transition-all duration-200 ease-in-out">
+        class="app-sidebar fixed inset-y-0 left-0 bg-[#f7f7f5] border-r border-[#e9e9e7] flex flex-col justify-between z-40 select-none transition-all duration-200 ease-in-out">
         
         <!-- Workspace / Brand Header & Collapse Toggle (Pinned Top) -->
         <div class="p-3 pb-0 shrink-0">
             <div :class="sidebarOpen ? 'justify-between' : 'justify-center'" class="flex items-center pb-3 border-b border-[#e9e9e7]">
-                <a href="{{ route('dashboard') }}" class="flex items-center gap-2.5 min-w-0 group cursor-pointer" title="Ir al Dashboard">
+                <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2.5 min-w-0 group cursor-pointer" title="Ir al Dashboard">
                     <div class="w-7 h-7 rounded-lg bg-[#eda621] flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
                         <img src="{{ asset('images/kudos-hand-white.svg') }}" alt="{{ config('app.name') }}" class="w-4.5 h-4.5 object-contain">
                     </div>
@@ -85,6 +154,7 @@
                 <!-- Control Center -->
                 <a 
                     href="/" 
+                    wire:navigate
                     title="{{ __('Centro de Control Operativo') }}" 
                     class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('/') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-activity class="w-4 h-4 text-zinc-500 shrink-0" />
@@ -95,6 +165,7 @@
                 @if(!auth()->user()?->isDesigner())
                     <a 
                         href="/analytics" 
+                        wire:navigate
                         title="{{ __('Analytics Dashboard') }}" 
                         class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('analytics*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                         <x-lucide-bar-chart-3 class="w-4 h-4 text-zinc-500 shrink-0" />
@@ -106,20 +177,20 @@
                 <div class="my-2 border-t border-[#e9e9e7]"></div>
 
                 <!-- Kanban Board -->
-                <a href="/kanban" title="{{ __('Kanban Board') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                <a href="/kanban" wire:navigate title="{{ __('Kanban Board') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('kanban*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-kanban class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Kanban Board') }}</span>
                 </a>
 
                 <!-- Weekly Planner -->
-                <a href="/planner" title="{{ __('Planificador Semanal') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('planner*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                <a href="/planner" wire:navigate title="{{ __('Planificador Semanal') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('planner*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-check-circle-2 class="w-4 h-4 text-zinc-500 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Planificador Semanal') }}</span>
                 </a>
 
                 <!-- Overview -->
                 @if(!auth()->user()?->isDesigner())
-                    <a href="/overview" title="{{ __('Overview Operativo') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('overview*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <a href="/overview" wire:navigate title="{{ __('Overview Operativo') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('overview*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                         <x-lucide-table-properties class="w-4 h-4 text-emerald-600 shrink-0" />
                         <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Overview') }}</span>
                     </a>
@@ -130,20 +201,20 @@
                 <div class="my-2 border-t border-[#e9e9e7]"></div>
 
                 <!-- Clientes -->
-                <a href="/clients" title="{{ __('Clientes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('clients*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                <a href="/clients" wire:navigate title="{{ __('Clientes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('clients*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-building-2 class="w-4 h-4 text-emerald-600 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Clientes') }}</span>
                 </a>
 
                 <!-- Archivadas -->
-                <a href="/archived" title="{{ __('Órdenes Archivadas') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('archived*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                <a href="/archived" wire:navigate title="{{ __('Órdenes Archivadas') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('archived*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                     <x-lucide-archive class="w-4 h-4 text-slate-600 shrink-0" />
                     <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Archivadas') }}</span>
                 </a>
 
                 <!-- Papelera -->
                 @if(!auth()->user()?->isDesigner() && !auth()->user()?->isSales())
-                    <a href="/trash" title="{{ __('Papelera de Reciclaje') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('trash*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <a href="/trash" wire:navigate title="{{ __('Papelera de Reciclaje') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('trash*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
                         <x-lucide-trash-2 class="w-4 h-4 text-red-500 shrink-0" />
                         <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Papelera') }}</span>
                     </a>
@@ -183,199 +254,242 @@
                     </div>
                 </div>
             </nav>
+        </div>
 
-            <!-- Bottom-aligned Navigation Links -->
-            <div class="mt-auto shrink-0 pt-2 space-y-1 text-xs">
-                <!-- (separador) -->
-                <div class="my-2 border-t border-[#e9e9e7]"></div>
-
-                <!-- Settings Item with Context Dropdown Menu -->
-                <div class="relative" @click.outside="configPopover = false">
-                    <button 
-                        @click="sidebarOpen ? (configOpen = !configOpen) : (configPopover = !configPopover)" 
-                        title="{{ __('Configuración') }}" 
-                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ request()->is('settings*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <x-lucide-settings class="w-4 h-4 text-zinc-500 shrink-0" />
-                            <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Configuración') }}</span>
-                        </div>
-                        <x-lucide-chevron-down 
-                            x-show="sidebarOpen" 
-                            class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
-                            x-bind:class="configOpen ? 'rotate-180' : ''" />
-                    </button>
-
-                    <!-- Expanded Sub-menu when Sidebar is Open -->
-                    <div 
-                        x-show="configOpen && sidebarOpen" 
-                        x-transition:enter="transition ease-out duration-100"
-                        x-transition:enter-start="opacity-0 scale-95"
-                        x-transition:enter-end="opacity-100 scale-100"
-                        class="mt-1 pl-6 space-y-1 text-xs">
-                        <a 
-                            href="/settings/profile" 
-                            title="{{ __('Mi Perfil') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/profile*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-user-cog class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Mi Perfil') }}</span>
-                        </a>
-                        @if(auth()->user()?->isAdmin())
-                            <a 
-                                href="/settings/users" 
-                                title="{{ __('Gestión de Usuarios') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                                <span class="truncate">{{ __('Usuarios y Roles') }}</span>
-                            </a>
-                        @endif
-                        <a 
-                            href="/settings/documentation" 
-                            title="{{ __('Guía de Comportamientos') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span class="truncate">{{ __('Guía de Comportamientos') }}</span>
-                        </a>
-                        <a 
-                            href="/settings/language" 
-                            title="{{ __('Idioma / Language') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                            <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Idioma') }}</span>
-                        </a>
-                        @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
-                            <a 
-                                href="/settings/color-coding" 
-                                title="{{ __('Personalización de Colores') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/color-coding*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <x-lucide-palette class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Color Coding') }}</span>
-                            </a>
-                            <a 
-                                href="/settings/substatuses" 
-                                title="{{ __('Configuración de Subestatus') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Subestatus') }}</span>
-                            </a>
-                            <a 
-                                href="/settings/subtasks" 
-                                title="{{ __('Plantillas de Subtareas') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
-                            </a>
-                        @endif
-                        @if(auth()->user()?->isAdmin())
-                            <a 
-                                href="/settings/trello-mapping" 
-                                title="{{ __('Mapeo de Listas Trello') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
-                            </a>
-                            <a 
-                                href="/settings/backups" 
-                                title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                    <span class="truncate">{{ __('Respaldos') }}</span>
-                                </div>
-                                <kbd x-show="sidebarOpen" class="hidden sm:inline-block text-[10px] font-mono text-zinc-400 bg-stone-200/70 border border-stone-300/80 px-1 py-0.2 rounded leading-tight">⌘S</kbd>
-                            </a>
-                        @endif
+        <!-- Bottom-aligned Navigation Links (Docked above profile) -->
+        <div class="shrink-0 p-3 pt-2 pb-1 space-y-1 text-xs border-t border-[#e9e9e7]">
+            <!-- Settings Item with Context Dropdown Menu -->
+            <div class="relative" @click.outside="configPopover = false">
+                <button 
+                    @click="sidebarOpen ? (configOpen = !configOpen) : (configPopover = !configPopover)" 
+                    title="{{ __('Configuración') }}" 
+                    class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between transition cursor-pointer text-xs {{ request()->is('settings*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}"
+                    :class="(configPopover && !sidebarOpen) ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : ''">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <x-lucide-settings class="w-4 h-4 text-zinc-500 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Configuración') }}</span>
                     </div>
+                    <x-lucide-chevron-down 
+                        x-show="sidebarOpen" 
+                        class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 shrink-0" 
+                        x-bind:class="configOpen ? 'rotate-180' : ''" />
+                </button>
 
-                    <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
-                    <div 
-                        x-show="configPopover && !sidebarOpen" 
-                        x-transition:enter="transition ease-out duration-150"
-                        x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
-                        x-transition:enter-end="opacity-100 scale-100 translate-x-0"
-                        class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[170px] space-y-1 text-xs">
-                        <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">{{ __('Configuración') }}</div>
-                        @if(auth()->user()?->isAdmin())
-                            <a 
-                                href="/settings/users" 
-                                title="{{ __('Gestión de Usuarios') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                                <span class="truncate">{{ __('Usuarios y Roles') }}</span>
-                            </a>
-                        @endif
+                <!-- Expanded Sub-menu when Sidebar is Open -->
+                <div 
+                    x-show="configOpen && sidebarOpen" 
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-100"
+                    x-transition:enter-start="opacity-0 scale-95"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    class="mt-1 pl-6 space-y-1 text-xs max-h-[300px] overflow-y-auto custom-vertical-scrollbar"
+                    style="display: none;">
+                    <a 
+                        href="/settings/profile" 
+                        wire:navigate
+                        title="{{ __('Mi Perfil') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/profile*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-user-cog class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">{{ __('Mi Perfil') }}</span>
+                    </a>
+                    @if(auth()->user()?->isAdmin())
                         <a 
-                            href="/settings/documentation" 
-                            title="{{ __('Guía de Comportamientos') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                            <span class="truncate">{{ __('Guía Comportamientos') }}</span>
+                            href="/settings/users" 
+                            wire:navigate
+                            title="{{ __('Gestión de Usuarios') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                            <span class="truncate">{{ __('Usuarios y Roles') }}</span>
+                        </a>
+                    @endif
+                    <a 
+                        href="/settings/documentation" 
+                        wire:navigate
+                        title="{{ __('Guía de Comportamientos') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span class="truncate">{{ __('Guía de Comportamientos') }}</span>
+                    </a>
+                    <a 
+                        href="/settings/language" 
+                        wire:navigate
+                        title="{{ __('Idioma / Language') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">{{ __('Idioma') }}</span>
+                    </a>
+                    @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                        <a 
+                            href="/settings/color-coding" 
+                            wire:navigate
+                            title="{{ __('Personalización de Colores') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/color-coding*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-palette class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Color Coding') }}</span>
                         </a>
                         <a 
-                            href="/settings/language" 
-                            title="{{ __('Idioma / Language') }}" 
-                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                            <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                            <span class="truncate">{{ __('Idioma') }}</span>
+                            href="/settings/substatuses" 
+                            wire:navigate
+                            title="{{ __('Configuración de Subestatus') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Subestatus') }}</span>
                         </a>
-                        @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
-                            <a 
-                                href="/settings/color-coding" 
-                                title="{{ __('Personalización de Colores') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/color-coding*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <x-lucide-palette class="w-3.5 h-3.5 text-pink-600 shrink-0" />
-                                <span class="truncate">{{ __('Color Coding') }}</span>
-                            </a>
-                            <a 
-                                href="/settings/substatuses" 
-                                title="{{ __('Configuración de Subestatus') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Subestatus') }}</span>
-                            </a>
-                            <a 
-                                href="/settings/subtasks" 
-                                title="{{ __('Plantillas de Subtareas') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
-                            </a>
-                        @endif
-                        @if(auth()->user()?->isAdmin())
-                            <a 
-                                href="/settings/trello-mapping" 
-                                title="{{ __('Mapeo de Listas Trello') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
-                            </a>
-                            <a 
-                                href="/settings/backups" 
-                                title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
-                                class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center justify-between gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                                <div class="flex items-center gap-2 min-w-0">
-                                    <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                    <span class="truncate">{{ __('Respaldos') }}</span>
-                                </div>
-                                <kbd class="text-[10px] font-mono text-zinc-400 bg-stone-200/70 border border-stone-300/80 px-1 py-0.2 rounded leading-tight">⌘S</kbd>
-                            </a>
-                        @endif
-                    </div>
+                        <a 
+                            href="/settings/installation-types" 
+                            wire:navigate
+                            title="{{ __('Configuración de Tipos de Instalación') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/installation-types*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-truck class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Instalación') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/subtasks" 
+                            wire:navigate
+                            title="{{ __('Plantillas de Subtareas') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
+                        </a>
+                    @endif
+                    @if(auth()->user()?->isAdmin())
+                        <a 
+                            href="/settings/trello-mapping" 
+                            wire:navigate
+                            title="{{ __('Mapeo de Listas Trello') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/backups" 
+                            wire:navigate
+                            title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center justify-between gap-2 transition {{ request()->is('settings/backups*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Respaldos') }}</span>
+                            </div>
+                            <kbd x-show="sidebarOpen" class="hidden sm:inline-block text-[10px] font-mono text-zinc-400 bg-stone-200/70 border border-stone-300/80 px-1 py-0.2 rounded leading-tight">⌘S</kbd>
+                        </a>
+                    @endif
                 </div>
 
-                <!-- Backlog -->
-                <a href="/backlog" title="{{ __('Backlog de Órdenes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Backlog') }}</span>
-                </a>
-
-                <!-- Sincronización -->
-                @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
-                    <a href="/trello-sync" title="{{ __('Sincronización Trello') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('trello-sync*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                        <x-lucide-refresh-cw class="w-4 h-4 text-blue-600 shrink-0" />
-                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Sincronización') }}</span>
+                <!-- Floating Popover Context Menu when Sidebar is Collapsed -->
+                <div 
+                    x-show="configPopover && !sidebarOpen" 
+                    x-cloak
+                    x-transition:enter="transition ease-out duration-150"
+                    x-transition:enter-start="opacity-0 scale-95 -translate-x-1"
+                    x-transition:enter-end="opacity-100 scale-100 translate-x-0"
+                    class="absolute left-14 bottom-0 z-50 bg-white shadow-xl border border-stone-200 rounded-xl p-1.5 min-w-[190px] space-y-1 text-xs max-h-[calc(100vh-20px)] overflow-y-auto custom-vertical-scrollbar"
+                    style="display: none;">
+                    <div class="px-2 py-1 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">{{ __('Configuración') }}</div>
+                    <a 
+                        href="/settings/profile" 
+                        wire:navigate
+                        title="{{ __('Mi Perfil') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/profile*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                        <x-lucide-user-cog class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">{{ __('Mi Perfil') }}</span>
                     </a>
-                @endif
+                    @if(auth()->user()?->isAdmin())
+                        <a 
+                            href="/settings/users" 
+                            wire:navigate
+                            title="{{ __('Gestión de Usuarios') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                            <span class="truncate">{{ __('Usuarios y Roles') }}</span>
+                        </a>
+                    @endif
+                    <a 
+                        href="/settings/documentation" 
+                        wire:navigate
+                        title="{{ __('Guía de Comportamientos') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                        <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                        <span class="truncate">{{ __('Guía Comportamientos') }}</span>
+                    </a>
+                    <a 
+                        href="/settings/language" 
+                        wire:navigate
+                        title="{{ __('Idioma / Language') }}" 
+                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/language*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                        <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span class="truncate">{{ __('Idioma') }}</span>
+                    </a>
+                    @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                        <a 
+                            href="/settings/color-coding" 
+                            wire:navigate
+                            title="{{ __('Personalización de Colores') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/color-coding*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-palette class="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                            <span class="truncate">{{ __('Color Coding') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/substatuses" 
+                            wire:navigate
+                            title="{{ __('Configuración de Subestatus') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/substatuses*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-tags class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Subestatus') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/installation-types" 
+                            wire:navigate
+                            title="{{ __('Configuración de Tipos de Instalación') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/installation-types*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-truck class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Instalación') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/subtasks" 
+                            wire:navigate
+                            title="{{ __('Plantillas de Subtareas') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/subtasks*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-list-checks class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Plantillas Subtareas') }}</span>
+                        </a>
+                    @endif
+                    @if(auth()->user()?->isAdmin())
+                        <a 
+                            href="/settings/trello-mapping" 
+                            wire:navigate
+                            title="{{ __('Mapeo de Listas Trello') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                            <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/backups" 
+                            wire:navigate
+                            title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center justify-between gap-2 transition {{ request()->is('settings/backups*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <x-lucide-database class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                                <span class="truncate">{{ __('Respaldos') }}</span>
+                            </div>
+                            <kbd class="text-[10px] font-mono text-zinc-400 bg-stone-200/70 border border-stone-300/80 px-1 py-0.2 rounded leading-tight">⌘S</kbd>
+                        </a>
+                    @endif
+                </div>
             </div>
+
+            <!-- Backlog -->
+            <a href="/backlog" wire:navigate title="{{ __('Backlog de Órdenes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('backlog*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                <x-lucide-box class="w-4 h-4 text-zinc-500 shrink-0" />
+                <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Backlog') }}</span>
+            </a>
+
+            <!-- Sincronización -->
+            @if(auth()->user()?->isAdmin() || auth()->user()?->isCoordinator())
+                <a href="/trello-sync" wire:navigate title="{{ __('Sincronización Trello') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('trello-sync*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-refresh-cw class="w-4 h-4 text-blue-600 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Sincronización') }}</span>
+                </a>
+            @endif
         </div>
 
         <!-- User Profile & Logout Sidebar Footer -->
@@ -387,6 +501,7 @@
                 <a 
                     x-show="sidebarOpen"
                     href="{{ route('settings.profile') }}" 
+                    wire:navigate
                     class="flex items-center gap-2 min-w-0 group hover:opacity-80 transition" 
                     title="{{ auth()->user()->name }}">
                     @if(auth()->user()->avatar_url)
@@ -419,6 +534,7 @@
                 <!-- Floating Popover when Sidebar is Collapsed -->
                 <div 
                     x-show="userMenuOpen && !sidebarOpen" 
+                    x-cloak
                     @click.outside="userMenuOpen = false"
                     x-transition:enter="transition ease-out duration-150"
                     x-transition:enter-start="opacity-0 scale-95 translate-y-1"
@@ -429,11 +545,11 @@
                         <p class="font-semibold text-zinc-900 truncate">{{ auth()->user()->name }}</p>
                         <span class="text-[10px] text-zinc-500 block truncate">{{ auth()->user()->role?->label() ?? __('Diseñador') }}</span>
                     </div>
-                    <a href="{{ route('settings.profile') }}" class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
+                    <a href="{{ route('settings.profile') }}" wire:navigate class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
                         <x-lucide-user class="w-3.5 h-3.5 text-zinc-500" />
                         <span>{{ __('Mi Perfil') }}</span>
                     </a>
-                    <a href="/settings/language" class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
+                    <a href="/settings/language" wire:navigate class="w-full px-2 py-1.5 rounded-lg font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
                         <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500" />
                         <span>{{ __('Idioma') }}</span>
                     </a>
@@ -461,8 +577,9 @@
 
     <!-- Main Content Container (Dynamic Padding for Collapsible Sidebar) -->
     <div 
+        id="app-main-container"
         :class="sidebarOpen ? 'pl-64' : 'pl-16'"
-        class="flex-1 h-screen max-h-screen flex flex-col w-full bg-[#fbfbfa] transition-all duration-200 ease-in-out overflow-hidden">
+        class="app-main-container flex-1 h-screen max-h-screen flex flex-col w-full bg-[#fbfbfa] transition-all duration-200 ease-in-out overflow-hidden">
         
         <!-- Demo Environment Notification Banner -->
         @if(app(\App\Services\DemoEnvironmentService::class)->isDemo())
@@ -547,6 +664,7 @@
 
                         <div 
                             x-show="open" 
+                            x-cloak
                             @click.outside="open = false"
                             x-transition:enter="transition ease-out duration-100"
                             x-transition:enter-start="transform opacity-0 scale-95"
@@ -567,12 +685,12 @@
                                 </div>
                             </div>
 
-                            <a href="{{ route('settings.profile') }}" class="flex items-center gap-2 px-3 py-2 text-zinc-700 hover:bg-stone-50 transition">
+                            <a href="{{ route('settings.profile') }}" wire:navigate class="flex items-center gap-2 px-3 py-2 text-zinc-700 hover:bg-stone-50 transition">
                                 <x-lucide-user class="w-3.5 h-3.5 text-zinc-400" />
                                 <span>{{ __('Mi Perfil y Configuración') }}</span>
                             </a>
 
-                            <a href="/settings/language" class="flex items-center gap-2 px-3 py-2 text-zinc-700 hover:bg-stone-50 transition">
+                            <a href="/settings/language" wire:navigate class="flex items-center gap-2 px-3 py-2 text-zinc-700 hover:bg-stone-50 transition">
                                 <x-lucide-languages class="w-3.5 h-3.5 text-zinc-400" />
                                 <span>{{ __('Idioma') }}</span>
                             </a>
@@ -593,7 +711,7 @@
         </header>
 
         <!-- Main Slot -->
-        <main class="flex-1 w-full px-6 py-4 flex flex-col min-h-0 overflow-hidden">
+        <main class="app-main-content flex-1 w-full px-6 py-4 flex flex-col min-h-0 overflow-hidden">
             {{ $slot }}
         </main>
     </div>
@@ -628,6 +746,7 @@
         }"
         @toast.window="notify($event.detail.message || $event.detail)"
         x-show="show"
+        x-cloak
         x-transition:enter="transition ease-out duration-200"
         x-transition:enter-start="opacity-0 translate-y-2 scale-95"
         x-transition:enter-end="opacity-100 translate-y-0 scale-100"

@@ -27,7 +27,7 @@ class SubstatusSeeder extends Seeder
                 'core_status' => null,
                 'is_default' => false,
                 'is_global' => true,
-                'bg_color' => '#FFEAD1DC',
+                'bg_color' => '#EAD1DC',
                 'text_color' => '#581C87',
                 'border_color' => '#D5B8C6',
                 'is_system' => true,

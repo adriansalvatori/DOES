@@ -282,6 +282,28 @@ class OverviewTest extends TestCase
         $this->assertFalse($order->fresh()->hasFlag('URGENTE'));
     }
 
+    public function test_overview_toggle_flag_handles_null_order_id_safely(): void
+    {
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('toggleFlag', null, 'URGENTE')
+            ->assertOk();
+    }
+
+    public function test_overview_substatus_popover_renders_global_flags_first_without_emojis(): void
+    {
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertDontSee('🚩')
+            ->assertSeeHtmlInOrder([
+                __('Banderas / Flags Globales'),
+                __('Urgente'),
+                __('Ticket'),
+                __('Clasificación de Proceso (1 Selección)'),
+                __('Sin Subestatus'),
+            ]);
+    }
+
     public function test_overview_shows_assigned_designer_from_relation_when_designer_id_is_null(): void
     {
         $order = Order::create([

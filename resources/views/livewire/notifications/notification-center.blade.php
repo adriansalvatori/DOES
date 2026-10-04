@@ -1,4 +1,4 @@
-<div class="relative" x-data="{ open: false }" @click.outside="open = false" wire:poll.20s>
+<div class="relative" x-data="{ open: false }" @click.outside="open = false" wire:poll.visible.60s>
     
     <!-- Bell Icon Trigger Button -->
     <button 

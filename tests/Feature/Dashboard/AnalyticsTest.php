@@ -34,7 +34,7 @@ class AnalyticsTest extends TestCase
         Livewire::test(Analytics::class)
             ->assertSee(__('Mapa de Órdenes en Curso'))
             ->assertSee(__('Carga de Trabajo por Diseñador'))
-            ->assertSee(__('Órdenes en Diseño Activas'))
+            ->assertSee(__('Órdenes Activas'))
             ->assertSee(__('Cumplimiento del SLA'));
     }
 
@@ -181,7 +181,7 @@ class AnalyticsTest extends TestCase
 
         $test = Livewire::test(Analytics::class);
 
-        $test->assertSee(__('Disponibilidad Real por Diseñador'));
+        $test->assertSee(__('Disponibilidad Actual por Diseñador'));
         $test->assertSee('Diseñador A');
         $test->assertSee('Diseñador B');
 

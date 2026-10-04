@@ -223,6 +223,11 @@ class Order extends Model
         return (int) max(0, $start->diffInDays($closed));
     }
 
+    public function getInstallationBadgeStyleAttribute(): string
+    {
+        return InstallationType::getInlineBadgeStyle($this->installation_type);
+    }
+
     public function scopeNewFromTrello(Builder $query): Builder
     {
         return $query->where('is_new_from_trello', true);

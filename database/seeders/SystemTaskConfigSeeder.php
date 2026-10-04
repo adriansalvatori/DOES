@@ -60,7 +60,7 @@ class SystemTaskConfigSeeder extends Seeder
                 'task_type' => RelatedTaskType::PONER_ALTA->value,
                 'title' => 'Poner en ALTA',
                 'category' => 'Producción',
-                'description' => 'Acción operativa requerida para pasar los artes aprobados al estado de producción final en taller.',
+                'description' => 'Acción operativa requerida para pasar los artes aprobados al estado de producción final en producción.',
                 'is_active' => true,
             ],
             [

@@ -53,6 +53,7 @@
         activeMenu: null,
         targetOrderId: null,
         targetSubstatus: null,
+        targetInstallationType: null,
         targetFlags: [],
         menuStyle: '',
         openMenu(type, orderId, triggerEl, extraData = {}) {
@@ -63,6 +64,7 @@
             this.activeMenu = type;
             this.targetOrderId = orderId;
             this.targetSubstatus = extraData.substatus !== undefined ? extraData.substatus : null;
+            this.targetInstallationType = extraData.installationType !== undefined ? extraData.installationType : null;
             this.targetFlags = Array.isArray(extraData.flags) ? extraData.flags : [];
 
             const rect = triggerEl.getBoundingClientRect();
@@ -72,7 +74,7 @@
             let menuWidth = 200;
             if (type === 'substatus') { menuHeight = 320; menuWidth = 240; }
             if (type === 'designer') { menuHeight = 240; menuWidth = 170; }
-            if (type === 'installation') { menuHeight = 200; menuWidth = 210; }
+            if (type === 'installation') { menuHeight = 360; menuWidth = 240; }
             if (type === 'review') { menuHeight = 180; menuWidth = 210; }
 
             const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
@@ -90,27 +92,33 @@
             this.activeMenu = null;
             this.targetOrderId = null;
             this.targetSubstatus = null;
+            this.targetInstallationType = null;
             this.targetFlags = [];
         },
         setDesigner(dId) {
+            const orderId = this.targetOrderId;
             this.closeMenu();
-            $wire.updateDesigner(this.targetOrderId, dId);
+            if (orderId) $wire.updateDesigner(orderId, dId);
         },
         setReviewStatus(status) {
+            const orderId = this.targetOrderId;
             this.closeMenu();
-            $wire.updateReviewStatus(this.targetOrderId, status);
+            if (orderId) $wire.updateReviewStatus(orderId, status);
         },
         setInstallationType(type) {
+            const orderId = this.targetOrderId;
             this.closeMenu();
-            $wire.updateInstallationType(this.targetOrderId, type);
+            if (orderId) $wire.updateInstallationType(orderId, type);
         },
         setSubstatus(status) {
+            const orderId = this.targetOrderId;
             this.closeMenu();
-            $wire.updateSubstatus(this.targetOrderId, status);
+            if (orderId) $wire.updateSubstatus(orderId, status);
         },
         toggleGlobalFlag(flag) {
+            const orderId = this.targetOrderId;
             this.closeMenu();
-            $wire.toggleFlag(this.targetOrderId, flag);
+            if (orderId) $wire.toggleFlag(orderId, flag);
         }
     }"
     @keydown.escape.window="closeMenu()"
@@ -276,7 +284,7 @@
                         wire:click="setTab('production')"
                         class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'production' ? 'bg-white text-pink-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
                         <x-lucide-layers class="w-3.5 h-3.5 text-pink-600 shrink-0" />
-                        <span>{{ __('EN PRODUCCIÓN') }}</span>
+                        <span class="uppercase">{{ __('En Producción') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-pink-100 text-pink-800 font-extrabold">{{ $inProductionCount }}</span>
                     </button>
                     <button 
@@ -403,10 +411,10 @@
                     wire:model.live="filterInstallation" 
                     class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
                     <option value="">{{ __('Todas') }}</option>
-                    <option value="Kudos">Kudos (Sin color)</option>
-                    <option value="Kudos (Entregado)">Kudos (Verde - Entregado)</option>
-                    <option value="Debe">Debe (Rojo)</option>
-                    <option value="NONE">Vacío (Sin información)</option>
+                    @foreach($installationTypes as $instType)
+                        <option value="{{ $instType->name }}">{{ $instType->name }}</option>
+                    @endforeach
+                    <option value="NONE">{{ __('Vacío (Sin información)') }}</option>
                 </select>
             </div>
         </div>
@@ -425,7 +433,7 @@
     @endphp
 
     <!-- Single Unified Orders Data Grid (11 Columns Layout) -->
-    <div class="bg-white rounded-xl border border-stone-200 shadow-2xs w-full pb-12">
+    <div class="bg-white rounded-xl border border-stone-200 shadow-2xs w-full">
         <!-- Table Header Bar -->
         <div class="w-full px-4 py-3 bg-[#f7f7f5] border-b border-stone-200 flex items-center justify-between rounded-t-xl">
             <div class="flex items-center gap-2.5">
@@ -455,10 +463,10 @@
                             <span class="text-cyan-700 font-semibold">• {{ ucfirst(str_replace('_', ' ', $archivedSubstatus)) }}</span>
                         @endif
                     @else
-                        {{ __('Todas las Órdenes (Workspace + Producción + Backlog + Archivadas)') }}
+                        {{ __('Todas las Órdenes') }}
                     @endif
                 </h3>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
+                <span class="hidden px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
                     {{ method_exists($orders, 'total') ? $orders->total() : count($orders) }}
                 </span>
             </div>
@@ -478,14 +486,14 @@
             </div>
         </div>
 
-        <div class="w-full overflow-x-hidden pb-16">
+        <div class="w-full">
             <table x-ref="ordersTable" class="w-full table-fixed text-left text-xs border-collapse">
-                <thead>
+                <thead class="sticky top-0 z-20 bg-stone-50 shadow-2xs">
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
                         <!-- 1. Fecha Creación -->
                         <th 
                             :style="'width: ' + (colWidths['created_at'] || 6) + '%;'"
-                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('created_at')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Creación">Creación</span>
@@ -502,7 +510,7 @@
                         <!-- 2. Fecha Enviado a Producción -->
                         <th 
                             :style="'width: ' + (colWidths['prod_date'] || 6) + '%;'"
-                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('production_sent_at')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Enviado a Producción">Env. Prod.</span>
@@ -519,7 +527,7 @@
                         <!-- 3. WO # -->
                         <th 
                             :style="'width: ' + (colWidths['wo'] || 6) + '%;'"
-                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('wo_number')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="WO #">WO #</span>
@@ -536,7 +544,7 @@
                         <!-- 4. Client -->
                         <th 
                             :style="'width: ' + (colWidths['client'] || 12) + '%;'"
-                            class="relative py-2 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('company_name')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Cliente">Cliente</span>
@@ -553,7 +561,7 @@
                         <!-- 5. Order Name -->
                         <th 
                             :style="'width: ' + (colWidths['name'] || 14) + '%;'"
-                            class="relative py-2 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('task_name')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nombre de Orden">Nombre de Orden</span>
@@ -570,7 +578,7 @@
                         <!-- 6. Designer -->
                         <th 
                             :style="'width: ' + (colWidths['designer'] || 7.5) + '%;'"
-                            class="relative py-2 px-1 select-none group/col">
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Diseñador">Diseñador</span>
                             </div>
@@ -585,7 +593,7 @@
                         <!-- 7. Nota Producción / Instalación -->
                         <th 
                             :style="'width: ' + (colWidths['prod_note'] || 12) + '%;'"
-                            class="relative py-2 px-1.5 select-none group/col">
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nota Producción/Instalación">Nota Prod./Inst.</span>
                             </div>
@@ -600,7 +608,7 @@
                         <!-- 8. Estimado / Invoice -->
                         <th 
                             :style="'width: ' + (colWidths['invoice'] || 7) + '%;'"
-                            class="relative py-2 px-1 select-none group/col">
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Estimado / Invoice">Est. / Inv.</span>
                             </div>
@@ -615,7 +623,7 @@
                         <!-- 8.5. Fecha Email -->
                         <th 
                             :style="'width: ' + (colWidths['email_date'] || 6) + '%;'"
-                            class="relative py-2 px-1 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('email_date')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Fecha Email">Email</span>
@@ -632,7 +640,7 @@
                         <!-- 9. Instalación -->
                         <th 
                             :style="'width: ' + (colWidths['installation'] || 6) + '%;'"
-                            class="relative py-2 px-1 select-none group/col">
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Instalación">Instalación</span>
                             </div>
@@ -647,7 +655,7 @@
                         <!-- 10. CHECK MARK -->
                         <th 
                             :style="'width: ' + (colWidths['check'] || 3.5) + '%;'"
-                            class="relative py-2 px-0.5 text-center select-none group/col">
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-0.5 text-center select-none group/col">
                             <div class="flex items-center justify-center gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <x-lucide-check class="w-3.5 h-3.5 text-stone-400" />
                             </div>
@@ -662,7 +670,7 @@
                         <!-- 11. Nota de Entrega -->
                         <th 
                             :style="'width: ' + (colWidths['deliv_note'] || 7) + '%;'"
-                            class="relative py-2 px-1.5 select-none group/col">
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nota de Entrega">Entrega</span>
                             </div>
@@ -677,7 +685,7 @@
                         <!-- 12. Subestatus -->
                         <th 
                             :style="'width: ' + (colWidths['substatus'] || 7) + '%;'"
-                            class="relative py-2 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('substatus')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Subestatus">Subestatus</span>
@@ -944,30 +952,23 @@
 
                             <!-- 9. Instalación -->
                             @php
-                                $instCellBg = match($order->installation_type) {
-                                    'Kudos (Entregado)', 'Kudos Verde' => 'bg-emerald-100 text-emerald-950 font-bold',
-                                    'Debe' => 'bg-red-100 text-red-950 font-bold',
-                                    'Kudos' => 'bg-transparent text-stone-900 font-semibold',
-                                    'Cliente' => 'bg-transparent text-stone-700 font-medium',
-                                    default => 'bg-transparent text-stone-400 font-normal',
-                                };
-                                $instDisplayText = match($order->installation_type) {
-                                    'Kudos (Entregado)', 'Kudos Verde' => 'Kudos',
-                                    'Debe' => 'Debe',
-                                    'Kudos' => 'Kudos',
-                                    'Cliente' => 'Cliente',
-                                    default => '—',
-                                };
+                                $instTypeModel = !empty($order->installation_type) ? $installationTypes->firstWhere('name', $order->installation_type) : null;
+                                $hasInstallation = !empty($order->installation_type);
                             @endphp
-                            <td class="py-1 px-1 truncate transition {{ $instCellBg }}">
+                            <td class="py-1 px-1 truncate transition">
                                 <button 
                                     type="button"
                                     data-popover-trigger="installation"
-                                    @click.stop="openMenu('installation', {{ $order->id }}, $el)"
-                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
-                                    title="Clic para cambiar instalación: {{ $instDisplayText }}">
-                                    <span class="truncate font-bold text-[10px] block">{{ $instDisplayText }}</span>
-                                    <x-lucide-chevron-down class="w-2.5 h-2.5 text-stone-500 shrink-0" />
+                                    @click.stop="openMenu('installation', {{ $order->id }}, $el, { installationType: {{ \Illuminate\Support\Js::from($order->installation_type ?? '') }} })"
+                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 px-1.5 rounded-md truncate transition {{ $instTypeModel ? 'border shadow-2xs' : ($hasInstallation ? 'bg-stone-100 text-stone-700' : 'bg-transparent text-stone-400 hover:bg-stone-50') }}"
+                                    @if($instTypeModel)
+                                        style="background-color: {{ $instTypeModel->bg_color }}; color: {{ $instTypeModel->text_color }}; border-color: {{ $instTypeModel->border_color }};"
+                                    @endif
+                                    title="{{ __('Clic para cambiar instalación: :type', ['type' => $order->installation_type ?? __('Sin información')]) }}">
+                                    <span class="truncate font-bold text-[10px] block">
+                                        {{ $hasInstallation ? $order->installation_type : '—' }}
+                                    </span>
+                                    <x-lucide-chevron-down class="w-2.5 h-2.5 shrink-0 opacity-60" />
                                 </button>
                             </td>
 
@@ -1060,10 +1061,36 @@
                                                 @php
                                                     $fEnum = \App\Enums\Substatus::tryFrom($fName);
                                                     $fLabel = $fEnum?->label() ?? $fName;
+                                                    $fVars = match($fName) {
+                                                        'URGENTE', \App\Enums\Substatus::URGENTE->value => [
+                                                            'bg' => 'var(--cc-urgent-bg-light)',
+                                                            'text' => 'var(--cc-urgent-text-dark)',
+                                                            'border' => 'var(--cc-urgent-border)',
+                                                        ],
+                                                        'TICKET', \App\Enums\Substatus::TICKET->value => [
+                                                            'bg' => 'var(--cc-camila-bg-light)',
+                                                            'text' => 'var(--cc-camila-text-dark)',
+                                                            'border' => 'var(--cc-camila-border)',
+                                                        ],
+                                                        'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
+                                                            'bg' => 'var(--cc-todo-today-bg-light)',
+                                                            'text' => 'var(--cc-todo-today-text-dark)',
+                                                            'border' => 'var(--cc-todo-today-border)',
+                                                        ],
+                                                        'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
+                                                            'bg' => 'var(--cc-designer-external-bg-light)',
+                                                            'text' => 'var(--cc-designer-external-text-dark)',
+                                                            'border' => 'var(--cc-designer-external-border)',
+                                                        ],
+                                                        default => null,
+                                                    };
+                                                    $fBadgeStyle = $fVars 
+                                                        ? "background-color: {$fVars['bg']}; color: {$fVars['text']}; border: 1px solid {$fVars['border']};"
+                                                        : ($fEnum ? $fEnum->getInlineBadgeStyle() : 'background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border: 1px solid var(--cc-camila-border);');
                                                 @endphp
                                                 @if($fName !== 'OVERDUE' && $fName !== 'ALMOST OVERDUE')
-                                                    <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold uppercase shrink-0" 
-                                                          style="{{ $fEnum ? $fEnum->getInlineBadgeStyle() : 'background-color: #9333ea; color: #ffffff;' }}" 
+                                                    <span class="px-1 py-0.2 rounded text-[8px] font-bold uppercase shrink-0" 
+                                                          style="{{ $fBadgeStyle }}" 
                                                           title="Flag {{ $fLabel }}">{{ Str::limit($fLabel, 3, '') }}</span>
                                                 @endif
                                             @endforeach
@@ -1087,6 +1114,7 @@
         <!-- Progressive Background Chunk Loader -->
         @if(!empty($hasMore))
             <div 
+                wire:key="overview-chunk-loader-{{ $loadedCount }}"
                 x-data
                 x-init="$nextTick(() => $wire.loadNextChunk())"
                 class="py-2.5 px-4 bg-emerald-50/70 border-t border-emerald-100 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-800">
@@ -1194,45 +1222,162 @@
         <!-- 3. Installation Popover Content -->
         <template x-if="activeMenu === 'installation'">
             <div class="space-y-1">
-                <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Instalación</div>
-                
-                <button 
-                    type="button"
-                    @click="setInstallationType('Kudos')"
-                    class="w-full text-left px-2.5 py-1.5 rounded text-xs hover:bg-stone-100 text-stone-800 font-semibold transition flex items-center justify-between cursor-pointer">
-                    <span>Kudos</span>
-                    <span class="text-[10px] text-stone-400 font-normal">(Orden Lista)</span>
-                </button>
-                
-                <button 
-                    type="button"
-                    @click="setInstallationType('Kudos (Entregado)')"
-                    class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-emerald-100 text-emerald-950 font-bold hover:bg-emerald-200 transition flex items-center justify-between cursor-pointer">
-                    <span>Kudos</span>
-                    <span class="text-[10px] text-emerald-800 font-semibold">(Verde - Entregado)</span>
-                </button>
-                
-                <button 
-                    type="button"
-                    @click="setInstallationType('Debe')"
-                    class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-red-100 text-red-950 font-bold hover:bg-red-200 transition flex items-center justify-between cursor-pointer">
-                    <span>Debe</span>
-                    <span class="text-[10px] text-red-800 font-semibold">(Rojo - Atrasado)</span>
-                </button>
-                
-                <button 
-                    type="button"
-                    @click="setInstallationType(null)"
-                    class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition cursor-pointer">
-                    Vacío (Sin información)
-                </button>
+                <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between">
+                    <span>{{ __('Tipo de Instalación') }}</span>
+                    <a href="{{ route('settings.installation-types') }}" wire:navigate class="text-[9px] text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-0.5">
+                        <x-lucide-settings class="w-2.5 h-2.5" />
+                        <span>{{ __('Ajustes') }}</span>
+                    </a>
+                </div>
+
+                <div class="space-y-1 max-h-72 overflow-y-auto pr-0.5 custom-vertical-scrollbar">
+                    @foreach($installationTypes as $instType)
+                        <button 
+                            type="button"
+                            @click="setInstallationType('{{ $instType->name }}')"
+                            class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold border transition flex items-center justify-between cursor-pointer shadow-2xs hover:opacity-90"
+                            style="background-color: {{ $instType->bg_color }}; color: {{ $instType->text_color }}; border-color: {{ $instType->border_color }};">
+                            <span class="truncate">{{ $instType->name }}</span>
+                            <template x-if="targetInstallationType === '{{ $instType->name }}'">
+                                <x-lucide-check class="w-3.5 h-3.5 shrink-0" />
+                            </template>
+                        </button>
+                    @endforeach
+                </div>
+
+                <div class="pt-1 border-t border-stone-100">
+                    <button 
+                        type="button"
+                        @click="setInstallationType(null)"
+                        class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs bg-stone-50 hover:bg-stone-100 text-stone-600 border border-stone-200 transition flex items-center justify-between cursor-pointer">
+                        <span>{{ __('Vacío (Sin información)') }}</span>
+                        <template x-if="!targetInstallationType">
+                            <x-lucide-check class="w-3.5 h-3.5 shrink-0 text-stone-500" />
+                        </template>
+                    </button>
+                </div>
             </div>
         </template>
 
         <!-- 4. Substatus & Global Flags Popover Content -->
         <template x-if="activeMenu === 'substatus'">
             <div class="space-y-1.5">
-                <div class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1">
+                <!-- Section 1: Global Flags (First) -->
+                <div class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between">
+                    <span>{{ __('Banderas / Flags Globales') }}</span>
+                    <span class="text-[9px] text-stone-400 font-normal lowercase">({{ __('coexistentes') }})</span>
+                </div>
+
+                @php
+                    $allGlobals = $substatuses->filter(function ($item) {
+                        $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+                        if (in_array($name, ['OVERDUE', 'ALMOST OVERDUE'], true)) {
+                            return false;
+                        }
+                        if ($item instanceof \App\Models\Substatus) {
+                            return (bool) $item->is_global;
+                        }
+                        $enum = \App\Enums\Substatus::tryFrom($name);
+                        return $enum ? $enum->isGlobal() : false;
+                    });
+
+                    $coreEnums = collect(\App\Enums\Substatus::cases())->filter(fn($e) => $e->isGlobal() && !in_array($e->value, ['OVERDUE', 'ALMOST OVERDUE'], true));
+                    foreach ($coreEnums as $coreEnum) {
+                        $exists = $allGlobals->contains(function ($item) use ($coreEnum) {
+                            $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+                            return $name === $coreEnum->value;
+                        });
+                        if (!$exists) {
+                            $allGlobals->push($coreEnum);
+                        }
+                    }
+
+                    $preferredOrder = ['URGENTE' => 1, 'TICKET' => 2, 'POTENTIAL CUSTOMER' => 3, 'EXTERNO' => 4];
+                    $globalFlagsList = $allGlobals->sortBy(function ($item) use ($preferredOrder) {
+                        $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+                        $modelOrder = ($item instanceof \App\Models\Substatus && $item->sort_order) ? $item->sort_order : 999;
+                        return $preferredOrder[$name] ?? $modelOrder;
+                    })->values();
+                @endphp
+                @foreach($globalFlagsList as $flagItem)
+                    @php
+                        $flagValue = $flagItem instanceof \App\Models\Substatus ? $flagItem->name : ($flagItem instanceof \App\Enums\Substatus ? $flagItem->value : (string) $flagItem);
+                        $flagModel = ($flagItem instanceof \App\Models\Substatus) ? $flagItem : (($substatuses->first() instanceof \App\Models\Substatus) ? $substatuses->firstWhere('name', $flagValue) : null);
+                        $flagEnum = \App\Enums\Substatus::tryFrom($flagValue);
+                        $flagLabel = $flagEnum?->label() ?? ($flagModel?->name ?? $flagValue);
+
+                        // Use light pastel CSS color variables for global flags
+                        $flagVars = match($flagValue) {
+                            'URGENTE', \App\Enums\Substatus::URGENTE->value => [
+                                'bg' => 'var(--cc-urgent-bg-light)',
+                                'text' => 'var(--cc-urgent-text-dark)',
+                                'border' => 'var(--cc-urgent-border)',
+                                'solid' => 'var(--cc-urgent-solid)',
+                            ],
+                            'TICKET', \App\Enums\Substatus::TICKET->value => [
+                                'bg' => 'var(--cc-camila-bg-light)',
+                                'text' => 'var(--cc-camila-text-dark)',
+                                'border' => 'var(--cc-camila-border)',
+                                'solid' => 'var(--cc-camila-solid)',
+                            ],
+                            'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
+                                'bg' => 'var(--cc-todo-today-bg-light)',
+                                'text' => 'var(--cc-todo-today-text-dark)',
+                                'border' => 'var(--cc-todo-today-border)',
+                                'solid' => 'var(--cc-todo-today-solid)',
+                            ],
+                            'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
+                                'bg' => 'var(--cc-designer-external-bg-light)',
+                                'text' => 'var(--cc-designer-external-text-dark)',
+                                'border' => 'var(--cc-designer-external-border)',
+                                'solid' => 'var(--cc-designer-external-solid)',
+                            ],
+                            default => null,
+                        };
+
+                        if ($flagVars) {
+                            $flagBg = $flagVars['bg'];
+                            $flagText = $flagVars['text'];
+                            $flagBorder = $flagVars['border'];
+                            $flagSolid = $flagVars['solid'];
+                        } else {
+                            $hex = $flagModel?->color ?: ($flagModel?->bg_color ?: '#6B7280');
+                            $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
+                            $flagBg = $pal['bg_color'];
+                            $flagText = $pal['text_color'];
+                            $flagBorder = $pal['border_color'];
+                            $flagSolid = $pal['color'];
+                        }
+
+                        $activeStyle = "background-color: {$flagBg}; color: {$flagText}; border-color: {$flagBorder}; font-weight: 700;";
+                    @endphp
+
+                    <button 
+                        type="button"
+                        @click="toggleGlobalFlag('{{ addslashes($flagValue) }}')"
+                        :style="targetFlags.includes('{{ addslashes($flagValue) }}') ? '{{ $activeStyle }}' : 'border-color: {{ $flagBorder }};'"
+                        :class="targetFlags.includes('{{ addslashes($flagValue) }}') 
+                            ? 'shadow-2xs' 
+                            : 'bg-white hover:bg-stone-50 text-stone-700 font-semibold'"
+                        class="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition flex items-center justify-between border cursor-pointer">
+                        <div class="flex items-center gap-2 truncate">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" 
+                                  style="background-color: {{ $flagSolid }};"></span>
+                            <span class="truncate">{{ $flagLabel }}</span>
+                        </div>
+                        <div class="shrink-0 ml-1.5 flex items-center">
+                            <template x-if="targetFlags.includes('{{ addslashes($flagValue) }}')">
+                                <x-lucide-check class="w-3.5 h-3.5 stroke-[3]" />
+                            </template>
+                            <template x-if="!targetFlags.includes('{{ addslashes($flagValue) }}')">
+                                <div class="w-3.5 h-3.5 rounded border border-stone-300"></div>
+                            </template>
+                        </div>
+                    </button>
+                @endforeach
+
+                <!-- Section 2: Process Classification -->
+                <div class="px-2 pt-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-t border-stone-100 mt-2">
                     {{ __('Clasificación de Proceso (1 Selección)') }}
                 </div>
                 
@@ -1286,31 +1431,6 @@
                         <span class="truncate">{{ $itemLabel }}</span>
                         <template x-if="targetSubstatus === '{{ addslashes($itemValue) }}'">
                             <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
-                        </template>
-                    </button>
-                @endforeach
-
-                <!-- Section 2: Global Flags -->
-                <div class="px-2 pt-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-t border-stone-100 mt-1">
-                    {{ __('Banderas / Flags Globales (Coexistentes)') }}
-                </div>
-
-                @php
-                    $globalFlags = [
-                        \App\Enums\Substatus::URGENTE,
-                        \App\Enums\Substatus::TICKET,
-                        \App\Enums\Substatus::POTENTIAL_CUSTOMER,
-                    ];
-                @endphp
-                @foreach($globalFlags as $flagEnum)
-                    <button 
-                        type="button"
-                        @click="toggleGlobalFlag('{{ $flagEnum->value }}')"
-                        :class="targetFlags.includes('{{ $flagEnum->value }}') ? 'bg-indigo-600 text-white border-indigo-700' : 'bg-stone-50 text-stone-700 border-stone-200 hover:bg-stone-100'"
-                        class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer">
-                        <span>🚩 {{ $flagEnum->label() }}</span>
-                        <template x-if="targetFlags.includes('{{ $flagEnum->value }}')">
-                            <x-lucide-check class="w-3.5 h-3.5 text-white shrink-0 ml-1 stroke-[3]" />
                         </template>
                     </button>
                 @endforeach

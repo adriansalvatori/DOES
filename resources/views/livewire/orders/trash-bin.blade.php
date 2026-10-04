@@ -5,7 +5,7 @@
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Papelera') }}</h1>
             </div>
-            <a href="{{ route('kanban') }}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition">
+            <a href="{{ route('kanban') }}" wire:navigate class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition">
                 <x-lucide-arrow-left class="w-3.5 h-3.5" />
                 {{ __('Volver al Kanban') }}
             </a>

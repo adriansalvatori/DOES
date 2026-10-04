@@ -22,6 +22,9 @@
     @fluxAppearance
 
     <style>
+        [x-cloak] {
+            display: none !important;
+        }
         body {
             font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: #f7f7f5;

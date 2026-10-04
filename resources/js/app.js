@@ -294,10 +294,28 @@ document.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
         window.KudosDirtyGuard.confirmIfDirty(() => {
-            window.location.href = href;
+            if (link.hasAttribute('wire:navigate') && window.Livewire && typeof window.Livewire.navigate === 'function') {
+                window.Livewire.navigate(href);
+            } else {
+                window.location.href = href;
+            }
         });
     }
 }, true);
+
+// Reset guards and recalculate overlays on wire:navigate page transitions
+document.addEventListener('livewire:navigated', () => {
+    if (window.KudosDirtyGuard) {
+        window.KudosDirtyGuard.dirtyRegistry.clear();
+        window.KudosDirtyGuard.updateGlobalState();
+    }
+    if (window.KudosModalStack) {
+        window.KudosModalStack.recalculateZIndices();
+    }
+    if (window.KudosDemoTour) {
+        window.KudosDemoTour.checkAutoResume();
+    }
+});
 
 // Kudos Design Ops - Global Dropdown Navigation Manager
 window.KudosDropdownNav = {
@@ -385,6 +403,10 @@ window.KudosDropdownNav = {
 
 const registerAlpineDropdown = () => {
     if (window.Alpine) {
+        // Alpine v3 has no built-in $cleanup magic; expose the element-bound cleanup utility
+        // so callbacks run when the component's root element is removed from the DOM.
+        window.Alpine.magic('cleanup', (el, { cleanup }) => (callback) => cleanup(callback));
+
         window.Alpine.directive('dropdown-nav', (el, { expression }, { evaluate }) => {
             const varName = expression || 'open';
             el.addEventListener('keydown', (e) => {

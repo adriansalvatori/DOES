@@ -33,6 +33,22 @@ enum CoreStatus: string
         };
     }
 
+    public function shortLabel(): string
+    {
+        return match ($this) {
+            self::ENTRANTE => __('Entrante'),
+            self::EURALIZ_ORDERS_RECEIVED => __('Euralíz'),
+            self::ADRIAN_ORDERS_RECEIVED => __('Adrián'),
+            self::CESAR_ORDERS_RECEIVED => __('César'),
+            self::TO_DO_TODAY => __('Working'),
+            self::ENVIADO_A_CAMILA => __('Camila'),
+            self::ENVIADO_AL_CLIENTE => __('Cliente'),
+            self::ON_HOLD => __('On Hold'),
+            self::EN_PRODUCCION => __('Producción'),
+            self::ARCHIVED => __('Archivado'),
+        };
+    }
+
     public function color(): string
     {
         return match ($this) {
@@ -218,5 +234,111 @@ enum CoreStatus: string
             self::ARCHIVED => Substatus::FINALIZADA,
             default => null,
         };
+    }
+
+    /**
+     * Get a global presentation map of all core statuses.
+     *
+     * @return array<string, array{
+     *     value: string,
+     *     name: string,
+     *     label: string,
+     *     short_label: string,
+     *     color: string,
+     *     hex_color: string,
+     *     badge_style: string,
+     *     badge_inline_style: string,
+     *     dot_style: string,
+     *     dot_class: string,
+     * }>
+     */
+    public static function map(): array
+    {
+        $map = [];
+
+        foreach (self::cases() as $case) {
+            $map[$case->value] = [
+                'value' => $case->value,
+                'name' => $case->name,
+                'label' => $case->label(),
+                'short_label' => $case->shortLabel(),
+                'color' => $case->color(),
+                'hex_color' => $case->hexColor(),
+                'badge_style' => $case->badgeStyle(),
+                'badge_inline_style' => $case->badgeInlineStyle(),
+                'dot_style' => $case->dotStyle(),
+                'dot_class' => $case->dotClass(),
+            ];
+        }
+
+        return $map;
+    }
+
+    /**
+     * Get metadata for a specific core status (instance or string value).
+     *
+     * @return array{
+     *     value: string,
+     *     name: string,
+     *     label: string,
+     *     short_label: string,
+     *     color: string,
+     *     hex_color: string,
+     *     badge_style: string,
+     *     badge_inline_style: string,
+     *     dot_style: string,
+     *     dot_class: string,
+     * }|null
+     */
+    public static function getMetadata(self|string|null $status): ?array
+    {
+        if ($status === null) {
+            return null;
+        }
+
+        $enum = $status instanceof self ? $status : self::tryFrom($status);
+
+        if (! $enum) {
+            return null;
+        }
+
+        return [
+            'value' => $enum->value,
+            'name' => $enum->name,
+            'label' => $enum->label(),
+            'short_label' => $enum->shortLabel(),
+            'color' => $enum->color(),
+            'hex_color' => $enum->hexColor(),
+            'badge_style' => $enum->badgeStyle(),
+            'badge_inline_style' => $enum->badgeInlineStyle(),
+            'dot_style' => $enum->dotStyle(),
+            'dot_class' => $enum->dotClass(),
+        ];
+    }
+
+    public static function labelFor(self|string|null $status, string $default = ''): string
+    {
+        if ($status instanceof self) {
+            return $status->label();
+        }
+
+        if (is_string($status) && $enum = self::tryFrom($status)) {
+            return $enum->label();
+        }
+
+        return $default;
+    }
+
+    public static function shortLabelFor(self|string|null $status, string $default = ''): string
+    {
+        if ($status instanceof self) {
+            return $status->shortLabel();
+        }
+
+        if (is_string($status) && $enum = self::tryFrom($status)) {
+            return $enum->shortLabel();
+        }
+
+        return $default;
     }
 }

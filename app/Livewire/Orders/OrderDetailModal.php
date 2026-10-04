@@ -1666,6 +1666,23 @@ class OrderDetailModal extends Component
 
     public function render()
     {
+        if (! $this->showModal) {
+            return view('livewire.orders.order-detail-modal', [
+                'order' => null,
+                'clientOtherActiveOrders' => collect(),
+                'designers' => collect(),
+                'subtaskPresets' => collect(),
+                'coreStatuses' => [],
+                'substatuses' => [],
+                'existingCompanies' => collect(),
+                'existingResponsibles' => collect(),
+                'existingLocations' => collect(),
+                'clientLocations' => [],
+                'clientContacts' => [],
+                'availableTrelloCards' => collect(),
+            ]);
+        }
+
         $order = $this->orderId
             ? Order::with(['designer', 'client.locations', 'client.contacts', 'relatedTasks.assignee', 'events', 'dueDateHistories'])->find($this->orderId)
             : null;

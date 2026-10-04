@@ -1,4 +1,4 @@
-<div class="h-full flex flex-col space-y-6 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto pb-10">
+<div class="flex-1 w-full min-h-0 flex flex-col space-y-6 overflow-y-auto custom-vertical-scrollbar pr-2 max-w-6xl mx-auto pb-28">
     <!-- Header Card -->
     <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-wrap items-center justify-between gap-4 shrink-0">
         <div class="min-w-0">

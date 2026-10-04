@@ -15,6 +15,7 @@ use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\ColorCoding;
 use App\Livewire\Settings\Documentation;
+use App\Livewire\Settings\InstallationTypes;
 use App\Livewire\Settings\LanguageSettings;
 use App\Livewire\Settings\ProfileSettings;
 use App\Livewire\Settings\Substatuses;
@@ -87,6 +88,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/color-coding', ColorCoding::class)->name('settings.color-coding');
     Route::get('/settings/language', LanguageSettings::class)->name('settings.language');
     Route::get('/settings/substatuses', Substatuses::class)->name('settings.substatuses');
+    Route::get('/settings/installation-types', InstallationTypes::class)->name('settings.installation-types');
     Route::get('/settings/subtasks', SubtaskPresets::class)->name('settings.subtasks');
     Route::get('/settings/trello-mapping', TrelloMapping::class)->name('settings.trello-mapping');
     Route::get('/settings/backups', Backups::class)->name('settings.backups');

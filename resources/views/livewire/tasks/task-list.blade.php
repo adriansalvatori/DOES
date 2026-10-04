@@ -42,10 +42,12 @@
 
                 <div 
                     x-show="open" 
+                    x-cloak
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 overflow-y-auto divide-y divide-stone-100 text-xs"
+                    style="display: none;">
                     <button 
                         type="button"
                         @click="selectStatus('todo')" 
@@ -98,10 +100,12 @@
 
                 <div 
                     x-show="open" 
+                    x-cloak
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                    style="display: none;">
                     <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
                         <input 
                             type="text" 

@@ -297,6 +297,20 @@ class CreateOrderModal extends Component
 
     public function render()
     {
+        if (! $this->showModal) {
+            return view('livewire.orders.create-order-modal', [
+                'designers' => collect(),
+                'coreStatuses' => [],
+                'substatuses' => [],
+                'existingCompanies' => collect(),
+                'existingResponsibles' => collect(),
+                'existingLocations' => collect(),
+                'clientLocations' => [],
+                'clientContacts' => [],
+                'availableTrelloCards' => collect(),
+            ]);
+        }
+
         $client = ! empty($this->companyName)
             ? Client::with(['locations', 'contacts'])->where('name', mb_strtoupper(trim($this->companyName), 'UTF-8'))->first()
             : null;

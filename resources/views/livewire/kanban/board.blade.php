@@ -9,7 +9,7 @@
                 </span>
                 <span>{{ __('Hay') }} <strong>{{ $this->newOrdersCount }}</strong> {{ $this->newOrdersCount === 1 ? __('nueva orden') : __('nuevas órdenes') }} {{ __('de Trello sin revisar en el Backlog.') }}</span>
             </div>
-            <a href="{{ route('backlog') }}" class="px-2.5 py-1 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-bold transition shrink-0 flex items-center gap-1">
+            <a href="{{ route('backlog') }}" wire:navigate class="px-2.5 py-1 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-bold transition shrink-0 flex items-center gap-1">
                 <span>{{ __('Ver Nuevas Órdenes') }}</span>
                 <x-lucide-arrow-right class="w-3 h-3 text-amber-800" />
             </a>
@@ -21,7 +21,6 @@
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 min-w-0">
             <div class="flex items-center gap-3 min-w-0 flex-wrap">
                 <h1 id="tour-kanban-title" class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Kanban Board') }}</h1>
-                <span class="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-[11px] font-bold text-zinc-600">9 {{ __('Listas') }}</span>
             </div>
 
             <div class="flex items-center gap-2 shrink-0 self-end sm:self-auto">
@@ -33,7 +32,7 @@
                     <span>{{ __('Nueva Orden') }}</span>
                 </button>
 
-                <a href="{{ route('trash') }}" class="px-2.5 py-1.5 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 hover:text-rose-900 text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="{{ __('Ver papelera') }}">
+                <a href="{{ route('trash') }}" wire:navigate class="hidden px-2.5 py-1.5 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 hover:text-rose-900 text-xs font-semibold transition flex items-center gap-1.5 shrink-0" title="{{ __('Ver papelera') }}">
                     <x-lucide-trash-2 class="w-3.5 h-3.5" />
                     <span>{{ __('Papelera') }}</span>
                 </a>
@@ -54,10 +53,12 @@
 
                 @if(strlen(trim($search)) >= 2)
                     <div x-show="open" 
+                         x-cloak
                          x-transition:enter="transition ease-out duration-100"
                          x-transition:enter-start="opacity-0 scale-95"
                          x-transition:enter-end="opacity-100 scale-100"
-                         class="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl max-h-72 overflow-y-auto p-1.5 text-xs">
+                         class="absolute left-0 right-0 top-full mt-1.5 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl max-h-72 overflow-y-auto p-1.5 text-xs"
+                         style="display: none;">
                         <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400 border-b border-[#f0f0ee] mb-1 flex items-center justify-between">
                             <span>{{ __('Coincidencias') }} ({{ $this->searchResults->count() }})</span>
                             <span class="text-[9px] font-mono text-zinc-400">{{ __('Clic para abrir') }}</span>
@@ -126,10 +127,12 @@
 
                 <div 
                     x-show="open" 
+                    x-cloak
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-52 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-52 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                    style="display: none;">
                     <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
                         <input 
                             type="text" 
@@ -162,7 +165,7 @@
             </div>
 
             <!-- Responsible Filter (Searchable) -->
-            <div class="relative flex-1 min-w-[140px] sm:flex-none" 
+            <div class="hidden relative flex-1 min-w-[140px] sm:flex-none" 
                  x-data="{ 
                      open: false,
                      search: '',
@@ -183,10 +186,12 @@
 
                 <div 
                     x-show="open" 
+                    x-cloak
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                    style="display: none;">
                     <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
                         <input 
                             type="text" 
@@ -246,10 +251,12 @@
 
                 <div 
                     x-show="open" 
+                    x-cloak
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                    style="display: none;">
                     <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
                         <input 
                             type="text" 
@@ -304,10 +311,12 @@
 
                 <div 
                     x-show="open" 
+                    x-cloak
                     x-transition:enter="transition ease-out duration-100"
                     x-transition:enter-start="opacity-0 scale-95"
                     x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                    style="display: none;">
                     <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
                         <input 
                             type="text" 
@@ -344,7 +353,7 @@
     </div>
 
     <!-- Notion Column Group Filter Tabs Bar -->
-    <div id="tour-kanban-group-tabs" class="flex items-center justify-between gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
+    <div id="tour-kanban-group-tabs" class="hidden flex items-center justify-between gap-1 border-b border-[#e9e9e7] pb-2 overflow-x-auto scrollbar-none text-xs shrink-0">
         <div class="flex items-center gap-1 shrink-0">
             <button wire:click="$set('columnGroup', 'all')" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $columnGroup === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-[#f2f2f0]' }}">
                 <x-lucide-layers class="w-3.5 h-3.5 text-zinc-500" />
@@ -367,7 +376,7 @@
             </button>
         </div>
 
-        <button wire:click="toggleStandaloneTaskCards" class="px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 text-xs {{ $showStandaloneTaskCards ? 'bg-violet-100 text-violet-900 border border-violet-300 font-semibold' : 'bg-white text-zinc-600 border border-stone-200 hover:bg-stone-50' }}" title="{{ __('Mostrar u ocultar tarjetas de tareas como elementos independientes en las columnas') }}">
+        <button wire:click="toggleStandaloneTaskCards" class="hidden px-3 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 text-xs {{ $showStandaloneTaskCards ? 'bg-violet-100 text-violet-900 border border-violet-300 font-semibold' : 'bg-white text-zinc-600 border border-stone-200 hover:bg-stone-50' }}" title="{{ __('Mostrar u ocultar tarjetas de tareas como elementos independientes en las columnas') }}">
             <x-lucide-list-todo class="w-3.5 h-3.5 {{ $showStandaloneTaskCards ? 'text-violet-700' : 'text-zinc-500' }}" />
             <span>{{ $showStandaloneTaskCards ? __('Ocultar Tarjetas de Tareas') : __('Mostrar Tarjetas de Tareas') }}</span>
         </button>
@@ -460,7 +469,7 @@
                             </h3>
                         </div>
 
-                        <a href="/archived" title="{{ __('Ver Órdenes Archivadas') }}" class="flex items-center gap-1 px-2 py-0.5 rounded bg-white text-[11px] font-mono text-zinc-700 border border-stone-300 font-bold shrink-0 hover:bg-stone-100 transition">
+                        <a href="/archived" wire:navigate title="{{ __('Ver Órdenes Archivadas') }}" class="flex items-center gap-1 px-2 py-0.5 rounded bg-white text-[11px] font-mono text-zinc-700 border border-stone-300 font-bold shrink-0 hover:bg-stone-100 transition">
                             <x-lucide-external-link class="w-3 h-3 text-zinc-500" />
                             <span>{{ $this->archivedCount }}</span>
                         </a>
@@ -477,7 +486,7 @@
                                 {{ __('Las órdenes soltadas en esta columna se marcarán como Archivadas y se ocultarán del Workspace activo.') }}
                             </p>
                         </div>
-                        <a href="/archived" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-2xs transition mt-2">
+                        <a href="/archived" wire:navigate class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-medium text-xs shadow-2xs transition mt-2">
                             <x-lucide-bar-chart-2 class="w-3.5 h-3.5 text-zinc-300" />
                             <span>{{ __('Ver Rendimiento') }}</span>
                         </a>

@@ -10,7 +10,7 @@
     })->values()->toArray();
 @endphp
 <div 
-    wire:poll.3s 
+    wire:poll.visible.30s 
     @open-subtask-modal.window="openCreateSubtaskModal($event.detail.orderId || '', $event.detail.dateStr || '', $event.detail.designerId || '')"
     @open-link-note-modal.window="openLinkNoteModal($event.detail.taskId || null, $event.detail.noteTitle || '')"
     @dragend.window="clearDragState()"
@@ -312,7 +312,7 @@
                 <div class="min-w-0">
                     <div class="flex items-center gap-2.5 flex-wrap">
                         <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight leading-tight">
-                            {{ __('Agenda Semanal') }}
+                            {{ __('Planificación Semanal') }}
                         </h1>
                         @php
                             $startVal = Carbon\Carbon::parse($selectedWeekStart);
@@ -390,10 +390,12 @@
                         <!-- Mini-Calendar Interactive Popover Modal -->
                         <div 
                             x-show="calendarOpen"
+                            x-cloak
                             x-transition:enter="transition ease-out duration-150"
                             x-transition:enter-start="opacity-0 scale-95"
                             x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute right-0 top-full mt-2 w-80 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl p-4 text-xs space-y-3">
+                            class="absolute right-0 top-full mt-2 w-80 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl p-4 text-xs space-y-3"
+                            style="display: none;">
                             
                             <!-- Month Header Navigator -->
                             <div class="flex items-center justify-between border-b border-[#f0f0ee] pb-2">
@@ -489,7 +491,7 @@
                 <div class="flex items-center gap-1 overflow-x-auto custom-horizontal-scrollbar py-0.5 text-xs shrink min-w-0">
                     <button wire:click="$set('selectedDesignerFilter', 'all')" class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-zinc-900 text-white font-medium shadow-2xs' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
                         <x-lucide-users class="w-3 h-3 text-zinc-400" />
-                        <span>{{ __('Todos') }}</span>
+                        <span>{{ __('Todos los diseñadores') }}</span>
                     </button>
 
                     @foreach($allDesigners as $des)
@@ -528,10 +530,12 @@
                         @if(!empty($unscheduledSearch))
                             <div 
                                 x-show="open"
+                                x-cloak
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs">
+                                class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs"
+                                style="display: none;">
                                 
                                 <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-500 flex items-center justify-between">
                                     <span class="flex items-center gap-1.5">
@@ -600,10 +604,12 @@
                         @if(!empty($backlogSearch))
                             <div 
                                 x-show="open"
+                                x-cloak
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs">
+                                class="absolute right-0 top-full mt-1.5 w-80 sm:w-96 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl overflow-hidden divide-y divide-stone-100 text-xs"
+                                style="display: none;">
                                 
                                 <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-500 flex items-center justify-between">
                                     <span class="flex items-center gap-1.5">
@@ -871,8 +877,10 @@
 
                                                         <div 
                                                             x-show="openSub" 
+                                                            x-cloak
                                                             @click.outside="openSub = false"
-                                                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl p-2 text-xs space-y-1.5">
+                                                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl p-2 text-xs space-y-1.5"
+                                                            style="display: none;">
                                                             <div>
                                                                 <span class="text-[9px] text-zinc-400 block mb-0.5">Programar para día:</span>
                                                                 <select x-model="targetDate" class="w-full bg-stone-50 border border-stone-200 rounded px-1 py-0.5 text-[10px] text-zinc-800 focus:outline-none">
@@ -1626,7 +1634,9 @@
                                                         <div 
                                                             x-ref="orderDropdownPanel"
                                                             x-show="dropdownOpen && getFilteredOrders().length > 0" 
-                                                            class="absolute left-0 top-full mt-1 z-50 bg-white border border-stone-200 rounded-md shadow-md max-h-44 overflow-y-auto divide-y divide-stone-100 text-[11px] w-72">
+                                                            x-cloak
+                                                            class="absolute left-0 top-full mt-1 z-50 bg-white border border-stone-200 rounded-md shadow-md max-h-44 overflow-y-auto divide-y divide-stone-100 text-[11px] w-72"
+                                                            style="display: none;">
                                                             <template x-for="(ord, idx) in getFilteredOrders()" :key="ord.id">
                                                                 <button 
                                                                     type="button" 
@@ -1684,6 +1694,7 @@
                                                             <div 
                                                                 x-ref="presetDropdownPanel"
                                                                 x-show="presetDropdownOpen && getFilteredPresets().length > 0"
+                                                                x-cloak
                                                                 x-transition:enter="transition ease-out duration-100"
                                                                 x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
                                                                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
@@ -1856,10 +1867,12 @@
                             <div 
                                 x-ref="modalOrderDropdownPanel"
                                 x-show="orderDropdownOpen"
+                                x-cloak
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                                style="display: none;">
                                 
                                 <template x-for="(item, idx) in getFilteredOrders()" :key="item.id">
                                     <button 
@@ -1960,10 +1973,12 @@
 
                                 <div 
                                     x-show="calOpen"
+                                    x-cloak
                                     x-transition:enter="transition ease-out duration-100"
                                     x-transition:enter-start="opacity-0 scale-95"
                                     x-transition:enter-end="opacity-100 scale-100"
-                                    class="absolute left-0 bottom-full mb-1.5 w-72 sm:w-80 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl p-3 text-xs space-y-2.5">
+                                    class="absolute left-0 bottom-full mb-1.5 w-72 sm:w-80 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl p-3 text-xs space-y-2.5"
+                                    style="display: none;">
                                     
                                     <div class="flex items-center justify-between border-b border-[#f0f0ee] pb-1.5">
                                         <button type="button" wire:click="previousMonth" class="p-1 rounded hover:bg-stone-100 text-zinc-600 transition">
@@ -2143,10 +2158,12 @@
                             <div 
                                 x-ref="linkNoteDropdownPanel"
                                 x-show="linkNoteDropdownOpen"
+                                x-cloak
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs">
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
+                                style="display: none;">
                                 
                                 <template x-for="(item, idx) in getFilteredLinkNoteOrders()" :key="item.id">
                                     <button 
