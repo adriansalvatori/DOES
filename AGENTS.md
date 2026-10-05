@@ -160,11 +160,33 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Tests should cover all happy paths, failure paths, and edge cases.
 - You must not remove any tests or test files from the tests directory without approval. These are not temporary or helper files; these are core to the application.
 
-## Running Tests
+=== hostinger deployment rules ===
 
-- Run the minimal number of tests, using an appropriate filter, before finalizing.
-- To run all tests: `php artisan test --compact`.
-- To run all tests in a file: `php artisan test --compact tests/Feature/ExampleTest.php`.
-- To filter on a particular test name: `php artisan test --compact --filter=testName` (recommended after making a change to a related file).
+# Hostinger Deployment Protocol (Kudos DOES)
+
+Whenever the user asks to deploy ("despliega", "deploy", "sube a producción", "haz deploy"):
+
+1. **Pre-flight & Git Integrity:**
+   - Verify local git working tree with `git status --short`.
+   - Never deploy uncommitted code to production without committing it first or explicitly confirming with the user.
+   - Run `npm run deploy:status` to check what commit/tag is currently in production and review pending commits.
+
+2. **Quality Verification:**
+   - Run code formatter: `vendor/bin/pint --dirty --format agent`.
+   - Run test suite: `php artisan test --compact` to guarantee no regressions before touching production.
+
+3. **Deploy Execution:**
+   - Run `npm run deploy` (or `npm run deploy -- --tag=vX.Y.Z` if tagging a release).
+   - This script:
+     - Uses `HOSTINGER_SSH_PASSWORD` from `.env` to connect to `u483747408@185.211.7.113:65002`.
+     - Compiles Vite assets with `npm run build`.
+     - Syncs differential files to `/home/u483747408/domains/gold-trout-815009.hostingersite.com/` via `rsync`.
+     - **Strictly preserves** remote `.env`, `database/*.sqlite*`, and user uploads in `storage/` (`--filter=P ...`).
+     - Executes remote post-deploy tasks with PHP 8.4: `artisan migrate --force`, `artisan storage:link`, `artisan optimize:clear`, `artisan optimize`.
+     - Updates `deployed.json` for version tracking.
+
+4. **Post-Deploy Verification:**
+   - Verify health: `curl -s -o /dev/null -w "%{http_code}\n" https://gold-trout-815009.hostingersite.com/login` (must return HTTP 200).
+   - Confirm successful deployment and version/commit hash with the user.
 
 </laravel-boost-guidelines>

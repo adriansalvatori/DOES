@@ -30,9 +30,23 @@ class ArchivedOrders extends Component
     public function updateSubstatus(int $orderId, string $substatusValue): void
     {
         $order = Order::findOrFail($orderId);
+        $previousSub = $order->substatus;
         $subEnum = Substatus::tryFrom($substatusValue) ?? $substatusValue;
 
         $order->update(['substatus' => $subEnum]);
+
+        $prevSubVal = $previousSub instanceof Substatus ? $previousSub->value : (string) $previousSub;
+        $newSubVal = $subEnum instanceof Substatus ? $subEnum->value : (string) $subEnum;
+        $subLabel = $subEnum instanceof Substatus ? $subEnum->label() : $substatusValue;
+
+        OrderEvent::create([
+            'order_id' => $order->id,
+            'event_type' => 'SUBSTATUS_CHANGED',
+            'actor' => auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $prevSubVal ?: null,
+            'new_value' => $newSubVal ?: null,
+            'metadata' => ['description' => __('Subestatus actualizado a: :status', ['status' => $subLabel])],
+        ]);
 
         $this->dispatch('order-updated');
         session()->flash('message', "Subestatus de la orden '{$order->company_name}' actualizado.");
@@ -89,7 +103,7 @@ class ArchivedOrders extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'CORE_STATUS_CHANGED',
-            'actor' => 'User',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => $previousStatus->value,
             'new_value' => CoreStatus::EN_PRODUCCION->value,
             'metadata' => ['comment' => 'Orden restaurada de Archivo a En Producción.'],

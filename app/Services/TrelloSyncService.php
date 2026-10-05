@@ -479,7 +479,7 @@ class TrelloSyncService
                         'trello_card_id' => $cardData['id'],
                     ],
                 ]);
-                app(AutomationEngine::class)->handleStatusChanged($order, $existing->core_status, $targetStatus);
+                app(AutomationEngine::class)->handleStatusChanged($order, $existing->core_status, $targetStatus, 'Trello');
             }
 
             app(SlaEngine::class)->checkOverdue($order);
@@ -526,7 +526,7 @@ class TrelloSyncService
                     'is_missing_from_trello' => true,
                 ]);
 
-                app(AutomationEngine::class)->handleStatusChanged($delOrder, $previousStatus, CoreStatus::ARCHIVED);
+                app(AutomationEngine::class)->handleStatusChanged($delOrder, $previousStatus, CoreStatus::ARCHIVED, 'Trello');
 
                 $changesList[] = [
                     'order_id' => $delOrder->id,
@@ -1010,6 +1010,138 @@ class TrelloSyncService
             Log::error("Trello API error fetching card attachments for {$cardId}: ".$e->getMessage());
 
             return ['success' => false, 'status' => 500, 'error' => $e->getMessage(), 'attachments' => []];
+        }
+    }
+
+    /**
+     * Upload a file attachment to a Trello card.
+     *
+     * @return array{success: bool, attachment?: array, error?: string, status?: int}
+     */
+    public function uploadCardAttachment(
+        string $cardId,
+        string $filePath,
+        ?string $fileName = null,
+        ?string $mimeType = null,
+        ?string $apiKey = null,
+        ?string $apiToken = null
+    ): array {
+        $cardId = trim($cardId);
+        if (empty($cardId)) {
+            return ['success' => false, 'error' => 'No card ID specified.'];
+        }
+
+        if (! file_exists($filePath) || ! is_readable($filePath)) {
+            return ['success' => false, 'error' => 'El archivo no existe o no se puede leer.'];
+        }
+
+        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+
+        if (empty($apiKey) || empty($apiToken)) {
+            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.'];
+        }
+
+        $fileName = $fileName ?: basename($filePath);
+        $queryParams = [
+            'key' => $apiKey,
+            'token' => $apiToken,
+            'name' => $fileName,
+        ];
+
+        $fileHandle = fopen($filePath, 'r');
+        if (! $fileHandle) {
+            return ['success' => false, 'error' => 'No se pudo abrir el archivo para lectura.'];
+        }
+
+        try {
+            $headers = [];
+            if ($mimeType) {
+                $headers['Content-Type'] = $mimeType;
+            }
+
+            $url = "{$this->baseUrl}/cards/{$cardId}/attachments?".http_build_query($queryParams);
+
+            $response = Http::attach('file', $fileHandle, $fileName, $headers)
+                ->timeout(60)
+                ->post($url);
+
+            if ($response->successful()) {
+                return ['success' => true, 'attachment' => $response->json()];
+            }
+
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'error' => $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error("Trello API error uploading attachment to card {$cardId}: ".$e->getMessage());
+
+            return [
+                'success' => false,
+                'status' => 500,
+                'error' => $e->getMessage(),
+            ];
+        } finally {
+            if (is_resource($fileHandle)) {
+                fclose($fileHandle);
+            }
+        }
+    }
+
+    /**
+     * Delete an attachment from a Trello card.
+     *
+     * @return array{success: bool, error?: string, status?: int}
+     */
+    public function deleteCardAttachment(
+        string $cardId,
+        string $attachmentId,
+        ?string $apiKey = null,
+        ?string $apiToken = null
+    ): array {
+        $cardId = trim($cardId);
+        $attachmentId = trim($attachmentId);
+
+        if (empty($cardId) || empty($attachmentId)) {
+            return ['success' => false, 'error' => 'Card ID y Attachment ID son requeridos.'];
+        }
+
+        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+
+        if (empty($apiKey) || empty($apiToken)) {
+            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.'];
+        }
+
+        $queryParams = [
+            'key' => $apiKey,
+            'token' => $apiToken,
+        ];
+
+        try {
+            $url = "{$this->baseUrl}/cards/{$cardId}/attachments/{$attachmentId}?".http_build_query($queryParams);
+
+            $response = Http::timeout(30)->delete($url);
+
+            if ($response->successful()) {
+                return ['success' => true];
+            }
+
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'error' => $response->body(),
+            ];
+        } catch (\Exception $e) {
+            Log::error("Trello API error deleting attachment {$attachmentId} on card {$cardId}: ".$e->getMessage());
+
+            return [
+                'success' => false,
+                'status' => 500,
+                'error' => $e->getMessage(),
+            ];
         }
     }
 

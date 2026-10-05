@@ -11,6 +11,7 @@ use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\RelatedTask;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -201,6 +202,62 @@ class KanbanBoardTest extends TestCase
             'order_id' => $order->id,
             'event_type' => 'SUBTASK_COMPLETED',
             'new_value' => 'Digitalización',
+        ]);
+    }
+
+    public function test_moving_order_on_kanban_board_records_authenticated_user_as_actor_in_timeline(): void
+    {
+        $user = User::factory()->create(['name' => 'Adrián Reinoza']);
+        $this->actingAs($user);
+
+        $order = Order::create([
+            'company_name' => 'Acme Corp',
+            'task_name' => 'Banner Design',
+            'core_status' => CoreStatus::ENTRANTE,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(Board::class)
+            ->call('moveOrder', $order->id, CoreStatus::TO_DO_TODAY->value);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'CORE_STATUS_CHANGED',
+            'actor' => 'Adrián Reinoza',
+            'previous_value' => CoreStatus::ENTRANTE->value,
+            'new_value' => CoreStatus::TO_DO_TODAY->value,
+        ]);
+
+        $this->assertDatabaseMissing('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'CORE_STATUS_CHANGED',
+            'actor' => 'User/Automation',
+        ]);
+    }
+
+    public function test_changing_substatus_in_detail_modal_records_substatus_changed_event_with_user_actor(): void
+    {
+        $user = User::factory()->create(['name' => 'Adrián Reinoza']);
+        $this->actingAs($user);
+
+        $order = Order::create([
+            'company_name' => 'Acme Corp',
+            'task_name' => 'Logo Redesign',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => null,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id, true)
+            ->set('editSubstatus', Substatus::CAMBIOS_CLIENTE->value)
+            ->call('saveOrder', false);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'SUBSTATUS_CHANGED',
+            'actor' => 'Adrián Reinoza',
+            'new_value' => Substatus::CAMBIOS_CLIENTE->value,
         ]);
     }
 }

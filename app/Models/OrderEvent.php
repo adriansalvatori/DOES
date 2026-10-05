@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\CoreStatus;
+use App\Enums\Substatus;
 use App\Services\ColorCodingService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -36,7 +37,7 @@ class OrderEvent extends Model
         $type = strtoupper((string) $this->event_type);
         $newVal = strtoupper((string) $this->new_value);
 
-        if (str_contains($type, 'STATUS_CHANGED') || str_contains($newVal, 'PRODUCCI') || str_contains($type, 'APPROVAL')) {
+        if (str_contains($type, 'STATUS_CHANGED') || str_contains($type, 'SUBSTATUS') || str_contains($newVal, 'PRODUCCI') || str_contains($type, 'APPROVAL')) {
             return false;
         }
 
@@ -284,6 +285,12 @@ class OrderEvent extends Model
         if (str_contains($type, 'DUPLICATED')) {
             return __('Orden duplicada');
         }
+        if (str_contains($type, 'ATTACHMENT_DELETED')) {
+            return __('Archivo adjunto eliminado de Trello (:file)', ['file' => $this->previous_value ?? __('Archivo')]);
+        }
+        if (str_contains($type, 'ATTACHMENT')) {
+            return __('Archivo adjuntado a Trello (:file)', ['file' => $this->new_value ?? __('Archivo')]);
+        }
         if (str_contains($type, 'COMMENT')) {
             return __('Comentario de Trello agregado');
         }
@@ -299,6 +306,19 @@ class OrderEvent extends Model
             $dateLabel = $this->formatValueIfDate($this->new_value);
 
             return __('Fecha de entrega actualizada (:date)', ['date' => $dateLabel]);
+        }
+        if (str_contains($type, 'SUBSTATUS')) {
+            if (! empty($this->metadata['description'])) {
+                return $this->metadata['description'];
+            }
+            if (! empty($this->new_value)) {
+                $subEnum = Substatus::tryFrom($this->new_value);
+                $label = $subEnum ? $subEnum->label() : $this->new_value;
+
+                return __('Subestatus: :status', ['status' => $label]);
+            }
+
+            return __('Subestatus actualizado');
         }
         if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
             $formatted = $this->formatValueIfDate($this->new_value);

@@ -280,8 +280,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertSet('viewMode', 'by_day')
-            ->assertSeeHtml('Por Días')
-            ->assertSeeHtml('Por Diseñador')
+            ->assertSeeHtml(__('Por Días'))
+            ->assertSeeHtml(__('Por Diseñador'))
             ->call('changeViewMode', 'by_designer')
             ->assertSet('viewMode', 'by_designer')
             ->assertSessionHas('weekly_planner_view_mode', 'by_designer')

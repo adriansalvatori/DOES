@@ -26,7 +26,7 @@
                 <input 
                     wire:model.live.debounce.250ms="search"
                     type="text"
-                    placeholder="{{ __('Buscar en archivo...') }}"
+                    placeholder="{{ __('Buscar en archivo') }}"
                     class="pl-8 pr-3 py-1.5 bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-zinc-400 w-44 sm:w-56"
                 >
             </div>
@@ -69,7 +69,7 @@
             </div>
             <div>
                 <span class="text-2xl sm:text-3xl font-bold font-mono text-zinc-900">{{ $totalArchivedCount }}</span>
-                <span class="text-xs text-zinc-500 font-normal ml-1">{{ __('órdenes cerradas') }}</span>
+                <span class="lowercase text-xs text-zinc-500 font-normal ml-1">{{ __('órdenes finalizadas') }}</span>
             </div>
             <div class="pt-2 border-t border-[#e9e9e7] flex items-center justify-between text-[11px] text-zinc-600 gap-1 flex-wrap">
                 <span class="text-emerald-700 font-medium flex items-center gap-1"><x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" /> {{ $successfulCount }} Éxito</span>

@@ -295,14 +295,16 @@
                             <span class="truncate">{{ __('Usuarios y Roles') }}</span>
                         </a>
                     @endif
-                    <a 
-                        href="/settings/documentation" 
-                        wire:navigate
-                        title="{{ __('Guía de Comportamientos') }}" 
-                        class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                        <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span class="truncate">{{ __('Guía de Comportamientos') }}</span>
-                    </a>
+                    @if(auth()->user()?->isAdmin())
+                        <a 
+                            href="/settings/documentation" 
+                            wire:navigate
+                            title="{{ __('Guía de Comportamientos') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span class="truncate">{{ __('Guía de Comportamientos') }}</span>
+                        </a>
+                    @endif
                     <a 
                         href="/settings/language" 
                         wire:navigate
@@ -396,14 +398,16 @@
                             <span class="truncate">{{ __('Usuarios y Roles') }}</span>
                         </a>
                     @endif
-                    <a 
-                        href="/settings/documentation" 
-                        wire:navigate
-                        title="{{ __('Guía de Comportamientos') }}" 
-                        class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
-                        <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span class="truncate">{{ __('Guía Comportamientos') }}</span>
-                    </a>
+                    @if(auth()->user()?->isAdmin())
+                        <a 
+                            href="/settings/documentation" 
+                            wire:navigate
+                            title="{{ __('Guía de Comportamientos') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/documentation*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-book-open class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span class="truncate">{{ __('Guía Comportamientos') }}</span>
+                        </a>
+                    @endif
                     <a 
                         href="/settings/language" 
                         wire:navigate

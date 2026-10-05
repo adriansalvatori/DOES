@@ -66,7 +66,7 @@ class ColorCodingSettingsTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Personalización del Color Coding');
         $response->assertSee('Camila (QA & Revisiones)');
-        $response->assertSee('Producción (ALTA & producción)');
+        $response->assertSee('Producción (ALTA & Taller)');
         $response->assertSee('Euralíz (Lead Designer)');
     }
 

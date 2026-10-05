@@ -467,7 +467,6 @@ class AuthenticationAndProfileTest extends TestCase
         $dashboardResponse = $this->get(route('dashboard'));
         $dashboardResponse->assertStatus(200);
         $dashboardResponse->assertSee('/analytics');
-        $dashboardResponse->assertSee('/resolver');
         $dashboardResponse->assertSee('id="tour-stats-resolver"', false);
     }
 

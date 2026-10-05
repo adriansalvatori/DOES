@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Support\AppBehaviorsDocs;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class Documentation extends Component
@@ -10,6 +11,14 @@ class Documentation extends Component
     public string $search = '';
 
     public string $activeCategory = 'all';
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->isAdmin()) {
+            abort(403, __('No tiene permisos para acceder a esta sección.'));
+        }
+    }
 
     public function selectCategory(string $category): void
     {

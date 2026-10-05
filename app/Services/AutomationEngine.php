@@ -72,16 +72,18 @@ class AutomationEngine
     /**
      * Triggered when order status changes.
      */
-    public function handleStatusChanged(Order $order, CoreStatus $previousStatus, CoreStatus $newStatus): void
+    public function handleStatusChanged(Order $order, CoreStatus $previousStatus, CoreStatus $newStatus, ?string $actor = null): void
     {
         if ($order->core_status !== $newStatus) {
             $order->update(['core_status' => $newStatus]);
         }
 
+        $resolvedActor = $actor ?: (auth()->user()?->name ?? 'Automation');
+
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'CORE_STATUS_CHANGED',
-            'actor' => 'User/Automation',
+            'actor' => $resolvedActor,
             'previous_value' => $previousStatus->value,
             'new_value' => $newStatus->value,
             'metadata' => ['timestamp' => now()->toIso8601String()],
@@ -157,7 +159,7 @@ class AutomationEngine
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'APPROVAL_RESET',
-                    'actor' => 'User/Automation',
+                    'actor' => $resolvedActor,
                     'previous_value' => 'approved: true',
                     'new_value' => 'approved: false (Sent to Camila, requires new approval)',
                     'metadata' => ['timestamp' => now()->toIso8601String()],
@@ -218,7 +220,7 @@ class AutomationEngine
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'ORDER_SENT_TO_CLIENT',
-                    'actor' => 'User/Automation',
+                    'actor' => $resolvedActor,
                     'previous_value' => $previousStatus->value,
                     'new_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
                     'metadata' => [
@@ -232,7 +234,7 @@ class AutomationEngine
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'APPROVAL_RESET',
-                    'actor' => 'User/Automation',
+                    'actor' => $resolvedActor,
                     'previous_value' => 'approved: true',
                     'new_value' => 'approved: false (Re-sent to client, requires new approval)',
                     'metadata' => ['timestamp' => now()->toIso8601String()],
@@ -421,7 +423,7 @@ class AutomationEngine
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'DELAY_RESOLVED',
-            'actor' => 'User',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => 'OVERDUE',
             'new_value' => 'Promised Date: '.$clientPromisedDate->toDateString(),
             'metadata' => ['reason' => $reason],
@@ -558,7 +560,7 @@ class AutomationEngine
                 'metadata' => ['trigger' => 'Enviar proof al cliente completed'],
             ]);
 
-            $this->handleStatusChanged($order, $previousStatus, CoreStatus::ENVIADO_AL_CLIENTE);
+            $this->handleStatusChanged($order, $previousStatus, CoreStatus::ENVIADO_AL_CLIENTE, 'AutomationEngine');
         }
 
         // Check for overdue orders and auto-create preventative delay tasks
@@ -861,7 +863,7 @@ class AutomationEngine
                         'origin_substatus' => null,
                     ]);
 
-                    $this->handleStatusChanged($order, $prevStatus, $returnStatus);
+                    $this->handleStatusChanged($order, $prevStatus, $returnStatus, 'AutomationEngine');
 
                     if ($targetSubstatus) {
                         $order->update(['substatus' => $targetSubstatus]);

@@ -73,13 +73,12 @@ class LanguageSettingsTest extends TestCase
         $response = $this->actingAs($user)->get('/kanban');
         $response->assertStatus(200);
         $response->assertSee('Kanban Board');
-        $response->assertSee('Trash');
-        $response->assertSee('Drag and drop cards between lists to update their status in real time.');
+        $response->assertSee(__('Nueva Orden'));
 
         $responseTrash = $this->get('/trash');
         $responseTrash->assertStatus(200);
         $responseTrash->assertSee('Trash');
-        $responseTrash->assertSee('Deleted orders — Restore or delete permanently');
+        $responseTrash->assertSee(__('Volver al Kanban'));
 
         $responsePlanner = $this->get('/planner');
         $responsePlanner->assertStatus(200);

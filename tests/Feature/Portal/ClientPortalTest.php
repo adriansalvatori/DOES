@@ -94,7 +94,7 @@ class ClientPortalTest extends TestCase
             ->assertSee('WO 16362')
             ->assertSee('Esperando tu respuesta')
             ->assertSee('WINDOW GRAPHICS')
-            ->assertSee('En Producción')
+            ->assertSee(__('En Producción'))
             ->assertDontSee('OLD ARCHIVED PROJECT');
     }
 

@@ -27,7 +27,7 @@ class TrashBin extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_RESTORED',
-            'actor' => 'User',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => 'TRASHED',
             'new_value' => $order->core_status?->value,
             'metadata' => ['comment' => 'Orden restaurada desde la papelera.'],

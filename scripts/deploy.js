@@ -73,7 +73,7 @@ function cleanup() {
         try { unlinkSync(askpassFile); } catch {}
     }
     if (askpassDir && existsSync(askpassDir)) {
-        try { import('node:fs').then(fs => fs.rmdirSync(askpassDir, { recursive: true })); } catch {}
+        try { import('node:fs').then(fs => (fs.rmSync ? fs.rmSync(askpassDir, { recursive: true, force: true }) : fs.rmdirSync(askpassDir))); } catch {}
     }
 }
 process.on('exit', cleanup);
@@ -150,13 +150,14 @@ if (isStatus) {
             console.log('✅ ¡El servidor de producción está al día con tu commit local!');
         } else {
             try {
-                const pendingCommits = execSync(`git log ${remoteInfo.commit}..HEAD --oneline`, { cwd: rootDir, encoding: 'utf-8' }).trim();
+                const ref = remoteInfo.short_commit || remoteInfo.commit;
+                const pendingCommits = execSync(`git log ${ref}..HEAD --oneline`, { cwd: rootDir, encoding: 'utf-8' }).trim();
                 if (pendingCommits) {
                     const count = pendingCommits.split('\n').length;
                     console.log(`🚀 Commits pendientes por desplegar (${count}):\n`);
                     console.log(pendingCommits);
                     console.log('\n📄 Archivos modificados en estos commits:');
-                    const diffStat = execSync(`git diff --stat ${remoteInfo.commit}..HEAD`, { cwd: rootDir, encoding: 'utf-8' }).trim();
+                    const diffStat = execSync(`git diff --stat ${ref}..HEAD`, { cwd: rootDir, encoding: 'utf-8' }).trim();
                     console.log(diffStat);
                 } else {
                     console.log('ℹ️  Tu commit local no es un descendiente directo del commit en producción.');

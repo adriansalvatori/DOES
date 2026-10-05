@@ -138,6 +138,12 @@ class OrderDetailModal extends Component
 
     public $trelloDetailsError = null;
 
+    public $attachmentFile = null;
+
+    public bool $isUploadingAttachment = false;
+
+    public ?string $attachmentUploadError = null;
+
     // In-App Media Preview Modal State
     public $showMediaPreviewModal = false;
 
@@ -303,6 +309,125 @@ class OrderDetailModal extends Component
             $this->trelloAttachments = $attachRes['attachments'] ?? [];
         } else {
             $this->trelloAttachments = [];
+        }
+    }
+
+    public function updatedAttachmentFile(): void
+    {
+        $this->uploadAttachmentToTrello();
+    }
+
+    public function uploadAttachmentToTrello(): void
+    {
+        if (! $this->orderId || ! $this->attachmentFile) {
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || ! $order->trello_card_id) {
+            $this->attachmentUploadError = 'Esta orden no tiene una tarjeta de Trello vinculada.';
+            $this->attachmentFile = null;
+
+            return;
+        }
+
+        $this->validate([
+            'attachmentFile' => 'file|max:10240',
+        ], [
+            'attachmentFile.file' => 'El archivo seleccionado no es válido.',
+            'attachmentFile.max' => 'El archivo no debe superar los 10 MB (límite de Trello).',
+        ]);
+
+        $this->isUploadingAttachment = true;
+        $this->attachmentUploadError = null;
+
+        try {
+            $filePath = $this->attachmentFile->getRealPath();
+            $fileName = $this->attachmentFile->getClientOriginalName();
+            $mimeType = $this->attachmentFile->getMimeType();
+
+            $service = app(TrelloSyncService::class);
+            $res = $service->uploadCardAttachment(
+                cardId: $order->trello_card_id,
+                filePath: $filePath,
+                fileName: $fileName,
+                mimeType: $mimeType,
+            );
+
+            if ($res['success']) {
+                $authorName = auth()->user()?->name ?? 'Usuario';
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+                    'actor' => $authorName,
+                    'previous_value' => null,
+                    'new_value' => $fileName,
+                    'metadata' => [
+                        'file_name' => $fileName,
+                        'trello_card_id' => $order->trello_card_id,
+                        'attachment_id' => $res['attachment']['id'] ?? null,
+                    ],
+                ]);
+
+                $this->loadTrelloDetails();
+                $this->dispatch('toast', message: "Archivo '{$fileName}' adjuntado a la tarjeta de Trello exitosamente.");
+                $this->dispatch('order-updated');
+            } else {
+                $this->attachmentUploadError = $res['error'] ?? 'Error al subir el archivo a Trello.';
+                $this->dispatch('toast', message: 'Error al adjuntar archivo a Trello: '.($res['error'] ?? 'Error desconocido'));
+            }
+        } catch (\Throwable $e) {
+            $this->attachmentUploadError = $e->getMessage();
+            $this->dispatch('toast', message: 'Error: '.$e->getMessage());
+        } finally {
+            $this->attachmentFile = null;
+            $this->isUploadingAttachment = false;
+        }
+    }
+
+    public function deleteAttachment(string $attachmentId, string $fileName = ''): void
+    {
+        if (! $this->orderId || empty($attachmentId)) {
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || ! $order->trello_card_id) {
+            $this->dispatch('toast', message: 'Esta orden no tiene una tarjeta de Trello vinculada.');
+
+            return;
+        }
+
+        try {
+            $service = app(TrelloSyncService::class);
+            $res = $service->deleteCardAttachment($order->trello_card_id, $attachmentId);
+
+            if ($res['success']) {
+                $authorName = auth()->user()?->name ?? 'Usuario';
+                $displayName = ! empty($fileName) ? $fileName : 'Archivo adjunto';
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'TRELLO_ATTACHMENT_DELETED',
+                    'actor' => $authorName,
+                    'previous_value' => $displayName,
+                    'new_value' => null,
+                    'metadata' => [
+                        'file_name' => $displayName,
+                        'trello_card_id' => $order->trello_card_id,
+                        'attachment_id' => $attachmentId,
+                    ],
+                ]);
+
+                $this->loadTrelloDetails();
+                $this->dispatch('toast', message: "Archivo '{$displayName}' eliminado de la tarjeta de Trello.");
+                $this->dispatch('order-updated');
+            } else {
+                $this->dispatch('toast', message: 'Error al eliminar archivo de Trello: '.($res['error'] ?? 'Error desconocido'));
+            }
+        } catch (\Throwable $e) {
+            $this->dispatch('toast', message: 'Error: '.$e->getMessage());
         }
     }
 
@@ -513,7 +638,7 @@ class OrderDetailModal extends Component
         }
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
         }
 
         app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
@@ -628,7 +753,7 @@ class OrderDetailModal extends Component
         $this->editSubstatus = $subEnum instanceof Substatus ? $subEnum->value : (string) $subEnum;
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
         }
 
         $freshOrder = $order->fresh();
@@ -693,7 +818,7 @@ class OrderDetailModal extends Component
         $this->editCoreStatus = $newCoreStatus->value;
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
         }
 
         OrderEvent::create([
@@ -793,7 +918,7 @@ class OrderDetailModal extends Component
         }
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
         }
 
         OrderEvent::create([
@@ -894,7 +1019,7 @@ class OrderDetailModal extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'WO_UPDATED_FROM_TRELLO',
-            'actor' => 'Usuario',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => $oldWo,
             'new_value' => $newWo,
             'metadata' => [
@@ -1058,9 +1183,27 @@ class OrderDetailModal extends Component
         }
 
         $oldDueDateStr = $order->current_due_date ? $order->current_due_date->toDateString() : null;
+        $previousSubstatus = $order->substatus;
 
         $order->update($updateData);
         $order->syncDesigners($this->editDesignerIds);
+
+        $prevSubVal = $previousSubstatus instanceof Substatus ? $previousSubstatus->value : (string) $previousSubstatus;
+        $newSubVal = $newSubstatus instanceof Substatus ? $newSubstatus->value : (string) $newSubstatus;
+        if ($prevSubVal !== $newSubVal) {
+            $subEnum = Substatus::tryFrom($newSubVal);
+            $subLabel = $subEnum ? $subEnum->label() : ($newSubVal ?: __('Ninguno'));
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'SUBSTATUS_CHANGED',
+                'actor' => auth()->user()?->name ?? 'Usuario',
+                'previous_value' => $prevSubVal ?: null,
+                'new_value' => $newSubVal ?: null,
+                'metadata' => [
+                    'description' => __('Subestatus actualizado a: :status', ['status' => $subLabel]),
+                ],
+            ]);
+        }
 
         if ($newDueDate && $newDueDate !== $oldDueDateStr) {
             app(SlaEngine::class)->updateDueDate(
@@ -1074,7 +1217,7 @@ class OrderDetailModal extends Component
         }
 
         if ($newCoreStatus && $previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus);
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
 
             if ($newCoreStatus === CoreStatus::ON_HOLD && ! empty($this->onHoldReason)) {
                 OrderEvent::create([
@@ -1151,7 +1294,7 @@ class OrderDetailModal extends Component
         OrderEvent::create([
             'order_id' => $newOrder->id,
             'event_type' => 'ORDER_DUPLICATED',
-            'actor' => 'User',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => null,
             'new_value' => $newOrder->core_status?->value,
             'metadata' => [
@@ -1265,6 +1408,9 @@ class OrderDetailModal extends Component
         $this->newTrelloComment = '';
         $this->approvalComment = '';
         $this->approvalImage = null;
+        $this->attachmentFile = null;
+        $this->attachmentUploadError = null;
+        $this->isUploadingAttachment = false;
     }
 
     public function moveToBacklog()

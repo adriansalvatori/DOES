@@ -212,6 +212,13 @@
         targetInstallationType: null,
         targetFlags: [],
         menuStyle: '',
+        menuSearch: '',
+        matchesMenuSearch(text) {
+            if (!this.menuSearch || !this.menuSearch.trim()) return true;
+            if (!text) return false;
+            const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            return clean(text).includes(clean(this.menuSearch));
+        },
         openMenu(type, orderId, triggerEl, extraData = {}) {
             if (this.activeMenu === type && this.targetOrderId === orderId) {
                 this.closeMenu();
@@ -219,6 +226,7 @@
             }
             this.activeMenu = type;
             this.targetOrderId = orderId;
+            this.menuSearch = '';
             const st = this.ordersState[orderId] || {};
             this.targetSubstatus = st.substatus !== undefined ? st.substatus : (extraData.substatus !== undefined ? extraData.substatus : null);
             this.targetInstallationType = st.installation_type !== undefined ? st.installation_type : (extraData.installationType !== undefined ? extraData.installationType : null);
@@ -227,23 +235,31 @@
             const rect = triggerEl.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
             
-            let menuHeight = 220;
-            let menuWidth = 200;
-            if (type === 'substatus') { menuHeight = 320; menuWidth = 240; }
-            if (type === 'designer') { menuHeight = 240; menuWidth = 170; }
-            if (type === 'installation') { menuHeight = 360; menuWidth = 240; }
-            if (type === 'review') { menuHeight = 180; menuWidth = 210; }
+            let menuHeight = 240;
+            let menuWidth = 220;
+            if (type === 'substatus') { menuHeight = 360; menuWidth = 260; }
+            if (type === 'designer') { menuHeight = 280; menuWidth = 230; }
+            if (type === 'installation') { menuHeight = 340; menuWidth = 260; }
+            if (type === 'review') { menuHeight = 170; menuWidth = 210; }
 
+            this.scrollStartTop = this.$el ? this.$el.scrollTop : 0;
             const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
             let left = Math.min(Math.max(10, rect.left), window.innerWidth - menuWidth - 15);
 
             if (openUp) {
                 const bottom = window.innerHeight - rect.top + 4;
-                this.menuStyle = `position: fixed; left: ${left}px; bottom: ${bottom}px; max-height: ${Math.min(menuHeight + 50, rect.top - 20)}px; z-index: 99999;`;
+                this.menuStyle = `position: fixed; left: ${left}px; bottom: ${bottom}px; width: ${menuWidth}px; max-height: ${Math.min(menuHeight, rect.top - 15)}px; z-index: 99999;`;
             } else {
                 const top = rect.bottom + 4;
-                this.menuStyle = `position: fixed; left: ${left}px; top: ${top}px; max-height: ${Math.min(menuHeight + 50, spaceBelow - 20)}px; z-index: 99999;`;
+                this.menuStyle = `position: fixed; left: ${left}px; top: ${top}px; width: ${menuWidth}px; max-height: ${Math.min(menuHeight, spaceBelow - 15)}px; z-index: 99999;`;
             }
+
+            this.$nextTick(() => {
+                const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
+                if (searchEl) {
+                    searchEl.focus({ preventScroll: true });
+                }
+            });
         },
         closeMenu() {
             this.activeMenu = null;
@@ -251,23 +267,72 @@
             this.targetSubstatus = null;
             this.targetInstallationType = null;
             this.targetFlags = [];
+            this.menuSearch = '';
         },
-        setDesigner(dId) {
+        setDesigner(dId, dName, badgeStyle, inlineStyle) {
             const orderId = this.targetOrderId;
             this.closeMenu();
             if (orderId) {
-                if (this.ordersState[orderId]) {
-                    this.ordersState[orderId].designer_id = dId;
-                }
+                if (!this.ordersState[orderId]) this.ordersState[orderId] = {};
+                this.ordersState[orderId].designer_id = dId;
+                if (dName !== undefined) this.ordersState[orderId].designer_name = dName;
+                if (badgeStyle !== undefined) this.ordersState[orderId].designer_badge_style = badgeStyle;
+                if (inlineStyle !== undefined) this.ordersState[orderId].designer_badge_inline_style = inlineStyle;
                 $wire.updateDesigner(orderId, dId);
             }
+        },
+        installationTypesMap: {{ \Illuminate\Support\Js::from($installationTypes->keyBy('name')->map(fn($t) => [
+            'bg' => $t->bg_color,
+            'text' => $t->text_color,
+            'border' => $t->border_color ?: $t->bg_color,
+        ])) }},
+        getInstallationStyle(type) {
+            if (!type) return '';
+            const direct = this.installationTypesMap[type];
+            if (direct && direct.bg) {
+                return `background-color: ${direct.bg}; color: ${direct.text}; border-color: ${direct.border};`;
+            }
+            const lower = String(type).toLowerCase().trim();
+            for (const [k, v] of Object.entries(this.installationTypesMap)) {
+                if (k.toLowerCase().trim() === lower && v.bg) {
+                    return `background-color: ${v.bg}; color: ${v.text}; border-color: ${v.border};`;
+                }
+            }
+            return '';
+        },
+        getInstallationClass(type) {
+            if (!type) return 'bg-transparent text-stone-400 hover:bg-stone-50';
+            if (this.getInstallationStyle(type)) return 'border shadow-2xs font-bold';
+            return 'bg-stone-100 text-stone-700 font-semibold';
+        },
+        getReviewCellClass(status) {
+            if (status === 'CS') return 'bg-pink-100 text-pink-900 font-bold';
+            if (status === 'CAMILA') return 'font-bold';
+            return 'bg-transparent text-stone-700';
+        },
+        getReviewCellStyle(status) {
+            if (status === 'CAMILA') return 'background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark);';
+            return '';
+        },
+        getReviewIconColor(status) {
+            if (status === 'CS') return 'text-pink-700 hover:bg-pink-200/80';
+            if (status === 'CAMILA') return 'hover:opacity-80';
+            return 'text-stone-400 hover:text-stone-800';
+        },
+        getReviewIconStyle(status) {
+            if (status === 'CAMILA') return 'color: var(--cc-camila-solid);';
+            return '';
         },
         setReviewStatus(status) {
             const orderId = this.targetOrderId;
             this.closeMenu();
             if (orderId) {
-                if (this.ordersState[orderId]) {
-                    this.ordersState[orderId].review_status = status;
+                this.ordersState[orderId] = Object.assign({}, this.ordersState[orderId] || {}, { review_status: status });
+                const prefix = (status === 'CS' || status === 'CAMILA') ? 'INV' : 'EST';
+                const inputEl = document.querySelector('[data-est-input=\'' + orderId + '\']');
+                if (inputEl) {
+                    const raw = (inputEl.dataset.initial || inputEl.value || '').replace(/^(INV|EST)\s*#?\s*/i, '').trim();
+                    inputEl.value = raw ? `${prefix} ${raw}` : prefix;
                 }
                 $wire.updateReviewStatus(orderId, status);
             }
@@ -276,19 +341,18 @@
             const orderId = this.targetOrderId;
             this.closeMenu();
             if (orderId) {
-                if (this.ordersState[orderId]) {
-                    this.ordersState[orderId].installation_type = type;
-                }
+                this.ordersState[orderId] = Object.assign({}, this.ordersState[orderId] || {}, { installation_type: type });
                 $wire.updateInstallationType(orderId, type);
             }
         },
-        setSubstatus(status) {
+        setSubstatus(status, label, style) {
             const orderId = this.targetOrderId;
             this.closeMenu();
             if (orderId) {
-                if (this.ordersState[orderId]) {
-                    this.ordersState[orderId].substatus = status;
-                }
+                if (!this.ordersState[orderId]) this.ordersState[orderId] = {};
+                this.ordersState[orderId].substatus = status;
+                if (label !== undefined) this.ordersState[orderId].substatus_label = label;
+                if (style !== undefined) this.ordersState[orderId].substatus_style = style;
                 $wire.updateSubstatus(orderId, status);
             }
         },
@@ -299,7 +363,7 @@
                 if (this.ordersState[orderId]) {
                     const flags = this.ordersState[orderId].flags || [];
                     const idx = flags.indexOf(flag);
-                    if (idx > -1) flags.splice(idx, 1);
+                    if (idx !== -1) flags.splice(idx, 1);
                     else flags.push(flag);
                     this.ordersState[orderId].flags = flags;
                 }
@@ -308,8 +372,7 @@
         }
     }"
     @keydown.escape.window="closeMenu()"
-    @click.window="if (activeMenu && !$el.contains($event.target) && !$event.target.closest('[data-popover-trigger]')) closeMenu()"
-    @scroll.window.passive="closeMenu()"
+    @scroll.passive="if (activeMenu && Math.abs($el.scrollTop - scrollStartTop) > 35) closeMenu()"
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
     <!-- Top Summary Metrics & Filtering Cards Bar (Full Screen Width) -->
@@ -986,49 +1049,50 @@
                         <tr 
                             data-order-id="{{ $order->id }}"
                             :class="getRowClass({{ $order->id }}, '{{ $rowStyle }}')"
-                            class="transition group relative {{ $rowStyle }}">
+                            class="transition-colors duration-75 group relative {{ $rowStyle }}">
                             <!-- 1. Fecha Creación -->
+                            @php
+                                $cDate = $order->manual_creation_date ?? $order->trello_created_at ?? $order->created_at;
+                                $creationDateVal = $cDate ? $cDate->format('Y-m-d') : '';
+                                $creationDateDisplay = $cDate ? $cDate->format('d/m/Y') : '—';
+                            @endphp
                             <td class="py-1 px-1.5 truncate">
-                                @if($editingOrderId === $order->id && $editingField === 'manual_creation_date')
-                                    <input 
-                                        type="date" 
-                                        wire:model="editingValue"
-                                        wire:change="saveEdit"
-                                        wire:blur="saveEdit"
-                                        wire:keydown.escape="cancelEdit"
-                                        autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
-                                    >
-                                @else
-                                    <div 
-                                        wire:click="startEdit({{ $order->id }}, 'manual_creation_date')"
-                                        class="cursor-pointer hover:underline text-stone-600 truncate text-[10.5px]"
-                                        title="{{ $order->manual_creation_date ? $order->manual_creation_date->format('d/m/Y') : ($order->created_at ? $order->created_at->format('d/m/Y') : 'Sin fecha') }} (Clic para editar)">
-                                        {{ $order->manual_creation_date ? $order->manual_creation_date->format('d/m/Y') : ($order->created_at ? $order->created_at->format('d/m/Y') : '—') }}
-                                    </div>
-                                @endif
+                                <input 
+                                    type="date"
+                                    data-initial="{{ $creationDateVal }}"
+                                    value="{{ $creationDateVal }}"
+                                    @input.stop
+                                    @change.stop="
+                                        if ($el.value !== $el.dataset.initial) {
+                                            $el.dataset.initial = $el.value;
+                                            $wire.quickUpdateField({{ $order->id }}, 'manual_creation_date', $el.value);
+                                        }
+                                    "
+                                    class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                                    title="{{ $creationDateDisplay }} (Clic para editar)"
+                                >
                             </td>
 
                             <!-- 2. Fecha Enviado a Producción -->
+                            @php
+                                $prodDateVal = $order->production_sent_at ? $order->production_sent_at->format('Y-m-d') : '';
+                                $prodDateDisplay = $order->production_sent_at ? $order->production_sent_at->format('d/m/Y') : '—';
+                            @endphp
                             <td class="py-1 px-1.5 truncate">
-                                @if($editingOrderId === $order->id && $editingField === 'production_sent_at')
-                                    <input 
-                                        type="date" 
-                                        wire:model="editingValue"
-                                        wire:change="saveEdit"
-                                        wire:blur="saveEdit"
-                                        wire:keydown.escape="cancelEdit"
-                                        autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
-                                    >
-                                @else
-                                    <div 
-                                        wire:click="startEdit({{ $order->id }}, 'production_sent_at')"
-                                        class="cursor-pointer hover:underline text-stone-600 truncate text-[10.5px]"
-                                        title="{{ $order->production_sent_at ? $order->production_sent_at->format('d/m/Y') : 'Sin fecha' }} (Clic para editar)">
-                                        {{ $order->production_sent_at ? $order->production_sent_at->format('d/m/Y') : '—' }}
-                                    </div>
-                                @endif
+                                <input 
+                                    type="date"
+                                    data-initial="{{ $prodDateVal }}"
+                                    value="{{ $prodDateVal }}"
+                                    @input.stop
+                                    @change.stop="
+                                        if ($el.value !== $el.dataset.initial) {
+                                            $el.dataset.initial = $el.value;
+                                            $wire.quickUpdateField({{ $order->id }}, 'production_sent_at', $el.value);
+                                        }
+                                    "
+                                    class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                                    title="{{ $prodDateDisplay }} (Clic para editar)"
+                                >
                             </td>
 
                             <!-- 3. WO # (Click opens modal if exists + Backlog pill if in_workspace is false) -->
@@ -1044,26 +1108,22 @@
                                     @endif
 
                                     @if($order->hasNoWo())
-                                        @if($editingOrderId === $order->id && $editingField === 'wo_number')
-                                            <input 
-                                                type="text" 
-                                                wire:model="editingValue"
-                                                wire:keydown.enter="saveEdit"
-                                                wire:blur="saveEdit"
-                                                wire:keydown.escape="cancelEdit"
-                                                placeholder="WO..."
-                                                autofocus
-                                                class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] font-mono font-bold w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
-                                            >
-                                        @else
-                                            <div 
-                                                wire:click="startEdit({{ $order->id }}, 'wo_number')"
-                                                class="cursor-pointer inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-300 animate-pulse truncate"
-                                                title="Sin WO - Clic para agregar">
-                                                <x-lucide-alert-circle class="w-2.5 h-2.5 shrink-0" />
-                                                <span class="truncate">Sin WO</span>
-                                            </div>
-                                        @endif
+                                        <input 
+                                            type="text" 
+                                            value=""
+                                            placeholder="+ WO"
+                                            @input.stop
+                                            @keydown.enter.stop.prevent="$el.blur()"
+                                            @keydown.escape.stop.prevent="$el.value = ''; $el.blur()"
+                                            @blur="
+                                                const val = $el.value.trim();
+                                                if (val) {
+                                                    $wire.quickUpdateField({{ $order->id }}, 'wo_number', val);
+                                                }
+                                            "
+                                            class="w-full bg-rose-50 hover:bg-rose-100/80 focus:bg-white text-rose-800 focus:text-stone-900 placeholder-rose-400 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm border-0 border-b border-rose-300 focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate"
+                                            title="Sin WO - Clic para agregar número de WO"
+                                        >
                                     @else
                                         <button 
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
@@ -1110,28 +1170,26 @@
                                     <span class="truncate block" x-text="ordersState[{{ $order->id }}]?.designer_name || '{{ addslashes($order->designer_name) }}'">{{ $order->designer_name }}</span>
                                 </button>
                             </td>
-
                             <!-- 7. Nota Producción / Instalación -->
                             <td class="py-1 px-1.5 truncate">
-                                @if($editingOrderId === $order->id && $editingField === 'production_note')
-                                    <input 
-                                        type="text" 
-                                        wire:model="editingValue"
-                                        wire:keydown.enter="saveEdit"
-                                        wire:blur="saveEdit"
-                                        wire:keydown.escape="cancelEdit"
-                                        placeholder="Nota producción..."
-                                        autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
-                                    >
-                                @else
-                                    <div 
-                                        wire:click="startEdit({{ $order->id }}, 'production_note')"
-                                        class="cursor-pointer hover:bg-stone-100 rounded px-1 py-0.5 text-stone-600 italic truncate min-h-[22px] flex items-center"
-                                        title="{{ $order->production_note ?: 'Clic para editar nota de producción' }}">
-                                        {{ $order->production_note ?: '—' }}
-                                    </div>
-                                @endif
+                                <input 
+                                    type="text" 
+                                    data-initial="{{ $order->production_note ?? '' }}"
+                                    value="{{ $order->production_note ?? '' }}"
+                                    placeholder="—"
+                                    @input.stop
+                                    @keydown.enter.stop.prevent="$el.blur()"
+                                    @keydown.escape.stop.prevent="$el.value = $el.dataset.initial; $el.blur()"
+                                    @blur="
+                                        const val = $el.value.trim();
+                                        if (val !== $el.dataset.initial) {
+                                            $el.dataset.initial = val;
+                                            $wire.quickUpdateField({{ $order->id }}, 'production_note', val);
+                                        }
+                                    "
+                                    class="w-full bg-transparent hover:bg-stone-100/70 focus:bg-white text-[11px] text-stone-700 italic px-1.5 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate placeholder-stone-400 focus:text-stone-900 focus:not-italic"
+                                    title="{{ $order->production_note ?: 'Clic para editar nota de producción' }}"
+                                >
                             </td>
 
                             <!-- 8. Estimado / Invoice (Clean grid cell styling, NO inner box borders) -->
@@ -1163,34 +1221,43 @@
                                     default => '',
                                 };
                             @endphp
-                            <td class="py-1 px-1 truncate transition {{ $cellBg }}" @if(!empty($cellStyle)) style="{{ $cellStyle }}" @endif>
+                            <td 
+                                :class="getReviewCellClass(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
+                                :style="getReviewCellStyle(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
+                                class="py-1 px-1 truncate transition"
+                            >
                                 <div class="flex items-center justify-between gap-0.5 w-full py-0.5 truncate">
-                                    @if($editingOrderId === $order->id && $editingField === 'estimate_invoice_number')
-                                        <input 
-                                            type="text" 
-                                            wire:model="editingValue"
-                                            wire:keydown.enter="saveEdit"
-                                            wire:blur="saveEdit"
-                                            wire:keydown.escape="cancelEdit"
-                                            placeholder="N°..."
-                                            autofocus
-                                            class="px-1 py-0.5 bg-white border border-stone-400 text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900 font-mono font-bold text-stone-900"
-                                        >
-                                    @else
-                                        <span 
-                                            wire:click="startEdit({{ $order->id }}, 'estimate_invoice_number')"
-                                            class="cursor-pointer font-bold font-mono text-[10px] truncate block"
-                                            title="{{ $displayText }} (Clic para editar)">
-                                            {{ $displayText }}
-                                        </span>
-                                    @endif
+                                    <input 
+                                        data-est-input="{{ $order->id }}"
+                                        type="text" 
+                                        data-initial="{{ $order->estimate_invoice_number ?? '' }}"
+                                        value="{{ $displayText }}"
+                                        placeholder="{{ $prefix }}"
+                                        @input.stop
+                                        @focus="if ($el.value === 'EST' || $el.value === 'INV') { $el.value = ''; } else { $el.value = $el.dataset.initial || '{{ $cleanNum }}'; }"
+                                        @keydown.enter.stop.prevent="$el.blur()"
+                                        @keydown.escape.stop.prevent="$el.value = '{{ $displayText }}'; $el.blur()"
+                                        @blur="
+                                            const val = $el.value.trim();
+                                            if (val !== $el.dataset.initial) {
+                                                $el.dataset.initial = val;
+                                                $wire.quickUpdateField({{ $order->id }}, 'estimate_invoice_number', val);
+                                            }
+                                            const curStatus = ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}';
+                                            const curPrefix = (curStatus === 'CS' || curStatus === 'CAMILA') ? 'INV' : 'EST';
+                                            $el.value = val ? (curPrefix + ' ' + val.replace(/^(INV|EST)\s*#?\s*/i, '')) : curPrefix;
+                                        "
+                                        class="flex-1 min-w-0 bg-transparent hover:bg-black/[0.04] focus:bg-white text-[10.5px] font-mono font-bold text-stone-900 px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate"
+                                        title="{{ $displayText }} (Clic para editar)"
+                                    >
 
                                     <button 
                                         type="button"
                                         data-popover-trigger="review"
                                         @click.stop="openMenu('review', {{ $order->id }}, $el)"
-                                        class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none {{ $checkIconColor }}"
-                                        @if(!empty($checkIconStyle)) style="{{ $checkIconStyle }}" @endif
+                                        :class="getReviewIconColor(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
+                                        :style="getReviewIconStyle(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
+                                        class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none"
                                         title="Cambiar estado de revisión">
                                         <x-lucide-check-square class="w-3.5 h-3.5" />
                                     </button>
@@ -1198,25 +1265,25 @@
                             </td>
 
                             <!-- 8.5. Fecha Email -->
+                            @php
+                                $emailDateVal = $order->email_date ? $order->email_date->format('Y-m-d') : '';
+                                $emailDateDisplay = $order->email_date ? $order->email_date->format('d/m/Y') : '—';
+                            @endphp
                             <td class="py-1 px-1.5 truncate">
-                                @if($editingOrderId === $order->id && $editingField === 'email_date')
-                                    <input 
-                                        type="date" 
-                                        wire:model="editingValue"
-                                        wire:change="saveEdit"
-                                        wire:blur="saveEdit"
-                                        wire:keydown.escape="cancelEdit"
-                                        autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[10px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
-                                    >
-                                @else
-                                    <div 
-                                        wire:click="startEdit({{ $order->id }}, 'email_date')"
-                                        class="cursor-pointer hover:underline text-stone-600 truncate text-[10.5px]"
-                                        title="{{ $order->email_date ? $order->email_date->format('d/m/Y') : 'Sin fecha' }} (Clic para editar)">
-                                        {{ $order->email_date ? $order->email_date->format('d/m/Y') : '—' }}
-                                    </div>
-                                @endif
+                                <input 
+                                    type="date"
+                                    data-initial="{{ $emailDateVal }}"
+                                    value="{{ $emailDateVal }}"
+                                    @input.stop
+                                    @change.stop="
+                                        if ($el.value !== $el.dataset.initial) {
+                                            $el.dataset.initial = $el.value;
+                                            $wire.quickUpdateField({{ $order->id }}, 'email_date', $el.value);
+                                        }
+                                    "
+                                    class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                                    title="{{ $emailDateDisplay }} (Clic para editar)"
+                                >
                             </td>
 
                             <!-- 9. Instalación -->
@@ -1228,13 +1295,12 @@
                                 <button 
                                     type="button"
                                     data-popover-trigger="installation"
-                                    @click.stop="openMenu('installation', {{ $order->id }}, $el, { installationType: {{ \Illuminate\Support\Js::from($order->installation_type ?? '') }} })"
-                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 px-1.5 rounded-md truncate transition {{ $instTypeModel ? 'border shadow-2xs' : ($hasInstallation ? 'bg-stone-100 text-stone-700' : 'bg-transparent text-stone-400 hover:bg-stone-50') }}"
-                                    @if($instTypeModel)
-                                        style="background-color: {{ $instTypeModel->bg_color }}; color: {{ $instTypeModel->text_color }}; border-color: {{ $instTypeModel->border_color }};"
-                                    @endif
+                                    @click.stop="openMenu('installation', {{ $order->id }}, $el, { installationType: ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : {{ \Illuminate\Support\Js::from($order->installation_type ?? '') }} })"
+                                    :class="getInstallationClass(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
+                                    :style="getInstallationStyle(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
+                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 px-1.5 rounded-md truncate transition"
                                     title="{{ __('Clic para cambiar instalación: :type', ['type' => $order->installation_type ?? __('Sin información')]) }}">
-                                    <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.installation_type || '{{ $hasInstallation ? addslashes($order->installation_type) : '—' }}'">
+                                    <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.installation_type !== undefined ? (ordersState[{{ $order->id }}].installation_type || '—') : '{{ $hasInstallation ? addslashes($order->installation_type) : '—' }}'">
                                         {{ $hasInstallation ? $order->installation_type : '—' }}
                                     </span>
                                     <x-lucide-chevron-down class="w-2.5 h-2.5 shrink-0 opacity-60" />
@@ -1245,7 +1311,7 @@
                             <td class="py-1 px-0.5 text-center">
                                 <input 
                                     type="checkbox" 
-                                    wire:click="toggleOverviewChecked({{ $order->id }})"
+                                    @click.stop="$wire.toggleOverviewChecked({{ $order->id }})"
                                     {{ $order->overview_checked ? 'checked' : '' }}
                                     class="w-3.5 h-3.5 rounded border-stone-300 text-stone-900 focus:ring-stone-900 cursor-pointer"
                                 >
@@ -1253,25 +1319,24 @@
 
                             <!-- 11. Nota de Entrega -->
                             <td class="py-1 px-1.5 truncate">
-                                @if($editingOrderId === $order->id && $editingField === 'delivery_note')
-                                    <input 
-                                        type="text" 
-                                        wire:model="editingValue"
-                                        wire:keydown.enter="saveEdit"
-                                        wire:blur="saveEdit"
-                                        wire:keydown.escape="cancelEdit"
-                                        placeholder="Nota entrega..."
-                                        autofocus
-                                        class="px-1 py-0.5 bg-white border border-stone-400 rounded-none text-[11px] w-full focus:outline-none focus:ring-1 focus:ring-stone-900"
-                                    >
-                                @else
-                                    <div 
-                                        wire:click="startEdit({{ $order->id }}, 'delivery_note')"
-                                        class="cursor-pointer hover:bg-stone-100 rounded px-1 py-0.5 text-stone-600 italic truncate min-h-[22px] flex items-center"
-                                        title="{{ $order->delivery_note ?: 'Clic para editar nota de entrega' }}">
-                                        {{ $order->delivery_note ?: '—' }}
-                                    </div>
-                                @endif
+                                <input 
+                                    type="text" 
+                                    data-initial="{{ $order->delivery_note ?? '' }}"
+                                    value="{{ $order->delivery_note ?? '' }}"
+                                    placeholder="—"
+                                    @input.stop
+                                    @keydown.enter.stop.prevent="$el.blur()"
+                                    @keydown.escape.stop.prevent="$el.value = $el.dataset.initial; $el.blur()"
+                                    @blur="
+                                        const val = $el.value.trim();
+                                        if (val !== $el.dataset.initial) {
+                                            $el.dataset.initial = val;
+                                            $wire.quickUpdateField({{ $order->id }}, 'delivery_note', val);
+                                        }
+                                    "
+                                    class="w-full bg-transparent hover:bg-stone-100/70 focus:bg-white text-[11px] text-stone-700 italic px-1.5 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate placeholder-stone-400 focus:text-stone-900 focus:not-italic"
+                                    title="{{ $order->delivery_note ?: 'Clic para editar nota de entrega' }}"
+                                >
                             </td>
 
                             <!-- 12. Subestatus -->
@@ -1424,6 +1489,7 @@
 
     <!-- Single Centralized Unified Popover Container (No teleport leaks, max 1 active popover) -->
     <div 
+        x-ref="popoverContainer"
         x-show="activeMenu !== null"
         x-transition:enter="transition ease-out duration-100"
         x-transition:enter-start="opacity-0 scale-95"
@@ -1431,41 +1497,75 @@
         x-transition:leave="transition ease-in duration-75"
         x-transition:leave-start="opacity-100 scale-100"
         x-transition:leave-end="opacity-0 scale-95"
-        @click.outside="closeMenu()"
+        @click.outside="if (!$event.target.closest('[data-popover-trigger]')) closeMenu()"
+        @wheel.stop
         :style="menuStyle"
-        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-1.5 min-w-[190px] z-[99999] overflow-y-auto max-h-[360px] scrollbar-thin text-stone-900"
+        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-2 z-[99999] flex flex-col overflow-hidden text-stone-900 overscroll-contain select-none"
         style="display: none;">
 
         <!-- 1. Designer Popover Content -->
         <template x-if="activeMenu === 'designer'">
-            <div class="space-y-0.5">
-                <div class="px-2 py-1 text-[10px] font-bold text-stone-400 uppercase">Seleccionar Diseñador</div>
-                <button 
-                    type="button"
-                    @click="setDesigner(null)"
-                    class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 text-stone-500 cursor-pointer">
-                    -- Sin Asignar --
-                </button>
-                @foreach($designers as $d)
-                    @php $desObj = is_object($d) ? $d : null; @endphp
+            <div class="flex flex-col h-full min-h-0 space-y-1.5">
+                <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between shrink-0">
+                    <span>{{ __('Seleccionar Diseñador') }}</span>
+                </div>
+
+                <!-- Search input -->
+                <div class="px-1 shrink-0">
+                    <div class="relative flex items-center">
+                        <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
+                        <input 
+                            data-menu-search
+                            x-model="menuSearch"
+                            type="text" 
+                            placeholder="{{ __('Buscar diseñador...') }}" 
+                            class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
+                            @keydown.escape.stop="if (menuSearch) { menuSearch = ''; } else { closeMenu(); }"
+                        >
+                        <button 
+                            x-show="menuSearch" 
+                            @click="menuSearch = ''; $el.previousElementSibling.focus()" 
+                            type="button" 
+                            class="absolute right-2 text-stone-400 hover:text-stone-600 text-xs">✕</button>
+                    </div>
+                </div>
+
+                <div class="space-y-0.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
                     <button 
                         type="button"
-                        @click="setDesigner({{ is_object($d) ? $d->id : $d }})"
-                        class="w-full text-left px-2 py-1 rounded text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800 cursor-pointer">
-                        <span class="flex items-center gap-1.5">
-                            @if($desObj)
-                                <span class="w-2 h-2 rounded-full shrink-0" style="{{ $desObj->dot_inline_style }}"></span>
-                            @endif
-                            <span>{{ is_object($d) ? $d->name : $d }}</span>
-                        </span>
+                        x-show="matchesMenuSearch('sin asignar')"
+                        @click="setDesigner(null, '{{ __('Sin Asignar') }}', 'bg-stone-50 border-dashed border-stone-300 text-stone-400 hover:border-stone-400', '')"
+                        class="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-stone-100 text-stone-500 cursor-pointer">
+                        -- {{ __('Sin Asignar') }} --
                     </button>
-                @endforeach
+                    @foreach($designers as $d)
+                        @php 
+                            $desObj = is_object($d) ? $d : null; 
+                            $dName = is_object($d) ? $d->name : $d; 
+                            $dId = is_object($d) ? $d->id : $d;
+                            $dStyle = $desObj ? $desObj->badge_style : '';
+                            $dInline = $desObj ? $desObj->inline_badge_style : '';
+                        @endphp
+                        <button 
+                            type="button"
+                            x-show="matchesMenuSearch('{{ addslashes($dName) }}')"
+                            @click="setDesigner({{ $dId }}, '{{ addslashes($dName) }}', '{{ addslashes($dStyle) }}', '{{ addslashes($dInline) }}')"
+                            class="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800 cursor-pointer">
+                            <span class="flex items-center gap-1.5">
+                                @if($desObj)
+                                    <span class="w-2 h-2 rounded-full shrink-0" style="{{ $desObj->dot_inline_style }}"></span>
+                                @endif
+                                <span>{{ $dName }}</span>
+                            </span>
+                        </button>
+                    @endforeach
+                </div>
             </div>
         </template>
 
         <!-- 2. Review Status Popover Content -->
         <template x-if="activeMenu === 'review'">
-            <div class="space-y-1">
+            <div class="flex flex-col h-full min-h-0 space-y-1">
                 <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Revisión</div>
                 <button 
                     type="button"
@@ -1491,8 +1591,8 @@
 
         <!-- 3. Installation Popover Content -->
         <template x-if="activeMenu === 'installation'">
-            <div class="space-y-1">
-                <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between">
+            <div class="flex flex-col h-full min-h-0 space-y-1.5">
+                <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between shrink-0">
                     <span>{{ __('Tipo de Instalación') }}</span>
                     <a href="{{ route('settings.installation-types') }}" wire:navigate class="text-[9px] text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-0.5">
                         <x-lucide-settings class="w-2.5 h-2.5" />
@@ -1500,10 +1600,31 @@
                     </a>
                 </div>
 
-                <div class="space-y-1 max-h-72 overflow-y-auto pr-0.5 custom-vertical-scrollbar">
+                <!-- Search Input -->
+                <div class="px-1 shrink-0">
+                    <div class="relative flex items-center">
+                        <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
+                        <input 
+                            data-menu-search
+                            x-model="menuSearch"
+                            type="text" 
+                            placeholder="{{ __('Buscar instalación...') }}" 
+                            class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
+                            @keydown.escape.stop="if (menuSearch) { menuSearch = ''; } else { closeMenu(); }"
+                        >
+                        <button 
+                            x-show="menuSearch" 
+                            @click="menuSearch = ''; $el.previousElementSibling.focus()" 
+                            type="button" 
+                            class="absolute right-2 text-stone-400 hover:text-stone-600 text-xs">✕</button>
+                    </div>
+                </div>
+
+                <div class="space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
                     @foreach($installationTypes as $instType)
                         <button 
                             type="button"
+                            x-show="matchesMenuSearch('{{ addslashes($instType->name) }}')"
                             @click="setInstallationType('{{ $instType->name }}')"
                             class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold border transition flex items-center justify-between cursor-pointer shadow-2xs hover:opacity-90"
                             style="background-color: {{ $instType->bg_color }}; color: {{ $instType->text_color }}; border-color: {{ $instType->border_color }};">
@@ -1515,9 +1636,10 @@
                     @endforeach
                 </div>
 
-                <div class="pt-1 border-t border-stone-100">
+                <div class="pt-1 border-t border-stone-100 shrink-0">
                     <button 
                         type="button"
+                        x-show="matchesMenuSearch('vacio') || matchesMenuSearch('sin informacion')"
                         @click="setInstallationType(null)"
                         class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs bg-stone-50 hover:bg-stone-100 text-stone-600 border border-stone-200 transition flex items-center justify-between cursor-pointer">
                         <span>{{ __('Vacío (Sin información)') }}</span>
@@ -1531,179 +1653,208 @@
 
         <!-- 4. Substatus & Global Flags Popover Content -->
         <template x-if="activeMenu === 'substatus'">
-            <div class="space-y-1.5">
-                <!-- Section 1: Global Flags (First) -->
-                <div class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between">
-                    <span>{{ __('Banderas / Flags Globales') }}</span>
-                    <span class="text-[9px] text-stone-400 font-normal lowercase">({{ __('coexistentes') }})</span>
+            <div class="flex flex-col h-full min-h-0 space-y-1.5">
+                <!-- Search Input -->
+                <div class="px-1 pt-0.5 shrink-0">
+                    <div class="relative flex items-center">
+                        <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
+                        <input 
+                            data-menu-search
+                            x-model="menuSearch"
+                            type="text" 
+                            placeholder="{{ __('Buscar subestatus o flag...') }}" 
+                            class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
+                            @keydown.escape.stop="if (menuSearch) { menuSearch = ''; } else { closeMenu(); }"
+                        >
+                        <button 
+                            x-show="menuSearch" 
+                            @click="menuSearch = ''; $el.previousElementSibling.focus()" 
+                            type="button" 
+                            class="absolute right-2 text-stone-400 hover:text-stone-600 text-xs">✕</button>
+                    </div>
                 </div>
 
-                @php
-                    $allGlobals = $substatuses->filter(function ($item) {
-                        $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
-                        if (in_array($name, ['OVERDUE', 'ALMOST OVERDUE'], true)) {
-                            return false;
-                        }
-                        if ($item instanceof \App\Models\Substatus) {
-                            return (bool) $item->is_global;
-                        }
-                        $enum = \App\Enums\Substatus::tryFrom($name);
-                        return $enum ? $enum->isGlobal() : false;
-                    });
+                <div class="space-y-1.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
+                    <!-- Section 1: Global Flags (First) -->
+                    <div 
+                        x-show="!menuSearch"
+                        class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between">
+                        <span>{{ __('Banderas / Flags Globales') }}</span>
+                        <span class="text-[9px] text-stone-400 font-normal lowercase">({{ __('coexistentes') }})</span>
+                    </div>
 
-                    $coreEnums = collect(\App\Enums\Substatus::cases())->filter(fn($e) => $e->isGlobal() && !in_array($e->value, ['OVERDUE', 'ALMOST OVERDUE'], true));
-                    foreach ($coreEnums as $coreEnum) {
-                        $exists = $allGlobals->contains(function ($item) use ($coreEnum) {
+                    @php
+                        $allGlobals = $substatuses->filter(function ($item) {
                             $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
-                            return $name === $coreEnum->value;
+                            if (in_array($name, ['OVERDUE', 'ALMOST OVERDUE'], true)) {
+                                return false;
+                            }
+                            if ($item instanceof \App\Models\Substatus) {
+                                return (bool) $item->is_global;
+                            }
+                            $enum = \App\Enums\Substatus::tryFrom($name);
+                            return $enum ? $enum->isGlobal() : false;
                         });
-                        if (!$exists) {
-                            $allGlobals->push($coreEnum);
-                        }
-                    }
 
-                    $preferredOrder = ['URGENTE' => 1, 'TICKET' => 2, 'POTENTIAL CUSTOMER' => 3, 'EXTERNO' => 4];
-                    $globalFlagsList = $allGlobals->sortBy(function ($item) use ($preferredOrder) {
-                        $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
-                        $modelOrder = ($item instanceof \App\Models\Substatus && $item->sort_order) ? $item->sort_order : 999;
-                        return $preferredOrder[$name] ?? $modelOrder;
-                    })->values();
-                @endphp
-                @foreach($globalFlagsList as $flagItem)
-                    @php
-                        $flagValue = $flagItem instanceof \App\Models\Substatus ? $flagItem->name : ($flagItem instanceof \App\Enums\Substatus ? $flagItem->value : (string) $flagItem);
-                        $flagModel = ($flagItem instanceof \App\Models\Substatus) ? $flagItem : (($substatuses->first() instanceof \App\Models\Substatus) ? $substatuses->firstWhere('name', $flagValue) : null);
-                        $flagEnum = \App\Enums\Substatus::tryFrom($flagValue);
-                        $flagLabel = $flagEnum?->label() ?? ($flagModel?->name ?? $flagValue);
-
-                        // Use light pastel CSS color variables for global flags
-                        $flagVars = match($flagValue) {
-                            'URGENTE', \App\Enums\Substatus::URGENTE->value => [
-                                'bg' => 'var(--cc-urgent-bg-light)',
-                                'text' => 'var(--cc-urgent-text-dark)',
-                                'border' => 'var(--cc-urgent-border)',
-                                'solid' => 'var(--cc-urgent-solid)',
-                            ],
-                            'TICKET', \App\Enums\Substatus::TICKET->value => [
-                                'bg' => 'var(--cc-camila-bg-light)',
-                                'text' => 'var(--cc-camila-text-dark)',
-                                'border' => 'var(--cc-camila-border)',
-                                'solid' => 'var(--cc-camila-solid)',
-                            ],
-                            'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
-                                'bg' => 'var(--cc-todo-today-bg-light)',
-                                'text' => 'var(--cc-todo-today-text-dark)',
-                                'border' => 'var(--cc-todo-today-border)',
-                                'solid' => 'var(--cc-todo-today-solid)',
-                            ],
-                            'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
-                                'bg' => 'var(--cc-designer-external-bg-light)',
-                                'text' => 'var(--cc-designer-external-text-dark)',
-                                'border' => 'var(--cc-designer-external-border)',
-                                'solid' => 'var(--cc-designer-external-solid)',
-                            ],
-                            default => null,
-                        };
-
-                        if ($flagVars) {
-                            $flagBg = $flagVars['bg'];
-                            $flagText = $flagVars['text'];
-                            $flagBorder = $flagVars['border'];
-                            $flagSolid = $flagVars['solid'];
-                        } else {
-                            $hex = $flagModel?->color ?: ($flagModel?->bg_color ?: '#6B7280');
-                            $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
-                            $flagBg = $pal['bg_color'];
-                            $flagText = $pal['text_color'];
-                            $flagBorder = $pal['border_color'];
-                            $flagSolid = $pal['color'];
+                        $coreEnums = collect(\App\Enums\Substatus::cases())->filter(fn($e) => $e->isGlobal() && !in_array($e->value, ['OVERDUE', 'ALMOST OVERDUE'], true));
+                        foreach ($coreEnums as $coreEnum) {
+                            $exists = $allGlobals->contains(function ($item) use ($coreEnum) {
+                                $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+                                return $name === $coreEnum->value;
+                            });
+                            if (!$exists) {
+                                $allGlobals->push($coreEnum);
+                            }
                         }
 
-                        $activeStyle = "background-color: {$flagBg}; color: {$flagText}; border-color: {$flagBorder}; font-weight: 700;";
+                        $preferredOrder = ['URGENTE' => 1, 'TICKET' => 2, 'POTENTIAL CUSTOMER' => 3, 'EXTERNO' => 4];
+                        $globalFlagsList = $allGlobals->sortBy(function ($item) use ($preferredOrder) {
+                            $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+                            $modelOrder = ($item instanceof \App\Models\Substatus && $item->sort_order) ? $item->sort_order : 999;
+                            return $preferredOrder[$name] ?? $modelOrder;
+                        })->values();
                     @endphp
+                    @foreach($globalFlagsList as $flagItem)
+                        @php
+                            $flagValue = $flagItem instanceof \App\Models\Substatus ? $flagItem->name : ($flagItem instanceof \App\Enums\Substatus ? $flagItem->value : (string) $flagItem);
+                            $flagModel = ($flagItem instanceof \App\Models\Substatus) ? $flagItem : (($substatuses->first() instanceof \App\Models\Substatus) ? $substatuses->firstWhere('name', $flagValue) : null);
+                            $flagEnum = \App\Enums\Substatus::tryFrom($flagValue);
+                            $flagLabel = $flagEnum?->label() ?? ($flagModel?->name ?? $flagValue);
 
-                    <button 
-                        type="button"
-                        @click="toggleGlobalFlag('{{ addslashes($flagValue) }}')"
-                        :style="targetFlags.includes('{{ addslashes($flagValue) }}') ? '{{ $activeStyle }}' : 'border-color: {{ $flagBorder }};'"
-                        :class="targetFlags.includes('{{ addslashes($flagValue) }}') 
-                            ? 'shadow-2xs' 
-                            : 'bg-white hover:bg-stone-50 text-stone-700 font-semibold'"
-                        class="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition flex items-center justify-between border cursor-pointer">
-                        <div class="flex items-center gap-2 truncate">
-                            <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" 
-                                  style="background-color: {{ $flagSolid }};"></span>
-                            <span class="truncate">{{ $flagLabel }}</span>
-                        </div>
-                        <div class="shrink-0 ml-1.5 flex items-center">
-                            <template x-if="targetFlags.includes('{{ addslashes($flagValue) }}')">
-                                <x-lucide-check class="w-3.5 h-3.5 stroke-[3]" />
-                            </template>
-                            <template x-if="!targetFlags.includes('{{ addslashes($flagValue) }}')">
-                                <div class="w-3.5 h-3.5 rounded border border-stone-300"></div>
-                            </template>
-                        </div>
-                    </button>
-                @endforeach
+                            // Use light pastel CSS color variables for global flags
+                            $flagVars = match($flagValue) {
+                                'URGENTE', \App\Enums\Substatus::URGENTE->value => [
+                                    'bg' => 'var(--cc-urgent-bg-light)',
+                                    'text' => 'var(--cc-urgent-text-dark)',
+                                    'border' => 'var(--cc-urgent-border)',
+                                    'solid' => 'var(--cc-urgent-solid)',
+                                ],
+                                'TICKET', \App\Enums\Substatus::TICKET->value => [
+                                    'bg' => 'var(--cc-camila-bg-light)',
+                                    'text' => 'var(--cc-camila-text-dark)',
+                                    'border' => 'var(--cc-camila-border)',
+                                    'solid' => 'var(--cc-camila-solid)',
+                                ],
+                                'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
+                                    'bg' => 'var(--cc-todo-today-bg-light)',
+                                    'text' => 'var(--cc-todo-today-text-dark)',
+                                    'border' => 'var(--cc-todo-today-border)',
+                                    'solid' => 'var(--cc-todo-today-solid)',
+                                ],
+                                'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
+                                    'bg' => 'var(--cc-designer-external-bg-light)',
+                                    'text' => 'var(--cc-designer-external-text-dark)',
+                                    'border' => 'var(--cc-designer-external-border)',
+                                    'solid' => 'var(--cc-designer-external-solid)',
+                                ],
+                                default => null,
+                            };
 
-                <!-- Section 2: Process Classification -->
-                <div class="px-2 pt-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-t border-stone-100 mt-2">
-                    {{ __('Clasificación de Proceso (1 Selección)') }}
-                </div>
-                
-                <button 
-                    type="button"
-                    @click="setSubstatus(null)"
-                    class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
-                    <span>-- {{ __('Sin Subestatus') }} --</span>
-                    <template x-if="!targetSubstatus">
-                        <x-lucide-check class="w-3.5 h-3.5 text-stone-600 stroke-[3]" />
-                    </template>
-                </button>
+                            if ($flagVars) {
+                                $flagBg = $flagVars['bg'];
+                                $flagText = $flagVars['text'];
+                                $flagBorder = $flagVars['border'];
+                                $flagSolid = $flagVars['solid'];
+                            } else {
+                                $hex = $flagModel?->color ?: ($flagModel?->bg_color ?: '#6B7280');
+                                $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
+                                $flagBg = $pal['bg_color'];
+                                $flagText = $pal['text_color'];
+                                $flagBorder = $pal['border_color'];
+                                $flagSolid = $pal['color'];
+                            }
 
-                @foreach($substatuses as $subItem)
-                    @php
-                        $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
-                        $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
-                        if ($itemEnum && $itemEnum->isGlobal()) {
-                            continue;
-                        }
-                        if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) {
-                            continue;
-                        }
-                        $itemLabel = $itemEnum?->label() ?? $itemValue;
-                        
-                        if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
-                            $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
-                        } else {
-                            $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
-                        }
+                            $activeStyle = "background-color: {$flagBg}; color: {$flagText}; border-color: {$flagBorder}; font-weight: 700;";
+                        @endphp
 
-                        $itemFallbackClass = match($itemValue) {
-                            'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
-                            'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
-                            'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
-                            'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
-                            'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
-                            'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
-                            'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
-                            'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
-                            'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
-                            default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
-                        };
-                    @endphp
+                        <button 
+                            type="button"
+                            x-show="matchesMenuSearch('{{ addslashes($flagLabel) }}') || matchesMenuSearch('{{ addslashes($flagValue) }}')"
+                            @click="toggleGlobalFlag('{{ addslashes($flagValue) }}')"
+                            :style="targetFlags.includes('{{ addslashes($flagValue) }}') ? '{{ $activeStyle }}' : 'border-color: {{ $flagBorder }};'"
+                            :class="targetFlags.includes('{{ addslashes($flagValue) }}') 
+                                ? 'shadow-2xs' 
+                                : 'bg-white hover:bg-stone-50 text-stone-700 font-semibold'"
+                            class="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition flex items-center justify-between border cursor-pointer">
+                            <div class="flex items-center gap-2 truncate">
+                                <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" 
+                                      style="background-color: {{ $flagSolid }};"></span>
+                                <span class="truncate">{{ $flagLabel }}</span>
+                            </div>
+                            <div class="shrink-0 ml-1.5 flex items-center">
+                                <template x-if="targetFlags.includes('{{ addslashes($flagValue) }}')">
+                                    <x-lucide-check class="w-3.5 h-3.5 stroke-[3]" />
+                                </template>
+                                <template x-if="!targetFlags.includes('{{ addslashes($flagValue) }}')">
+                                    <div class="w-3.5 h-3.5 rounded border border-stone-300"></div>
+                                </template>
+                            </div>
+                        </button>
+                    @endforeach
+
+                    <!-- Section 2: Process Classification -->
+                    <div 
+                        x-show="!menuSearch"
+                        class="px-2 pt-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-t border-stone-100 mt-2">
+                        {{ __('Clasificación de Proceso (1 Selección)') }}
+                    </div>
                     
                     <button 
                         type="button"
-                        @click="setSubstatus('{{ addslashes($itemValue) }}')"
-                        @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
-                        class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
-                        <span class="truncate">{{ $itemLabel }}</span>
-                        <template x-if="targetSubstatus === '{{ addslashes($itemValue) }}'">
-                            <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
+                        x-show="matchesMenuSearch('sin subestatus') || matchesMenuSearch('vacio')"
+                        @click="setSubstatus(null, '—', '')"
+                        class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
+                        <span>-- {{ __('Sin Subestatus') }} --</span>
+                        <template x-if="!targetSubstatus">
+                            <x-lucide-check class="w-3.5 h-3.5 text-stone-600 stroke-[3]" />
                         </template>
                     </button>
-                @endforeach
+
+                    @foreach($substatuses as $subItem)
+                        @php
+                            $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                            $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
+                            if ($itemEnum && $itemEnum->isGlobal()) {
+                                continue;
+                            }
+                            if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) {
+                                continue;
+                            }
+                            $itemLabel = $itemEnum?->label() ?? $itemValue;
+                            
+                            if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
+                                $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
+                            } else {
+                                $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
+                            }
+
+                            $itemFallbackClass = match($itemValue) {
+                                'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
+                                'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
+                                'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
+                                'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
+                                'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
+                                'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
+                                'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
+                                'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
+                                'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
+                                default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
+                            };
+                        @endphp
+                        
+                        <button 
+                            type="button"
+                            x-show="matchesMenuSearch('{{ addslashes($itemLabel) }}') || matchesMenuSearch('{{ addslashes($itemValue) }}')"
+                            @click="setSubstatus('{{ addslashes($itemValue) }}', '{{ addslashes($itemLabel) }}', '{{ addslashes($itemStyle) }}')"
+                            @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
+                            class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
+                            <span class="truncate">{{ $itemLabel }}</span>
+                            <template x-if="targetSubstatus === '{{ addslashes($itemValue) }}'">
+                                <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
+                            </template>
+                        </button>
+                    @endforeach
+                </div>
             </div>
         </template>
     </div>

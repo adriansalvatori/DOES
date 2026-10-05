@@ -254,7 +254,7 @@ class CreateOrderModal extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'ORDER_DUPLICATED',
-                'actor' => 'User',
+                'actor' => auth()->user()?->name ?? 'Usuario',
                 'previous_value' => null,
                 'new_value' => $order->core_status?->value,
                 'metadata' => [

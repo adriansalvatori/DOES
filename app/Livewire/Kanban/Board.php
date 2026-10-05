@@ -168,7 +168,7 @@ class Board extends Component
         }
 
         // Run local workflow automations
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? 'Usuario');
 
         // Optionally attempt Trello sync in background without interrupting UI
         $freshOrder = $order->fresh();
@@ -247,7 +247,7 @@ class Board extends Component
             'archived_at' => now(),
         ]);
 
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, CoreStatus::ARCHIVED);
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, CoreStatus::ARCHIVED, auth()->user()?->name ?? 'Usuario');
 
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
@@ -313,13 +313,13 @@ class Board extends Component
         $order->update(['core_status' => $newStatus]);
 
         // Run local workflow automations
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? 'Usuario');
 
         // Log event in OrderEvent with reason
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'MOVED_TO_ON_HOLD',
-            'actor' => 'User',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => $previousStatus->value,
             'new_value' => $newStatus->value,
             'metadata' => [
@@ -403,7 +403,7 @@ class Board extends Component
             $order->update(['core_status' => $newStatus]);
         }
 
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus);
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? 'Usuario');
 
         OrderEvent::create([
             'order_id' => $order->id,
@@ -453,7 +453,7 @@ class Board extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_TRASHED',
-            'actor' => 'User',
+            'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => $order->core_status?->value,
             'new_value' => 'TRASHED',
             'metadata' => ['comment' => 'Orden movida a la papelera.'],

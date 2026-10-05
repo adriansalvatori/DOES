@@ -40,10 +40,12 @@ class AutocompleteAndFilterTest extends TestCase
         ]);
 
         Livewire::test(CreateOrderModal::class)
+            ->set('showModal', true)
             ->assertViewHas('existingCompanies', fn ($c) => $c->contains('TAQUERIA LA CHULA') && $c->contains('GLOSSY SIGNS'))
             ->assertViewHas('existingResponsibles', fn ($r) => $r->contains('EDER CIFUENTES') && $r->contains('MARCELA'));
 
         Livewire::test(OrderDetailModal::class)
+            ->set('showModal', true)
             ->assertViewHas('existingCompanies', fn ($c) => $c->contains('TAQUERIA LA CHULA'))
             ->assertViewHas('existingResponsibles', fn ($r) => $r->contains('EDER CIFUENTES'));
     }

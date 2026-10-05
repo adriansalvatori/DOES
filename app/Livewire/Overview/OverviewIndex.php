@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -64,6 +65,7 @@ class OverviewIndex extends Component
     #[On('order-updated')]
     #[On('order-created')]
     #[On('order-deleted')]
+    #[Renderless]
     public function handleOrderUpdated(): void
     {
         $this->clearOverviewCache();
@@ -471,7 +473,7 @@ class OverviewIndex extends Component
             'client_id' => $order->client_id,
             'company_name' => $order->company_name,
             'designer_id' => $order->designer_id ?? $order->primary_designer?->id,
-            'manual_creation_date' => $order->manual_creation_date ? $order->manual_creation_date->format('Y-m-d') : ($order->created_at ? $order->created_at->format('Y-m-d') : ''),
+            'manual_creation_date' => ($order->manual_creation_date ?? $order->trello_created_at ?? $order->created_at)?->format('Y-m-d') ?? '',
             'production_sent_at' => $order->production_sent_at ? $order->production_sent_at->format('Y-m-d') : '',
             'email_date' => $order->email_date ? $order->email_date->format('Y-m-d') : '',
             'production_note' => $order->production_note,
@@ -555,6 +557,75 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Orden actualizada exitosamente.'));
     }
 
+    #[Renderless]
+    public function quickUpdateField(int $orderId, string $field, ?string $value): void
+    {
+        $order = Order::find($orderId);
+        if (! $order) {
+            return;
+        }
+
+        $prevVal = match ($field) {
+            'wo_number' => $order->wo_number,
+            'task_name' => $order->task_name,
+            'company_name' => $order->company_name,
+            'manual_creation_date' => $order->manual_creation_date?->format('Y-m-d'),
+            'production_sent_at' => $order->production_sent_at?->format('Y-m-d'),
+            'email_date' => $order->email_date?->format('Y-m-d'),
+            'production_note' => $order->production_note,
+            'estimate_invoice_number' => $order->estimate_invoice_number,
+            'delivery_note' => $order->delivery_note,
+            default => null,
+        };
+
+        switch ($field) {
+            case 'wo_number':
+                $cleanWo = trim((string) $value);
+                if (! empty($cleanWo) && ! str_starts_with(strtoupper($cleanWo), 'WO')) {
+                    $cleanWo = 'WO '.$cleanWo;
+                }
+                $order->update(['wo_number' => $cleanWo]);
+                break;
+
+            case 'task_name':
+                $order->update(['task_name' => trim((string) $value)]);
+                break;
+
+            case 'company_name':
+                $order->update(['company_name' => trim((string) $value)]);
+                break;
+
+            case 'manual_creation_date':
+                $order->update(['manual_creation_date' => ! empty($value) ? $value : null]);
+                break;
+
+            case 'production_sent_at':
+                $order->update(['production_sent_at' => ! empty($value) ? $value : null]);
+                break;
+
+            case 'email_date':
+                $order->update(['email_date' => ! empty($value) ? $value : null]);
+                break;
+
+            case 'production_note':
+                $order->update(['production_note' => trim((string) $value)]);
+                break;
+
+            case 'estimate_invoice_number':
+                $order->update(['estimate_invoice_number' => trim((string) $value)]);
+                break;
+
+            case 'delivery_note':
+                $order->update(['delivery_note' => trim((string) $value)]);
+                break;
+        }
+
+        $this->syncTrelloAndLog($order, 'ORDER_UPDATED', "Campo {$field} actualizado", $prevVal, $value);
+        $this->clearOverviewCache();
+        $this->dispatch('toast', message: __('Guardado.'));
+    }
+
+    #[Renderless]
     public function updateReviewStatus(?int $orderId, ?string $status): void
     {
         if (! $orderId) {
@@ -573,6 +644,7 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Estado de revisión actualizado.'));
     }
 
+    #[Renderless]
     public function updateInstallationType(?int $orderId, ?string $type): void
     {
         if (! $orderId) {
@@ -591,6 +663,7 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Instalación actualizada.'));
     }
 
+    #[Renderless]
     public function updateSubstatus(?int $orderId, ?string $substatusValue): void
     {
         if (! $orderId) {
@@ -602,17 +675,20 @@ class OverviewIndex extends Component
             return;
         }
 
+        $previousSub = $order->substatus;
+        $prevSubVal = $previousSub instanceof Substatus ? $previousSub->value : (string) $previousSub;
         $substatus = $substatusValue ? (Substatus::tryFrom($substatusValue) ?? $substatusValue) : null;
+        $newSubVal = $substatus instanceof Substatus ? $substatus->value : (string) $substatus;
 
         if ($substatus instanceof Substatus && $substatus->isGlobal()) {
             $order->toggleFlag($substatus);
             $order->save();
             $label = $substatus->label();
-            $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', 'Bandera actualizada: '.$label);
+            $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', 'Bandera actualizada: '.$label, $newSubVal, $prevSubVal);
         } else {
             $order->update(['substatus' => $substatus]);
             $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
-            $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label);
+            $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label, $newSubVal, $prevSubVal);
         }
 
         $this->clearOverviewCache();
@@ -620,6 +696,7 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Subestatus / Bandera actualizada.'));
     }
 
+    #[Renderless]
     public function toggleFlag(?int $orderId, string $flagName): void
     {
         if (! $orderId) {
@@ -639,6 +716,7 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Bandera actualizada.'));
     }
 
+    #[Renderless]
     public function toggleOverviewChecked(?int $orderId): void
     {
         if (! $orderId) {
@@ -656,6 +734,7 @@ class OverviewIndex extends Component
         $this->dispatch('order-updated');
     }
 
+    #[Renderless]
     public function updateDesigner(?int $orderId, ?int $designerId): void
     {
         if (! $orderId) {
@@ -708,20 +787,30 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Orden movida al Backlog.'));
     }
 
-    private function syncTrelloAndLog(Order $order, string $eventType, string $description): void
+    private function syncTrelloAndLog(Order $order, string $eventType, string $description, ?string $newValue = null, ?string $previousValue = null): void
     {
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => $eventType,
-            'actor' => auth()->user()?->name ?? 'Sistema',
+            'actor' => auth()->user()?->name ?? 'Usuario',
+            'previous_value' => $previousValue,
+            'new_value' => $newValue,
             'metadata' => ['description' => $description],
         ]);
 
         if ($order->trello_card_id) {
-            try {
-                app(TrelloSyncService::class)->updateCardOnTrello($order);
-            } catch (\Throwable $e) {
-                // Ignore network error silently
+            $syncCallback = function () use ($order) {
+                try {
+                    app(TrelloSyncService::class)->updateCardOnTrello($order);
+                } catch (\Throwable $e) {
+                    // Ignore network error silently
+                }
+            };
+
+            if (app()->environment('testing')) {
+                $syncCallback();
+            } else {
+                app()->terminating($syncCallback);
             }
         }
     }
@@ -799,6 +888,10 @@ class OverviewIndex extends Component
         ];
         $sortCol = in_array($this->sortBy, $allowedColumns, true) ? $this->sortBy : 'created_at';
         $dir = strtolower($this->sortDirection) === 'asc' ? 'asc' : 'desc';
+
+        if ($sortCol === 'manual_creation_date') {
+            return $query->orderByRaw("COALESCE(manual_creation_date, trello_created_at, created_at) {$dir}");
+        }
 
         return $query->orderBy($sortCol, $dir);
     }
