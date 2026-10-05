@@ -219,6 +219,13 @@
             const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
             return clean(text).includes(clean(this.menuSearch));
         },
+        groupHasMatches(items) {
+            if (!this.menuSearch || !this.menuSearch.trim()) return true;
+            if (!items || !items.length) return false;
+            const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            const q = clean(this.menuSearch);
+            return items.some(item => clean(item).includes(q));
+        },
         openMenu(type, orderId, triggerEl, extraData = {}) {
             if (this.activeMenu === type && this.targetOrderId === orderId) {
                 this.closeMenu();
@@ -237,7 +244,7 @@
             
             let menuHeight = 240;
             let menuWidth = 220;
-            if (type === 'substatus') { menuHeight = 360; menuWidth = 260; }
+            if (type === 'substatus') { menuHeight = 460; menuWidth = 295; }
             if (type === 'designer') { menuHeight = 280; menuWidth = 230; }
             if (type === 'installation') { menuHeight = 340; menuWidth = 260; }
             if (type === 'review') { menuHeight = 170; menuWidth = 210; }
@@ -375,137 +382,140 @@
     @scroll.passive="if (activeMenu && Math.abs($el.scrollTop - scrollStartTop) > 35) closeMenu()"
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
-    <!-- Top Summary Metrics & Filtering Cards Bar (Full Screen Width) -->
+    <!-- Top Summary Metrics & Filtering Cards Bar (3 Cards) -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-        <!-- 1. Órdenes Activas (Workspace) -->
-        <div 
-            wire:click="setTab('workspace')"
-            class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'workspace' ? 'bg-emerald-50/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
-            title="{{ __('Clic para filtrar Órdenes Activas en Workspace') }}">
-            <div class="flex items-start justify-between gap-2">
-                <div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'workspace' ? 'text-emerald-800' : 'text-stone-500 group-hover:text-stone-700' }}">
-                        {{ __('Órdenes Activas') }}
-                    </span>
-                    <div class="flex items-baseline gap-2 mt-0.5">
-                        <span class="text-2xl font-extrabold text-stone-900 leading-tight">
-                            {{ $totalWorkspaceCount }}
+            <!-- 1. Órdenes Activas (Workspace) -->
+            <div 
+                wire:click="setTab('workspace')"
+                class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'workspace' ? 'bg-emerald-50/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
+                title="{{ __('Clic para filtrar Órdenes Activas en Workspace') }}">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'workspace' ? 'text-emerald-800' : 'text-stone-500 group-hover:text-stone-700' }}">
+                            {{ __('Órdenes Activas') }}
                         </span>
-                        <span class="text-[11px] text-stone-400 font-medium lowercase">
-                            {{ __('en workspace') }}
-                        </span>
-                    </div>
-                </div>
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'workspace' ? 'bg-emerald-500 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' }}">
-                    <x-lucide-activity class="w-5 h-5" />
-                </div>
-            </div>
-            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
-                <span class="flex items-center gap-1 font-medium {{ $activeTab === 'workspace' ? 'text-emerald-700 font-semibold' : 'text-stone-500' }}">
-                    <x-lucide-zap class="w-3.5 h-3.5 {{ $activeTab === 'workspace' ? 'text-emerald-600' : 'text-stone-400' }}" />
-                    {{ __('Ver sólo Órdenes Activas') }}
-                </span>
-                @if(!empty($missingWoCount) && $missingWoCount > 0)
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="{{ __('Órdenes activas sin número WO') }}">
-                        <x-lucide-alert-circle class="w-3 h-3 text-amber-500" />
-                        {{ $missingWoCount }} {{ __('Sin WO') }}
-                    </span>
-                @endif
-            </div>
-        </div>
-
-        <!-- 2. En Producción -->
-        <div 
-            wire:click="setTab('production')"
-            class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'production' ? 'bg-pink-50/40 border-pink-500 ring-2 ring-pink-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
-            title="{{ __('Clic para filtrar Órdenes En Producción') }}">
-            <div class="flex items-start justify-between gap-2">
-                <div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'production' ? 'text-pink-800' : 'text-stone-500 group-hover:text-stone-700' }}">
-                        {{ __('En Producción') }}
-                    </span>
-                    <div class="flex items-baseline gap-2 mt-0.5">
-                        <span class="text-2xl font-extrabold text-pink-600 leading-tight">
-                            {{ $inProductionCount }}
-                        </span>
-                        @if(!empty($inWorkspaceProductionCount) && $inWorkspaceProductionCount > 0)
-                            <span class="text-[11px] text-stone-400 font-medium">
-                                ({{ $inWorkspaceProductionCount }} {{ __('en workspace') }})
+                        <div class="flex items-baseline gap-2 mt-0.5">
+                            <span class="text-2xl font-extrabold text-stone-900 leading-tight">
+                                {{ $totalWorkspaceCount }}
                             </span>
-                        @endif
+                            <span class="text-[11px] text-stone-400 font-medium lowercase">
+                                {{ __('en workspace') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'workspace' ? 'bg-emerald-500 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' }}">
+                        <x-lucide-activity class="w-5 h-5" />
                     </div>
                 </div>
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'production' ? 'bg-pink-600 text-white shadow-2xs' : 'bg-pink-50 text-pink-600 group-hover:bg-pink-100' }}">
-                    <x-lucide-layers class="w-5 h-5" />
-                </div>
-            </div>
-            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
-                <span class="flex items-center gap-1 font-medium {{ $activeTab === 'production' ? 'text-pink-700 font-semibold' : 'text-stone-500' }}">
-                    <x-lucide-filter class="w-3.5 h-3.5 {{ $activeTab === 'production' ? 'text-pink-600' : 'text-stone-400' }}" />
-                    {{ __('Ver sólo Producción') }}
-                </span>
-                <span class="text-[10px] text-stone-400 font-medium">
-                    {{ __('Fabricación activa') }}
-                </span>
-            </div>
-        </div>
-
-        <!-- 3. Órdenes Archivadas (con sus subestatus) -->
-        <div 
-            wire:click="setTab('archived', 'all')"
-            class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'archived' ? 'bg-cyan-50/40 border-cyan-500 ring-2 ring-cyan-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
-            title="{{ __('Clic para filtrar Órdenes Archivadas') }}">
-            <div class="flex items-start justify-between gap-2">
-                <div>
-                    <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'archived' ? 'text-cyan-800' : 'text-stone-500 group-hover:text-stone-700' }}">
-                        {{ __('Órdenes Archivadas') }}
+                <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                    <span class="flex items-center gap-1 font-medium {{ $activeTab === 'workspace' ? 'text-emerald-700 font-semibold' : 'text-stone-500' }}">
+                        <x-lucide-zap class="w-3.5 h-3.5 {{ $activeTab === 'workspace' ? 'text-emerald-600' : 'text-stone-400' }}" />
+                        {{ __('Ver sólo Órdenes Activas') }}
                     </span>
-                    <div class="flex items-baseline gap-2 mt-0.5">
-                        <span class="text-2xl font-extrabold text-cyan-800 leading-tight">
-                            {{ $totalArchivedCount }}
+                    @if(!empty($missingWoCount) && $missingWoCount > 0)
+                        <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="{{ __('Órdenes activas sin número WO') }}">
+                            <x-lucide-alert-circle class="w-3 h-3 text-amber-500" />
+                            {{ $missingWoCount }} {{ __('Sin WO') }}
                         </span>
-                        <span class="text-[11px] text-stone-400 font-medium lowercase">
-                            {{ __('Órdenes Finalizadas') }}
+                    @endif
+                </div>
+            </div>
+
+            <!-- 2. En Producción -->
+            <div 
+                wire:click="setTab('production')"
+                class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'production' ? 'bg-pink-50/40 border-pink-500 ring-2 ring-pink-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
+                title="{{ __('Clic para filtrar Órdenes En Producción') }}">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'production' ? 'text-pink-800' : 'text-stone-500 group-hover:text-stone-700' }}">
+                            {{ __('En Producción') }}
                         </span>
+                        <div class="flex items-baseline gap-2 mt-0.5">
+                            <span class="text-2xl font-extrabold text-pink-600 leading-tight">
+                                {{ $inProductionCount }}
+                            </span>
+                            @if(!empty($inWorkspaceProductionCount) && $inWorkspaceProductionCount > 0)
+                                <span class="text-[11px] text-stone-400 font-medium">
+                                    ({{ $inWorkspaceProductionCount }} {{ __('en workspace') }})
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'production' ? 'bg-pink-600 text-white shadow-2xs' : 'bg-pink-50 text-pink-600 group-hover:bg-pink-100' }}">
+                        <x-lucide-layers class="w-5 h-5" />
                     </div>
                 </div>
-                <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'archived' ? 'bg-cyan-600 text-white shadow-2xs' : 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' }}">
-                    <x-lucide-archive class="w-5 h-5" />
+                <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                    <span class="flex items-center gap-1 font-medium {{ $activeTab === 'production' ? 'text-pink-700 font-semibold' : 'text-stone-500' }}">
+                        <x-lucide-filter class="w-3.5 h-3.5 {{ $activeTab === 'production' ? 'text-pink-600' : 'text-stone-400' }}" />
+                        {{ __('Ver sólo Producción') }}
+                    </span>
+                    <span class="text-[10px] text-stone-400 font-medium">
+                        {{ __('Fabricación activa') }}
+                    </span>
                 </div>
             </div>
-            <!-- Subestatus Pills Bar -->
-            <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5 flex-wrap">
-                <button 
-                    type="button"
-                    wire:click.stop="setArchivedSubstatus('all')"
-                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'all' ? 'bg-cyan-700 text-white shadow-2xs' : 'bg-stone-100 text-stone-600 hover:bg-stone-200' }}"
-                    title="{{ __('Ver todas las archivadas') }}">
-                    {{ __('Todas') }} ({{ $totalArchivedCount }})
-                </button>
-                <button 
-                    type="button"
-                    wire:click.stop="setArchivedSubstatus('finalizada')"
-                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'finalizada' ? 'bg-emerald-600 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60' }}"
-                    title="{{ __('Archivadas finalizadas') }}">
-                    {{ __('Finalizadas') }} ({{ $archivedFinalizadaCount }})
-                </button>
-                <button 
-                    type="button"
-                    wire:click.stop="setArchivedSubstatus('cancelada')"
-                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'cancelada' ? 'bg-rose-600 text-white shadow-2xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200/60' }}"
-                    title="{{ __('Archivadas canceladas') }}">
-                    {{ __('Canceladas') }} ({{ $archivedCanceladaCount }})
-                </button>
-                <button 
-                    type="button"
-                    wire:click.stop="setArchivedSubstatus('no_responsive')"
-                    class="px-2 py-0.5 rounded text-[10.5px] font-extrabold transition cursor-pointer {{ $activeTab === 'archived' && $archivedSubstatus === 'no_responsive' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200/60' }}"
-                    title="{{ __('Archivadas por cliente no responsive') }}">
-                    {{ __('No Responsive') }} ({{ $archivedNoResponsiveCount }})
-                </button>
+
+            <!-- 3. Órdenes Archivadas (con sus subestatus) -->
+            <div 
+                wire:click="setTab('archived', 'all')"
+                class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'archived' ? 'bg-cyan-50/40 border-cyan-500 ring-2 ring-cyan-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
+                title="{{ __('Clic para filtrar Órdenes Archivadas') }}">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'archived' ? 'text-cyan-800' : 'text-stone-500 group-hover:text-stone-700' }}">
+                            {{ __('Órdenes Archivadas') }}
+                        </span>
+                        <div class="flex items-baseline gap-2 mt-0.5">
+                            <span class="text-2xl font-extrabold text-cyan-800 leading-tight">
+                                {{ $totalArchivedCount }}
+                            </span>
+                            <span class="text-[11px] text-stone-400 font-medium lowercase">
+                                {{ __('Órdenes Finalizadas') }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'archived' ? 'bg-cyan-600 text-white shadow-2xs' : 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' }}">
+                        <x-lucide-archive class="w-5 h-5" />
+                    </div>
+                </div>
+                <!-- Subestatus Pills Bar -->
+                <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5 flex-wrap">
+                    @foreach($archivedSubstatusFilters as $filterKey => $filter)
+                        @php
+                            $isSelected = ($activeTab === 'archived' && $archivedSubstatus === $filterKey);
+                            $pillStyle = '';
+                            if ($filterKey === 'all') {
+                                $pillClass = $isSelected 
+                                    ? 'bg-cyan-700 text-white shadow-2xs border-cyan-800' 
+                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200 border-stone-200/80';
+                            } else {
+                                if ($isSelected) {
+                                    $solid = $filter['solid_bg'] ?? '#0E7490';
+                                    $pillClass = 'shadow-2xs font-black text-white';
+                                    $pillStyle = "background-color: {$solid}; border-color: {$solid}; color: #ffffff;";
+                                } else {
+                                    $bg = $filter['bg_color'] ?? '#F5F5F4';
+                                    $txt = $filter['text_color'] ?? '#57534E';
+                                    $bd = $filter['border_color'] ?? '#E7E5E4';
+                                    $pillClass = 'hover:opacity-85 font-extrabold';
+                                    $pillStyle = "background-color: {$bg}; color: {$txt}; border-color: {$bd};";
+                                }
+                            }
+                        @endphp
+                        <button 
+                            type="button"
+                            wire:click.stop="setArchivedSubstatus('{{ $filterKey }}')"
+                            @if(!empty($pillStyle)) style="{{ $pillStyle }}" @endif
+                            class="px-2 py-0.5 rounded text-[10.5px] transition cursor-pointer border {{ $pillClass }}"
+                            title="{{ $filter['label'] }}">
+                            {{ $filter['label'] }} ({{ $filter['count'] }})
+                        </button>
+                    @endforeach
+                </div>
             </div>
         </div>
-    </div>
 
     <!-- Toolbar Filters Bar -->
     <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
@@ -1810,49 +1820,66 @@
                         </template>
                     </button>
 
-                    @foreach($substatuses as $subItem)
+                    @foreach($groupedProcessSubstatuses as $groupKey => $group)
                         @php
-                            $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
-                            $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
-                            if ($itemEnum && $itemEnum->isGlobal()) {
-                                continue;
-                            }
-                            if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) {
-                                continue;
-                            }
-                            $itemLabel = $itemEnum?->label() ?? $itemValue;
-                            
-                            if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
-                                $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
-                            } else {
-                                $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
-                            }
-
-                            $itemFallbackClass = match($itemValue) {
-                                'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
-                                'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
-                                'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
-                                'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
-                                'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
-                                'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
-                                'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
-                                'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
-                                'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
-                                default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
-                            };
+                            $searchTerms = collect($group['items'])->flatMap(function ($subItem) {
+                                $val = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                                $enum = \App\Enums\Substatus::tryFrom($val);
+                                $lbl = $enum?->label() ?? $val;
+                                return [$val, $lbl];
+                            })->push($group['title'])->values();
                         @endphp
-                        
-                        <button 
-                            type="button"
-                            x-show="matchesMenuSearch('{{ addslashes($itemLabel) }}') || matchesMenuSearch('{{ addslashes($itemValue) }}')"
-                            @click="setSubstatus('{{ addslashes($itemValue) }}', '{{ addslashes($itemLabel) }}', '{{ addslashes($itemStyle) }}')"
-                            @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
-                            class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
-                            <span class="truncate">{{ $itemLabel }}</span>
-                            <template x-if="targetSubstatus === '{{ addslashes($itemValue) }}'">
-                                <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
-                            </template>
-                        </button>
+                        <div x-show="groupHasMatches({{ \Illuminate\Support\Js::from($searchTerms->all()) }})" class="pt-2 first:pt-1 space-y-1">
+                            <div class="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-stone-400 border-t border-stone-100 first:border-0 pt-1">
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $group['dot'] }}"></span>
+                                <span class="truncate">{{ $group['title'] }}</span>
+                            </div>
+
+                            @foreach($group['items'] as $subItem)
+                                @php
+                                    $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                                    $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
+                                    if ($itemEnum && $itemEnum->isGlobal()) {
+                                        continue;
+                                    }
+                                    if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) {
+                                        continue;
+                                    }
+                                    $itemLabel = $itemEnum?->label() ?? $itemValue;
+                                    
+                                    if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
+                                        $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
+                                    } else {
+                                        $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
+                                    }
+
+                                    $itemFallbackClass = match($itemValue) {
+                                        'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
+                                        'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
+                                        'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
+                                        'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
+                                        'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
+                                        'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
+                                        'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
+                                        'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
+                                        'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
+                                        default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
+                                    };
+                                @endphp
+                                
+                                <button 
+                                    type="button"
+                                    x-show="matchesMenuSearch('{{ addslashes($itemLabel) }}') || matchesMenuSearch('{{ addslashes($itemValue) }}') || matchesMenuSearch('{{ addslashes($group['title']) }}')"
+                                    @click="setSubstatus('{{ addslashes($itemValue) }}', '{{ addslashes($itemLabel) }}', '{{ addslashes($itemStyle) }}')"
+                                    @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
+                                    class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
+                                    <span class="truncate">{{ $itemLabel }}</span>
+                                    <template x-if="targetSubstatus === '{{ addslashes($itemValue) }}'">
+                                        <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
+                                    </template>
+                                </button>
+                            @endforeach
+                        </div>
                     @endforeach
                 </div>
             </div>

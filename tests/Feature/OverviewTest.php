@@ -439,4 +439,56 @@ class OverviewTest extends TestCase
             ->call('clearFilter', 'filterWo')
             ->assertSet('filterWo', '');
     }
+
+    public function test_archived_substatus_filters_computes_counts_and_displays_cards(): void
+    {
+        Order::create([
+            'wo_number' => 'WO 90001',
+            'task_name' => 'Archived Test 1',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ARCHIVED,
+            'substatus' => Substatus::FINALIZADA,
+            'in_workspace' => false,
+        ]);
+
+        Order::create([
+            'wo_number' => 'WO 90002',
+            'task_name' => 'Archived Test 2',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ARCHIVED,
+            'substatus' => Substatus::CANCELADA,
+            'in_workspace' => false,
+        ]);
+
+        $component = Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('setTab', 'archived');
+
+        $filters = $component->instance()->archivedSubstatusFilters;
+        $this->assertArrayHasKey('all', $filters);
+        $this->assertGreaterThanOrEqual(2, $filters['all']['count']);
+
+        $component->assertSee('Órdenes Archivadas');
+    }
+
+    public function test_grouped_process_substatuses_groups_by_core_status(): void
+    {
+        \App\Models\Substatus::firstOrCreate(
+            ['name' => 'BLOQUEADA'],
+            ['core_status' => CoreStatus::ENTRANTE, 'is_global' => false]
+        );
+        \App\Models\Substatus::firstOrCreate(
+            ['name' => 'PAUSADO'],
+            ['core_status' => CoreStatus::ON_HOLD, 'is_global' => false]
+        );
+
+        $component = Livewire::actingAs($this->user)->test(OverviewIndex::class);
+        $groups = $component->instance()->groupedProcessSubstatuses;
+
+        $this->assertNotEmpty($groups);
+        $this->assertArrayHasKey('ENTRANTE', $groups);
+        $this->assertArrayHasKey('ON HOLD', $groups);
+        $this->assertNotEmpty($groups['ENTRANTE']['items']);
+        $this->assertNotEmpty($groups['ENTRANTE']['title']);
+    }
 }

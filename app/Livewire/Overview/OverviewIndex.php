@@ -71,9 +71,199 @@ class OverviewIndex extends Component
         $this->clearOverviewCache();
     }
 
+    #[Computed]
+    public function archivedSubstatusFilters(): array
+    {
+        $rawCounts = Order::query()
+            ->archived()
+            ->selectRaw('substatus, count(*) as count')
+            ->groupBy('substatus')
+            ->pluck('count', 'substatus')
+            ->toArray();
+
+        $models = \App\Models\Substatus::where('core_status', CoreStatus::ARCHIVED->value)
+            ->where('is_global', false)
+            ->orderBy('sort_order')
+            ->get();
+
+        $total = array_sum($rawCounts);
+
+        $filters = [];
+
+        // 1. All (Total)
+        $filters['all'] = [
+            'key' => 'all',
+            'label' => __('All'),
+            'short_label' => __('All'),
+            'count' => $total,
+            'bg_color' => '#F5F5F4',
+            'text_color' => '#57534E',
+            'border_color' => '#E7E5E4',
+            'solid_bg' => '#0E7490',
+            'solid_text' => '#FFFFFF',
+            'icon' => 'archive',
+        ];
+
+        // 2. Subestatus configurados para ARCHIVED en la base de datos
+        foreach ($models as $m) {
+            $cnt = (int) ($rawCounts[$m->name] ?? 0);
+            $enum = Substatus::tryFrom($m->name);
+            $label = $enum?->label() ?? mb_convert_case($m->name, MB_CASE_TITLE, 'UTF-8');
+
+            $hex = $m->color ?: ($m->bg_color ?: '#6B7280');
+            $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
+
+            $filters[$m->name] = [
+                'key' => $m->name,
+                'label' => $label,
+                'short_label' => $label,
+                'count' => $cnt,
+                'bg_color' => $pal['bg_color'],
+                'text_color' => $pal['text_color'],
+                'border_color' => $pal['border_color'],
+                'solid_bg' => $pal['color'],
+                'solid_text' => '#FFFFFF',
+                'icon' => 'tag',
+            ];
+        }
+
+        // 3. Subestatus adicionales encontrados en órdenes archivadas de DB
+        foreach ($rawCounts as $subName => $cnt) {
+            if ($subName && ! isset($filters[$subName])) {
+                $enum = Substatus::tryFrom($subName);
+                $label = $enum?->label() ?? mb_convert_case($subName, MB_CASE_TITLE, 'UTF-8');
+                $pal = \App\Models\Substatus::derivePaletteFromColor('#10B981', 'light');
+
+                $filters[$subName] = [
+                    'key' => $subName,
+                    'label' => $label,
+                    'short_label' => $label,
+                    'count' => (int) $cnt,
+                    'bg_color' => $pal['bg_color'],
+                    'text_color' => $pal['text_color'],
+                    'border_color' => $pal['border_color'],
+                    'solid_bg' => $pal['color'],
+                    'solid_text' => '#FFFFFF',
+                    'icon' => 'check-circle-2',
+                ];
+            }
+        }
+
+        $all = $filters['all'];
+        unset($filters['all']);
+
+        uasort($filters, function ($a, $b) {
+            if ($a['count'] === $b['count']) {
+                return strcmp($a['label'], $b['label']);
+            }
+
+            return $b['count'] <=> $a['count'];
+        });
+
+        return ['all' => $all] + $filters;
+    }
+
+    #[Computed]
+    public function groupedProcessSubstatuses(): array
+    {
+        $substatuses = \App\Models\Substatus::where('is_global', false)
+            ->orderBy('sort_order')
+            ->get();
+
+        if ($substatuses->isEmpty()) {
+            $substatuses = collect(Substatus::cases())->filter(fn ($s) => ! $s->isGlobal());
+        }
+
+        $coreOrder = [
+            'ENTRANTE' => [
+                'title' => __('1. Entrante / Bloqueada'),
+                'dot' => 'bg-orange-500',
+                'badge' => 'border-orange-200 bg-orange-50 text-orange-900',
+            ],
+            'EURALIZ ORDERS RECEIVED' => [
+                'title' => __('2. Colas de Diseño'),
+                'dot' => 'bg-emerald-500',
+                'badge' => 'border-emerald-200 bg-emerald-50 text-emerald-900',
+            ],
+            'ENVIADO A CAMILA' => [
+                'title' => __('3. Enviado a Camila (QA)'),
+                'dot' => 'bg-purple-500',
+                'badge' => 'border-purple-200 bg-purple-50 text-purple-900',
+            ],
+            'ENVIADO AL CLIENTE' => [
+                'title' => __('4. Enviado al Cliente'),
+                'dot' => 'bg-sky-500',
+                'badge' => 'border-sky-200 bg-sky-50 text-sky-900',
+            ],
+            'ON HOLD' => [
+                'title' => __('5. En Pausa (On Hold)'),
+                'dot' => 'bg-stone-500',
+                'badge' => 'border-stone-300 bg-stone-100 text-stone-900',
+            ],
+            'EN PRODUCCIÓN' => [
+                'title' => __('6. En Producción'),
+                'dot' => 'bg-pink-500',
+                'badge' => 'border-pink-200 bg-pink-50 text-pink-900',
+            ],
+            'ARCHIVED' => [
+                'title' => __('7. Archivado / Cierre'),
+                'dot' => 'bg-teal-500',
+                'badge' => 'border-teal-200 bg-teal-50 text-teal-900',
+            ],
+        ];
+
+        $groups = [];
+        foreach ($coreOrder as $coreKey => $meta) {
+            $groups[$coreKey] = [
+                'key' => $coreKey,
+                'title' => $meta['title'],
+                'dot' => $meta['dot'],
+                'badge' => $meta['badge'],
+                'items' => [],
+            ];
+        }
+        $groups['OTROS'] = [
+            'key' => 'OTROS',
+            'title' => __('8. Otros'),
+            'dot' => 'bg-stone-400',
+            'badge' => 'border-stone-200 bg-stone-50 text-stone-700',
+            'items' => [],
+        ];
+
+        foreach ($substatuses as $subItem) {
+            $core = null;
+            if ($subItem instanceof \App\Models\Substatus) {
+                $core = $subItem->core_status ? $subItem->core_status->value : null;
+            } elseif ($subItem instanceof Substatus) {
+                $core = $subItem->defaultCoreStatus()?->value;
+            }
+            $core = $core ?: 'OTROS';
+
+            if (in_array($core, ['ADRIAN ORDERS RECEIVED', 'CESAR ORDERS RECEIVED', 'TO DO TODAY'], true)) {
+                $core = 'EURALIZ ORDERS RECEIVED';
+            }
+
+            if (! isset($groups[$core])) {
+                $groups[$core] = [
+                    'key' => $core,
+                    'title' => $core,
+                    'dot' => 'bg-stone-400',
+                    'badge' => 'border-stone-200 bg-stone-50 text-stone-700',
+                    'items' => [],
+                ];
+            }
+
+            $groups[$core]['items'][] = $subItem;
+        }
+
+        return array_filter($groups, fn ($g) => ! empty($g['items']));
+    }
+
     public function clearOverviewCache(): void
     {
         unset($this->metrics);
+        unset($this->archivedSubstatusFilters);
+        unset($this->groupedProcessSubstatuses);
         if (! Cache::store('file')->has('overview_cache_version')) {
             Cache::store('file')->forever('overview_cache_version', 1);
         }
@@ -905,17 +1095,20 @@ class OverviewIndex extends Component
             'archived' => (function () {
                 $query = Order::query()->archived();
                 if ($this->archivedSubstatus !== 'all') {
-                    match ($this->archivedSubstatus) {
-                        'finalizada', Substatus::FINALIZADA->value => $query->where('substatus', Substatus::FINALIZADA->value),
-                        'cancelada' => $query->whereIn('substatus', [
+                    if (in_array($this->archivedSubstatus, ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE', 'no_responsive'], true)) {
+                        $query->whereIn('substatus', ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE']);
+                    } elseif (in_array($this->archivedSubstatus, ['finalizada', Substatus::FINALIZADA->value], true)) {
+                        $query->where('substatus', Substatus::FINALIZADA->value);
+                    } elseif ($this->archivedSubstatus === 'cancelada') {
+                        $query->whereIn('substatus', [
                             Substatus::CANCELADA->value,
                             Substatus::CANCELADA_POR_CLIENTE->value,
                             Substatus::CANCELADA_POR_CAMILA->value,
                             Substatus::NO_REALIZADA_TRANSFERIDA->value,
-                        ]),
-                        'no_responsive', Substatus::CLIENTE_NO_RESPONSIVE->value => $query->where('substatus', Substatus::CLIENTE_NO_RESPONSIVE->value),
-                        default => $query->where('substatus', $this->archivedSubstatus),
-                    };
+                        ]);
+                    } else {
+                        $query->where('substatus', $this->archivedSubstatus);
+                    }
                 }
 
                 return $query;
@@ -959,6 +1152,8 @@ class OverviewIndex extends Component
             'editingField' => $this->editingField,
             'editingValue' => $this->editingValue,
             'archivedSubstatus' => $this->archivedSubstatus,
+            'archivedSubstatusFilters' => $this->archivedSubstatusFilters,
+            'groupedProcessSubstatuses' => $this->groupedProcessSubstatuses,
             'appliedFilters' => $this->appliedFilters,
             'ordersState' => $this->buildOrdersState($orders),
         ], $this->metrics))->layout('components.layouts.app', ['title' => 'Overview Operativo']);
