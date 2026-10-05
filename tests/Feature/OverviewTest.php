@@ -165,6 +165,26 @@ class OverviewTest extends TestCase
         $this->assertEquals('2026-09-28', $fresh->email_date?->format('Y-m-d'));
     }
 
+    public function test_overview_can_update_production_processed_at_and_delivery_due_date(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 66666',
+            'task_name' => 'Custom Dates Test Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('quickUpdateField', $order->id, 'production_processed_at', '2026-10-05')
+            ->call('quickUpdateField', $order->id, 'delivery_due_date', '2026-10-10');
+
+        $fresh = $order->fresh();
+        $this->assertEquals('2026-10-05', $fresh->production_processed_at?->format('Y-m-d'));
+        $this->assertEquals('2026-10-10', $fresh->delivery_due_date?->format('Y-m-d'));
+    }
+
     public function test_overview_can_move_order_between_backlog_and_workspace(): void
     {
         $order = Order::create([

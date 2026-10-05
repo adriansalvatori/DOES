@@ -6,8 +6,8 @@
         lastSyncTime: '',
         pollTimer: null,
         columns: [
-            'created_at',
-            'prod_date',
+            'proc_date',
+            'due_date',
             'wo',
             'client',
             'name',
@@ -21,8 +21,8 @@
             'substatus'
         ],
         defaultColWidths: {
-            created_at: 6,
-            prod_date: 6,
+            proc_date: 6,
+            due_date: 6,
             wo: 6,
             client: 12,
             name: 14,
@@ -37,8 +37,8 @@
         },
         colWidths: (() => {
             const defaults = {
-                created_at: 6,
-                prod_date: 6,
+                proc_date: 6,
+                due_date: 6,
                 wo: 6,
                 client: 12,
                 name: 14,
@@ -808,39 +808,39 @@
             <table x-ref="ordersTable" class="w-full table-fixed text-left text-xs border-collapse">
                 <thead class="sticky z-20 bg-stone-50 shadow-2xs" style="top: var(--table-header-h, 49px);">
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
-                        <!-- 1. Fecha Creación -->
+                        <!-- 1. Fecha Procesado en Producción -->
                         <th 
-                            :style="'width: ' + (colWidths['created_at'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            :style="'width: ' + (colWidths['proc_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
                             class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('created_at')">
+                            wire:click="sortByColumn('production_processed_at')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="Creación">Creación</span>
+                                <span class="truncate" title="Procesado en Producción">Proc. Prod.</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
-                                @mousedown.stop.prevent="initResize($event, 'created_at')"
-                                @dblclick.stop.prevent="resetDivider('created_at')"
+                                @mousedown.stop.prevent="initResize($event, 'proc_date')"
+                                @dblclick.stop.prevent="resetDivider('proc_date')"
                                 @click.stop.prevent
-                                :class="resizingDivider === 'created_at' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                :class="resizingDivider === 'proc_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
                                 class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
-                        <!-- 2. Fecha Enviado a Producción -->
+                        <!-- 2. Order Due Date -->
                         <th 
-                            :style="'width: ' + (colWidths['prod_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            :style="'width: ' + (colWidths['due_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
                             class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('production_sent_at')">
+                            wire:click="sortByColumn('delivery_due_date')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="Enviado a Producción">Env. Prod.</span>
+                                <span class="truncate" title="Due Date (Fecha Límite de Entrega)">Due Date</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
                             </div>
                             <div 
-                                @mousedown.stop.prevent="initResize($event, 'prod_date')"
-                                @dblclick.stop.prevent="resetDivider('prod_date')"
+                                @mousedown.stop.prevent="initResize($event, 'due_date')"
+                                @dblclick.stop.prevent="resetDivider('due_date')"
                                 @click.stop.prevent
-                                :class="resizingDivider === 'prod_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                :class="resizingDivider === 'due_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
                                 class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
@@ -1060,48 +1060,49 @@
                             data-order-id="{{ $order->id }}"
                             :class="getRowClass({{ $order->id }}, '{{ $rowStyle }}')"
                             class="transition-colors duration-75 group relative {{ $rowStyle }}">
-                            <!-- 1. Fecha Creación -->
+                            <!-- 1. Fecha Procesado en Producción -->
                             @php
-                                $cDate = $order->manual_creation_date ?? $order->trello_created_at ?? $order->created_at;
-                                $creationDateVal = $cDate ? $cDate->format('Y-m-d') : '';
-                                $creationDateDisplay = $cDate ? $cDate->format('d/m/Y') : '—';
+                                $procDateVal = $order->production_processed_at ? $order->production_processed_at->format('Y-m-d') : '';
+                                $procDateDisplay = $order->production_processed_at ? $order->production_processed_at->format('d/m/Y') : '—';
                             @endphp
                             <td class="py-1 px-1.5 truncate">
                                 <input 
                                     type="date"
-                                    data-initial="{{ $creationDateVal }}"
-                                    value="{{ $creationDateVal }}"
+                                    data-initial="{{ $procDateVal }}"
+                                    value="{{ $procDateVal }}"
                                     @input.stop
                                     @change.stop="
                                         if ($el.value !== $el.dataset.initial) {
                                             $el.dataset.initial = $el.value;
-                                            $wire.quickUpdateField({{ $order->id }}, 'manual_creation_date', $el.value);
+                                            $wire.quickUpdateField({{ $order->id }}, 'production_processed_at', $el.value);
                                         }
                                     "
                                     class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
-                                    title="{{ $creationDateDisplay }} (Clic para editar)"
+                                    title="{{ $procDateDisplay }} (Procesado en Producción - Clic para editar)"
                                 >
                             </td>
 
-                            <!-- 2. Fecha Enviado a Producción -->
+                            <!-- 2. Order Due Date (Delivery Deadline) -->
                             @php
-                                $prodDateVal = $order->production_sent_at ? $order->production_sent_at->format('Y-m-d') : '';
-                                $prodDateDisplay = $order->production_sent_at ? $order->production_sent_at->format('d/m/Y') : '—';
+                                $dueDateVal = $order->delivery_due_date ? $order->delivery_due_date->format('Y-m-d') : '';
+                                $dueDateDisplay = $order->delivery_due_date ? $order->delivery_due_date->format('d/m/Y') : '—';
+                                $isDueDateFilled = !empty($dueDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
                                 <input 
                                     type="date"
-                                    data-initial="{{ $prodDateVal }}"
-                                    value="{{ $prodDateVal }}"
+                                    data-initial="{{ $dueDateVal }}"
+                                    value="{{ $dueDateVal }}"
                                     @input.stop
                                     @change.stop="
                                         if ($el.value !== $el.dataset.initial) {
                                             $el.dataset.initial = $el.value;
-                                            $wire.quickUpdateField({{ $order->id }}, 'production_sent_at', $el.value);
+                                            $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', $el.value);
                                         }
                                     "
-                                    class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
-                                    title="{{ $prodDateDisplay }} (Clic para editar)"
+                                    class="w-full text-[10px] font-mono px-1 py-0.5 rounded-sm border-0 transition-colors cursor-pointer {{ $isDueDateFilled ? 'bg-red-600 text-white font-bold shadow-2xs focus:ring-1 focus:ring-red-700' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
+                                    style="{{ $isDueDateFilled ? 'color-scheme: dark;' : '' }}"
+                                    title="{{ $dueDateDisplay }} (Due Date / Fecha Límite de Entrega - Clic para editar)"
                                 >
                             </td>
 

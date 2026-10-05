@@ -322,6 +322,8 @@ class OverviewIndex extends Component
                 'production_note',
                 'estimate_invoice_number',
                 'in_workspace',
+                'production_processed_at',
+                'delivery_due_date',
             ])
             ->with(['designer', 'designers'])
             ->get();
@@ -371,6 +373,8 @@ class OverviewIndex extends Component
                 'wo_number' => $order->wo_number,
                 'production_note' => $order->production_note,
                 'estimate_invoice_number' => $order->estimate_invoice_number,
+                'production_processed_at' => $order->production_processed_at?->format('Y-m-d'),
+                'delivery_due_date' => $order->delivery_due_date?->format('Y-m-d'),
                 'updated_at' => $order->updated_at?->timestamp ?? 0,
             ];
         }
@@ -666,6 +670,8 @@ class OverviewIndex extends Component
             'designer_id' => $order->designer_id ?? $order->primary_designer?->id,
             'manual_creation_date' => ($order->manual_creation_date ?? $order->trello_created_at ?? $order->created_at)?->format('Y-m-d') ?? '',
             'production_sent_at' => $order->production_sent_at ? $order->production_sent_at->format('Y-m-d') : '',
+            'production_processed_at' => $order->production_processed_at ? $order->production_processed_at->format('Y-m-d') : '',
+            'delivery_due_date' => $order->delivery_due_date ? $order->delivery_due_date->format('Y-m-d') : '',
             'email_date' => $order->email_date ? $order->email_date->format('Y-m-d') : '',
             'production_note' => $order->production_note,
             'estimate_invoice_number' => $order->estimate_invoice_number,
@@ -724,6 +730,14 @@ class OverviewIndex extends Component
                 $order->update(['production_sent_at' => ! empty($value) ? $value : null]);
                 break;
 
+            case 'production_processed_at':
+                $order->update(['production_processed_at' => ! empty($value) ? $value : null]);
+                break;
+
+            case 'delivery_due_date':
+                $order->update(['delivery_due_date' => ! empty($value) ? $value : null]);
+                break;
+
             case 'email_date':
                 $order->update(['email_date' => ! empty($value) ? $value : null]);
                 break;
@@ -762,6 +776,8 @@ class OverviewIndex extends Component
             'company_name' => $order->company_name,
             'manual_creation_date' => $order->manual_creation_date?->format('Y-m-d'),
             'production_sent_at' => $order->production_sent_at?->format('Y-m-d'),
+            'production_processed_at' => $order->production_processed_at?->format('Y-m-d'),
+            'delivery_due_date' => $order->delivery_due_date?->format('Y-m-d'),
             'email_date' => $order->email_date?->format('Y-m-d'),
             'production_note' => $order->production_note,
             'estimate_invoice_number' => $order->estimate_invoice_number,
@@ -792,6 +808,14 @@ class OverviewIndex extends Component
 
             case 'production_sent_at':
                 $order->update(['production_sent_at' => ! empty($value) ? $value : null]);
+                break;
+
+            case 'production_processed_at':
+                $order->update(['production_processed_at' => ! empty($value) ? $value : null]);
+                break;
+
+            case 'delivery_due_date':
+                $order->update(['delivery_due_date' => ! empty($value) ? $value : null]);
                 break;
 
             case 'email_date':
@@ -1070,6 +1094,8 @@ class OverviewIndex extends Component
             'created_at',
             'manual_creation_date',
             'production_sent_at',
+            'production_processed_at',
+            'delivery_due_date',
             'email_date',
             'wo_number',
             'company_name',
