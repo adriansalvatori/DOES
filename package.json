@@ -8,7 +8,8 @@
         "zip": "node scripts/create-zip.js",
         "deploy": "node scripts/deploy.js",
         "deploy:dry": "node scripts/deploy.js --dry-run",
-        "deploy:status": "node scripts/deploy.js --status"
+        "deploy:status": "node scripts/deploy.js --status",
+        "deploy:db": "node scripts/upload-db.js"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

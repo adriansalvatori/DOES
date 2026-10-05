@@ -189,4 +189,9 @@ Whenever the user asks to deploy ("despliega", "deploy", "sube a producción", "
    - Verify health: `curl -s -o /dev/null -w "%{http_code}\n" https://gold-trout-815009.hostingersite.com/login` (must return HTTP 200).
    - Confirm successful deployment and version/commit hash with the user.
 
+5. **Database Replacement (`npm run deploy:db`):**
+   - **CRITICAL RESTRICTION:** Standard deployments (`npm run deploy`) NEVER overwrite remote databases.
+   - The command `npm run deploy:db` uploads local `database/database.sqlite` and replaces the production database.
+   - **NEVER execute `npm run deploy:db` automatically.** It MUST ONLY be run with explicit, direct authorization from the user.
+
 </laravel-boost-guidelines>

@@ -77,3 +77,16 @@ curl -s -o /dev/null -w "%{http_code}\n" https://gold-trout-815009.hostingersite
 Expected output: `200`.
 
 Report the deployed version, commit hash, and health confirmation to the user.
+
+---
+
+## Emergency / Exceptional Commands
+
+### Local Database Override (`npm run deploy:db`)
+- **Purpose:** Uploads local `database/database.sqlite` to replace the remote production database.
+- **Rules:**
+  - **NEVER execute this command during standard deployments.**
+  - **NEVER run without explicit user input.**
+  - Automatically creates a remote backup (`database/database.sqlite.bak-YYYYMMDD_HHmmss`) before replacing.
+  - Requires interactive confirmation (`REEMPLAZAR`) or explicit `--confirm` flag.
+
