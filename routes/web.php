@@ -36,7 +36,6 @@ Route::get('/c/{token}', ClientPortal::class)->name('client.portal');
 Route::get('/portal/{token}', function (string $token) {
     return redirect()->route('client.portal', ['token' => $token]);
 });
-
 // Guest Routes
 Route::middleware(['guest'])->group(function () {
     Route::get('/login', Login::class)->name('login');

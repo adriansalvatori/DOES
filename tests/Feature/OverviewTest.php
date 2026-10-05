@@ -382,4 +382,61 @@ class OverviewTest extends TestCase
             ->assertSee('ARCHIVED CANCELADA ORDER')
             ->assertDontSee('ARCHIVED FINALIZADA ORDER');
     }
+
+    public function test_poll_orders_state_detects_changes_and_returns_reactive_state(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 77777',
+            'task_name' => 'State Sync Order Test',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => Substatus::PAUSADO,
+            'designer_id' => $this->designer->id,
+            'in_workspace' => true,
+        ]);
+
+        $component = Livewire::actingAs($this->user)->test(OverviewIndex::class);
+
+        // Initial poll with no last timestamp should return full state
+        $res = $component->instance()->pollOrdersState([$order->id], null);
+        $this->assertTrue($res['has_changes']);
+        $this->assertArrayHasKey($order->id, $res['orders']);
+        $this->assertSame(Substatus::PAUSADO->value, $res['orders'][$order->id]['substatus']);
+        $this->assertSame($this->designer->id, $res['orders'][$order->id]['designer_id']);
+
+        $currentTs = $res['timestamp'];
+
+        // Second poll with same timestamp should return has_changes = false (zero work)
+        $noChangeRes = $component->instance()->pollOrdersState([$order->id], $currentTs);
+        $this->assertFalse($noChangeRes['has_changes']);
+
+        // Update order in database (simulating another user's change)
+        Order::where('id', $order->id)->update([
+            'substatus' => Substatus::PONER_EN_ALTA->value,
+            'updated_at' => now()->addMinutes(1),
+        ]);
+
+        // Next poll should detect the new timestamp and return the fresh state
+        $updatedRes = $component->instance()->pollOrdersState([$order->id], $currentTs);
+        $this->assertTrue($updatedRes['has_changes']);
+        $this->assertSame(Substatus::PONER_EN_ALTA->value, $updatedRes['orders'][$order->id]['substatus']);
+    }
+
+    public function test_applied_filters_are_displayed_and_clearable(): void
+    {
+        Order::create([
+            'wo_number' => 'WO 77777',
+            'task_name' => 'Filter Test Task',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->set('filterWo', '77777')
+            ->assertSee('77777')
+            ->call('clearFilter', 'filterWo')
+            ->assertSet('filterWo', '');
+    }
 }

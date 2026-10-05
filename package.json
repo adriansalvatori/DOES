@@ -4,7 +4,11 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "zip": "node scripts/create-zip.js",
+        "deploy": "node scripts/deploy.js",
+        "deploy:dry": "node scripts/deploy.js --dry-run",
+        "deploy:status": "node scripts/deploy.js --status"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

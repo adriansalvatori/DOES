@@ -1,5 +1,40 @@
 <div 
     x-data="{
+        ordersState: {{ \Illuminate\Support\Js::from($ordersState ?? []) }},
+        lastServerTimestamp: {{ now()->timestamp }},
+        isSyncing: false,
+        lastSyncTime: '',
+        pollTimer: null,
+        columns: [
+            'created_at',
+            'prod_date',
+            'wo',
+            'client',
+            'name',
+            'designer',
+            'prod_note',
+            'invoice',
+            'email_date',
+            'installation',
+            'check',
+            'deliv_note',
+            'substatus'
+        ],
+        defaultColWidths: {
+            created_at: 6,
+            prod_date: 6,
+            wo: 6,
+            client: 12,
+            name: 14,
+            designer: 7.5,
+            prod_note: 12,
+            invoice: 7,
+            email_date: 6,
+            installation: 6,
+            check: 3.5,
+            deliv_note: 7,
+            substatus: 7
+        },
         colWidths: (() => {
             const defaults = {
                 created_at: 6,
@@ -18,37 +53,158 @@
             };
             try {
                 localStorage.removeItem('overview_col_widths');
-                const saved = JSON.parse(localStorage.getItem('overview_col_widths_pct') || '{}');
-                for (let k in saved) {
-                    if (saved[k] > 40) return defaults;
+                const savedStr = localStorage.getItem('overview_col_widths_pct');
+                if (!savedStr) return Object.assign({}, defaults);
+                const saved = JSON.parse(savedStr);
+                let total = 0;
+                for (let k in defaults) {
+                    if (typeof saved[k] !== 'number' || saved[k] <= 0 || saved[k] > 50) {
+                        return Object.assign({}, defaults);
+                    }
+                    total += saved[k];
                 }
-                return Object.assign(defaults, saved);
+                if (Math.abs(total - 100) > 2) {
+                    return Object.assign({}, defaults);
+                }
+                return Object.assign({}, defaults, saved);
             } catch (err) {
-                return defaults;
+                return Object.assign({}, defaults);
             }
         })(),
-        resizingCol: null,
-        startX: 0,
-        startWidth: 0,
-        initResize(e, colKey) {
-            this.resizingCol = colKey;
-            this.startX = e.pageX;
-            const tableWidth = this.$refs.ordersTable ? this.$refs.ordersTable.getBoundingClientRect().width : (window.innerWidth - 300);
-            this.startWidth = this.colWidths[colKey] || 7;
-            let onMove = (mv) => {
-                if (!this.resizingCol) return;
-                let deltaPct = ((mv.pageX - this.startX) / tableWidth) * 100;
-                let newPct = Math.max(2.5, this.startWidth + deltaPct);
-                this.colWidths[this.resizingCol] = Math.round(newPct * 10) / 10;
-                localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
+        resizingDivider: null,
+        init() {
+            this.lastSyncTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            this.startPolling();
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    this.syncState();
+                }
+            });
+        },
+        startPolling() {
+            if (this.pollTimer) clearInterval(this.pollTimer);
+            this.pollTimer = setInterval(() => {
+                if (!document.hidden && !$wire.editingOrderId && !this.activeMenu) {
+                    this.syncState();
+                }
+            }, 15000);
+        },
+        getVisibleOrderIds() {
+            return Object.keys(this.ordersState).map(id => parseInt(id)).filter(id => !isNaN(id));
+        },
+        async syncState(force = false) {
+            const ids = this.getVisibleOrderIds();
+            if (ids.length === 0) return;
+            try {
+                this.isSyncing = true;
+                const res = await $wire.pollOrdersState(ids, force ? null : this.lastServerTimestamp);
+                if (res && res.has_changes && res.orders) {
+                    this.lastServerTimestamp = res.timestamp || this.lastServerTimestamp;
+                    for (const id in res.orders) {
+                        this.ordersState[id] = Object.assign(this.ordersState[id] || {}, res.orders[id]);
+                    }
+                    this.lastSyncTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                } else if (res && res.timestamp) {
+                    this.lastServerTimestamp = res.timestamp;
+                    this.lastSyncTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                }
+            } catch (e) {
+                // Silently ignore transient network disconnect
+            } finally {
+                setTimeout(() => { this.isSyncing = false; }, 300);
+            }
+        },
+        async manualSync() {
+            this.isSyncing = true;
+            await this.syncState(true);
+            $wire.refreshOverview();
+            setTimeout(() => { this.isSyncing = false; }, 400);
+        },
+        getRowClass(orderId, defaultClass) {
+            const st = this.ordersState[orderId];
+            if (!st || !st.core_status) return defaultClass;
+            if (st.core_status === 'ARCHIVED') return 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold';
+            if (st.core_status === 'EN PRODUCCIÓN') return 'bg-orange-200/90 hover:bg-orange-300/90 text-orange-950 font-semibold';
+            return 'hover:bg-stone-50/80';
+        },
+        initResize(e, leftCol, rightCol = null) {
+            const leftIdx = this.columns.indexOf(leftCol);
+            if (leftIdx === -1) return;
+            const rightKey = rightCol || this.columns[leftIdx + 1];
+            if (!rightKey) return;
+
+            const tableEl = this.$refs.ordersTable;
+            const tableWidth = tableEl ? tableEl.getBoundingClientRect().width : (window.innerWidth - 300);
+            if (!tableWidth || tableWidth <= 0) return;
+
+            const startLeftWidth = Number(this.colWidths[leftCol] ?? this.defaultColWidths[leftCol] ?? 6);
+            const startRightWidth = Number(this.colWidths[rightKey] ?? this.defaultColWidths[rightKey] ?? 6);
+            const pairTotal = Math.round((startLeftWidth + startRightWidth) * 100) / 100;
+            const startX = e.pageX;
+            const minColWidth = 2.0;
+
+            if (pairTotal <= minColWidth * 2) return;
+
+            this.resizingDivider = leftCol;
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+
+            const onMove = (mv) => {
+                if (mv.buttons === 0) {
+                    onUp();
+                    return;
+                }
+                const deltaPx = mv.pageX - startX;
+                const deltaPct = (deltaPx / tableWidth) * 100;
+
+                let newLeft = startLeftWidth + deltaPct;
+                if (newLeft < minColWidth) {
+                    newLeft = minColWidth;
+                } else if (newLeft > pairTotal - minColWidth) {
+                    newLeft = pairTotal - minColWidth;
+                }
+
+                newLeft = Math.round(newLeft * 100) / 100;
+                let newRight = Math.round((pairTotal - newLeft) * 100) / 100;
+
+                this.colWidths[leftCol] = newLeft;
+                this.colWidths[rightKey] = newRight;
             };
-            let onUp = () => {
-                setTimeout(() => { this.resizingCol = null; }, 50);
+
+            const onUp = () => {
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
+                this.resizingDivider = null;
+                localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
                 window.removeEventListener('mousemove', onMove);
                 window.removeEventListener('mouseup', onUp);
             };
+
             window.addEventListener('mousemove', onMove);
             window.addEventListener('mouseup', onUp);
+        },
+        resetDivider(leftCol, rightCol = null) {
+            const leftIdx = this.columns.indexOf(leftCol);
+            if (leftIdx === -1) return;
+            const rightKey = rightCol || this.columns[leftIdx + 1];
+            if (!rightKey) return;
+
+            const defLeft = this.defaultColWidths[leftCol] ?? 6;
+            const defRight = this.defaultColWidths[rightKey] ?? 6;
+            const currentTotal = (this.colWidths[leftCol] || defLeft) + (this.colWidths[rightKey] || defRight);
+            const defTotal = defLeft + defRight;
+            const ratio = defLeft / defTotal;
+
+            const newLeft = Math.round(currentTotal * ratio * 100) / 100;
+            const newRight = Math.round((currentTotal - newLeft) * 100) / 100;
+
+            this.colWidths[leftCol] = newLeft;
+            this.colWidths[rightKey] = newRight;
+            localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
+        },
+        resetColWidths() {
+            this.colWidths = Object.assign({}, this.defaultColWidths);
+            localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
         },
         activeMenu: null,
         targetOrderId: null,
@@ -63,9 +219,10 @@
             }
             this.activeMenu = type;
             this.targetOrderId = orderId;
-            this.targetSubstatus = extraData.substatus !== undefined ? extraData.substatus : null;
-            this.targetInstallationType = extraData.installationType !== undefined ? extraData.installationType : null;
-            this.targetFlags = Array.isArray(extraData.flags) ? extraData.flags : [];
+            const st = this.ordersState[orderId] || {};
+            this.targetSubstatus = st.substatus !== undefined ? st.substatus : (extraData.substatus !== undefined ? extraData.substatus : null);
+            this.targetInstallationType = st.installation_type !== undefined ? st.installation_type : (extraData.installationType !== undefined ? extraData.installationType : null);
+            this.targetFlags = Array.isArray(st.flags) ? st.flags : (Array.isArray(extraData.flags) ? extraData.flags : []);
 
             const rect = triggerEl.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
@@ -98,27 +255,56 @@
         setDesigner(dId) {
             const orderId = this.targetOrderId;
             this.closeMenu();
-            if (orderId) $wire.updateDesigner(orderId, dId);
+            if (orderId) {
+                if (this.ordersState[orderId]) {
+                    this.ordersState[orderId].designer_id = dId;
+                }
+                $wire.updateDesigner(orderId, dId);
+            }
         },
         setReviewStatus(status) {
             const orderId = this.targetOrderId;
             this.closeMenu();
-            if (orderId) $wire.updateReviewStatus(orderId, status);
+            if (orderId) {
+                if (this.ordersState[orderId]) {
+                    this.ordersState[orderId].review_status = status;
+                }
+                $wire.updateReviewStatus(orderId, status);
+            }
         },
         setInstallationType(type) {
             const orderId = this.targetOrderId;
             this.closeMenu();
-            if (orderId) $wire.updateInstallationType(orderId, type);
+            if (orderId) {
+                if (this.ordersState[orderId]) {
+                    this.ordersState[orderId].installation_type = type;
+                }
+                $wire.updateInstallationType(orderId, type);
+            }
         },
         setSubstatus(status) {
             const orderId = this.targetOrderId;
             this.closeMenu();
-            if (orderId) $wire.updateSubstatus(orderId, status);
+            if (orderId) {
+                if (this.ordersState[orderId]) {
+                    this.ordersState[orderId].substatus = status;
+                }
+                $wire.updateSubstatus(orderId, status);
+            }
         },
         toggleGlobalFlag(flag) {
             const orderId = this.targetOrderId;
             this.closeMenu();
-            if (orderId) $wire.toggleFlag(orderId, flag);
+            if (orderId) {
+                if (this.ordersState[orderId]) {
+                    const flags = this.ordersState[orderId].flags || [];
+                    const idx = flags.indexOf(flag);
+                    if (idx > -1) flags.splice(idx, 1);
+                    else flags.push(flag);
+                    this.ordersState[orderId].flags = flags;
+                }
+                $wire.toggleFlag(orderId, flag);
+            }
         }
     }"
     @keydown.escape.window="closeMenu()"
@@ -154,7 +340,7 @@
             <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
                 <span class="flex items-center gap-1 font-medium {{ $activeTab === 'workspace' ? 'text-emerald-700 font-semibold' : 'text-stone-500' }}">
                     <x-lucide-zap class="w-3.5 h-3.5 {{ $activeTab === 'workspace' ? 'text-emerald-600' : 'text-stone-400' }}" />
-                    {{ __('Filtrar Activas') }}
+                    {{ __('Ver sólo Órdenes Activas') }}
                 </span>
                 @if(!empty($missingWoCount) && $missingWoCount > 0)
                     <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="{{ __('Órdenes activas sin número WO') }}">
@@ -193,7 +379,7 @@
             <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
                 <span class="flex items-center gap-1 font-medium {{ $activeTab === 'production' ? 'text-pink-700 font-semibold' : 'text-stone-500' }}">
                     <x-lucide-filter class="w-3.5 h-3.5 {{ $activeTab === 'production' ? 'text-pink-600' : 'text-stone-400' }}" />
-                    {{ __('Filtrar Producción') }}
+                    {{ __('Ver sólo Producción') }}
                 </span>
                 <span class="text-[10px] text-stone-400 font-medium">
                     {{ __('Fabricación activa') }}
@@ -216,7 +402,7 @@
                             {{ $totalArchivedCount }}
                         </span>
                         <span class="text-[11px] text-stone-400 font-medium lowercase">
-                            {{ __('histórico') }}
+                            {{ __('Órdenes Finalizadas') }}
                         </span>
                     </div>
                 </div>
@@ -263,80 +449,55 @@
         <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-stone-100">
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="min-w-0">
-                    <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Overview Operativo') }}</h1>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Overview') }}</h1>
                 </div>
 
                 <!-- View Mode Tabs (TODAS | ÓRDENES ACTIVAS | EN PRODUCCIÓN | ARCHIVADAS | BACKLOG) -->
                 <div class="inline-flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200 flex-wrap">
                     <button 
                         wire:click="setTab('all')"
-                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer {{ $activeTab === 'all' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
-                        {{ __('TODAS') }}
+                        class="uppercase px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer {{ $activeTab === 'all' ? 'bg-white text-stone-900 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        {{ __('Todas') }}
                     </button>
                     <button 
                         wire:click="setTab('workspace')"
-                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'workspace' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        class="uppercase px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'workspace' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
                         <x-lucide-zap class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>{{ __('ÓRDENES ACTIVAS') }}</span>
+                        <span>{{ __('Órdenes Activas') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-100 text-emerald-800 font-extrabold">{{ $totalWorkspaceCount }}</span>
                     </button>
                     <button 
                         wire:click="setTab('production')"
-                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'production' ? 'bg-white text-pink-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        class="uppercase px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'production' ? 'bg-white text-pink-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
                         <x-lucide-layers class="w-3.5 h-3.5 text-pink-600 shrink-0" />
-                        <span class="uppercase">{{ __('En Producción') }}</span>
+                        <span>{{ __('En Producción') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-pink-100 text-pink-800 font-extrabold">{{ $inProductionCount }}</span>
                     </button>
                     <button 
                         wire:click="setTab('archived', 'all')"
-                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'archived' ? 'bg-white text-cyan-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        class="uppercase px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'archived' ? 'bg-white text-cyan-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
                         <x-lucide-archive class="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                        <span>{{ __('ARCHIVADAS') }}</span>
+                        <span>{{ __('Archivadas') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-cyan-100 text-cyan-800 font-extrabold">{{ $totalArchivedCount }}</span>
                     </button>
                     <button 
                         wire:click="setTab('backlog')"
-                        class="px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'backlog' ? 'bg-white text-amber-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
+                        class="uppercase px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'backlog' ? 'bg-white text-amber-800 shadow-2xs' : 'text-stone-500 hover:text-stone-900' }}">
                         <x-lucide-inbox class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span>{{ __('BACKLOG') }}</span>
+                        <span>{{ __('Backlog') }}</span>
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-extrabold">{{ $totalBacklogCount }}</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Global Search, Per Page & Reset Buttons -->
-            <div class="flex items-center gap-2">
-                <!-- Cache Status & Refresh Button -->
-                <button 
-                    type="button"
-                    wire:click="refreshCache"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 transition cursor-pointer"
-                    title="{{ __('Caché en disco activo. Clic para forzar recarga.') }}">
-                    <x-lucide-zap class="w-3.5 h-3.5 text-emerald-600" />
-                    <span class="hidden md:inline">{{ __('Caché Disco') }}</span>
-                    <x-lucide-refresh-cw class="w-3 h-3 text-emerald-500 hover:rotate-180 transition-transform" />
-                </button>
-
-                <!-- Per Page Selector -->
-                <div class="flex items-center gap-1.5 text-xs text-stone-500 font-semibold bg-stone-50 px-2 py-1.5 rounded-lg border border-stone-200">
-                    <span class="hidden sm:inline text-stone-400 font-medium">{{ __('Mostrar:') }}</span>
-                    <select 
-                        wire:model.live="perPage" 
-                        class="bg-transparent text-xs font-bold text-stone-800 focus:outline-none cursor-pointer">
-                        <option value="0">Todas (Sin paginación)</option>
-                        <option value="25">25 / pág</option>
-                        <option value="50">50 / pág</option>
-                        <option value="100">100 / pág</option>
-                        <option value="250">250 / pág</option>
-                    </select>
-                </div>
-
-                <div class="relative w-64">
+            <!-- Global Search & Reset Buttons -->
+            <div class="flex items-center gap-2 flex-1 justify-end min-w-[240px]">
+                <div class="relative flex-1">
                     <x-lucide-search class="w-4 h-4 text-stone-400 absolute left-2.5 top-2.5" />
                     <input 
                         type="text" 
                         wire:model.live.debounce.300ms="search"
-                        placeholder="{{ __('Buscar WO, cliente, orden...') }}"
+                        placeholder="{{ __('Buscar en DOES (WO#, cliente, empresa, trabajo...)...') }}"
                         class="w-full pl-8 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-stone-900 focus:bg-white transition"
                     >
                 </div>
@@ -344,7 +505,7 @@
                 @if($search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange)
                     <button 
                         wire:click="resetFilters" 
-                        class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 cursor-pointer">
+                        class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 cursor-pointer shrink-0">
                         <x-lucide-rotate-ccw class="w-3.5 h-3.5" />
                         {{ __('Limpiar') }}
                     </button>
@@ -433,26 +594,44 @@
     @endphp
 
     <!-- Single Unified Orders Data Grid (11 Columns Layout) -->
-    <div class="bg-white rounded-xl border border-stone-200 shadow-2xs w-full">
+    <div 
+        x-data="{ 
+            headerHeight: 49,
+            init() {
+                const updateHeight = () => {
+                    if (this.$refs.headerBar) {
+                        this.headerHeight = this.$refs.headerBar.offsetHeight;
+                    }
+                };
+                updateHeight();
+                this.$nextTick(updateHeight);
+                if (window.ResizeObserver && this.$refs.headerBar) {
+                    new ResizeObserver(updateHeight).observe(this.$refs.headerBar);
+                }
+            }
+        }"
+        :style="'--table-header-h: ' + headerHeight + 'px;'"
+        class="bg-white rounded-xl border border-stone-200 shadow-2xs w-full relative">
         <!-- Table Header Bar -->
-        <div class="w-full px-4 py-3 bg-[#f7f7f5] border-b border-stone-200 flex items-center justify-between rounded-t-xl">
-            <div class="flex items-center gap-2.5">
-                <div class="w-7 h-7 rounded-lg bg-stone-900 text-white flex items-center justify-center font-bold text-xs">
+        <div 
+            x-ref="headerBar"
+            class="sticky top-0 z-30 w-full px-4 py-3 bg-[#f7f7f5] border-b border-stone-200 flex flex-wrap items-center justify-between gap-2.5 rounded-t-xl">
+            <div class="flex items-center gap-2.5 flex-wrap min-w-0">
+                @if($activeTab === 'workspace')
+                    <x-lucide-zap class="w-5 h-5 text-emerald-600 shrink-0" />
+                @elseif($activeTab === 'production')
+                    <x-lucide-layers class="w-5 h-5 text-pink-600 shrink-0" />
+                @elseif($activeTab === 'backlog')
+                    <x-lucide-inbox class="w-5 h-5 text-amber-600 shrink-0" />
+                @elseif($activeTab === 'archived')
+                    <x-lucide-archive class="w-5 h-5 text-cyan-600 shrink-0" />
+                @else
+                    <x-lucide-layout-grid class="w-5 h-5 text-stone-500 shrink-0" />
+                @endif
+
+                <h3 class="font-bold text-sm text-stone-900 tracking-tight shrink-0">
                     @if($activeTab === 'workspace')
-                        <x-lucide-zap class="w-4 h-4 text-emerald-400" />
-                    @elseif($activeTab === 'production')
-                        <x-lucide-layers class="w-4 h-4 text-pink-400" />
-                    @elseif($activeTab === 'backlog')
-                        <x-lucide-inbox class="w-4 h-4 text-amber-400" />
-                    @elseif($activeTab === 'archived')
-                        <x-lucide-archive class="w-4 h-4 text-cyan-400" />
-                    @else
-                        <x-lucide-layout-grid class="w-4 h-4 text-stone-300" />
-                    @endif
-                </div>
-                <h3 class="font-bold text-sm text-stone-900 tracking-tight">
-                    @if($activeTab === 'workspace')
-                        {{ __('Órdenes Activas en Workspace') }}
+                        {{ __('Todas las Órdenes Activas') }}
                     @elseif($activeTab === 'production')
                         {{ __('Órdenes en Producción') }}
                     @elseif($activeTab === 'backlog')
@@ -466,34 +645,100 @@
                         {{ __('Todas las Órdenes') }}
                     @endif
                 </h3>
+
+                @if(!empty($appliedFilters))
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <span class="text-stone-300 font-light select-none">|</span>
+                        @foreach($appliedFilters as $filter)
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-stone-700 border border-stone-200 shadow-2xs">
+                                <span class="text-stone-400 font-normal">{{ $filter['label'] }}:</span>
+                                <span class="font-bold text-stone-900 max-w-[180px] truncate" title="{{ $filter['value'] }}">{{ $filter['value'] }}</span>
+                                <button 
+                                    type="button" 
+                                    wire:click="clearFilter('{{ $filter['key'] }}')" 
+                                    class="text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded p-0.5 transition cursor-pointer"
+                                    title="{{ __('Quitar filtro') }}">
+                                    <x-lucide-x class="w-2.5 h-2.5" />
+                                </button>
+                            </span>
+                        @endforeach
+
+                        @if(count($appliedFilters) > 1)
+                            <button 
+                                type="button" 
+                                wire:click="resetFilters" 
+                                class="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer ml-1 select-none">
+                                {{ __('Limpiar todos') }}
+                            </button>
+                        @endif
+                    </div>
+                @endif
+
                 <span class="hidden px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
                     {{ method_exists($orders, 'total') ? $orders->total() : count($orders) }}
                 </span>
             </div>
 
-            <div class="text-xs text-stone-500 font-medium hidden sm:block">
-                @if($activeTab === 'all')
-                    <span class="inline-flex items-center gap-2">
-                        <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold"><x-lucide-zap class="w-3.5 h-3.5 text-emerald-600" /> {{ $totalWorkspaceCount }} {{ __('Activas') }}</span>
-                        <span>•</span>
-                        <span class="inline-flex items-center gap-1 text-pink-700 font-semibold"><x-lucide-layers class="w-3.5 h-3.5 text-pink-600" /> {{ $inProductionCount }} {{ __('Producción') }}</span>
-                        <span>•</span>
-                        <span class="inline-flex items-center gap-1 text-amber-700 font-semibold"><x-lucide-inbox class="w-3.5 h-3.5 text-amber-600" /> {{ $totalBacklogCount }} {{ __('Backlog') }}</span>
-                        <span>•</span>
-                        <span class="inline-flex items-center gap-1 text-cyan-700 font-semibold"><x-lucide-archive class="w-3.5 h-3.5 text-cyan-600" /> {{ $totalArchivedCount }} {{ __('Archivadas') }}</span>
-                    </span>
-                @endif
+            <div class="text-xs text-stone-500 font-medium hidden sm:flex items-center">
+                <div class="inline-flex items-center gap-1.5 flex-wrap">
+                    @if($activeTab !== 'all')
+                        <button 
+                            type="button"
+                            wire:click="setTab('all')"
+                            class="inline-flex items-center gap-1 font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 px-2 py-0.5 rounded-md transition cursor-pointer text-[11px]"
+                            title="{{ __('Ver todas las órdenes') }}">
+                            <x-lucide-layout-grid class="w-3 h-3 text-stone-500" />
+                            <span>{{ __('Todas') }}</span>
+                        </button>
+                        <span class="text-stone-300">•</span>
+                    @endif
+                    <button 
+                        type="button"
+                        wire:click="setTab('workspace')"
+                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'workspace' ? 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-500/30 shadow-2xs' : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50' }}"
+                        title="{{ __('Ver Órdenes Activas') }}">
+                        <x-lucide-zap class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>{{ $totalWorkspaceCount }} {{ __('Activas') }}</span>
+                    </button>
+                    <span class="text-stone-300">•</span>
+                    <button 
+                        type="button"
+                        wire:click="setTab('production')"
+                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'production' ? 'bg-pink-100 text-pink-900 ring-1 ring-pink-500/30 shadow-2xs' : 'text-pink-700 hover:text-pink-900 hover:bg-pink-50' }}"
+                        title="{{ __('Ver Órdenes en Producción') }}">
+                        <x-lucide-layers class="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                        <span>{{ $inProductionCount }} {{ __('Producción') }}</span>
+                    </button>
+                    <span class="text-stone-300">•</span>
+                    <button 
+                        type="button"
+                        wire:click="setTab('backlog')"
+                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'backlog' ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-500/30 shadow-2xs' : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50' }}"
+                        title="{{ __('Ver Órdenes en Backlog') }}">
+                        <x-lucide-inbox class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>{{ $totalBacklogCount }} {{ __('Backlog') }}</span>
+                    </button>
+                    <span class="text-stone-300">•</span>
+                    <button 
+                        type="button"
+                        wire:click="setTab('archived', 'all')"
+                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'archived' ? 'bg-cyan-100 text-cyan-900 ring-1 ring-cyan-500/30 shadow-2xs' : 'text-cyan-700 hover:text-cyan-900 hover:bg-cyan-50' }}"
+                        title="{{ __('Ver Órdenes Archivadas') }}">
+                        <x-lucide-archive class="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                        <span>{{ $totalArchivedCount }} {{ __('Archivadas') }}</span>
+                    </button>
+                </div>
             </div>
         </div>
 
         <div class="w-full">
             <table x-ref="ordersTable" class="w-full table-fixed text-left text-xs border-collapse">
-                <thead class="sticky top-0 z-20 bg-stone-50 shadow-2xs">
+                <thead class="sticky z-20 bg-stone-50 shadow-2xs" style="top: var(--table-header-h, 49px);">
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
                         <!-- 1. Fecha Creación -->
                         <th 
-                            :style="'width: ' + (colWidths['created_at'] || 6) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['created_at'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('created_at')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Creación">Creación</span>
@@ -501,16 +746,18 @@
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'created_at')"
+                                @dblclick.stop.prevent="resetDivider('created_at')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'created_at' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 2. Fecha Enviado a Producción -->
                         <th 
-                            :style="'width: ' + (colWidths['prod_date'] || 6) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['prod_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('production_sent_at')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Enviado a Producción">Env. Prod.</span>
@@ -518,16 +765,18 @@
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'prod_date')"
+                                @dblclick.stop.prevent="resetDivider('prod_date')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'prod_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 3. WO # -->
                         <th 
-                            :style="'width: ' + (colWidths['wo'] || 6) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['wo'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('wo_number')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="WO #">WO #</span>
@@ -535,16 +784,18 @@
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'wo')"
+                                @dblclick.stop.prevent="resetDivider('wo')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'wo' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 4. Client -->
                         <th 
-                            :style="'width: ' + (colWidths['client'] || 12) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['client'] || 12) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('company_name')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Cliente">Cliente</span>
@@ -552,16 +803,18 @@
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'client')"
+                                @dblclick.stop.prevent="resetDivider('client')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'client' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 5. Order Name -->
                         <th 
-                            :style="'width: ' + (colWidths['name'] || 14) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['name'] || 14) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('task_name')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nombre de Orden">Nombre de Orden</span>
@@ -569,61 +822,69 @@
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'name')"
+                                @dblclick.stop.prevent="resetDivider('name')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'name' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 6. Designer -->
                         <th 
-                            :style="'width: ' + (colWidths['designer'] || 7.5) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
+                            :style="'width: ' + (colWidths['designer'] || 7.5) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Diseñador">Diseñador</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'designer')"
+                                @dblclick.stop.prevent="resetDivider('designer')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'designer' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 7. Nota Producción / Instalación -->
                         <th 
-                            :style="'width: ' + (colWidths['prod_note'] || 12) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
+                            :style="'width: ' + (colWidths['prod_note'] || 12) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nota Producción/Instalación">Nota Prod./Inst.</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'prod_note')"
+                                @dblclick.stop.prevent="resetDivider('prod_note')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'prod_note' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 8. Estimado / Invoice -->
                         <th 
-                            :style="'width: ' + (colWidths['invoice'] || 7) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
+                            :style="'width: ' + (colWidths['invoice'] || 7) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Estimado / Invoice">Est. / Inv.</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'invoice')"
+                                @dblclick.stop.prevent="resetDivider('invoice')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'invoice' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 8.5. Fecha Email -->
                         <th 
-                            :style="'width: ' + (colWidths['email_date'] || 6) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['email_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('email_date')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Fecha Email">Email</span>
@@ -631,71 +892,73 @@
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'email_date')"
+                                @dblclick.stop.prevent="resetDivider('email_date')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'email_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 9. Instalación -->
                         <th 
-                            :style="'width: ' + (colWidths['installation'] || 6) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
+                            :style="'width: ' + (colWidths['installation'] || 6) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Instalación">Instalación</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'installation')"
+                                @dblclick.stop.prevent="resetDivider('installation')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'installation' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 10. CHECK MARK -->
                         <th 
-                            :style="'width: ' + (colWidths['check'] || 3.5) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-0.5 text-center select-none group/col">
+                            :style="'width: ' + (colWidths['check'] || 3.5) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-0.5 text-center select-none group/col">
                             <div class="flex items-center justify-center gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <x-lucide-check class="w-3.5 h-3.5 text-stone-400" />
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'check')"
+                                @dblclick.stop.prevent="resetDivider('check')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'check' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 11. Nota de Entrega -->
                         <th 
-                            :style="'width: ' + (colWidths['deliv_note'] || 7) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
+                            :style="'width: ' + (colWidths['deliv_note'] || 7) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nota de Entrega">Entrega</span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'deliv_note')"
+                                @dblclick.stop.prevent="resetDivider('deliv_note')"
                                 @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
+                                :class="resizingDivider === 'deliv_note' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
+                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
                                 title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 12. Subestatus -->
                         <th 
-                            :style="'width: ' + (colWidths['substatus'] || 7) + '%;'"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
+                            :style="'width: ' + (colWidths['substatus'] || 7) + '%; top: var(--table-header-h, 49px);'"
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
                             wire:click="sortByColumn('substatus')">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Subestatus">Subestatus</span>
                                 <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'substatus')"
-                                @click.stop.prevent
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize hover:bg-emerald-500/60 group-hover/col:bg-stone-300 transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
                     </tr>
@@ -720,7 +983,10 @@
                                 default => 'hover:bg-stone-50/80',
                             };
                         @endphp
-                        <tr class="transition group relative {{ $rowStyle }}">
+                        <tr 
+                            data-order-id="{{ $order->id }}"
+                            :class="getRowClass({{ $order->id }}, '{{ $rowStyle }}')"
+                            class="transition group relative {{ $rowStyle }}">
                             <!-- 1. Fecha Creación -->
                             <td class="py-1 px-1.5 truncate">
                                 @if($editingOrderId === $order->id && $editingField === 'manual_creation_date')
@@ -835,10 +1101,13 @@
                                     type="button"
                                     data-popover-trigger="designer"
                                     @click.stop="openMenu('designer', {{ $order->id }}, $el)"
+                                    :class="ordersState[{{ $order->id }}]?.designer_badge_style || '{{ $order->getDesignerBadgeStyle() }}'"
+                                    :style="ordersState[{{ $order->id }}]?.designer_badge_inline_style || '{{ $order->getDesignerBadgeInlineStyle() }}'"
+                                    :title="ordersState[{{ $order->id }}]?.designer_name || '{{ addslashes($order->designer_name) }}'"
                                     class="px-1 py-0.5 rounded-sm border text-[10px] font-semibold cursor-pointer truncate transition w-full text-center block {{ $order->getDesignerBadgeStyle() }}"
                                     style="{{ $order->getDesignerBadgeInlineStyle() }}"
                                     title="{{ $order->designer_name }}">
-                                    <span class="truncate block">{{ $order->designer_name }}</span>
+                                    <span class="truncate block" x-text="ordersState[{{ $order->id }}]?.designer_name || '{{ addslashes($order->designer_name) }}'">{{ $order->designer_name }}</span>
                                 </button>
                             </td>
 
@@ -965,7 +1234,7 @@
                                         style="background-color: {{ $instTypeModel->bg_color }}; color: {{ $instTypeModel->text_color }}; border-color: {{ $instTypeModel->border_color }};"
                                     @endif
                                     title="{{ __('Clic para cambiar instalación: :type', ['type' => $order->installation_type ?? __('Sin información')]) }}">
-                                    <span class="truncate font-bold text-[10px] block">
+                                    <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.installation_type || '{{ $hasInstallation ? addslashes($order->installation_type) : '—' }}'">
                                         {{ $hasInstallation ? $order->installation_type : '—' }}
                                     </span>
                                     <x-lucide-chevron-down class="w-2.5 h-2.5 shrink-0 opacity-60" />
@@ -1041,6 +1310,7 @@
                                 };
                             @endphp
                             <td 
+                                :style="ordersState[{{ $order->id }}]?.substatus_style !== undefined ? ordersState[{{ $order->id }}].substatus_style : '{{ $subInlineStyle }}'"
                                 @if(!empty($subInlineStyle)) style="{{ $subInlineStyle }}" @endif
                                 class="py-1 px-1.5 truncate transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
                                 <button 
@@ -1050,7 +1320,7 @@
                                     class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
                                     title="Clic para cambiar subestatus / banderas: {{ $subLabel }}">
                                     <div class="flex items-center gap-0.5 overflow-hidden truncate">
-                                        <span class="truncate font-bold text-[10px] block">{{ $subLabel }}</span>
+                                        <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.substatus_label || '{{ addslashes($subLabel) }}'">{{ $subLabel }}</span>
                                         @if($order->isOverdue())
                                             <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold bg-red-600 text-white uppercase shrink-0">!</span>
                                         @elseif($order->isDueToday())

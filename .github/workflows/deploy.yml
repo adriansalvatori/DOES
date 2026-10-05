@@ -1,0 +1,93 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, sqlite3, fileinfo, zip
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install NPM Dependencies & Build Assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy via SSH & Rsync
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_SSH_HOST || '185.211.7.113' }}
+          SSH_PORT: ${{ secrets.HOSTINGER_SSH_PORT || '65002' }}
+          SSH_USER: ${{ secrets.HOSTINGER_SSH_USER || 'u483747408' }}
+          SSH_PASS: ${{ secrets.HOSTINGER_SSH_PASSWORD }}
+          SSH_KEY: ${{ secrets.HOSTINGER_SSH_KEY }}
+          REMOTE_DIR: '/home/u483747408/domains/gold-trout-815009.hostingersite.com'
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          # Configurar autenticación SSH (Key preferida, o sshpass)
+          if [ -n "$SSH_KEY" ]; then
+            echo "$SSH_KEY" > ~/.ssh/deploy_key
+            chmod 600 ~/.ssh/deploy_key
+            SSH_CMD="ssh -i ~/.ssh/deploy_key -p $SSH_PORT -o StrictHostKeyChecking=accept-new"
+          elif [ -n "$SSH_PASS" ]; then
+            sudo apt-get update && sudo apt-get install -y sshpass
+            SSH_CMD="sshpass -p $SSH_PASS ssh -p $SSH_PORT -o StrictHostKeyChecking=accept-new"
+          else
+            echo "::error::Neither HOSTINGER_SSH_KEY nor HOSTINGER_SSH_PASSWORD is set in GitHub Secrets."
+            exit 1
+          fi
+
+          echo "🚀 Sincronizando archivos con Hostinger..."
+          rsync -avz --delete-after \
+            -e "$SSH_CMD" \
+            --filter='P .env*' \
+            --filter='P database/*.sqlite*' \
+            --filter='P database/*.bak*' \
+            --filter='P storage/**' \
+            --filter='P kudosdoes-deploy.zip' \
+            --exclude='.env*' \
+            --exclude='database/*.sqlite*' \
+            --exclude='database/*.bak*' \
+            --exclude='.git*' \
+            --exclude='.github' \
+            --exclude='.agents' \
+            --exclude='.ai' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='docs' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/app/public/*' \
+            --exclude='storage/app/private/*' \
+            --exclude='public/hot' \
+            ./ "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
+
+          echo "⚙️ Ejecutando comandos artisan en Hostinger..."
+          $SSH_CMD "$SSH_USER@$SSH_HOST" "cd $REMOTE_DIR && /opt/alt/php84/usr/bin/php artisan migrate --force && /opt/alt/php84/usr/bin/php artisan storage:link && /opt/alt/php84/usr/bin/php artisan optimize:clear && /opt/alt/php84/usr/bin/php artisan optimize"
+          echo "🎉 Despliegue completado con éxito."

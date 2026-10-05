@@ -11,24 +11,17 @@
 
 #nprogress .bar {
     background: #eda621 !important;
-    background: linear-gradient(90deg, #f59e0b 0%, #eda621 50%, #10b981 100%) !important;
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100% !important;
-    height: 3.5px !important;
+    height: 4px !important;
     z-index: 999999 !important;
-    box-shadow: 0 0 10px rgba(237, 166, 33, 0.8), 0 0 5px rgba(245, 158, 11, 0.6) !important;
+    box-shadow: none !important;
 }
 
 #nprogress .peg {
-    display: block !important;
-    position: absolute !important;
-    right: 0px !important;
-    width: 120px !important;
-    height: 100% !important;
-    box-shadow: 0 0 14px #eda621, 0 0 8px #f59e0b !important;
-    opacity: 1 !important;
+    box-shadow: none !important;
 }
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';

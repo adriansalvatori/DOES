@@ -9,6 +9,7 @@ use App\Observers\OrderObserver;
 use App\Observers\RelatedTaskObserver;
 use App\Services\WorkOrder\QuickBooksWorkOrderGenerator;
 use App\Services\WorkOrder\SequentialWorkOrderGenerator;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -36,5 +37,9 @@ class AppServiceProvider extends ServiceProvider
     {
         Order::observe(OrderObserver::class);
         RelatedTask::observe(RelatedTaskObserver::class);
+
+        if ($this->app->environment('production') || request()->header('x-forwarded-proto') === 'https') {
+            URL::forceScheme('https');
+        }
     }
 }

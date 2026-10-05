@@ -84,6 +84,107 @@ class OverviewIndex extends Component
         $this->dispatch('toast', message: __('Caché en disco renovado exitosamente.'));
     }
 
+    /**
+     * Polling ultraligero que compara el MAX(updated_at) de las órdenes visibles
+     * y sólo serializa el state cuando hubo cambios reales (Renderless sin recargar HTML).
+     */
+    #[Renderless]
+    public function pollOrdersState(array $orderIds, ?int $lastTimestamp = null): array
+    {
+        $validIds = array_values(array_filter(array_map('intval', $orderIds), fn ($id) => $id > 0));
+
+        if (empty($validIds)) {
+            return [
+                'has_changes' => false,
+                'timestamp' => now()->timestamp,
+                'orders' => [],
+            ];
+        }
+
+        $maxUpdatedAt = Order::query()
+            ->whereIn('id', $validIds)
+            ->max('updated_at');
+
+        $currentTimestamp = $maxUpdatedAt ? strtotime((string) $maxUpdatedAt) : 0;
+
+        if ($lastTimestamp !== null && $currentTimestamp <= $lastTimestamp) {
+            return [
+                'has_changes' => false,
+                'timestamp' => $currentTimestamp,
+            ];
+        }
+
+        $orders = Order::query()
+            ->whereIn('id', $validIds)
+            ->select([
+                'id',
+                'updated_at',
+                'core_status',
+                'substatus',
+                'flags',
+                'designer_id',
+                'installation_type',
+                'review_status',
+                'wo_number',
+                'production_note',
+                'estimate_invoice_number',
+                'in_workspace',
+            ])
+            ->with(['designer', 'designers'])
+            ->get();
+
+        return [
+            'has_changes' => true,
+            'timestamp' => $currentTimestamp,
+            'orders' => $this->buildOrdersState($orders),
+        ];
+    }
+
+    /**
+     * Construye un array indexado por ID con los atributos reactivos críticos para el state.
+     */
+    public function buildOrdersState(iterable $orders): array
+    {
+        $state = [];
+        $substatuses = \App\Models\Substatus::all()->keyBy('name');
+
+        foreach ($orders as $order) {
+            $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
+            $subEnum = $subVal ? Substatus::tryFrom($subVal) : null;
+            $subModel = $subVal ? ($substatuses->get($subVal)) : null;
+            $subLabel = $subEnum?->label() ?? ($subVal ?: '—');
+
+            $subInlineStyle = '';
+            if ($subModel && ! empty($subModel->bg_color) && ! empty($subModel->text_color)) {
+                $subInlineStyle = "background-color: {$subModel->bg_color}; color: {$subModel->text_color}; border-color: {$subModel->border_color};";
+            } elseif ($subEnum) {
+                $subInlineStyle = $subEnum->getInlineBadgeStyle();
+            }
+
+            $state[$order->id] = [
+                'id' => $order->id,
+                'substatus' => $subVal,
+                'substatus_label' => $subLabel,
+                'substatus_style' => $subInlineStyle,
+                'flags' => $order->flags ?? [],
+                'designer_id' => $order->designer_id ?? $order->primary_designer?->id,
+                'designer_name' => $order->designer_name,
+                'designer_badge_inline_style' => $order->getDesignerBadgeInlineStyle(),
+                'designer_badge_style' => $order->getDesignerBadgeStyle(),
+                'review_status' => $order->review_status,
+                'installation_type' => $order->installation_type,
+                'core_status' => $order->core_status?->value ?? (is_string($order->core_status) ? $order->core_status : null),
+                'in_workspace' => (bool) $order->in_workspace,
+                'wo_number' => $order->wo_number,
+                'production_note' => $order->production_note,
+                'estimate_invoice_number' => $order->estimate_invoice_number,
+                'updated_at' => $order->updated_at?->timestamp ?? 0,
+            ];
+        }
+
+        return $state;
+    }
+
     // Filters
     public string $search = '';
 
@@ -256,6 +357,101 @@ class OverviewIndex extends Component
         ]);
         $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
+    }
+
+    public function clearFilter(string $key): void
+    {
+        if (in_array($key, ['search', 'filterWo', 'filterClient', 'filterDesigner', 'filterReviewStatus', 'filterInstallation', 'filterDateRange'], true)) {
+            $this->{$key} = '';
+            $this->loadedCount = self::CHUNK_SIZE;
+            $this->resetPage();
+        }
+    }
+
+    /**
+     * @return array<int, array{key: string, label: string, value: string}>
+     */
+    #[Computed]
+    public function appliedFilters(): array
+    {
+        $filters = [];
+
+        if (! empty(trim($this->search))) {
+            $filters[] = [
+                'key' => 'search',
+                'label' => __('Búsqueda'),
+                'value' => trim($this->search),
+            ];
+        }
+
+        if (! empty(trim($this->filterWo))) {
+            $filters[] = [
+                'key' => 'filterWo',
+                'label' => __('WO'),
+                'value' => trim($this->filterWo),
+            ];
+        }
+
+        if (! empty(trim($this->filterClient))) {
+            $clientName = is_numeric($this->filterClient)
+                ? Client::find($this->filterClient)?->name
+                : $this->filterClient;
+
+            $filters[] = [
+                'key' => 'filterClient',
+                'label' => __('Cliente'),
+                'value' => (string) ($clientName ?: $this->filterClient),
+            ];
+        }
+
+        if (! empty(trim($this->filterDesigner))) {
+            $designerName = Designer::find($this->filterDesigner)?->name;
+
+            $filters[] = [
+                'key' => 'filterDesigner',
+                'label' => __('Diseñador'),
+                'value' => (string) ($designerName ?: $this->filterDesigner),
+            ];
+        }
+
+        if (! empty(trim($this->filterReviewStatus))) {
+            $reviewLabel = match ($this->filterReviewStatus) {
+                'CS' => 'CS',
+                'CAMILA' => 'Camila',
+                'NONE' => __('Sin revisión'),
+                default => $this->filterReviewStatus,
+            };
+
+            $filters[] = [
+                'key' => 'filterReviewStatus',
+                'label' => __('Revisión'),
+                'value' => $reviewLabel,
+            ];
+        }
+
+        if (! empty(trim($this->filterInstallation))) {
+            $filters[] = [
+                'key' => 'filterInstallation',
+                'label' => __('Instalación'),
+                'value' => $this->filterInstallation === 'NONE' ? __('Sin información') : $this->filterInstallation,
+            ];
+        }
+
+        if (! empty(trim($this->filterDateRange))) {
+            $dateLabel = match ($this->filterDateRange) {
+                'today' => __('Hoy'),
+                'week' => __('Esta semana'),
+                default => $this->filterDateRange,
+            };
+
+            $filters[] = [
+                'key' => 'filterDateRange',
+                'label' => __('Fecha'),
+                'value' => $dateLabel,
+            ];
+        }
+
+        return $filters;
     }
 
     // Inline Editing Handlers
@@ -670,6 +866,8 @@ class OverviewIndex extends Component
             'editingField' => $this->editingField,
             'editingValue' => $this->editingValue,
             'archivedSubstatus' => $this->archivedSubstatus,
+            'appliedFilters' => $this->appliedFilters,
+            'ordersState' => $this->buildOrdersState($orders),
         ], $this->metrics))->layout('components.layouts.app', ['title' => 'Overview Operativo']);
     }
 }
