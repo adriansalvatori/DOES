@@ -11,6 +11,7 @@ use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Models\SubtaskPreset;
+use App\Services\AutomationEngine;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -113,7 +114,7 @@ class WeeklyPlanner extends Component
 
                 $dueDateTimestamp = $order?->current_due_date ? $order->current_due_date->timestamp : PHP_INT_MAX;
 
-                return [$rank, $dueDateTimestamp, $st->sort_order ?? 0, $st->id];
+                return [$rank, $st->sort_order ?? 0, $dueDateTimestamp, $st->id];
             })->values(),
 
             'client' => $subtasksCollection->sortBy(function ($st) {
@@ -242,6 +243,47 @@ class WeeklyPlanner extends Component
         return collect($grid);
     }
 
+    public function getNextSortOrderForDay(Carbon $scheduledDate, ?int $designerId = null): int
+    {
+        $startDate = Carbon::parse($this->selectedWeekStart ?? now()->startOfWeek(Carbon::MONDAY)->toDateString());
+        $nextWeekMonday = $startDate->copy()->addWeek()->startOfWeek(Carbon::MONDAY);
+
+        $query = RelatedTask::query()
+            ->where(function ($q) use ($scheduledDate, $nextWeekMonday) {
+                if ($scheduledDate->gte($nextWeekMonday)) {
+                    $q->whereDate('scheduled_date', '>=', $nextWeekMonday->toDateString());
+                } elseif ($scheduledDate->isMonday()) {
+                    $q->whereDate('scheduled_date', $scheduledDate->toDateString())
+                        ->orWhere(function ($sq) use ($scheduledDate) {
+                            $sq->whereDate('scheduled_date', '<', $scheduledDate->toDateString())
+                                ->where('status', '!=', 'done');
+                        });
+                } else {
+                    $q->whereDate('scheduled_date', $scheduledDate->toDateString());
+                }
+            });
+
+        if ($designerId) {
+            $query->where(function ($q) use ($designerId) {
+                $q->where('assignee_id', $designerId)
+                    ->orWhere(function ($sq) use ($designerId) {
+                        $sq->whereNull('assignee_id')
+                            ->whereHas('order', function ($oq) use ($designerId) {
+                                $oq->where('designer_id', $designerId)
+                                    ->orWhereHas('designers', fn ($dq) => $dq->where('designers.id', $designerId));
+                            });
+                    })
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('assignee_id')->whereNull('order_id');
+                    });
+            });
+        }
+
+        $maxSort = $query->max('sort_order');
+
+        return ($maxSort !== null) ? (int) $maxSort + 1 : 0;
+    }
+
     public function scheduleOrder($orderId, $dateString)
     {
         $order = Order::findOrFail($orderId);
@@ -265,6 +307,8 @@ class WeeklyPlanner extends Component
                 $isWorkTask = false;
             }
 
+            $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $assigneeId);
+
             $subtask = RelatedTask::create([
                 'order_id' => $order->id,
                 'title' => $taskTitle,
@@ -276,6 +320,7 @@ class WeeklyPlanner extends Component
                 'status' => 'todo',
                 'priority' => 'normal',
                 'is_work_task' => $isWorkTask,
+                'sort_order' => $nextSortOrder,
             ]);
 
             $updateData = ['in_workspace' => true];
@@ -357,6 +402,8 @@ class WeeklyPlanner extends Component
             $category = $preset?->category ?? SubtaskCategory::MANAGEMENT;
             $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
 
+            $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $designerId);
+
             $subtask = RelatedTask::create([
                 'order_id' => null,
                 'title' => $taskTitle,
@@ -367,6 +414,7 @@ class WeeklyPlanner extends Component
                 'status' => 'todo',
                 'priority' => 'normal',
                 'is_work_task' => $isWorkTask,
+                'sort_order' => $nextSortOrder,
             ]);
 
             session()->flash('message', __('Nota ":title" creada para el :date.', [
@@ -383,8 +431,11 @@ class WeeklyPlanner extends Component
         $subtask = RelatedTask::with('order')->findOrFail($taskId);
         $scheduledDate = Carbon::parse($dateString);
 
+        $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $subtask->assignee_id);
+
         $subtask->update([
             'scheduled_date' => $scheduledDate->toDateString(),
+            'sort_order' => $nextSortOrder,
         ]);
 
         if ($subtask->is_work_task && $scheduledDate->isToday() && $subtask->order) {
@@ -448,16 +499,29 @@ class WeeklyPlanner extends Component
             return;
         }
 
-        $newStatus = $subtask->status === 'done' ? 'todo' : 'done';
+        $order = $subtask->order;
+        $willBeDone = $subtask->status !== 'done';
+
+        // Check if completing a "Poner en alta" subtask
+        if ($order && $willBeDone && $subtask->isPonerEnAlta()) {
+            if (! $order->approved) {
+                $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+                session()->flash('warning', __('La orden requiere aprobación antes de ser enviada a producción.'));
+
+                return;
+            }
+        }
+
+        $newStatus = $willBeDone ? 'done' : 'todo';
 
         $subtask->update([
             'status' => $newStatus,
             'completed_at' => $newStatus === 'done' ? now() : null,
         ]);
 
-        if ($subtask->order && $newStatus === 'done') {
+        if ($order && $newStatus === 'done') {
             OrderEvent::create([
-                'order_id' => $subtask->order->id,
+                'order_id' => $order->id,
                 'event_type' => 'SUBTASK_COMPLETED',
                 'actor' => auth()->user()?->name ?? __('Diseñador'),
                 'new_value' => $subtask->title,
@@ -467,6 +531,37 @@ class WeeklyPlanner extends Component
                     'date' => $subtask->scheduled_date?->toDateString(),
                 ],
             ]);
+
+            if ($subtask->isPonerEnAlta() && $order->approved && $order->core_status !== CoreStatus::EN_PRODUCCION) {
+                $previousStatus = $order->core_status;
+                app(AutomationEngine::class)->handleStatusChanged(
+                    $order,
+                    $previousStatus,
+                    CoreStatus::EN_PRODUCCION,
+                    auth()->user()?->name ?? __('Diseñador')
+                );
+                $order->update([
+                    'substatus' => Substatus::ENVIADO_EN_ALTA,
+                    'done_today' => true,
+                    'origin_core_status' => null,
+                    'origin_substatus' => null,
+                ]);
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'MOVED_TO_PRODUCTION',
+                    'actor' => auth()->user()?->name ?? __('Diseñador'),
+                    'previous_value' => $previousStatus?->value,
+                    'new_value' => CoreStatus::EN_PRODUCCION->value,
+                    'metadata' => [
+                        'trigger' => 'Subtarea Poner en Alta completada en Weekly Planner',
+                        'task_id' => $subtask->id,
+                        'task_title' => $subtask->title,
+                    ],
+                ]);
+
+                session()->flash('message', __('Subtarea completada y orden :company enviada a Producción.', ['company' => $order->company_name]));
+            }
         }
 
         $this->dispatch('order-updated');

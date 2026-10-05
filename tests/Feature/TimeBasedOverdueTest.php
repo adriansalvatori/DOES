@@ -239,4 +239,68 @@ class TimeBasedOverdueTest extends TestCase
         ]);
         $this->assertEquals('2026-08-26', $order->dueDateHistories->first()->new_due_date->toDateString());
     }
+
+    public function test_orders_with_substatus_poner_en_alta_do_not_trigger_delay_email_subtask(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-24 16:30:00'));
+
+        $order = Order::create([
+            'wo_number' => 'WO-109',
+            'company_name' => 'Alta Company',
+            'task_name' => 'Task Alta',
+            'current_due_date' => '2026-08-24',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => Substatus::PONER_EN_ALTA,
+            'done_today' => false,
+            'in_workspace' => true,
+        ]);
+
+        $slaEngine = app(SlaEngine::class);
+        $slaEngine->checkOverdue($order);
+
+        $order->refresh();
+
+        // SLA should still be evaluated (taking production times into account)
+        $this->assertTrue($order->hasFlag(Substatus::OVERDUE));
+
+        // But automatic preventative delay email task should NOT be created
+        $this->assertDatabaseMissing('related_tasks', [
+            'order_id' => $order->id,
+            'type' => RelatedTaskType::CORREO_ATRASO->value,
+        ]);
+    }
+
+    public function test_transition_to_poner_en_alta_dismisses_pending_delay_email_subtask(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-08-24 15:00:00'));
+
+        $order = Order::create([
+            'wo_number' => 'WO-110',
+            'company_name' => 'Alta Transition Company',
+            'task_name' => 'Task Alta Transition',
+            'current_due_date' => '2026-08-24',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => null,
+            'done_today' => false,
+            'in_workspace' => true,
+        ]);
+
+        // Overdue check generates delay task
+        app(AutomationEngine::class)->checkAndCreateOverdueTask($order);
+
+        $this->assertDatabaseHas('related_tasks', [
+            'order_id' => $order->id,
+            'type' => RelatedTaskType::CORREO_ATRASO->value,
+        ]);
+
+        // When order moves to PONER EN ALTA substatus
+        $order->update(['substatus' => Substatus::PONER_EN_ALTA]);
+        app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
+
+        // Existing delay task must be dismissed
+        $this->assertDatabaseMissing('related_tasks', [
+            'order_id' => $order->id,
+            'type' => RelatedTaskType::CORREO_ATRASO->value,
+        ]);
+    }
 }

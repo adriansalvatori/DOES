@@ -91,27 +91,27 @@
                     if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
                         return;
                     }
-                    let title = '¿Guardar cambios de la orden?';
-                    let description = 'Tienes información editada en la orden sin guardar.';
+                    let title = @js(__('¿Guardar cambios de la orden?'));
+                    let description = @js(__('Tienes información editada en la orden sin guardar.'));
 
                     if (this.isEditDirty() && this.isCommentDirty()) {
-                        title = '¿Guardar cambios y publicar comentario?';
-                        description = 'Tienes información editada en los campos de la orden y un borrador de comentario.';
+                        title = @js(__('¿Guardar cambios y publicar comentario?'));
+                        description = @js(__('Tienes información editada en los campos de la orden y un borrador de comentario.'));
                     } else if (this.isEditDirty()) {
-                        title = '¿Guardar edición de la orden?';
-                        description = 'Tienes cambios realizados en los campos de la orden sin guardar.';
+                        title = @js(__('¿Guardar edición de la orden?'));
+                        description = @js(__('Tienes cambios realizados en los campos de la orden sin guardar.'));
                     } else if (this.isCommentDirty()) {
-                        title = '¿Publicar borrador de comentario?';
-                        description = 'Tienes un borrador de comentario escrito en la tarjeta.';
+                        title = @js(__('¿Publicar borrador de comentario?'));
+                        description = @js(__('Tienes un borrador de comentario escrito en la tarjeta.'));
                     }
 
                     if (this.isDirty()) {
                         window.KudosDirtyGuard.openConfirmModal({
                             title: title,
                             description: description,
-                            cancelText: 'Cancelar',
-                            discardText: 'No guardar',
-                            saveText: 'Guardar',
+                            cancelText: @js(__('Cancelar')),
+                            discardText: @js(__('No guardar')),
+                            saveText: @js(__('Guardar')),
                             onCancel: () => {},
                             onDiscard: () => {
                                 window.KudosDirtyGuard.unregister('order-detail-modal');
@@ -412,14 +412,14 @@
                         wire:click="toggleDoneToday" 
                         type="button"
                         class="w-5 h-5 mt-1 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
-                        title="{{ $order->done_today ? 'Completado (Clic para desmarcar)' : 'Marcar como completado' }}">
+                        title="{{ $order->done_today ? __('Completado (Clic para desmarcar)') : __('Marcar como completado') }}">
                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
                     </button>
                     <div class="space-y-1 min-w-0 flex-1">
                         <div class="flex items-center justify-between gap-2 flex-wrap">
                             <div class="flex items-center gap-2 flex-wrap min-w-0">
                                 <button 
-                                    type="button"
+                                    type="button" 
                                     wire:click="openClientDetail"
                                     class="text-left group/client inline-flex items-center gap-1.5 focus:outline-none cursor-pointer rounded-lg -ml-1.5 px-1.5 py-0.5 hover:bg-stone-100 transition-colors"
                                     title="{{ __('Ver detalles de :client', ['client' => $order->company_name ?: 'cliente']) }}">
@@ -431,7 +431,7 @@
 
                                 @if($order->location_name || $order->clientLocation)
                                     <button 
-                                        type="button"
+                                        type="button" 
                                         wire:click="openClientDetail"
                                         class="px-2 py-0.5 rounded-md text-xs font-semibold bg-[#f7f7f5] hover:bg-stone-100 text-zinc-700 hover:text-emerald-700 border border-[#e9e9e7] inline-flex items-center gap-1 shrink-0 cursor-pointer transition" 
                                         title="{{ __('Ver locación en detalles del cliente') }}">
@@ -446,9 +446,9 @@
                                     wire:click="openUnblockModal" 
                                     type="button"
                                     class="px-3.5 py-1.5 rounded-xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1.5 shrink-0 cursor-pointer opacity-100 filter-none"
-                                    title="Desbloquear orden">
+                                    title="{{ __('Desbloquear orden') }}">
                                     <x-lucide-unlock class="w-4 h-4 text-white stroke-[2.5]" />
-                                    <span>Desbloquear</span>
+                                    <span>{{ __('Desbloquear') }}</span>
                                 </button>
                             @endif
                         </div>
@@ -479,7 +479,7 @@
                         <!-- Core Status Selection Dropdown Menu -->
                         <div 
                             x-show="open" 
-                            x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter="transition ease-out duration-100" 
                             x-transition:enter-start="opacity-0 scale-95"
                             x-transition:enter-end="opacity-100 scale-100"
                             x-cloak
@@ -522,7 +522,7 @@
                     @if(!$order->in_workspace)
                         <span class="px-2.5 py-1 rounded-md text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1.5">
                             <x-lucide-box class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                            <span>En Backlog</span>
+                            <span>{{ __('En Backlog') }}</span>
                         </span>
                     @endif
 
@@ -536,15 +536,15 @@
 
                     <!-- Approved Badge -->
                     @if($order->approved)
-                        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-2xs" title="{{ $order->approval_note ?: ($order->approval_type_label ?? 'Orden Aprobada') }}">
+                        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-2xs" title="{{ $order->approval_note ?: ($order->approval_type_label ?? __('Orden Aprobada')) }}">
                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span>{{ $order->approval_type_label ?? 'Aprobada' }}</span>
+                            <span>{{ $order->approval_type_label ?? __('Aprobada') }}</span>
                             @if($order->approval_image_path)
                                 <button 
                                     type="button" 
-                                    wire:click="previewMedia('{{ Storage::url($order->approval_image_path) }}', 'Comprobante de Aprobación', 'image')" 
+                                    wire:click="previewMedia('{{ Storage::url($order->approval_image_path) }}', '{{ __('Comprobante de Aprobación') }}', 'image')" 
                                     class="ml-0.5 text-emerald-700 hover:text-emerald-950 transition cursor-pointer" 
-                                    title="Ver comprobante de aprobación">
+                                    title="{{ __('Ver comprobante de aprobación') }}">
                                     <x-lucide-paperclip class="w-3 h-3 inline" />
                                 </button>
                             @endif
@@ -581,10 +581,10 @@
                                     </span>
                                 </div>
                                 <p class="text-xs text-amber-900 leading-relaxed">
-                                    Se detectó un nuevo número de WO en Trello: <x-wo-badge :number="$order->pending_wo_number" variant="amber" show-copy-icon /> <span class="text-[11px] text-amber-800">(Trello card title)</span>.
+                                    {{ __('Se detectó un nuevo número de WO en Trello:') }} <x-wo-badge :number="$order->pending_wo_number" variant="amber" show-copy-icon /> <span class="text-[11px] text-amber-800">({{ __('Título tarjeta Trello') }})</span>.
                                 </p>
                                 <p class="text-xs text-amber-900 leading-relaxed">
-                                    El número registrado actualmente en DOES es: @if($order->wo_number)<x-wo-badge :number="$order->wo_number" variant="amber" show-copy-icon />@else<strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">Sin WO / WO 0000</strong>@endif <span class="text-[11px] text-amber-800">(DOES)</span>.
+                                    {{ __('El número registrado actualmente en DOES es:') }} @if($order->wo_number)<x-wo-badge :number="$order->wo_number" variant="amber" show-copy-icon />@else<strong class="font-mono bg-white px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs">{{ __('Sin WO / WO 0000') }}</strong>@endif <span class="text-[11px] text-amber-800">(DOES)</span>.
                                 </p>
                             </div>
                         </div>
@@ -595,7 +595,7 @@
                                 wire:click="dismissPendingWo" 
                                 class="px-3 py-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100/70 text-amber-900 font-semibold text-xs transition cursor-pointer shadow-2xs flex items-center gap-1">
                                 <x-lucide-x class="w-3.5 h-3.5 text-amber-700" />
-                                <span>{{ __('Conservar') }} {{ $order->wo_number ?: 'actual' }} (DOES)</span>
+                                <span>{{ __('Conservar') }} {{ $order->wo_number ?: __('actual') }} (DOES)</span>
                             </button>
 
                             <button 
@@ -614,25 +614,25 @@
                     <div class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-4 space-y-4">
                         <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                             <h4 class="font-semibold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                <x-lucide-edit-3 class="w-4 h-4 text-zinc-700" /> Editar Información de la Orden
+                                <x-lucide-edit-3 class="w-4 h-4 text-zinc-700" /> {{ __('Editar Información de la Orden') }}
                             </h4>
-                            <span class="text-[10px] text-zinc-400">Modifica fechas, diseñador, WO o campos disectados</span>
+                            <span class="text-[10px] text-zinc-400">{{ __('Modifica fechas, diseñador, WO o campos disectados') }}</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                             <!-- WO Number -->
                             <div class="space-y-1">
                                 <div class="flex items-center justify-between">
-                                    <label class="font-medium text-zinc-700 block">Número de Orden:</label>
+                                    <label class="font-medium text-zinc-700 block">{{ __('Número de Orden:') }}</label>
                                     <button 
                                         type="button" 
                                         wire:click="generateWoNumber" 
                                         wire:loading.attr="disabled"
                                         class="text-[11px] font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition select-none disabled:opacity-50"
-                                        title="Crear siguiente número de WO automáticamente">
+                                        title="{{ __('Crear siguiente número de WO automáticamente') }}">
                                         <x-lucide-sparkles class="w-3 h-3 text-amber-500" wire:loading.remove wire:target="generateWoNumber" />
                                         <x-lucide-loader-2 class="w-3 h-3 animate-spin text-zinc-400" wire:loading wire:target="generateWoNumber" />
-                                        <span>Crear WO</span>
+                                        <span>{{ __('Crear WO') }}</span>
                                     </button>
                                 </div>
                                 <div class="flex rounded-md shadow-2xs">
@@ -655,7 +655,7 @@
                                  x-dropdown-nav>
                                 <label class="font-medium text-zinc-700 block flex items-center gap-1">
                                     <x-lucide-external-link class="w-3.5 h-3.5 text-blue-600" />
-                                    <span>ID / Link Tarjeta Trello:</span>
+                                    <span>{{ __('ID / Link Tarjeta Trello:') }}</span>
                                 </label>
                                 
                                 <div class="relative">
@@ -665,14 +665,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="Ej. AbCdEf12 o buscar por empresa/WO..." 
+                                        placeholder="{{ __('Ej. AbCdEf12 o buscar por empresa/WO...') }}" 
                                         class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono pr-7">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                        title="Ver tarjetas de Trello disponibles">
+                                        title="{{ __('Ver tarjetas de Trello disponibles') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -686,7 +686,7 @@
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
                                     
                                     <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
-                                        Tarjetas de Trello Disponibles ({{ count($availableTrelloCards) }})
+                                        {{ __('Tarjetas de Trello Disponibles') }} ({{ count($availableTrelloCards) }})
                                     </div>
 
                                     @forelse($availableTrelloCards as $tc)
@@ -697,7 +697,7 @@
                                             class="w-full text-left p-2 hover:bg-blue-50/70 focus:bg-blue-50 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
                                             <div class="min-w-0">
                                                 <span class="font-bold text-zinc-900 block truncate text-[11px]">
-                                                    {{ $tc->trello_title ?: ($tc->company_name ?: 'Tarjeta Trello') }}
+                                                    {{ $tc->trello_title ?: ($tc->company_name ?: __('Tarjeta Trello')) }}
                                                 </span>
                                                 @if($tc->task_name && $tc->task_name !== $tc->trello_title)
                                                     <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name }}</span>
@@ -708,7 +708,7 @@
                                             </span>
                                         </button>
                                     @empty
-                                        <div class="p-3 text-center text-zinc-400 italic text-[11px]">No hay tarjetas registradas aún.</div>
+                                        <div class="p-3 text-center text-zinc-400 italic text-[11px]">{{ __('No hay tarjetas registradas aún.') }}</div>
                                     @endforelse
                                 </div>
                             </div>
@@ -723,7 +723,7 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="font-medium text-zinc-700 block">Persona Responsable / Cliente:</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Persona Responsable / Cliente:') }}</label>
                                 <div class="relative">
                                     <input 
                                         type="text" 
@@ -731,14 +731,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="Ej: MARCELA o buscar..." 
+                                        placeholder="{{ __('Ej: MARCELA o buscar...') }}" 
                                         class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full pr-7 font-semibold">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                        title="Ver lista de responsables">
+                                        title="{{ __('Ver lista de responsables') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -749,10 +749,9 @@
                                     x-transition:enter-start="opacity-0 scale-95"
                                     x-transition:enter-end="opacity-100 scale-100"
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
-                                    
-                                    @if(!empty($clientContacts))
+                                      @if(!empty($clientContacts))
                                         <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
-                                            <span>Contactos del cliente</span>
+                                            <span>{{ __('Contactos del cliente') }}</span>
                                             <x-lucide-user class="w-3 h-3 text-emerald-600" />
                                         </div>
                                         @foreach($clientContacts as $cResp)
@@ -762,7 +761,7 @@
                                                 @click="selectResp('{{ addslashes($cResp) }}')" 
                                                 class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition flex items-center justify-between">
                                                 <span>{{ $cResp }}</span>
-                                                <span class="text-[10px] text-emerald-600 font-medium">(Registrado)</span>
+                                                <span class="text-[10px] text-emerald-600 font-medium">({{ __('Registrado') }})</span>
                                             </button>
                                         @endforeach
                                     @endif
@@ -774,7 +773,7 @@
                                     @if(!empty($otherResponsibles))
                                         @if(!empty($clientContacts))
                                             <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
-                                                Otros responsables
+                                                {{ __('Otros responsables') }}
                                             </div>
                                         @endif
                                         @foreach($otherResponsibles as $resp)
@@ -789,7 +788,7 @@
                                     @endif
 
                                     @if(empty($clientContacts) && empty($otherResponsibles))
-                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo nombre...</div>
+                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">{{ __('Escribe un nuevo nombre...') }}</div>
                                     @endif
                                 </div>
                             </div>
@@ -805,15 +804,15 @@
                                  }"
                                  x-dropdown-nav>
                                 <div class="flex items-center justify-between">
-                                    <label class="font-medium text-zinc-700 block">Nombre de Empresa:</label>
+                                    <label class="font-medium text-zinc-700 block">{{ __('Nombre de Empresa:') }}</label>
                                     @if($order->client_id || $order->company_name || $editCompanyName)
                                         <button 
                                             type="button" 
                                             wire:click="openClientDetail" 
                                             class="text-[11px] font-medium text-emerald-600 hover:text-emerald-800 flex items-center gap-1 cursor-pointer transition select-none"
-                                            title="Ver detalles del cliente">
+                                            title="{{ __('Ver detalles del cliente') }}">
                                             <x-lucide-external-link class="w-3 h-3" />
-                                            <span>Ver Cliente</span>
+                                            <span>{{ __('Ver Cliente') }}</span>
                                         </button>
                                     @endif
                                 </div>
@@ -824,7 +823,7 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="Ej: TAQUERIA LA CHULA..." 
+                                        placeholder="{{ __('Ej: TAQUERIA LA CHULA...') }}" 
                                         class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full pr-7 font-semibold"
                                         x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                                     
@@ -851,7 +850,7 @@
                                             {{ $comp }}
                                         </button>
                                     @empty
-                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo nombre de empresa...</div>
+                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">{{ __('Escribe un nuevo nombre de empresa...') }}</div>
                                     @endforelse
                                 </div>
                             </div>
@@ -866,7 +865,7 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="font-medium text-zinc-700 block">Locación / Sede (Opcional):</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Locación / Sede (Opcional):') }}</label>
                                 <div class="relative">
                                     <input 
                                         type="text" 
@@ -874,14 +873,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="Ej: TALPA 8, SEDE NORTE..." 
+                                        placeholder="{{ __('Ej: TALPA 8, SEDE NORTE...') }}" 
                                         class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full pr-7 uppercase font-semibold text-emerald-700">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                        title="Ver locaciones disponibles">
+                                        title="{{ __('Ver locaciones disponibles') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -895,7 +894,7 @@
                                     
                                     @if(!empty($clientLocations))
                                         <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
-                                            <span>Locaciones del cliente</span>
+                                            <span>{{ __('Locaciones del cliente') }}</span>
                                             <x-lucide-map-pin class="w-3 h-3 text-rose-500" />
                                         </div>
                                         @foreach($clientLocations as $cLoc)
@@ -905,7 +904,7 @@
                                                 @click="selectLoc('{{ addslashes($cLoc) }}')" 
                                                 class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 uppercase transition flex items-center justify-between">
                                                 <span>{{ $cLoc }}</span>
-                                                <span class="text-[10px] text-emerald-600 font-medium normal-case">(Registrada)</span>
+                                                <span class="text-[10px] text-emerald-600 font-medium normal-case">({{ __('Registrada') }})</span>
                                             </button>
                                         @endforeach
                                     @endif
@@ -917,7 +916,7 @@
                                     @if(!empty($otherLocations))
                                         @if(!empty($clientLocations))
                                             <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
-                                                Otras locaciones
+                                                {{ __('Otras locaciones') }}
                                             </div>
                                         @endif
                                         @foreach($otherLocations as $loc)
@@ -932,25 +931,25 @@
                                     @endif
 
                                     @if(empty($clientLocations) && empty($otherLocations))
-                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe una nueva locación...</div>
+                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">{{ __('Escribe una nueva locación...') }}</div>
                                     @endif
                                 </div>
                             </div>
 
                             <!-- Tarea -->
                             <div class="space-y-1">
-                                <label class="font-medium text-zinc-700 block">Tarea de Diseño / Trabajo:</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Tarea de Diseño / Trabajo:') }}</label>
                                 <input type="text" wire:model="editTaskName" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 uppercase focus:outline-none w-full" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                             </div>
 
                             <!-- Diseñadores -->
                             <div class="space-y-1.5 sm:col-span-2">
-                                <label class="font-medium text-zinc-700 block">Diseñadores Asignados (Soporta múltiples):</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Diseñadores Asignados (Soporta múltiples):') }}</label>
                                 <div class="flex flex-wrap items-center gap-1.5 p-2 bg-stone-50 border border-[#e9e9e7] rounded-md min-h-[38px]">
                                     @foreach($designers as $des)
                                         @php $isAssigned = in_array((int)$des->id, array_map('intval', $editDesignerIds)); @endphp
                                         <button 
-                                            type="button"
+                                            type="button" 
                                             wire:click="toggleDesigner({{ $des->id }})"
                                             class="px-2 py-0.5 rounded text-[11px] font-semibold border transition flex items-center gap-1 cursor-pointer {{ $isAssigned ? $des->badge_style : 'bg-white text-zinc-500 border-stone-200 hover:bg-stone-100' }}"
                                             style="{{ $isAssigned ? $des->badge_inline_style : '' }}"
@@ -963,12 +962,12 @@
                                         </button>
                                     @endforeach
                                 </div>
-                                <span class="text-[10px] text-zinc-400 block">* Si seleccionas Diseñador Externo, se agregará Euralíz automáticamente.</span>
+                                <span class="text-[10px] text-zinc-400 block">{{ __('* Si seleccionas Diseñador Externo, se agregará Euralíz automáticamente.') }}</span>
                             </div>
 
                             <!-- Fecha Límite -->
                             <div class="space-y-1">
-                                <label class="font-medium text-zinc-700 block">Fecha Límite (Due Date):</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Fecha Límite (Due Date):') }}</label>
                                 <div class="flex items-center gap-1.5">
                                     <input type="date" wire:model="editDueDate" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono">
                                     @if($editDueDate)
@@ -976,9 +975,9 @@
                                             type="button" 
                                             wire:click="$set('editDueDate', '')" 
                                             class="px-2.5 py-1.5 rounded-md bg-stone-100 hover:bg-rose-50 text-stone-600 hover:text-rose-700 border border-stone-200 hover:border-rose-200 text-xs font-medium transition shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1.5" 
-                                            title="Establecer fecha límite a Ninguna">
+                                            title="{{ __('Establecer fecha límite a Ninguna') }}">
                                             <x-lucide-calendar-off class="w-3.5 h-3.5" />
-                                            <span>Sin Fecha</span>
+                                            <span>{{ __('Sin Fecha') }}</span>
                                         </button>
                                     @endif
                                 </div>
@@ -994,14 +993,14 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="font-medium text-zinc-700 block">Lista Trello / Estado Principal:</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Lista Trello / Estado Principal:') }}</label>
                                 <div class="relative">
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         @click.outside="open = false"
                                         class="bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-3 py-1.5 text-xs text-zinc-900 w-full text-left flex items-center justify-between font-medium">
-                                        <span>{{ \App\Enums\CoreStatus::tryFrom($editCoreStatus)?->label() ?? 'Seleccionar estado...' }}</span>
+                                        <span>{{ \App\Enums\CoreStatus::tryFrom($editCoreStatus)?->label() ?? __('Seleccionar estado...') }}</span>
                                         <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
                                     </button>
                                 </div>
@@ -1037,7 +1036,7 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="font-medium text-zinc-700 block">Subestatus Operativo:</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Subestatus Operativo:') }}</label>
                                 <div class="relative">
                                     <button 
                                         type="button" 
@@ -1050,7 +1049,7 @@
                                                 {{ $editSubstatus }}
                                             </span>
                                         @else
-                                            <span class="text-zinc-500 italic">Sin Subestatus</span>
+                                            <span class="text-zinc-500 italic">{{ __('Sin Subestatus') }}</span>
                                         @endif
                                         <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
                                     </button>
@@ -1070,7 +1069,7 @@
                                                 x-model="search"
                                                 x-ref="subSearchInput"
                                                 x-init="$watch('open', value => { if (value) { search = ''; $nextTick(() => $refs.subSearchInput?.focus()); } })"
-                                                placeholder="Buscar subestatus..."
+                                                placeholder="{{ __('Buscar subestatus...') }}"
                                                 class="w-full pl-7 pr-6 py-1 text-xs bg-white border border-stone-200 rounded text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400">
                                             <button 
                                                 type="button" 
@@ -1087,7 +1086,7 @@
                                             x-show="!search || 'sin subestatus'.includes(search.toLowerCase().trim())"
                                             @click="selectSub('')" 
                                             class="w-full text-left p-2.5 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
-                                            <span>Sin Subestatus</span>
+                                            <span>{{ __('Sin Subestatus') }}</span>
                                             @if(!$editSubstatus)
                                                 <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                                             @endif
@@ -1112,13 +1111,13 @@
 
                             <!-- Revisiones Cliente -->
                             <div class="space-y-1">
-                                <label class="font-medium text-zinc-700 block">Nº Revisiones Cliente:</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Nº Revisiones Cliente:') }}</label>
                                 <input type="number" min="0" wire:model="editClientRevisionCount" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono">
                             </div>
 
                             <!-- Revisiones Internas -->
                             <div class="space-y-1">
-                                <label class="font-medium text-zinc-700 block">Nº Revisiones Internas:</label>
+                                <label class="font-medium text-zinc-700 block">{{ __('Nº Revisiones Internas:') }}</label>
                                 <input type="number" min="0" wire:model="editInternalRevisionCount" class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono">
                             </div>
                         </div>
@@ -1126,7 +1125,7 @@
                         <!-- Form Save Buttons -->
                         <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#e9e9e7]">
                             <button type="button" @click.prevent="confirmClose(() => $wire.cancelEditing())" class="px-3 py-1.5 rounded-md bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium transition cursor-pointer">
-                                Cancelar
+                                {{ __('Cancelar') }}
                             </button>
                             
                             <button 
@@ -1137,7 +1136,7 @@
                                 class="px-3.5 py-1.5 rounded-md font-semibold text-xs transition flex items-center gap-1.5"
                             >
                                 <x-lucide-check class="w-3.5 h-3.5" x-show="isEditDirty()" />
-                                <span>Guardar Cambios</span>
+                                <span>{{ __('Guardar Cambios') }}</span>
                             </button>
 
                             @if(!$order->in_workspace)
@@ -1149,7 +1148,7 @@
                                     class="px-3.5 py-1.5 rounded-md font-semibold text-xs shadow-2xs transition flex items-center gap-1.5"
                                 >
                                     <x-lucide-arrow-right-circle class="w-3.5 h-3.5" />
-                                    <span>Guardar & Añadir a Workspace</span>
+                                    <span>{{ __('Guardar & Añadir a Workspace') }}</span>
                                 </button>
                             @endif
                         </div>
@@ -1160,7 +1159,7 @@
                     <!-- Metadata Property Grid (Fluid Grid & Prevent Text Collisions) -->
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 bg-[#fbfbfa] p-3.5 rounded-xl border border-[#e9e9e7] text-xs">
                         <div class="min-w-0">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Diseñadores:</span>
+                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('Diseñadores:') }}</span>
                             <div class="flex flex-wrap items-center gap-1 mt-1">
                                 @forelse($order->assigned_designers as $des)
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border truncate max-w-full {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
@@ -1168,13 +1167,13 @@
                                         <span class="truncate">{{ $des->name }}</span>
                                     </span>
                                 @empty
-                                    <span class="text-zinc-400 text-xs">Sin Asignar</span>
+                                    <span class="text-zinc-400 text-xs">{{ __('Sin Asignar') }}</span>
                                 @endforelse
                             </div>
                         </div>
 
                         <div class="min-w-0">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Creación Trello:</span>
+                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('Creación Trello:') }}</span>
                             <span class="font-mono text-zinc-800 text-[11px] font-medium mt-1 flex items-center gap-1 truncate" title="{{ $order->trello_created_at ? $order->trello_created_at->format('d M, Y (H:i)') : 'N/A' }}">
                                 <x-lucide-clock class="w-3 h-3 text-zinc-400 shrink-0" />
                                 <span class="truncate">{{ $order->trello_created_at ? $order->trello_created_at->format('d M, Y') : 'N/A' }}</span>
@@ -1182,7 +1181,7 @@
                         </div>
 
                         <div class="min-w-0 {{ !$order->trello_card_id ? 'col-span-1 sm:col-span-2 lg:col-span-1' : '' }}">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">ID Tarjeta Trello:</span>
+                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('ID Tarjeta Trello:') }}</span>
                             @if($order->trello_card_id)
                                 <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition max-w-full min-w-0 whitespace-nowrap" title="{{ $order->trello_card_id }}">
                                     <x-lucide-external-link class="w-3 h-3 text-blue-500 shrink-0" />
@@ -1195,46 +1194,46 @@
                                         wire:loading.attr="disabled"
                                         type="button"
                                         class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition cursor-pointer whitespace-nowrap shrink-0 disabled:opacity-50" 
-                                        title="Crear nueva tarjeta en Trello para esta orden">
+                                        title="{{ __('Crear nueva tarjeta en Trello para esta orden') }}">
                                         <x-lucide-plus-circle wire:loading.class="hidden" wire:target="createCardOnTrello" class="w-3 h-3 text-blue-600 shrink-0" />
                                         <x-lucide-loader-2 wire:loading wire:target="createCardOnTrello" class="w-3 h-3 text-blue-600 animate-spin shrink-0" />
-                                        <span class="whitespace-nowrap">Crear en Trello</span>
+                                        <span class="whitespace-nowrap">{{ __('Crear en Trello') }}</span>
                                     </button>
                                     <button 
                                         wire:click="startEditing" 
                                         type="button"
                                         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-stone-100 text-zinc-600 hover:text-zinc-900 border border-stone-200 transition cursor-pointer whitespace-nowrap shrink-0" 
-                                        title="Vincular ID existente de Trello">
+                                        title="{{ __('Vincular ID existente de Trello') }}">
                                         <x-lucide-link class="w-3 h-3 shrink-0" />
-                                        <span class="whitespace-nowrap">Vincular</span>
+                                        <span class="whitespace-nowrap">{{ __('Vincular') }}</span>
                                     </button>
                                 </div>
                             @endif
                         </div>
 
                         <div class="min-w-0">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Fecha Límite:</span>
+                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('Fecha Límite:') }}</span>
                             <div class="flex items-center gap-1.5 mt-1 min-w-0">
                                 <span class="font-mono font-semibold text-xs flex items-center gap-1 truncate {{ $order->isOverdue() ? 'text-red-600' : 'text-zinc-800' }}">
                                     <x-lucide-calendar class="w-3 h-3 shrink-0" />
-                                    <span class="truncate">{{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : 'Sin Fecha' }}</span>
+                                    <span class="truncate">{{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : __('Sin Fecha') }}</span>
                                 </span>
                                 @if($order->current_due_date)
                                     <button 
                                         wire:click="clearDueDate" 
-                                        wire:confirm="¿Estás seguro de establecer la fecha límite como Ninguna (Sin Fecha)?"
+                                        wire:confirm="{{ __('¿Estás seguro de establecer la fecha límite como Ninguna (Sin Fecha)?') }}"
                                         type="button"
                                         class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 hover:bg-rose-50 text-zinc-500 hover:text-rose-700 border border-stone-200 hover:border-rose-200 transition flex items-center gap-0.5 shrink-0 cursor-pointer"
-                                        title="Establecer fecha límite a Ninguna">
+                                        title="{{ __('Establecer fecha límite a Ninguna') }}">
                                         <x-lucide-calendar-off class="w-3 h-3" />
-                                        <span>Sin Fecha</span>
+                                        <span>{{ __('Sin Fecha') }}</span>
                                     </button>
                                 @endif
                             </div>
                         </div>
 
                         <div class="min-w-0">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">Revisiones Cliente:</span>
+                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('Revisiones Cliente:') }}</span>
                             <span class="font-medium text-sky-800 text-xs mt-1 flex items-center gap-1">
                                 <x-lucide-history class="w-3 h-3 text-sky-600 shrink-0" />
                                 <span>{{ $order->client_revision_count }}</span>
@@ -1247,12 +1246,12 @@
                         <div class="bg-red-50 border border-red-200 rounded-xl p-3.5 flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1">
                                 <h4 class="font-semibold text-xs text-red-800 flex items-center gap-1.5">
-                                    <x-lucide-alert-octagon class="w-4 h-4 text-red-600 shrink-0" /> Esta orden está en estado ATRASADO / OVERDUE
+                                    <x-lucide-alert-octagon class="w-4 h-4 text-red-600 shrink-0" /> {{ __('Esta orden está en estado ATRASADO / OVERDUE') }}
                                 </h4>
-                                <p class="text-[11px] text-zinc-600 mt-0.5">Requiere registrar la nueva fecha acordada con el cliente para resolver el atraso.</p>
+                                <p class="text-[11px] text-zinc-600 mt-0.5">{{ __('Requiere registrar la nueva fecha acordada con el cliente para resolver el atraso.') }}</p>
                             </div>
                             <button wire:click="$set('showDelayModal', true)" class="px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium text-xs whitespace-nowrap shadow-2xs shrink-0">
-                                Resolver Atraso
+                                {{ __('Resolver Atraso') }}
                             </button>
                         </div>
                     @endif
@@ -1447,7 +1446,7 @@
                             <div class="flex items-center justify-between">
                                 <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
                                     <x-lucide-check-square class="w-4 h-4 text-zinc-700 shrink-0" /> 
-                                    <span>Subtareas</span>
+                                    <span>{{ __('Subtareas') }}</span>
                                     <span class="text-zinc-500 font-mono text-[11px] font-normal">({{ $doneSubtasks }}/{{ $totalSubtasks }})</span>
                                 </h4>
                                 @if($totalSubtasks > 0)
@@ -1455,7 +1454,7 @@
                                         {{ $progressPercent }}%
                                     </span>
                                 @else
-                                    <span class="text-[10px] text-zinc-400">Organiza y realiza el seguimiento de entregables</span>
+                                    <span class="text-[10px] text-zinc-400">{{ __('Organiza y realiza el seguimiento de entregables') }}</span>
                                 @endif
                             </div>
 
@@ -1503,7 +1502,7 @@
                                                 wire:click="toggleTaskStatus({{ $task->id }})" 
                                                 type="button"
                                                 class="w-4 h-4 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
-                                                title="{{ $task->isDone() ? 'Marcar como pendiente' : 'Marcar como completada' }}">
+                                                title="{{ $task->isDone() ? __('Marcar como pendiente') : __('Marcar como completada') }}">
                                                 <x-lucide-check class="w-3 h-3 stroke-[3]" />
                                             </button>
 
@@ -1513,7 +1512,7 @@
                                                     <span 
                                                         style="{{ $task->systemBadgeStyle() }}"
                                                         class="px-1.5 py-0.5 rounded text-[9.5px] font-bold shrink-0 flex items-center gap-1 border shadow-2xs"
-                                                        title="Subtarea generada automáticamente por el sistema ({{ $task->colorCodingLabel() }})">
+                                                        title="{{ __('Subtarea generada automáticamente por el sistema') }} ({{ $task->colorCodingLabel() }})">
                                                         <span class="w-1.5 h-1.5 rounded-full" style="{{ $task->systemDotStyle() }}"></span>
                                                         <span>{{ $task->colorCodingShortLabel() }}</span>
                                                     </span>
@@ -1522,7 +1521,7 @@
                                                 <span 
                                                     @click="editing = true; $nextTick(() => $refs.editInput.focus())"
                                                     class="font-semibold text-zinc-900 text-xs break-words cursor-pointer hover:text-indigo-600 hover:underline decoration-stone-300 underline-offset-2 transition {{ $task->isDone() ? 'line-through text-zinc-400 font-normal' : '' }}" 
-                                                    title="Haz clic para editar el nombre de la subtarea">
+                                                    title="{{ __('Haz clic para editar el nombre de la subtarea') }}">
                                                     {{ $task->title }}
                                                 </span>
 
@@ -1535,7 +1534,7 @@
                                                         type="button" 
                                                         @click.stop="openCategory = !openCategory; openType = false; openDate = false; openAssignee = false"
                                                         class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer border hover:ring-2 hover:ring-offset-1 {{ $cat->badgeStyle() }}"
-                                                        title="Al completar: {{ $cat->returnActionLabel() }}. Clic para cambiar">
+                                                        title="{{ __('Al completar:') }} {{ $cat->returnActionLabel() }}. {{ __('Clic para cambiar') }}">
                                                         <span class="w-1.5 h-1.5 rounded-full {{ $cat->dotColorClass() }}"></span>
                                                         <span>{{ $cat->shortReturnLabel() }}</span>
                                                         <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
@@ -1551,7 +1550,7 @@
                                                         x-transition:enter-end="opacity-100 scale-100"
                                                         class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[210px] space-y-1 text-left text-xs">
                                                         <div class="px-2 py-0.5 font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
-                                                            Al marcar como lista, enviar a:
+                                                            {{ __('Al marcar como lista, enviar a:') }}
                                                         </div>
                                                         @foreach(\App\Enums\SubtaskCategory::cases() as $categoryCase)
                                                             <button 
@@ -1577,13 +1576,13 @@
                                                         type="button" 
                                                         @click.stop="openType = !openType; openDate = false; openAssignee = false"
                                                         class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer hover:ring-2 hover:ring-offset-1 {{ $task->is_work_task !== false ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:ring-blue-300' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:ring-amber-300' }}"
-                                                        title="Clic para cambiar tipo (Trabajo / Gestión)">
+                                                        title="{{ __('Clic para cambiar tipo (Trabajo / Gestión)') }}">
                                                         @if($task->is_work_task !== false)
                                                             <x-lucide-wrench class="w-2.5 h-2.5 text-blue-600" />
-                                                            <span>Trabajo</span>
+                                                            <span>{{ __('Trabajo') }}</span>
                                                         @else
                                                             <x-lucide-clipboard-list class="w-2.5 h-2.5 text-amber-600" />
-                                                            <span>Gestión</span>
+                                                            <span>{{ __('Gestión') }}</span>
                                                         @endif
                                                         <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
                                                     </button>
@@ -1598,7 +1597,7 @@
                                                         x-transition:enter-end="opacity-100 scale-100"
                                                         class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[150px] space-y-1 text-left text-xs">
                                                         <div class="px-2 py-0.5 font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
-                                                            Tipo de Subtarea
+                                                            {{ __('Tipo de Subtarea') }}
                                                         </div>
                                                         <button 
                                                             type="button"
@@ -1607,7 +1606,7 @@
                                                             class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-blue-50 {{ $task->is_work_task !== false ? 'text-blue-700 font-bold bg-blue-50/60' : 'text-zinc-700' }}">
                                                             <span class="flex items-center gap-1.5">
                                                                 <x-lucide-wrench class="w-3.5 h-3.5 text-blue-600" />
-                                                                <span>Trabajo</span>
+                                                                <span>{{ __('Trabajo') }}</span>
                                                             </span>
                                                             @if($task->is_work_task !== false)
                                                                 <x-lucide-check class="w-3.5 h-3.5 text-blue-600 stroke-[2.5]" />
@@ -1620,7 +1619,7 @@
                                                             class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-amber-50 {{ $task->is_work_task === false ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-zinc-700' }}">
                                                             <span class="flex items-center gap-1.5">
                                                                 <x-lucide-clipboard-list class="w-3.5 h-3.5 text-amber-600" />
-                                                                <span>Gestión</span>
+                                                                <span>{{ __('Gestión') }}</span>
                                                             </span>
                                                             @if($task->is_work_task === false)
                                                                 <x-lucide-check class="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
@@ -1635,9 +1634,9 @@
                                                         type="button" 
                                                         @click.stop="openDate = !openDate; openType = false; openAssignee = false"
                                                         class="text-[10px] font-medium inline-flex items-center gap-1 px-1.5 py-0.5 rounded border transition cursor-pointer shrink-0 hover:ring-2 hover:ring-offset-1 {{ $task->scheduled_date ? 'text-zinc-600 bg-stone-100 hover:bg-stone-200 border-stone-200 hover:ring-stone-300' : 'text-zinc-400 bg-white hover:bg-stone-50 border-dashed border-stone-300 hover:ring-stone-200' }}"
-                                                        title="Clic para cambiar fecha programada">
+                                                        title="{{ __('Clic para cambiar fecha programada') }}">
                                                         <x-lucide-calendar class="w-2.5 h-2.5 {{ $task->scheduled_date ? 'text-zinc-500' : 'text-zinc-400' }}" />
-                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->format('d M') : '+ Fecha' }}</span>
+                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->format('d M') : __('+ Fecha') }}</span>
                                                         <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
                                                     </button>
 
@@ -1652,7 +1651,7 @@
                                                         class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-2.5 min-w-[210px] space-y-2 text-left text-xs">
                                                         
                                                         <div class="font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
-                                                            Fecha Programada
+                                                            {{ __('Fecha Programada') }}
                                                         </div>
 
                                                         <!-- Quick presets: Hoy, Mañana -->
@@ -1662,20 +1661,20 @@
                                                                 wire:click="updateTaskDate({{ $task->id }}, '{{ now()->toDateString() }}')"
                                                                 @click="openDate = false"
                                                                 class="px-2 py-1 text-[11px] font-medium rounded-lg border text-center transition cursor-pointer {{ $task->scheduled_date?->isToday() ? 'bg-zinc-900 text-white border-zinc-900 font-semibold' : 'bg-stone-50 hover:bg-stone-100 text-zinc-700 border-stone-200' }}">
-                                                                Hoy
+                                                                {{ __('Hoy') }}
                                                             </button>
                                                             <button 
                                                                 type="button"
                                                                 wire:click="updateTaskDate({{ $task->id }}, '{{ now()->addDay()->toDateString() }}')"
                                                                 @click="openDate = false"
                                                                 class="px-2 py-1 text-[11px] font-medium rounded-lg border text-center transition cursor-pointer {{ $task->scheduled_date?->isTomorrow() ? 'bg-zinc-900 text-white border-zinc-900 font-semibold' : 'bg-stone-50 hover:bg-stone-100 text-zinc-700 border-stone-200' }}">
-                                                                Mañana
+                                                                {{ __('Mañana') }}
                                                             </button>
                                                         </div>
 
                                                         <!-- Custom Date Input -->
                                                         <div class="space-y-1 pt-1.5 border-t border-stone-100">
-                                                            <label class="text-[10px] text-zinc-500 font-medium block">Elegir otra fecha:</label>
+                                                            <label class="text-[10px] text-zinc-500 font-medium block">{{ __('Elegir otra fecha:') }}</label>
                                                             <input 
                                                                 type="date" 
                                                                 value="{{ $task->scheduled_date?->toDateString() }}"
@@ -1687,11 +1686,11 @@
                                                         @if($task->scheduled_date)
                                                             <div class="pt-1 border-t border-stone-100">
                                                                 <button 
-                                                                    type="button"
+                                                                    type="button" 
                                                                     wire:click="updateTaskDate({{ $task->id }}, null)"
                                                                     @click="openDate = false"
                                                                     class="w-full text-center py-1 text-[10px] text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition cursor-pointer font-medium">
-                                                                    Quitar fecha programada
+                                                                    {{ __('Quitar fecha programada') }}
                                                                 </button>
                                                             </div>
                                                         @endif
@@ -1704,9 +1703,9 @@
                                                         type="button" 
                                                         @click.stop="openAssignee = !openAssignee; openType = false; openDate = false"
                                                         class="text-[10px] font-medium inline-flex items-center gap-1 px-1.5 py-0.5 rounded border transition cursor-pointer shrink-0 hover:ring-2 hover:ring-offset-1 {{ $task->assignee ? 'text-zinc-600 bg-stone-100 hover:bg-stone-200 border-stone-200 hover:ring-stone-300' : 'text-zinc-400 bg-white hover:bg-stone-50 border-dashed border-stone-300 hover:ring-stone-200' }}"
-                                                        title="Clic para cambiar responsable">
+                                                        title="{{ __('Clic para cambiar responsable') }}">
                                                         <x-lucide-user class="w-2.5 h-2.5 {{ $task->assignee ? 'text-zinc-500' : 'text-zinc-400' }}" />
-                                                        <span>{{ $task->assignee ? $task->assignee->name : '+ Asignar' }}</span>
+                                                        <span>{{ $task->assignee ? $task->assignee->name : __('+ Asignar') }}</span>
                                                         <x-lucide-chevron-down class="w-2 h-2 opacity-60 ml-0.5" />
                                                     </button>
 
@@ -1721,7 +1720,7 @@
                                                         class="absolute left-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-2 min-w-[190px] max-w-[250px] space-y-1.5 text-left text-xs">
                                                         
                                                         <div class="font-bold text-[10px] uppercase text-zinc-400 tracking-wider px-1">
-                                                            Asignar Responsable
+                                                            {{ __('Asignar Responsable') }}
                                                         </div>
 
                                                         @if(count($designers) > 4)
@@ -1729,7 +1728,7 @@
                                                                 <input 
                                                                     type="text" 
                                                                     x-model="assigneeSearch"
-                                                                    placeholder="Buscar diseñador..." 
+                                                                    placeholder="{{ __('Buscar diseñador...') }}" 
                                                                     class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-2 py-1 text-xs text-zinc-800 focus:outline-none focus:border-stone-400">
                                                             </div>
                                                         @endif
@@ -1743,7 +1742,7 @@
                                                                 class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition cursor-pointer hover:bg-stone-100 {{ !$task->assignee_id ? 'font-bold text-zinc-900 bg-stone-100' : 'text-zinc-500' }}">
                                                                 <span class="flex items-center gap-1.5">
                                                                     <x-lucide-user-x class="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                                                                    <span>Sin asignar</span>
+                                                                    <span>{{ __('Sin asignar') }}</span>
                                                                 </span>
                                                                 @if(!$task->assignee_id)
                                                                     <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5] shrink-0" />
@@ -1779,16 +1778,16 @@
                                                 type="button"
                                                 @click="editing = true; $nextTick(() => $refs.editInput.focus())"
                                                 class="p-1.5 rounded-lg bg-white hover:bg-stone-100 text-zinc-400 hover:text-zinc-700 border border-stone-200 transition cursor-pointer" 
-                                                title="Editar nombre de subtarea">
+                                                title="{{ __('Editar nombre de subtarea') }}">
                                                 <x-lucide-pencil class="w-3.5 h-3.5" />
                                             </button>
 
                                             <!-- Delete Subtask Button -->
                                             <button 
                                                 wire:click="deleteTask({{ $task->id }})" 
-                                                wire:confirm="¿Estás seguro de eliminar la subtarea '{{ addslashes($task->title) }}'?" 
+                                                wire:confirm="{{ __('¿Estás seguro de eliminar la subtarea') }} '{{ addslashes($task->title) }}'?" 
                                                 class="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 border border-stone-200 hover:border-rose-200 transition cursor-pointer" 
-                                                title="Eliminar subtarea">
+                                                title="{{ __('Eliminar subtarea') }}">
                                                 <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                             </button>
                                         </div>
@@ -1806,27 +1805,27 @@
                                             type="text" 
                                             x-model="title"
                                             @keydown.escape="editing = false; title = @js($task->title)"
-                                            placeholder="Nombre de la subtarea..."
+                                            placeholder="{{ __('Nombre de la subtarea...') }}"
                                             class="flex-1 bg-white border border-stone-300 rounded-lg px-2.5 py-1 text-xs text-zinc-900 font-semibold focus:outline-none focus:ring-2 focus:ring-zinc-800"
                                         >
                                         <button 
                                             type="submit" 
                                             class="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
                                             <x-lucide-check class="w-3.5 h-3.5" />
-                                            <span>Guardar</span>
+                                            <span>{{ __('Guardar') }}</span>
                                         </button>
                                         <button 
                                             type="button" 
                                             @click="editing = false; title = @js($task->title)" 
                                             class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-200 transition cursor-pointer"
-                                            title="Cancelar">
+                                            title="{{ __('Cancelar') }}">
                                             <x-lucide-x class="w-3.5 h-3.5" />
                                         </button>
                                     </form>
                                 </div>
                             @empty
                                 <div class="p-4 text-center text-xs text-zinc-400 bg-[#fbfbfa] rounded-xl border border-[#e9e9e7]">
-                                    Sin subtareas creadas aún.
+                                    {{ __('Sin subtareas creadas aún.') }}
                                 </div>
                             @endforelse
                         </div>
@@ -1879,7 +1878,7 @@
                             <div class="flex items-center justify-between gap-2 flex-wrap">
                                 <span class="text-[11px] font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1">
                                     <x-lucide-plus-circle class="w-3.5 h-3.5 text-zinc-500" />
-                                    <span>Añadir Nueva Subtarea</span>
+                                    <span>{{ __('Añadir Nueva Subtarea') }}</span>
                                 </span>
                                 <div class="flex items-center gap-1.5 text-xs">
                                     <!-- Destination Selector: When marked as done, send to... -->
@@ -1935,17 +1934,17 @@
                                         type="button" 
                                         wire:click="$set('newTaskIsWork', true)" 
                                         class="px-2 py-1 rounded-md border text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer {{ $newTaskIsWork ? 'bg-blue-50 text-blue-800 border-blue-300 font-bold shadow-2xs' : 'bg-white text-zinc-600 border-stone-200 hover:bg-stone-100' }}"
-                                        title="Trabajo de diseño/producción">
+                                        title="{{ __('Trabajo de diseño/producción') }}">
                                         <x-lucide-wrench class="w-3 h-3 text-blue-600" />
-                                        <span>Trabajo</span>
+                                        <span>{{ __('Trabajo') }}</span>
                                     </button>
                                     <button 
                                         type="button" 
                                         wire:click="$set('newTaskIsWork', false)" 
                                         class="px-2 py-1 rounded-md border text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer {{ !$newTaskIsWork ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold shadow-2xs' : 'bg-white text-zinc-600 border-stone-200 hover:bg-stone-100' }}"
-                                        title="Gestión/Seguimiento administrativo">
+                                        title="{{ __('Gestión/Seguimiento administrativo') }}">
                                         <x-lucide-clipboard-list class="w-3 h-3 text-amber-600" />
-                                        <span>Gestión</span>
+                                        <span>{{ __('Gestión') }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -1953,17 +1952,17 @@
                             @if($order && ($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE || $order->origin_core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE))
                                 <div class="flex items-center gap-1.5 text-[10px] text-sky-800 bg-sky-50 border border-sky-200 px-2 py-1 rounded-lg font-medium">
                                     <x-lucide-corner-down-left class="w-3 h-3 text-sky-600 shrink-0" />
-                                    <span>Al completar las subtareas de hoy, este pedido volverá automáticamente a <strong>Enviado al Cliente</strong>.</span>
+                                    <span>{{ __('Al completar las subtareas de hoy, este pedido volverá automáticamente a') }} <strong>{{ __('Enviado al Cliente') }}</strong>.</span>
                                 </div>
                             @elseif($order && ($order->core_status === \App\Enums\CoreStatus::ENVIADO_A_CAMILA || $order->origin_core_status === \App\Enums\CoreStatus::ENVIADO_A_CAMILA))
                                 <div class="flex items-center gap-1.5 text-[10px] text-purple-800 bg-purple-50 border border-purple-200 px-2 py-1 rounded-lg font-medium">
                                     <x-lucide-corner-down-left class="w-3 h-3 text-purple-600 shrink-0" />
-                                    <span>Al completar las subtareas de hoy, este pedido volverá automáticamente a <strong>Enviado a Camila</strong>.</span>
+                                    <span>{{ __('Al completar las subtareas de hoy, este pedido volverá automáticamente a') }} <strong>{{ __('Enviado a Camila') }}</strong>.</span>
                                 </div>
                             @elseif($order && ($order->core_status === \App\Enums\CoreStatus::EN_PRODUCCION || $order->origin_core_status === \App\Enums\CoreStatus::EN_PRODUCCION))
                                 <div class="flex items-center gap-1.5 text-[10px] text-pink-800 bg-pink-50 border border-pink-200 px-2 py-1 rounded-lg font-medium">
                                     <x-lucide-corner-down-left class="w-3 h-3 text-pink-600 shrink-0" />
-                                    <span>Al completar las subtareas de hoy, este pedido volverá automáticamente a <strong>En Producción</strong>.</span>
+                                    <span>{{ __('Al completar las subtareas de hoy, este pedido volverá automáticamente a') }} <strong>{{ __('En Producción') }}</strong>.</span>
                                 </div>
                             @endif
 
@@ -1978,7 +1977,7 @@
                                         @keydown.arrow-up.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(-1);"
                                         @keydown.enter.prevent="if (presetDropdownOpen && presetHighlightedIndex >= 0 && getFilteredPresets()[presetHighlightedIndex]) { selectPreset(getFilteredPresets()[presetHighlightedIndex]); } else { $wire.addTask(); presetDropdownOpen = false; }"
                                         @keydown.escape.stop="presetDropdownOpen = false; presetHighlightedIndex = -1;"
-                                        placeholder="Nombre de la subtarea (ej: Ajustes cliente, Confirmar medidas...)" 
+                                        placeholder="{{ __('Nombre de la subtarea (ej: Ajustes cliente, Confirmar medidas...)') }}" 
                                         class="bg-white border border-[#e9e9e7] rounded-lg px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 font-normal w-full">
 
                                     <!-- Dropdown Menu for Subtask Presets -->
@@ -2017,7 +2016,7 @@
                                                         <span 
                                                             :class="preset.is_work_task ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200'"
                                                             class="px-1 py-0.2 rounded text-[8.5px] font-bold border">
-                                                            <span x-text="preset.is_work_task ? 'Trabajo' : 'Gestión'"></span>
+                                                            <span x-text="preset.is_work_task ? '{{ __('Trabajo') }}' : '{{ __('Gestión') }}'"></span>
                                                         </span>
                                                         <span class="text-[9px] text-amber-700 font-medium opacity-0 group-hover:opacity-100 transition">
                                                             ↵
@@ -2035,12 +2034,12 @@
                                         wire:model="newTaskDate" 
                                         class="bg-white border border-[#e9e9e7] rounded-lg px-2 py-1.5 text-xs text-zinc-700 font-medium focus:outline-none focus:border-stone-400 shrink-0">
                                     <button 
-                                        type="button"
+                                        type="button" 
                                         wire:click="addTask" 
                                         @click="presetDropdownOpen = false"
                                         class="px-3.5 py-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs shrink-0 shadow-2xs transition cursor-pointer flex items-center gap-1">
                                         <x-lucide-plus class="w-3.5 h-3.5" />
-                                        <span>Añadir</span>
+                                        <span>{{ __('Añadir') }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -2189,9 +2188,9 @@
                                                 @if(is_array($event->metadata) && isset($event->metadata['trigger_type']))
                                                     <div class="flex items-center gap-1.5 pt-0.5">
                                                         <x-lucide-zap class="w-2.5 h-2.5 text-zinc-400 shrink-0" />
-                                                        <span>Origen: {{ strtolower(str_replace('_', ' ', (string)$event->metadata['trigger_type'])) }}</span>
+                                                        <span>{{ __('Origen:') }} {{ strtolower(str_replace('_', ' ', (string)$event->metadata['trigger_type'])) }}</span>
                                                         @if(isset($event->metadata['priority']) && $event->metadata['priority'] === 'urgent')
-                                                            <span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200 uppercase">Urgente</span>
+                                                            <span class="text-[9px] font-bold text-rose-600 bg-rose-50 px-1 py-0.2 rounded border border-rose-200 uppercase">{{ __('Urgente') }}</span>
                                                         @endif
                                                     </div>
                                                 @endif
@@ -2199,7 +2198,7 @@
 
                                             @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])) && $event->event_type !== 'ORDER_APPROVED')
                                                 <div class="mt-1 pl-2 border-l-2 border-amber-300 text-[11px] text-zinc-600 py-0.5 space-y-0.5">
-                                                    <span class="font-semibold text-amber-900 text-[10px] uppercase tracking-wider block">Motivo:</span>
+                                                    <span class="font-semibold text-amber-900 text-[10px] uppercase tracking-wider block">{{ __('Motivo:') }}</span>
                                                     <p class="italic text-zinc-700 leading-snug">{{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</p>
                                                     @if(isset($event->metadata['blocked_duration']))
                                                         <span class="block text-[10px] text-emerald-700 font-medium pt-0.5">
@@ -2219,12 +2218,12 @@
                                                     <div class="flex items-center justify-between gap-2">
                                                         <div class="flex items-center gap-1.5 font-bold text-emerald-900">
                                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                            <span>{{ $event->metadata['approval_type_label'] ?? ((($event->metadata['approval_type'] ?? '') === 'camila') ? 'Aprobado por Camila' : 'Aprobado por Cliente') }}</span>
+                                                            <span>{{ $event->metadata['approval_type_label'] ?? ((($event->metadata['approval_type'] ?? '') === 'camila') ? __('Aprobado por Camila') : __('Aprobado por Cliente')) }}</span>
                                                         </div>
                                                         @if(!empty($event->metadata['new_due_date']))
                                                             <div class="flex items-center gap-1.5 flex-wrap">
                                                                 <span class="px-2 py-0.2 rounded-full text-[10px] font-mono font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200/80">
-                                                                    SLA: {{ $event->metadata['new_due_date'] }}
+                                                                    {{ __('SLA:') }} {{ $event->metadata['new_due_date'] }}
                                                                 </span>
                                                                 @if(!empty($event->metadata['is_urgente']) || (!empty($event->metadata['sla_reason']) && str_contains(strtolower($event->metadata['sla_reason']), 'urgent')) || (!empty($event->metadata['sla_message']) && str_contains(strtolower($event->metadata['sla_message']), 'urgent')))
                                                                     <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-100 text-rose-800 border border-rose-200 uppercase">
@@ -2245,10 +2244,10 @@
                                                         <div class="pt-0.5">
                                                             <button 
                                                                 type="button" 
-                                                                wire:click="previewMedia('{{ $event->metadata['approval_image'] }}', 'Soporte de Aprobación', 'image')" 
+                                                                wire:click="previewMedia('{{ $event->metadata['approval_image'] }}', '{{ __('Soporte de Aprobación') }}', 'image')" 
                                                                 class="inline-flex items-center gap-2 p-1 rounded-md bg-white border border-emerald-200 hover:border-emerald-300 text-emerald-950 transition cursor-pointer group shadow-2xs">
-                                                                <img src="{{ $event->metadata['approval_image'] }}" alt="Comprobante" class="w-8 h-8 object-cover rounded border border-stone-200 shrink-0">
-                                                                <span class="font-medium text-[11px] group-hover:underline text-emerald-800 pr-1.5">Ver comprobante adjunto</span>
+                                                                <img src="{{ $event->metadata['approval_image'] }}" alt="{{ __('Comprobante') }}" class="w-8 h-8 object-cover rounded border border-stone-200 shrink-0">
+                                                                <span class="font-medium text-[11px] group-hover:underline text-emerald-800 pr-1.5">{{ __('Ver comprobante adjunto') }}</span>
                                                             </button>
                                                         </div>
                                                     @endif
@@ -2259,7 +2258,7 @@
                                 @empty
                                     <div class="relative flex items-center min-h-5">
                                         <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-stone-300 ring-2 ring-white shadow-2xs" aria-hidden="true"></span>
-                                        <p class="text-xs text-zinc-500">Sin eventos en la línea de tiempo aún.</p>
+                                        <p class="text-xs text-zinc-500">{{ __('Sin eventos en la línea de tiempo aún.') }}</p>
                                     </div>
                                 @endforelse
 
@@ -2275,7 +2274,7 @@
                                                 @endif
                                             </span>
                                             <h5 class="text-xs leading-5 font-bold {{ $order->isOverdue() ? 'text-rose-700' : 'text-emerald-800' }}">
-                                                Objetivo de Entrega {{ $order->isOverdue() ? '(Vencido)' : '(En plazo)' }}
+                                                {{ __('Objetivo de Entrega') }} {{ $order->isOverdue() ? '(' . __('Vencido') . ')' : '(' . __('En plazo') . ')' }}
                                             </h5>
                                             <span class="text-[10px] font-mono font-semibold {{ $order->isOverdue() ? 'text-rose-600' : 'text-emerald-700' }}">
                                                 {{ $order->current_due_date->format('d M, g:i A') }}
@@ -2289,7 +2288,7 @@
                             <div class="pt-3 border-t border-[#e9e9e7] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                                 <div class="flex items-center gap-1.5 text-zinc-600">
                                     <x-lucide-clock class="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                                    <span>Tiempo transcurrido:</span>
+                                    <span>{{ __('Tiempo transcurrido:') }}</span>
                                     <strong class="text-zinc-900 font-mono font-semibold">{{ $order->created_at->diffForHumans(null, true) }}</strong>
                                 </div>
 
@@ -2297,10 +2296,10 @@
                                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold shadow-2xs {{ $order->isOverdue() ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200' }}">
                                         @if($order->isOverdue())
                                             <x-lucide-alert-triangle class="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                                            <span>SLA Vencido</span>
+                                            <span>{{ __('SLA Vencido') }}</span>
                                         @else
                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                            <span>En plazo límite</span>
+                                            <span>{{ __('En plazo límite') }}</span>
                                         @endif
                                     </div>
                                 @endif
@@ -2314,12 +2313,12 @@
                     <div class="flex items-center justify-between">
                         <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
                             <span class="w-5 h-5 rounded bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] shadow-2xs">T</span>
-                            <span>INFORMACIÓN & ARCHIVOS DE TRELLO</span>
+                            <span>{{ __('INFORMACIÓN & ARCHIVOS DE TRELLO') }}</span>
                         </h4>
                         @if($order->trello_card_id)
-                            <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="Actualizar datos de Trello">
+                            <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="{{ __('Actualizar datos de Trello') }}">
                                 <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshTrelloData,loadTrelloComments,loadTrelloDetails" class="w-3.5 h-3.5" />
-                                <span>Actualizar Trello</span>
+                                <span>{{ __('Actualizar Trello') }}</span>
                             </button>
                         @endif
                     </div>
@@ -2328,7 +2327,7 @@
                         <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs text-blue-900 flex items-center justify-between gap-3 shadow-2xs">
                             <div class="flex items-center gap-2 min-w-0">
                                 <x-lucide-info class="w-4 h-4 text-blue-500 shrink-0" />
-                                <span class="truncate">Esta orden no tiene tarjeta vinculada en Trello.</span>
+                                <span class="truncate">{{ __('Esta orden no tiene tarjeta vinculada en Trello.') }}</span>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
                                 <button 
@@ -2338,7 +2337,7 @@
                                     class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition cursor-pointer disabled:opacity-50">
                                     <x-lucide-plus-circle wire:loading.class="hidden" wire:target="createCardOnTrello" class="w-3.5 h-3.5 shrink-0" />
                                     <x-lucide-loader-2 wire:loading wire:target="createCardOnTrello" class="w-3.5 h-3.5 animate-spin shrink-0" />
-                                    <span>Crear Tarjeta en Trello</span>
+                                    <span>{{ __('Crear Tarjeta en Trello') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -2348,7 +2347,7 @@
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-align-left class="w-4 h-4 text-sky-600 shrink-0" />
-                                    <span>Descripción de la Tarjeta</span>
+                                    <span>{{ __('Descripción de la Tarjeta') }}</span>
                                 </h5>
                                 @if($isLoadingTrelloDetails)
                                     <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
@@ -2358,7 +2357,7 @@
                             @if($isLoadingTrelloDetails)
                                 <div class="py-3 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 font-medium">
                                     <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
-                                    <span>Cargando descripción desde Trello...</span>
+                                    <span>{{ __('Cargando descripción desde Trello...') }}</span>
                                 </div>
                             @elseif($trelloDetailsError)
                                 <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
@@ -2370,7 +2369,7 @@
                                     $formattedDesc = preg_replace_callback('/!\[([^\]]*)\]\(([^\)]+)\)/', function($matches) {
                                         $url = trim($matches[2]);
                                         $alt = trim($matches[1]);
-                                        $label = !empty($alt) ? $alt : (basename(parse_url($url, PHP_URL_PATH) ?: 'Archivo'));
+                                        $label = !empty($alt) ? $alt : (basename(parse_url($url, PHP_URL_PATH) ?: __('Archivo')));
                                         return "[$label]($url)";
                                     }, $trelloDescription);
 
@@ -2378,7 +2377,7 @@
                                     $htmlDesc = preg_replace_callback('/<a\s+(?:[^>]*?\s+)?href=([\'"])(.*?)\1[^>]*>(.*?)<\/a>/i', function($matches) {
                                         $url = html_entity_decode($matches[2]);
                                         $rawLabel = strip_tags($matches[3]);
-                                        $label = !empty(trim($rawLabel)) ? trim($rawLabel) : 'Archivo';
+                                        $label = !empty(trim($rawLabel)) ? trim($rawLabel) : __('Archivo');
                                         $escapedUrl = addslashes($url);
                                         $escapedLabel = addslashes($label);
                                         return '<button type="button" wire:click="openMediaPreview(\'' . $escapedUrl . '\', \'' . $escapedLabel . '\')" class="text-sky-600 font-semibold underline hover:text-sky-800 transition cursor-pointer inline-flex items-center gap-1 my-0.5">' . $matches[3] . ' <svg class="w-3 h-3 inline-block shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>';
@@ -2389,7 +2388,7 @@
                                 </div>
                             @else
                                 <div class="p-3 rounded-lg bg-stone-100/70 border border-stone-200 text-xs text-zinc-400 italic">
-                                    Sin descripción registrada en la tarjeta de Trello.
+                                    {{ __('Sin descripción registrada en la tarjeta de Trello.') }}
                                 </div>
                             @endif
                         </div>
@@ -2399,7 +2398,7 @@
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-paperclip class="w-4 h-4 text-sky-600 shrink-0" />
-                                    <span>Archivos Adjuntos</span>
+                                    <span>{{ __('Archivos Adjuntos') }}</span>
                                     @if(!empty($trelloAttachments))
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
                                             {{ count($trelloAttachments) }}
@@ -2411,7 +2410,7 @@
                                     @if($isLoadingTrelloDetails || $isUploadingAttachment)
                                         <div class="flex items-center gap-1.5 text-[11px] text-sky-600 font-medium">
                                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin shrink-0" />
-                                            <span class="hidden sm:inline">{{ $isUploadingAttachment ? 'Subiendo a Trello...' : 'Cargando...' }}</span>
+                                            <span class="hidden sm:inline">{{ $isUploadingAttachment ? __('Subiendo a Trello...') : __('Cargando...') }}</span>
                                         </div>
                                     @endif
 
@@ -2419,7 +2418,7 @@
                                         <label 
                                             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 hover:text-sky-800 border border-sky-200/90 shadow-2xs cursor-pointer transition select-none disabled:opacity-50">
                                             <x-lucide-upload class="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                                            <span>Subir archivo</span>
+                                            <span>{{ __('Subir archivo') }}</span>
                                             <input 
                                                 type="file" 
                                                 wire:model="attachmentFile" 
@@ -2434,7 +2433,7 @@
                             {{-- Livewire loading indicator during file upload --}}
                             <div wire:loading.flex wire:target="attachmentFile" class="flex flex-row items-center gap-2.5 py-2.5 px-3 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-800 shadow-2xs" style="display: none;">
                                 <x-lucide-loader-2 class="w-4 h-4 animate-spin text-sky-600 shrink-0 inline-block" />
-                                <span class="leading-snug font-medium">Cargando archivo y sincronizando con la tarjeta de Trello...</span>
+                                <span class="leading-snug font-medium">{{ __('Cargando archivo y sincronizando con la tarjeta de Trello...') }}</span>
                             </div>
 
                             @if($attachmentUploadError)
@@ -2457,16 +2456,16 @@
                             @if($isLoadingTrelloDetails)
                                 <div class="py-3 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 font-medium">
                                     <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
-                                    <span>Cargando archivos adjuntos desde Trello...</span>
+                                    <span>{{ __('Cargando archivos adjuntos desde Trello...') }}</span>
                                 </div>
                             @elseif(empty($trelloAttachments))
                                 <div class="p-4 rounded-xl bg-stone-50/80 border border-dashed border-stone-300 text-center space-y-2">
-                                    <p class="text-xs text-zinc-500 italic">Sin archivos adjuntos en la tarjeta de Trello.</p>
+                                    <p class="text-xs text-zinc-500 italic">{{ __('Sin archivos adjuntos en la tarjeta de Trello.') }}</p>
                                     @if($order && $order->trello_card_id)
                                         <div>
                                             <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 shadow-2xs cursor-pointer transition">
                                                 <x-lucide-upload class="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                                                <span>Haz clic para subir un archivo a Trello</span>
+                                                <span>{{ __('Haz clic para subir un archivo a Trello') }}</span>
                                                 <input type="file" wire:model="attachmentFile" class="hidden" @disabled($isUploadingAttachment)>
                                             </label>
                                         </div>
@@ -2497,7 +2496,7 @@
                                         @endphp
                                         
                                         <div 
-                                            wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? 'Archivo') }}')" 
+                                            wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
                                             x-data="{ imgError: false }" 
                                             class="group border border-[#e9e9e7] hover:border-sky-400 bg-white hover:bg-sky-50/40 rounded-lg p-2.5 flex items-center gap-3 transition shadow-2xs min-w-0 cursor-pointer">
                                             @if($isImage && $previewUrl)
@@ -2506,7 +2505,7 @@
                                                 @endphp
                                                 <div class="w-11 h-11 rounded-md bg-stone-100 border border-stone-200 overflow-hidden shrink-0 relative group-hover:ring-2 group-hover:ring-sky-400/40 transition flex items-center justify-center">
                                                     <template x-if="!imgError">
-                                                        <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? 'Adjunto' }}" class="w-full h-full object-cover">
+                                                        <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? __('Adjunto') }}" class="w-full h-full object-cover">
                                                     </template>
                                                     <template x-if="imgError">
                                                         <div class="w-full h-full bg-sky-50 text-sky-600 flex items-center justify-center">
@@ -2529,8 +2528,8 @@
                                             @endif
 
                                             <div class="min-w-0 flex-1 space-y-0.5">
-                                                <p class="text-xs font-semibold text-zinc-800 group-hover:text-sky-700 truncate" title="{{ $attachment['name'] ?? 'Archivo' }}">
-                                                    {{ $attachment['name'] ?? 'Archivo' }}
+                                                <p class="text-xs font-semibold text-zinc-800 group-hover:text-sky-700 truncate" title="{{ $attachment['name'] ?? __('Archivo') }}">
+                                                    {{ $attachment['name'] ?? __('Archivo') }}
                                                 </p>
                                                 <div class="flex items-center gap-2 text-[10px] text-zinc-400">
                                                     @if($sizeFormatted)
@@ -2545,18 +2544,18 @@
                                             <div class="flex items-center gap-0.5 shrink-0">
                                                 <button 
                                                     type="button" 
-                                                    wire:click.stop="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? 'Archivo') }}')" 
+                                                    wire:click.stop="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
                                                     class="p-1.5 rounded-md text-zinc-400 hover:text-sky-600 hover:bg-sky-100/60 transition cursor-pointer" 
-                                                    title="Ver Vista Previa">
+                                                    title="{{ __('Ver Vista Previa') }}">
                                                     <x-lucide-maximize-2 class="w-3.5 h-3.5" />
                                                 </button>
                                                 @if(!empty($attachment['id']))
                                                     <button 
                                                         type="button" 
-                                                        wire:click.stop="deleteAttachment('{{ $attachment['id'] }}', '{{ addslashes($attachment['name'] ?? 'Archivo') }}')" 
-                                                        wire:confirm="¿Estás seguro de que deseas eliminar este archivo adjunto de la tarjeta de Trello?" 
+                                                        wire:click.stop="deleteAttachment('{{ $attachment['id'] }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
+                                                        wire:confirm="{{ __('¿Estás seguro de que deseas eliminar este archivo adjunto de la tarjeta de Trello?') }}" 
                                                         class="p-1.5 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-70 group-hover:opacity-100" 
-                                                        title="Eliminar archivo de Trello">
+                                                        title="{{ __('Eliminar archivo de Trello') }}">
                                                         <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                                     </button>
                                                 @endif
@@ -2572,7 +2571,7 @@
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-message-square class="w-4 h-4 text-sky-600 shrink-0" />
-                                    <span>Comentarios</span>
+                                    <span>{{ __('Comentarios') }}</span>
                                     @if(!empty($trelloComments))
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
                                             {{ count($trelloComments) }}
@@ -2698,7 +2697,7 @@
                                     // Cmd+K / Ctrl+K: Link
                                     if (isCmdOrCtrl && (e.key === 'k' || e.key === 'K')) {
                                         e.preventDefault();
-                                        const url = prompt('Ingrese URL del enlace:', 'https://');
+                                        const url = prompt('{{ __('Ingrese URL del enlace:') }}', 'https://');
                                         if (url) {
                                             document.execCommand('createLink', false, url);
                                             this.syncToLivewire();
@@ -2746,22 +2745,22 @@
                                     contenteditable="true"
                                     @input="handleInput()"
                                     @keydown="handleKeydown($event)"
-                                    data-placeholder="Escribe un comentario..."
+                                    data-placeholder="{{ __('Escribe un comentario...') }}"
                                     class="comment-editor-box w-full bg-white border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition min-h-[84px] max-h-[220px] overflow-y-auto font-sans leading-relaxed outline-none prose prose-xs max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-400 empty:before:pointer-events-none"></div>
 
                                 <div class="flex items-center justify-between pt-1">
                                     <!-- Quick Formatting Buttons -->
                                     <div class="flex items-center gap-1 text-[11px]">
-                                        <button type="button" @click="format('bold')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 font-bold text-zinc-700 transition" title="Negrita">B</button>
-                                        <button type="button" @click="format('italic')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 italic text-zinc-700 transition" title="Cursiva">I</button>
-                                        <button type="button" @click="const url = prompt('URL del enlace:', 'https://'); if(url) format('createLink', url);" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition underline" title="Enlace">Link</button>
-                                        <button type="button" @click="format('insertUnorderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="Lista con viñetas">• Viñetas</button>
-                                        <button type="button" @click="format('insertOrderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="Lista numerada">1. Lista</button>
+                                        <button type="button" @click="format('bold')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 font-bold text-zinc-700 transition" title="{{ __('Negrita') }}">B</button>
+                                        <button type="button" @click="format('italic')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 italic text-zinc-700 transition" title="{{ __('Cursiva') }}">I</button>
+                                        <button type="button" @click="const url = prompt('{{ __('URL del enlace:') }}', 'https://'); if(url) format('createLink', url);" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition underline" title="{{ __('Enlace') }}">{{ __('Link') }}</button>
+                                        <button type="button" @click="format('insertUnorderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="{{ __('Lista con viñetas') }}">• {{ __('Viñetas') }}</button>
+                                        <button type="button" @click="format('insertOrderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="{{ __('Lista numerada') }}">1. {{ __('Lista') }}</button>
                                     </div>
 
                                     <div class="flex items-center gap-2">
                                         <span class="text-[10px] text-zinc-400 hidden sm:inline">
-                                            Como: <strong class="text-zinc-600 font-medium">{{ auth()->user()?->name ?? 'Usuario' }}</strong>
+                                            {{ __('Como:') }} <strong class="text-zinc-600 font-medium">{{ auth()->user()?->name ?? __('Usuario') }}</strong>
                                         </span>
                                         <button 
                                             wire:click="addTrelloComment" 
@@ -2770,7 +2769,7 @@
                                             class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0">
                                             <x-lucide-send wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
                                             <x-lucide-loader-2 wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
-                                            <span>Publicar en Trello</span>
+                                            <span>{{ __('Publicar en Trello') }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -2780,18 +2779,18 @@
                             @if($isLoadingTrelloComments)
                                 <div class="py-4 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
                                     <x-lucide-loader-2 class="w-4 h-4 animate-spin text-sky-600" />
-                                    <span>Cargando comentarios desde Trello...</span>
+                                    <span>{{ __('Cargando comentarios desde Trello...') }}</span>
                                 </div>
                             @elseif($trelloCommentError)
                                 <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
                                     <x-lucide-alert-circle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                     <div>
-                                        <strong>Nota de comentarios:</strong> {{ $trelloCommentError }}
+                                        <strong>{{ __('Nota de comentarios:') }}</strong> {{ $trelloCommentError }}
                                     </div>
                                 </div>
                             @elseif(empty($trelloComments))
                                 <div class="py-3 text-center text-xs text-zinc-400">
-                                    No hay comentarios registrados en la tarjeta de Trello aún.
+                                    {{ __('No hay comentarios registrados en la tarjeta de Trello aún.') }}
                                 </div>
                             @else
                                 <div class="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin divide-y divide-[#e9e9e7]">
@@ -2844,9 +2843,11 @@
             <!-- Flyout Footer -->
             <div class="p-4 border-t border-[#e9e9e7] bg-[#f7f7f5] flex justify-end">
                 <button wire:click="closeModal" class="px-4 py-1.5 rounded-md bg-stone-200 hover:bg-stone-300 text-zinc-800 text-xs font-medium transition">
-                    Cerrar Panel
+                    {{ __('Cerrar Panel') }}
                 </button>
             </div>
+
+        </div>
 
         </div>
     @endif
@@ -2861,12 +2862,12 @@
                     <div>
                         <h3 class="text-base font-semibold text-zinc-900">
                             @if($pendingProductionStatus === \App\Enums\CoreStatus::EN_PRODUCCION->value || $pendingProductionStatus === 'EN PRODUCCIÓN')
-                                Aprobación Requerida para Producción
+                                {{ __('Aprobación Requerida para Producción') }}
                             @else
-                                Confirmación de Aprobación
+                                {{ __('Confirmación de Aprobación') }}
                             @endif
                         </h3>
-                        <p class="text-xs text-zinc-500 mt-0.5">Valida el visto bueno y registra el soporte de aprobación para continuar.</p>
+                        <p class="text-xs text-zinc-500 mt-0.5">{{ __('Valida el visto bueno y registra el soporte de aprobación para continuar.') }}</p>
                     </div>
                     <button type="button" wire:click="closeApprovalModal" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-stone-100 transition cursor-pointer">
                         <x-lucide-x class="w-4 h-4" />
@@ -2877,8 +2878,8 @@
                     <div class="p-3 rounded-xl bg-pink-50 border border-pink-200 text-pink-900 text-xs flex items-start gap-2.5 shrink-0">
                         <x-lucide-alert-circle class="w-4 h-4 text-pink-600 shrink-0 mt-0.5" />
                         <div>
-                            <span class="font-semibold block">Pase a Producción Requerido</span>
-                            Para enviar esta orden a Producción debe ser aprobada previamente. Registra quién la aprobó e ingresa el comentario o soporte de aprobación.
+                            <span class="font-semibold block">{{ __('Pase a Producción Requerido') }}</span>
+                            {{ __('Para enviar esta orden a Producción debe ser aprobada previamente. Registra quién la aprobó e ingresa el comentario o soporte de aprobación.') }}
                         </div>
                     </div>
                 @endif
@@ -2887,7 +2888,7 @@
                     <!-- Validation Type Selection -->
                     <div class="space-y-1.5">
                         <label class="block text-xs font-semibold text-zinc-800">
-                            ¿Quién validó la aprobación? <span class="text-rose-500">*</span>
+                            {{ __('¿Quién validó la aprobación?') }} <span class="text-rose-500">*</span>
                         </label>
                         <div class="grid grid-cols-2 gap-2.5">
                             <button 
@@ -2898,8 +2899,8 @@
                                     <x-lucide-user-check class="w-4 h-4" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="font-bold text-xs truncate">Aprobado por Camila</div>
-                                    <div class="text-[10px] {{ $approvalType === 'camila' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">Validación interna</div>
+                                    <div class="font-bold text-xs truncate">{{ __('Aprobado por Camila') }}</div>
+                                    <div class="text-[10px] {{ $approvalType === 'camila' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">{{ __('Validación interna') }}</div>
                                 </div>
                                 @if($approvalType === 'camila')
                                     <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
@@ -2914,8 +2915,8 @@
                                     <x-lucide-check-circle-2 class="w-4 h-4" />
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <div class="font-bold text-xs truncate">Aprobado por Cliente</div>
-                                    <div class="text-[10px] {{ $approvalType === 'cliente' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">Confirmación directa</div>
+                                    <div class="font-bold text-xs truncate">{{ __('Aprobado por Cliente') }}</div>
+                                    <div class="text-[10px] {{ $approvalType === 'cliente' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">{{ __('Confirmación directa') }}</div>
                                 </div>
                                 @if($approvalType === 'cliente')
                                     <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
@@ -2928,9 +2929,9 @@
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
                             <label class="block text-xs font-semibold text-zinc-800">
-                                Soporte de aprobación <span class="text-rose-500">*</span>
+                                {{ __('Soporte de aprobación') }} <span class="text-rose-500">*</span>
                             </label>
-                            <span class="text-[10px] text-zinc-400">Texto o Imagen (al menos uno)</span>
+                            <span class="text-[10px] text-zinc-400">{{ __('Texto o Imagen (al menos uno)') }}</span>
                         </div>
 
                         <div 
@@ -2972,13 +2973,13 @@
                             <textarea 
                                 wire:model="approvalComment"
                                 rows="3"
-                                placeholder="Escribe aquí un comentario o pega una captura con Ctrl+V / Cmd+V (ej. visto bueno por WhatsApp, email, etc.)..."
+                                placeholder="{{ __('Escribe aquí un comentario o pega una captura con Ctrl+V / Cmd+V (ej. visto bueno por WhatsApp, email, etc.)...') }}"
                                 class="w-full text-xs text-zinc-800 placeholder-zinc-400 bg-transparent resize-none border-0 p-0 focus:outline-none focus:ring-0 leading-relaxed outline-none"></textarea>
 
                             <!-- Uploading loader -->
                             <div wire:loading.flex wire:target="approvalImage" class="flex flex-row items-center gap-2 mt-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800" style="display: none;">
                                 <x-lucide-loader-2 class="w-4 h-4 animate-spin text-emerald-600 shrink-0 inline-block" />
-                                <span>Cargando imagen de soporte...</span>
+                                <span>{{ __('Cargando imagen de soporte...') }}</span>
                             </div>
 
                             <!-- Uploaded image preview -->
@@ -2986,14 +2987,14 @@
                                 <div wire:loading.remove wire:target="approvalImage" class="mt-2.5 p-2 rounded-lg bg-[#fafaf9] border border-stone-200 flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-2.5 min-w-0">
                                         @if(method_exists($approvalImage, 'temporaryUrl'))
-                                            <img src="{{ $approvalImage->temporaryUrl() }}" alt="Soporte" class="w-12 h-12 object-cover rounded-md border border-stone-300 shadow-2xs shrink-0">
+                                            <img src="{{ $approvalImage->temporaryUrl() }}" alt="{{ __('Soporte') }}" class="w-12 h-12 object-cover rounded-md border border-stone-300 shadow-2xs shrink-0">
                                         @endif
                                         <div class="min-w-0">
-                                            <span class="text-xs font-semibold text-zinc-800 truncate block">Imagen de soporte adjunta</span>
+                                            <span class="text-xs font-semibold text-zinc-800 truncate block">{{ __('Imagen de soporte adjunta') }}</span>
                                             <span class="text-[10px] text-zinc-400 block">{{ number_format($approvalImage->getSize() / 1024, 1) }} KB</span>
                                         </div>
                                     </div>
-                                    <button type="button" wire:click="removeApprovalImage" class="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="Quitar imagen">
+                                    <button type="button" wire:click="removeApprovalImage" class="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="{{ __('Quitar imagen') }}">
                                         <x-lucide-trash-2 class="w-4 h-4" />
                                     </button>
                                 </div>
@@ -3003,13 +3004,13 @@
                             <div class="flex items-center justify-between pt-2 border-t border-stone-100 mt-2 text-[11px] text-zinc-500">
                                 <label for="approval-image-file" class="inline-flex items-center gap-1.5 font-medium hover:text-emerald-700 cursor-pointer transition select-none">
                                     <x-lucide-paperclip class="w-3.5 h-3.5 text-zinc-400" />
-                                    <span>Adjuntar imagen</span>
+                                    <span>{{ __('Adjuntar imagen') }}</span>
                                     <input type="file" id="approval-image-file" wire:model="approvalImage" accept="image/*" class="hidden">
                                 </label>
 
                                 <span class="text-[10px] text-zinc-400 flex items-center gap-1 select-none">
                                     <x-lucide-image class="w-3 h-3 text-zinc-400" />
-                                    <span>Pega con Cmd+V o arrastra aquí</span>
+                                    <span>{{ __('Pega con Cmd+V o arrastra aquí') }}</span>
                                 </span>
                             </div>
                         </div>
@@ -3032,11 +3033,11 @@
                     <label class="flex items-start gap-3 p-3.5 rounded-xl border border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 transition cursor-pointer select-none">
                         <input type="checkbox" wire:model="measuresConfirmed" class="w-4 h-4 mt-0.5 rounded border-stone-300 text-stone-900 focus:ring-stone-400">
                         <div class="space-y-0.5 min-w-0 flex-1">
-                            <span class="font-semibold text-zinc-900 text-xs block">Medidas 100% confirmadas</span>
+                            <span class="font-semibold text-zinc-900 text-xs block">{{ __('Medidas 100% confirmadas') }}</span>
                             @if(!$measuresConfirmed)
-                                <span class="text-[11px] text-amber-700 font-medium block">Si no se marca, se enviará la orden a RESOLVER para confirmar medidas.</span>
+                                <span class="text-[11px] text-amber-700 font-medium block">{{ __('Si no se marca, se enviará la orden a RESOLVER para confirmar medidas.') }}</span>
                             @else
-                                <span class="text-[11px] text-emerald-700 font-medium block">Medidas listas para producción.</span>
+                                <span class="text-[11px] text-emerald-700 font-medium block">{{ __('Medidas listas para producción.') }}</span>
                             @endif
                         </div>
                     </label>
@@ -3045,11 +3046,11 @@
                     <label class="flex items-start gap-3 p-3.5 rounded-xl border border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 transition cursor-pointer select-none">
                         <input type="checkbox" wire:model="estimateApproved" class="w-4 h-4 mt-0.5 rounded border-stone-300 text-stone-900 focus:ring-stone-400">
                         <div class="space-y-0.5 min-w-0 flex-1">
-                            <span class="font-semibold text-zinc-900 text-xs block">Estimado / Presupuesto aprobado</span>
+                            <span class="font-semibold text-zinc-900 text-xs block">{{ __('Estimado / Presupuesto aprobado') }}</span>
                             @if(!$estimateApproved)
-                                <span class="text-[11px] text-amber-700 font-medium block">Si no se marca, se registrará una advertencia de estimado pendiente.</span>
+                                <span class="text-[11px] text-amber-700 font-medium block">{{ __('Si no se marca, se registrará una advertencia de estimado pendiente.') }}</span>
                             @else
-                                <span class="text-[11px] text-emerald-700 font-medium block">Presupuesto verificado por cliente.</span>
+                                <span class="text-[11px] text-emerald-700 font-medium block">{{ __('Presupuesto verificado por cliente.') }}</span>
                             @endif
                         </div>
                     </label>
@@ -3060,20 +3061,20 @@
                             @if(!$measuresConfirmed)
                                 <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                 <div>
-                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-amber-800">Resultado: Resolver (Bloqueada)</strong>
-                                    La orden se moverá a <span class="font-semibold">ENTRANTE</span> con subestado <span class="font-semibold">BLOQUEADA</span> y se creará una tarea de resolución de medidas de alta prioridad (SLA {{ $order?->isUrgente() ? 'mismo día' : '24h' }}).
+                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-amber-800">{{ __('Resultado: Resolver (Bloqueada)') }}</strong>
+                                    {{ __('La orden se moverá a') }} <span class="font-semibold">{{ __('ENTRANTE') }}</span> {{ __('con subestado') }} <span class="font-semibold">{{ __('BLOQUEADA') }}</span> {{ __('y se creará una tarea de resolución de medidas de alta prioridad') }} (SLA {{ $order?->isUrgente() ? __('mismo día') : '24h' }}).
                                 </div>
                             @elseif(!$estimateApproved)
                                 <x-lucide-info class="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                                 <div>
-                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-orange-800">Resultado: Pendiente de Estimado</strong>
-                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">FALTA APROBACIÓN DE ESTIMADO</span> (SLA {{ $order?->isUrgente() ? 'mismo día' : '24h' }}).
+                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-orange-800">{{ __('Resultado: Pendiente de Estimado') }}</strong>
+                                    {{ __('La orden pasará al buzón del diseñador con subestado') }} <span class="font-semibold">{{ __('FALTA APROBACIÓN DE ESTIMADO') }}</span> (SLA {{ $order?->isUrgente() ? __('mismo día') : '24h' }}).
                                 </div>
                             @else
                                 <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                                 <div>
-                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-emerald-800">Resultado: Lista para Alta</strong>
-                                    La orden pasará al buzón del diseñador con subestado <span class="font-semibold">PONER EN ALTA</span> @if($order?->isUrgente()) (<span class="font-bold text-rose-700">SLA MISMO DÍA</span> por orden urgente). @else (SLA 24h para preprensa de alta resolución). @endif
+                                    <strong class="font-bold block text-[11px] uppercase tracking-wider text-emerald-800">{{ __('Resultado: Lista para Alta') }}</strong>
+                                    {{ __('La orden pasará al buzón del diseñador con subestado') }} <span class="font-semibold">{{ __('PONER EN ALTA') }}</span> @if($order?->isUrgente()) (<span class="font-bold text-rose-700">{{ __('SLA MISMO DÍA') }}</span> {{ __('por orden urgente') }}). @else ({{ __('SLA 24h para preprensa de alta resolución') }}). @endif
                                 </div>
                             @endif
                         </div>
@@ -3082,7 +3083,7 @@
 
                 <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-stone-100 shrink-0">
                     <button type="button" wire:click="closeApprovalModal" class="px-3.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium transition cursor-pointer">
-                        Cancelar
+                        {{ __('Cancelar') }}
                     </button>
                     <button 
                         type="button" 
@@ -3090,8 +3091,8 @@
                         wire:loading.attr="disabled"
                         class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-loader-2 wire:loading wire:target="submitApproval" class="w-3.5 h-3.5 animate-spin" />
-                        <span wire:loading.remove wire:target="submitApproval">Procesar Aprobación</span>
-                        <span wire:loading wire:target="submitApproval">Procesando...</span>
+                        <span wire:loading.remove wire:target="submitApproval">{{ __('Procesar Aprobación') }}</span>
+                        <span wire:loading wire:target="submitApproval">{{ __('Procesando...') }}</span>
                     </button>
                 </div>
             </div>
@@ -3106,28 +3107,28 @@
             @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.submitDelayResolution()">
             <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
                 <div>
-                    <h3 class="text-base font-semibold text-zinc-900">Resolver Atraso</h3>
-                    <p class="text-xs text-zinc-500 mt-0.5">Ingresa la nueva fecha prometida al cliente para resolver el estado Overdue.</p>
+                    <h3 class="text-base font-semibold text-zinc-900">{{ __('Resolver Atraso') }}</h3>
+                    <p class="text-xs text-zinc-500 mt-0.5">{{ __('Ingresa la nueva fecha prometida al cliente para resolver el estado Overdue.') }}</p>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="font-medium text-zinc-700 block mb-1">Nueva Fecha Prometida al Cliente:</label>
+                        <label class="font-medium text-zinc-700 block mb-1">{{ __('Nueva Fecha Prometida al Cliente:') }}</label>
                         <input type="date" wire:model="clientPromisedDate" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono">
                     </div>
 
                     <div>
-                        <label class="font-medium text-zinc-700 block mb-1">Motivo / Explicación del Retraso:</label>
+                        <label class="font-medium text-zinc-700 block mb-1">{{ __('Motivo / Explicación del Retraso:') }}</label>
                         <textarea wire:model="delayReason" rows="3" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md p-2.5 text-xs text-zinc-900 focus:outline-none w-full font-normal"></textarea>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2.5 pt-2">
                     <button wire:click="$set('showDelayModal', false)" class="px-3 py-1.5 rounded-md bg-stone-100 text-zinc-700 text-xs font-medium">
-                        Cancelar
+                        {{ __('Cancelar') }}
                     </button>
                     <button wire:click="submitDelayResolution" class="px-3.5 py-1.5 rounded-md bg-red-600 hover:bg-red-500 text-white font-medium text-xs shadow-2xs">
-                        Guardar & Resolver Atraso
+                        {{ __('Guardar & Resolver Atraso') }}
                     </button>
                 </div>
             </div>
@@ -3229,11 +3230,11 @@
                         <label class="font-medium text-zinc-700 block mb-1.5">{{ __('Motivo del Bloqueo:') }}</label>
                         <div class="grid grid-cols-2 gap-1.5">
                             @foreach([
-                                'FALTAN MEDIDAS' => 'Faltan Medidas',
-                                'FALTA LOGO' => 'Falta Logo / Arte',
-                                'FALTA APROBACIÓN DE ESTIMADO' => 'Falta Aprobación Estimado',
-                                'ESPERANDO CLIENTE' => 'Esperando Cliente',
-                                'OTROS' => 'Otro Motivo'
+                                'FALTAN MEDIDAS' => __('Faltan Medidas'),
+                                'FALTA LOGO' => __('Falta Logo / Arte'),
+                                'FALTA APROBACIÓN DE ESTIMADO' => __('Falta Aprobación Estimado'),
+                                'ESPERANDO CLIENTE' => __('Esperando Cliente'),
+                                'OTROS' => __('Otro Motivo')
                             ] as $value => $label)
                                 <button type="button" 
                                         wire:click="$set('blockReason', '{{ $value }}')" 
@@ -3250,13 +3251,13 @@
                     @if($blockReason === 'OTROS')
                         <div class="space-y-1">
                             <label class="font-medium text-zinc-700 block">{{ __('Especificar Otro Motivo:') }}</label>
-                            <input type="text" wire:model="blockReasonOther" placeholder="Ej: Esperando material especial de proveedor..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400">
+                            <input type="text" wire:model="blockReasonOther" placeholder="{{ __('Ej: Esperando material especial de proveedor...') }}" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400">
                         </div>
                     @endif
 
                     <div class="space-y-1">
                         <label class="font-medium text-zinc-700 block">{{ __('Detalles o Comentarios Adicionales (Opcional):') }}</label>
-                        <textarea wire:model="blockComment" rows="2" placeholder="Explica brevemente la situación..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                        <textarea wire:model="blockComment" rows="2" placeholder="{{ __('Explica brevemente la situación...') }}" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
                     </div>
 
                     <div class="pt-1 border-t border-stone-100">
@@ -3306,7 +3307,7 @@
 
                 <div class="space-y-1.5 text-xs">
                     <label class="font-medium text-zinc-700 block">{{ __('Motivo / Comentario:') }}</label>
-                    <textarea wire:model="onHoldReason" rows="3" placeholder="Ej: Esperando confirmación de presupuesto por parte del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    <textarea wire:model="onHoldReason" rows="3" placeholder="{{ __('Ej: Esperando confirmación de presupuesto por parte del cliente...') }}" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
                     @error('onHoldReason')
                         <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
                     @enderror
@@ -3350,7 +3351,7 @@
 
                 <div class="space-y-1.5 text-xs">
                     <label class="font-medium text-zinc-700 block">{{ __('Motivo / Nota de Reanudación:') }}</label>
-                    <textarea wire:model="resumeReason" rows="3" placeholder="Ej: Cliente aprobó presupuesto / Se recibieron las medidas del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                    <textarea wire:model="resumeReason" rows="3" placeholder="{{ __('Ej: Cliente aprobó presupuesto / Se recibieron las medidas del cliente...') }}" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
                     @error('resumeReason')
                         <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
                     @enderror
@@ -3428,7 +3429,7 @@
                                 <div>
                                     <span class="font-bold text-zinc-900 flex items-center gap-1.5">
                                         <x-lucide-x-circle class="w-4 h-4 text-red-600 shrink-0" />
-                                        <span>{{ __('Cancelada') }}</span>
+                                        <span>{{ __('Orden Cancelada') }}</span>
                                     </span>
                                     <span class="text-[11px] text-zinc-500 block mt-0.5">{{ __('Orden anulada o no realizada.') }}</span>
                                 </div>
@@ -3470,9 +3471,9 @@
                 <div class="flex items-center gap-2 shrink-0">
                     <a href="{{ $previewMediaUrl }}" download target="_blank" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold border border-zinc-700 transition flex items-center gap-1.5 shadow-2xs">
                         <x-lucide-download class="w-3.5 h-3.5 text-sky-400" />
-                        <span class="hidden sm:inline">Descargar / Abrir</span>
+                        <span class="hidden sm:inline">{{ __('Descargar / Abrir') }}</span>
                     </a>
-                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center border border-zinc-700 transition cursor-pointer" title="Cerrar (Esc)">
+                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center border border-zinc-700 transition cursor-pointer" title="{{ __('Cerrar (Esc)') }}">
                         <x-lucide-x class="w-4.5 h-4.5" />
                     </button>
                 </div>

@@ -359,18 +359,41 @@ class AutomationEngine
                 'substatus' => $finalSubstatus,
             ]);
 
-            RelatedTask::create([
-                'order_id' => $order->id,
-                'title' => 'Poner en alta',
-                'type' => RelatedTaskType::PONER_ALTA,
-                'status' => 'todo',
-                'assignee_id' => $order->getPrimaryDesignerId(),
-                'scheduled_date' => $targetDate->toDateString(),
-                'due_date' => $targetDate->toDateString(),
-                'trigger_type' => 'ORDER_APPROVED',
-                'priority' => $isUrgente ? 'urgent' : 'normal',
-                'is_work_task' => true,
-            ]);
+            $this->checkAndCreateOverdueTask($order);
+
+            $existingAltaTask = RelatedTask::where('order_id', $order->id)
+                ->where(function ($q) {
+                    $q->where('type', RelatedTaskType::PONER_ALTA->value)
+                        ->orWhere('category', SubtaskCategory::PRODUCTION_ADJUSTMENTS->value)
+                        ->orWhere('title', 'like', '%alta%');
+                })
+                ->where('status', '!=', 'done')
+                ->first();
+
+            if ($existingAltaTask && $finalStatus === CoreStatus::EN_PRODUCCION) {
+                $existingAltaTask->update([
+                    'status' => 'done',
+                    'completed_at' => now(),
+                    'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                    'return_core_status' => CoreStatus::EN_PRODUCCION,
+                ]);
+            } else {
+                RelatedTask::create([
+                    'order_id' => $order->id,
+                    'title' => 'Poner en alta',
+                    'type' => RelatedTaskType::PONER_ALTA,
+                    'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                    'return_core_status' => CoreStatus::EN_PRODUCCION,
+                    'status' => ($finalStatus === CoreStatus::EN_PRODUCCION) ? 'done' : 'todo',
+                    'completed_at' => ($finalStatus === CoreStatus::EN_PRODUCCION) ? now() : null,
+                    'assignee_id' => $order->getPrimaryDesignerId(),
+                    'scheduled_date' => $targetDate->toDateString(),
+                    'due_date' => $targetDate->toDateString(),
+                    'trigger_type' => 'ORDER_APPROVED',
+                    'priority' => $isUrgente ? 'urgent' : 'normal',
+                    'is_work_task' => true,
+                ]);
+            }
         } elseif (! $measuresConfirmed) {
             // Missing measures -> High priority RESOLVER in ENTRANTE
             $order->update([
@@ -578,6 +601,18 @@ class AutomationEngine
         $allowedStatuses = array_merge(CoreStatus::designerQueueStatuses(), [CoreStatus::TO_DO_TODAY]);
 
         if (! in_array($order->core_status, $allowedStatuses, true)) {
+            return;
+        }
+
+        // Orders with substatus PONER EN ALTA are internal production handoffs and do not notify client of delays
+        $subVal = $order->substatus instanceof \BackedEnum ? $order->substatus->value : ($order->substatus?->value ?? (string) $order->substatus);
+        if ($subVal === Substatus::PONER_EN_ALTA->value) {
+            RelatedTask::where('order_id', $order->id)
+                ->where('type', RelatedTaskType::CORREO_ATRASO)
+                ->where('status', '!=', 'done')
+                ->whereNull('completed_at')
+                ->forceDelete();
+
             return;
         }
 
@@ -807,7 +842,9 @@ class AutomationEngine
                                 SubtaskCategory::CLIENT_ADJUSTMENTS->value,
                                 SubtaskCategory::CAMILA_ADJUSTMENTS->value,
                                 SubtaskCategory::PRODUCTION_ADJUSTMENTS->value,
-                            ]);
+                            ])
+                            ->orWhere('type', RelatedTaskType::PONER_ALTA->value)
+                            ->orWhere('title', 'like', '%alta%');
                     })
                     ->latest('completed_at')
                     ->first();
@@ -832,7 +869,9 @@ class AutomationEngine
                                     SubtaskCategory::CLIENT_ADJUSTMENTS->value,
                                     SubtaskCategory::CAMILA_ADJUSTMENTS->value,
                                     SubtaskCategory::PRODUCTION_ADJUSTMENTS->value,
-                                ]);
+                                ])
+                                ->orWhere('type', RelatedTaskType::PONER_ALTA->value)
+                                ->orWhere('title', 'like', '%alta%');
                         })
                         ->latest('completed_at')
                         ->first();
@@ -840,7 +879,7 @@ class AutomationEngine
 
                 $returnStatus = null;
                 if ($targetTask) {
-                    $returnStatus = $targetTask->return_core_status ?? $targetTask->category->defaultReturnCoreStatus();
+                    $returnStatus = $targetTask->return_core_status ?? ($targetTask->isPonerEnAlta() ? CoreStatus::EN_PRODUCCION : $targetTask->category->defaultReturnCoreStatus());
                 }
 
                 // 2. If no task specified an explicit destination, fall back to the order's origin status
@@ -850,6 +889,9 @@ class AutomationEngine
 
                 // If return target is Sent to Client, Sent to Camila, or Production, execute auto-return
                 if ($returnStatus && in_array($returnStatus, [CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::ENVIADO_A_CAMILA, CoreStatus::EN_PRODUCCION], true)) {
+                    if ($returnStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
+                        return;
+                    }
                     $prevStatus = $order->core_status;
                     $targetSubstatus = match ($returnStatus) {
                         CoreStatus::ENVIADO_AL_CLIENTE => Substatus::WAITING_FOR_CLIENT,

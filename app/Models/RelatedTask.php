@@ -254,6 +254,26 @@ class RelatedTask extends Model
         return str_contains($titleLower, 'follow up') || str_contains($titleLower, 'followup') || str_starts_with($titleLower, 'llamar');
     }
 
+    public function isPonerEnAlta(): bool
+    {
+        if ($this->isFollowUp() || ($this->attributes['category'] ?? null) === SubtaskCategory::MANAGEMENT->value) {
+            return false;
+        }
+
+        $rawType = is_string($this->type) ? $this->type : $this->type?->value;
+        if ($rawType === RelatedTaskType::PONER_ALTA->value) {
+            return true;
+        }
+
+        if ($this->category === SubtaskCategory::PRODUCTION_ADJUSTMENTS || $this->return_core_status === CoreStatus::EN_PRODUCCION) {
+            return true;
+        }
+
+        $titleUpper = mb_strtoupper($this->title ?? '', 'UTF-8');
+
+        return str_contains($titleUpper, 'ALTA');
+    }
+
     /**
      * Determine the matching ColorCoding key for this subtask.
      */

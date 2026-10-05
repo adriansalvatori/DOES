@@ -704,4 +704,200 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertOk()
             ->assertSee('PAST PENDING COMPANY');
     }
+
+    public function test_unapproved_order_with_poner_en_alta_subtask_triggers_approval_modal_and_cannot_be_completed_in_weekly_planner(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'UNAPPROVED ALTA CORP',
+            'task_name' => 'Brochure Design',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => false,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => now()->toDateString(),
+            'due_date' => now()->toDateString(),
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('toggleSubtaskComplete', $subtask->id)
+            ->assertDispatched('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+
+        // Subtask must remain todo because approval is required
+        $this->assertEquals('todo', $subtask->fresh()->status);
+        $this->assertNull($subtask->fresh()->completed_at);
+
+        // Order must not be in production
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->fresh()->core_status);
+    }
+
+    public function test_approved_order_with_poner_en_alta_subtask_moves_to_production_when_completed_in_weekly_planner(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'APPROVED ALTA CORP',
+            'task_name' => 'Banner High Res',
+            'core_status' => CoreStatus::EURALIZ_ORDERS_RECEIVED,
+            'substatus' => Substatus::PONER_EN_ALTA,
+            'approved' => true,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => now()->toDateString(),
+            'due_date' => now()->toDateString(),
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('toggleSubtaskComplete', $subtask->id)
+            ->assertDispatched('order-updated');
+
+        // Subtask must be completed
+        $this->assertEquals('done', $subtask->fresh()->status);
+        $this->assertNotNull($subtask->fresh()->completed_at);
+
+        // Order must transition to EN_PRODUCCION with ENVIADO_EN_ALTA
+        $freshOrder = $order->fresh();
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $freshOrder->core_status);
+        $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $freshOrder->substatus);
+
+        // Event must be logged
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'MOVED_TO_PRODUCTION',
+            'new_value' => CoreStatus::EN_PRODUCCION->value,
+        ]);
+    }
+
+    public function test_unapproved_order_with_poner_en_alta_subtask_triggers_approval_modal_in_order_detail_modal(): void
+    {
+        $designer = Designer::create(['name' => 'Adrián', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'UNAPPROVED MODAL CORP',
+            'task_name' => 'Catalog Prep',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => false,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => now()->toDateString(),
+            'due_date' => now()->toDateString(),
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('toggleTaskStatus', $subtask->id)
+            ->assertSet('showApprovalModal', true)
+            ->assertSet('pendingProductionStatus', CoreStatus::EN_PRODUCCION->value);
+
+        $this->assertEquals('todo', $subtask->fresh()->status);
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->fresh()->core_status);
+    }
+
+    public function test_approved_order_with_poner_en_alta_subtask_moves_to_production_in_order_detail_modal(): void
+    {
+        $designer = Designer::create(['name' => 'Adrián', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'APPROVED MODAL CORP',
+            'task_name' => 'Catalog Prep Approved',
+            'core_status' => CoreStatus::ADRIAN_ORDERS_RECEIVED,
+            'substatus' => Substatus::PONER_EN_ALTA,
+            'approved' => true,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => now()->toDateString(),
+            'due_date' => now()->toDateString(),
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('toggleTaskStatus', $subtask->id)
+            ->assertDispatched('order-updated');
+
+        $this->assertEquals('done', $subtask->fresh()->status);
+        $freshOrder = $order->fresh();
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $freshOrder->core_status);
+        $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $freshOrder->substatus);
+    }
+
+    public function test_newly_created_subtask_is_placed_at_the_end_of_tasks_for_the_day(): void
+    {
+        $designer = Designer::create(['name' => 'Sara', 'active' => true]);
+        $dateStr = now()->addDays(2)->toDateString();
+
+        $order1 = Order::create([
+            'company_name' => 'ORDER ONE',
+            'task_name' => 'Design One',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => now()->addDays(10),
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $order2 = Order::create([
+            'company_name' => 'ORDER TWO',
+            'task_name' => 'Design Two',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => now()->addDays(5),
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        // Create first subtask on that date
+        Livewire::test(WeeklyPlanner::class)
+            ->call('scheduleSubtask', $order1->id, 'First Task', $dateStr, $designer->id);
+
+        $task1 = RelatedTask::where('title', 'First Task')->first();
+        $this->assertEquals(0, $task1->sort_order);
+
+        // Create second subtask on the same date (even with earlier due date on order2)
+        Livewire::test(WeeklyPlanner::class)
+            ->call('scheduleSubtask', $order2->id, 'Second Task', $dateStr, $designer->id);
+
+        $task2 = RelatedTask::where('title', 'Second Task')->first();
+        $this->assertGreaterThan($task1->sort_order, $task2->sort_order);
+
+        // In WeeklyPlanner, sortSubtaskCollection must place task2 after task1
+        $component = Livewire::test(WeeklyPlanner::class);
+        $sorted = $component->instance()->sortSubtaskCollection(collect([$task1, $task2]));
+        $this->assertEquals($task1->id, $sorted->first()->id);
+        $this->assertEquals($task2->id, $sorted->last()->id);
+    }
 }

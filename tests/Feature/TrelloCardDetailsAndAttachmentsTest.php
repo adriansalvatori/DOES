@@ -102,7 +102,7 @@ class TrelloCardDetailsAndAttachmentsTest extends TestCase
             ->assertSet('isLoadingTrelloDetails', false)
             ->assertSet('trelloDescription', 'Descripción detallada de la orden en Trello')
             ->assertCount('trelloAttachments', 1)
-            ->assertSee('Descripción de la Tarjeta')
+            ->assertSee(__('Descripción de la Tarjeta'))
             ->assertSee('Descripción detallada de la orden en Trello')
             ->assertSee('archivo_plano.pdf');
     }

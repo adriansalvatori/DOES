@@ -9,6 +9,7 @@ use App\Models\Designer;
 use App\Models\InstallationType;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Services\AutomationEngine;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -879,6 +880,7 @@ class OverviewIndex extends Component
             $order->update(['substatus' => $substatus]);
             $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
             $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label, $newSubVal, $prevSubVal);
+            app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
         }
 
         $this->clearOverviewCache();

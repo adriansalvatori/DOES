@@ -78,7 +78,7 @@ class ClientDatabaseTest extends TestCase
         Livewire::test(ClientIndex::class)
             ->assertStatus(200)
             ->assertSee('CLIENTE TEST')
-            ->assertSee('Base de Datos de Clientes');
+            ->assertSee(__('Base de Datos de Clientes'));
     }
 
     public function test_merging_clients_extracts_location_and_updates_orders(): void
