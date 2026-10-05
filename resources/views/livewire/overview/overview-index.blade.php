@@ -229,18 +229,9 @@
         },
         updateMenuPosition() {
             if (!this.activeMenu || !this.activeTriggerEl) return;
-            if (!document.body.contains(this.activeTriggerEl)) {
-                this.closeMenu();
-                return;
-            }
+            if (!document.body.contains(this.activeTriggerEl)) return;
             const rect = this.activeTriggerEl.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
-
-            // Close only if trigger cell is scrolled far off-screen
-            if (rect.bottom < 10 || rect.top > window.innerHeight - 10) {
-                this.closeMenu();
-                return;
-            }
 
             let menuHeight = 240;
             let menuWidth = 220;
@@ -1217,17 +1208,18 @@
                                 </button>
                             </td>
 
-                            <!-- 6. Designer (Full Color Badge, No Dot) -->
-                            <td class="py-1 px-1 truncate">
+                            <!-- 6. Designer (Full Color Cell) -->
+                            <td 
+                                :class="ordersState[{{ $order->id }}]?.designer_badge_style || '{{ $order->getDesignerBadgeStyle() }}'"
+                                :style="ordersState[{{ $order->id }}]?.designer_badge_inline_style || '{{ $order->getDesignerBadgeInlineStyle() }}'"
+                                class="py-1 px-1.5 truncate transition text-[10px] font-semibold text-center {{ $order->getDesignerBadgeStyle() }}"
+                                style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                 <button 
                                     type="button"
                                     data-popover-trigger="designer"
                                     @click.stop="openMenu('designer', {{ $order->id }}, $el)"
-                                    :class="ordersState[{{ $order->id }}]?.designer_badge_style || '{{ $order->getDesignerBadgeStyle() }}'"
-                                    :style="ordersState[{{ $order->id }}]?.designer_badge_inline_style || '{{ $order->getDesignerBadgeInlineStyle() }}'"
                                     :title="ordersState[{{ $order->id }}]?.designer_name || '{{ addslashes($order->designer_name) }}'"
-                                    class="px-1 py-0.5 rounded-sm border text-[10px] font-semibold cursor-pointer truncate transition w-full text-center block {{ $order->getDesignerBadgeStyle() }}"
-                                    style="{{ $order->getDesignerBadgeInlineStyle() }}"
+                                    class="w-full text-center cursor-pointer border-none bg-transparent py-0.5 truncate block"
                                     title="{{ $order->designer_name }}">
                                     <span class="truncate block" x-text="ordersState[{{ $order->id }}]?.designer_name || '{{ addslashes($order->designer_name) }}'">{{ $order->designer_name }}</span>
                                 </button>
@@ -1365,19 +1357,25 @@
                                 </div>
                             </td>
 
-                            <!-- 9. Instalación -->
+                            <!-- 9. Instalación (Full Color Cell) -->
                             @php
                                 $instTypeModel = !empty($order->installation_type) ? $installationTypes->firstWhere('name', $order->installation_type) : null;
                                 $hasInstallation = !empty($order->installation_type);
+                                $instStyle = '';
+                                if ($instTypeModel && !empty($instTypeModel->bg_color)) {
+                                    $instStyle = "background-color: {$instTypeModel->bg_color}; color: {$instTypeModel->text_color}; border-color: {$instTypeModel->border_color};";
+                                }
                             @endphp
-                            <td class="py-1 px-1 truncate transition">
+                            <td 
+                                :style="getInstallationStyle(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
+                                @if(!empty($instStyle)) style="{{ $instStyle }}" @endif
+                                :class="getInstallationClass(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
+                                class="py-1 px-1.5 truncate transition font-bold text-[10px]">
                                 <button 
                                     type="button"
                                     data-popover-trigger="installation"
                                     @click.stop="openMenu('installation', {{ $order->id }}, $el, { installationType: ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : {{ \Illuminate\Support\Js::from($order->installation_type ?? '') }} })"
-                                    :class="getInstallationClass(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
-                                    :style="getInstallationStyle(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
-                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 px-1.5 rounded-md truncate transition"
+                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 border-none bg-transparent truncate"
                                     title="{{ __('Clic para cambiar instalación: :type', ['type' => $order->installation_type ?? __('Sin información')]) }}">
                                     <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.installation_type !== undefined ? (ordersState[{{ $order->id }}].installation_type || '—') : '{{ $hasInstallation ? addslashes($order->installation_type) : '—' }}'">
                                         {{ $hasInstallation ? $order->installation_type : '—' }}

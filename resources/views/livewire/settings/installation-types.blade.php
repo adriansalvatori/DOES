@@ -70,8 +70,21 @@
                         $ordersCount = $ordersCountByInstallation[$item->name] ?? 0;
                     @endphp
                     <div class="px-5 py-3 flex items-center justify-between hover:bg-stone-50/60 transition gap-4">
-                        <!-- Badge Preview & Name -->
+                        <!-- Color Picker & Badge Preview -->
                         <div class="flex items-center gap-3 min-w-0 flex-1">
+                            <label class="relative cursor-pointer shrink-0 group flex items-center" title="{{ __('Clic para cambiar el color de :name', ['name' => $item->name]) }}">
+                                <input 
+                                    type="color" 
+                                    value="{{ $item->color ?? '#0284C7' }}" 
+                                    wire:change="updateColor({{ $item->id }}, $event.target.value)" 
+                                    class="sr-only" />
+                                <div 
+                                    class="w-7 h-7 rounded-lg border border-black/15 shadow-2xs flex items-center justify-center transition group-hover:scale-110 group-hover:shadow-md cursor-pointer" 
+                                    style="background-color: {{ $item->color ?? '#0284C7' }};">
+                                    <x-lucide-palette class="w-3.5 h-3.5 text-white/90 drop-shadow-xs opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                            </label>
+
                             <span 
                                 class="px-3 py-1 rounded-md text-xs font-bold border shrink-0 shadow-2xs"
                                 style="background-color: {{ $item->bg_color }}; color: {{ $item->text_color }}; border-color: {{ $item->border_color }};">
@@ -89,11 +102,15 @@
                             </span>
                         </div>
 
-                        <!-- Style Type Indicator -->
+                        <!-- Style Type Indicator / Toggle -->
                         <div class="hidden sm:flex items-center gap-2 shrink-0">
-                            <span class="text-[10px] px-2 py-0.5 rounded border font-medium {{ $item->style_type === 'solid' ? 'bg-stone-800 text-white border-stone-900' : 'bg-stone-100 text-zinc-600 border-stone-200' }}">
+                            <button 
+                                type="button"
+                                wire:click="toggleStyleType({{ $item->id }})"
+                                title="{{ __('Alternar estilo (Color Sólido / Fondo Claro)') }}"
+                                class="text-[10px] px-2.5 py-1 rounded-lg border font-medium transition cursor-pointer hover:scale-105 shadow-2xs {{ $item->style_type === 'solid' ? 'bg-stone-800 text-white border-stone-900 hover:bg-stone-900' : 'bg-stone-100 text-zinc-700 border-stone-200 hover:bg-stone-200' }}">
                                 {{ $item->style_type === 'solid' ? __('Color Sólido') : __('Fondo Claro') }}
-                            </span>
+                            </button>
                         </div>
 
                         <!-- Active Toggle -->

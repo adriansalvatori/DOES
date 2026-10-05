@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pricing;
 
+use App\Models\InstallationType;
 use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\ProductPriceTier;
@@ -178,6 +179,8 @@ class PricingIndex extends Component
     #[Computed]
     public function suppliers()
     {
+        InstallationType::syncAllToSuppliers();
+
         return Supplier::active()->orderBy('name')->get();
     }
 

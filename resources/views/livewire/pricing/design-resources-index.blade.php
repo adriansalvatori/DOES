@@ -125,7 +125,8 @@
 
                         <div class="flex items-center gap-1.5">
                             @if($product->supplier)
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
+                                @php $pSupStyle = $product->supplier->getBadgeStyle(); @endphp
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors" style="{{ $pSupStyle['inline'] }}">
                                     {{ $product->supplier->name }}
                                 </span>
                             @endif
@@ -143,7 +144,7 @@
                     </div>
 
                     @if($product->description)
-                        <p class="text-xs text-stone-500 leading-relaxed line-clamp-2">
+                        <p class="text-xs text-stone-500 leading-relaxed text-left">
                             {{ $product->description }}
                         </p>
                     @endif
@@ -190,8 +191,9 @@
                                                 {{ $variant->name }}
                                             </span>
                                             @if($vSupplier)
-                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                                                    <x-lucide-building-2 class="w-3 h-3 text-indigo-500" />
+                                                @php $vSupStyle = $vSupplier->getBadgeStyle(); @endphp
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold border transition-colors" style="{{ $vSupStyle['inline'] }}">
+                                                    <x-lucide-building-2 class="w-3 h-3" style="color: {{ $vSupStyle['text'] }}" />
                                                     <span>{{ $vSupplier->name }}</span>
                                                 </span>
                                             @endif

@@ -975,5 +975,6 @@
     "Ver Lista de Precios": "View Price List",
     "Modo Edición Habilitado (Manager / Admin)": "Editing Mode Enabled (Manager / Admin)",
     "Modo Solo Lectura (Diseñador / Comercial)": "Read-Only Mode (Designer / Sales)",
-    "Cambios guardados directamente en base de datos al editar cualquier celda.": "Changes saved directly to database upon editing any cell."
+    "Cambios guardados directamente en base de datos al editar cualquier celda.": "Changes saved directly to database upon editing any cell.",
+    "Agrega nueva opción de precio": "Add new price option"
 }

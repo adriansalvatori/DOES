@@ -6,6 +6,7 @@ use App\Enums\CoreStatus;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Models\Setting;
 use App\Models\TrelloListMapping;
 use App\Models\User;
 use Carbon\Carbon;
@@ -566,9 +567,9 @@ class TrelloSyncService
             return $customMapping->trello_list_id;
         }
 
-        $boardId = $boardId ?: config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
-        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
-        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+        $boardId = $boardId ?: Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54')));
+        $apiKey = $apiKey ?: Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = $apiToken ?: Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
 
         $res = $this->getBoardLists($boardId, $apiKey, $apiToken);
 
@@ -607,9 +608,9 @@ class TrelloSyncService
             return false;
         }
 
-        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
-        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
-        $boardId = ! empty(trim($boardId ?? '')) ? trim($boardId) : config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
+        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+        $boardId = ! empty(trim($boardId ?? '')) ? trim($boardId) : Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54')));
 
         if (empty($apiToken)) {
             Log::info("Trello sync skipped for order {$order->id}: No API token set.");
@@ -674,9 +675,9 @@ class TrelloSyncService
             return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
         }
 
-        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
-        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
-        $boardId = $boardId ?: config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
+        $apiKey = $apiKey ?: Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = $apiToken ?: Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+        $boardId = $boardId ?: Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54')));
 
         if (! $apiToken) {
             Log::info("Trello card creation skipped for order {$order->id}: No API token set.");
@@ -1155,8 +1156,8 @@ class TrelloSyncService
             return ['success' => false, 'error' => 'No URL specified.'];
         }
 
-        $apiKey = config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
-        $apiToken = config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+        $apiKey = Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
 
         try {
             $response = Http::withHeaders([

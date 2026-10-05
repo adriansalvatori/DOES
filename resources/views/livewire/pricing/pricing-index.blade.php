@@ -327,8 +327,8 @@
                             <!-- SUBPRODUCTS & PRODUCT DETAILS (UNFOLDS AS PART OF LIST ITEM) -->
                             <div x-show="openProduct" x-collapse class="px-4 sm:px-6 pb-5 pt-2 space-y-4 bg-stone-50/30 border-t border-stone-100">
                                 <!-- Expanded Product Details Bar (Thumbnail, Description, Sizes) -->
-                                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-1 px-1">
-                                    <div class="flex items-center gap-3 min-w-0">
+                                <div class="flex flex-col sm:flex-row sm:items-start justify-start gap-4 py-1 px-1">
+                                    <div class="flex items-start gap-3 min-w-0 text-left">
                                         <!-- Thumbnail Image (Only shown if image_url exists) -->
                                         @if($product->image_url)
                                             <div class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 shrink-0 flex items-center justify-center overflow-hidden">
@@ -336,33 +336,33 @@
                                             </div>
                                         @endif
 
-                                        <div class="space-y-0.5 min-w-0">
-                                            <div class="flex items-center gap-2 flex-wrap">
-                                                <span class="text-[11px] text-stone-400 font-medium">
+                                        <div class="space-y-1 min-w-0 text-left">
+                                            <div class="flex items-center gap-2 flex-wrap text-left">
+                                                <span class="text-[11px] text-stone-400 font-medium text-left">
                                                     ({{ $product->variants->count() }} {{ $product->variants->count() === 1 ? __('variante') : __('variantes') }})
                                                 </span>
                                             </div>
 
                                             @if($product->description)
-                                                <p class="text-xs text-stone-500 font-normal line-clamp-2">
+                                                <p class="text-xs text-stone-500 font-normal text-left">
                                                     {{ $product->description }}
                                                 </p>
                                             @endif
+
+                                            <!-- Badges de Tamaños Disponibles (Medidas) -->
+                                            @php $sizes = $product->getSizesList(); @endphp
+                                            @if(!empty($sizes))
+                                                <div class="flex items-center gap-1 flex-wrap text-left pt-1 justify-start">
+                                                    <span class="text-[9.5px] font-bold uppercase tracking-wider text-stone-400 mr-1 text-left">{{ __('Medidas:') }}</span>
+                                                    @foreach($sizes as $sz)
+                                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-white text-stone-700 border border-stone-200">
+                                                            {{ $sz }}
+                                                        </span>
+                                                    @endforeach
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
-
-                                    <!-- Badges de Tamaños Disponibles (Medidas) -->
-                                    @php $sizes = $product->getSizesList(); @endphp
-                                    @if(!empty($sizes))
-                                        <div class="flex items-center gap-1 flex-wrap shrink-0 pt-1 sm:pt-0">
-                                            <span class="text-[9.5px] font-bold uppercase tracking-wider text-stone-400 mr-1">{{ __('Medidas:') }}</span>
-                                            @foreach($sizes as $sz)
-                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-medium bg-white text-stone-700 border border-stone-200">
-                                                    {{ $sz }}
-                                                </span>
-                                            @endforeach
-                                        </div>
-                                    @endif
                                 </div>
                                 @forelse($product->variants as $variant)
                                     @php 
@@ -402,8 +402,9 @@
                                                 </h4>
 
                                                 @if($variantSupplier)
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="{{ __('Proveedor de este subproducto') }}">
-                                                        <x-lucide-building-2 class="w-3 h-3 text-indigo-500" />
+                                                    @php $vSupStyle = $variantSupplier->getBadgeStyle(); @endphp
+                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-bold border transition-colors" style="{{ $vSupStyle['inline'] }}" title="{{ __('Proveedor de este subproducto') }}">
+                                                        <x-lucide-building-2 class="w-3 h-3" style="color: {{ $vSupStyle['text'] }}" />
                                                         <span>{{ $variantSupplier->name }}</span>
                                                     </span>
                                                 @endif
@@ -453,14 +454,6 @@
                                                     >
                                                         <x-lucide-pencil class="w-3 h-3 text-stone-500" />
                                                         <span>{{ __('Editar') }}</span>
-                                                    </button>
-
-                                                    <button 
-                                                        wire:click="openAddTierModal({{ $variant->id }})"
-                                                        class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-stone-900 hover:bg-stone-800 text-white transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                                                    >
-                                                        <x-lucide-plus class="w-3 h-3" />
-                                                        <span>{{ __('Escala de Cantidad') }}</span>
                                                     </button>
                                                 @endif
                                             </div>
@@ -591,6 +584,21 @@
                                                         </tr>
                                                     @endforelse
                                                 </tbody>
+                                                @if(auth()->user()?->canManagePricing())
+                                                    <tfoot class="border-t border-stone-200/80 bg-stone-50/20">
+                                                        <tr>
+                                                            <td colspan="6" class="p-0">
+                                                                <button 
+                                                                    wire:click="openAddTierModal({{ $variant->id }})"
+                                                                    class="w-full py-2 px-3 flex items-center gap-1.5 text-[11.5px] font-medium text-stone-500 hover:text-stone-900 hover:bg-stone-100/70 transition cursor-pointer group"
+                                                                >
+                                                                    <x-lucide-plus class="w-3.5 h-3.5 text-stone-400 group-hover:text-stone-700 transition" />
+                                                                    <span>{{ __('Agrega nueva opción de precio') }}</span>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    </tfoot>
+                                                @endif
                                             </table>
                                         </div>
                                     </div>

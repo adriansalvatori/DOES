@@ -23,6 +23,14 @@ class Supplier extends Model
         'is_active' => 'boolean',
     ];
 
+    /**
+     * Get the badge style matching an InstallationType with the same name.
+     */
+    public function getBadgeStyle(): array
+    {
+        return InstallationType::getStyleFor($this->name);
+    }
+
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);

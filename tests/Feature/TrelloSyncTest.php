@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\CoreStatus;
 use App\Livewire\Settings\TrelloSync;
 use App\Models\Order;
+use App\Models\Setting;
+use App\Models\User;
 use App\Services\TrelloSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -162,5 +164,20 @@ class TrelloSyncTest extends TestCase
         $this->assertNotEmpty($res['details']);
         $this->assertStringContainsString('Fecha de entrega', implode(' ', $res['details']));
         $this->assertStringContainsString('Tarea:', implode(' ', $res['details']));
+    }
+
+    public function test_save_settings_persists_board_id_and_token_in_database_and_dispatches_event(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($user);
+
+        Livewire::test(TrelloSync::class)
+            ->set('boardId', 'https://trello.com/b/NEWBOARD123/my-board')
+            ->set('userToken', 'new_token_64_characters_long_12345678901234567890123456789012345')
+            ->call('saveSettings')
+            ->assertDispatched('trello-settings-saved');
+
+        $this->assertEquals('https://trello.com/b/NEWBOARD123/my-board', Setting::get('trello_board_id'));
+        $this->assertEquals('new_token_64_characters_long_12345678901234567890123456789012345', Setting::get('trello_user_token'));
     }
 }

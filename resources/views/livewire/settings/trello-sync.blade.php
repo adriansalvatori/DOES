@@ -8,15 +8,32 @@
             window.KudosDirtyGuard.register('trello-sync', () => this.isDirty());
             this.$cleanup(() => window.KudosDirtyGuard.unregister('trello-sync'));
         },
+        updateInitial() {
+            this.initialBoard = $wire.boardId || '';
+            this.initialToken = $wire.userToken || '';
+        },
         isDirty() {
             return ($wire.boardId || '') !== this.initialBoard || ($wire.userToken || '') !== this.initialToken;
         }
     }"
+    @trello-settings-saved.window="updateInitial()"
     class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
 
-    <div x-show="isDirty()" x-transition class="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs font-semibold flex items-center gap-2 shadow-2xs">
-        <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0" />
-        <span>{{ __('Tienes cambios sin guardar en la configuración del tablero o token de Trello. Sincroniza para aplicar tus cambios.') }}</span>
+    <div x-show="isDirty()" x-transition class="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs font-semibold flex items-center justify-between gap-3 shadow-2xs">
+        <div class="flex items-center gap-2">
+            <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0" />
+            <span>{{ __('Tienes cambios sin guardar en la configuración del tablero o token de Trello.') }}</span>
+        </div>
+        <button 
+            type="button"
+            wire:click="saveSettings"
+            wire:loading.attr="disabled"
+            wire:target="saveSettings"
+            class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5 shrink-0">
+            <x-lucide-save wire:loading.remove wire:target="saveSettings" class="w-3.5 h-3.5" />
+            <x-lucide-refresh-cw wire:loading wire:target="saveSettings" class="w-3.5 h-3.5 animate-spin" />
+            <span>{{ __('Guardar Configuración') }}</span>
+        </button>
     </div>
 
     @if (session()->has('message'))
@@ -623,6 +640,34 @@
                         </div>
                         <p class="text-[11px] text-zinc-500 leading-relaxed">{{ __('Haz clic en Generar Token, da clic en "Permitir" en Trello y copia el Token de 64 caracteres.') }}</p>
                     </div>
+                </div>
+
+                <!-- Save Settings Footer -->
+                <div class="pt-3.5 border-t border-[#e9e9e7] flex items-center justify-between gap-2">
+                    <template x-if="isDirty()">
+                        <span class="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
+                            <x-lucide-alert-circle class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>{{ __('Cambios pendientes de guardar') }}</span>
+                        </span>
+                    </template>
+                    <template x-if="!isDirty()">
+                        <span class="text-[11px] text-zinc-400 flex items-center gap-1">
+                            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>{{ __('Configuración al día') }}</span>
+                        </span>
+                    </template>
+
+                    <button 
+                        type="button"
+                        wire:click="saveSettings"
+                        wire:loading.attr="disabled"
+                        wire:target="saveSettings"
+                        :class="isDirty() ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white font-medium'"
+                        class="px-4 py-2 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                        <x-lucide-save wire:loading.remove wire:target="saveSettings" class="w-3.5 h-3.5" />
+                        <x-lucide-refresh-cw wire:loading wire:target="saveSettings" class="w-3.5 h-3.5 animate-spin" />
+                        <span>{{ __('Guardar Configuración') }}</span>
+                    </button>
                 </div>
             </div>
         </div>

@@ -3,6 +3,7 @@
 namespace App\Livewire\Settings;
 
 use App\Enums\CoreStatus;
+use App\Models\Setting;
 use App\Models\TrelloListMapping;
 use App\Services\TrelloSyncService;
 use Illuminate\Support\Facades\Auth;
@@ -29,9 +30,9 @@ class TrelloMapping extends Component
             abort(403, __('No tiene permisos para acceder a esta sección.'));
         }
 
-        $this->apiKey = (string) (config('services.trello.api_key') ?: env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
-        $this->userToken = (string) (config('services.trello.token') ?: env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET', '')));
-        $this->boardId = (string) (config('services.trello.board_id') ?: env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
+        $this->apiKey = (string) (Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'))));
+        $this->userToken = (string) (Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET', '')))));
+        $this->boardId = (string) (Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'))));
 
         $this->loadTrelloLists();
         $this->loadSavedMappings();
@@ -39,9 +40,9 @@ class TrelloMapping extends Component
 
     public function loadTrelloLists(): void
     {
-        $boardId = ! empty(trim($this->boardId)) ? $this->boardId : env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54');
-        $apiKey = ! empty(trim($this->apiKey)) ? $this->apiKey : env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f');
-        $userToken = ! empty(trim($this->userToken)) ? $this->userToken : env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET', ''));
+        $boardId = ! empty(trim($this->boardId)) ? $this->boardId : Setting::get('trello_board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'));
+        $apiKey = ! empty(trim($this->apiKey)) ? $this->apiKey : Setting::get('trello_api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $userToken = ! empty(trim($this->userToken)) ? $this->userToken : Setting::get('trello_user_token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET', '')));
 
         $syncService = app(TrelloSyncService::class);
         $res = $syncService->getBoardLists($boardId, $apiKey, $userToken);

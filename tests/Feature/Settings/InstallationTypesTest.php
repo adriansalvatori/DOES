@@ -182,4 +182,55 @@ class InstallationTypesTest extends TestCase
         $order->refresh();
         $this->assertEquals('4OVER', $order->installation_type);
     }
+
+    public function test_can_update_color_directly_from_list(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $item = InstallationType::firstOrCreate(
+            ['name' => 'DIRECT COLOR TEST'],
+            [
+                'color' => '#0284C7',
+                'style_type' => 'solid',
+                'bg_color' => '#0284C7',
+                'text_color' => '#FFFFFF',
+                'border_color' => '#0284C7',
+                'sort_order' => 1,
+                'is_active' => true,
+            ]
+        );
+
+        Livewire::actingAs($admin)
+            ->test(InstallationTypes::class)
+            ->call('updateColor', $item->id, '#EF4444')
+            ->assertDispatched('installation-types-updated');
+
+        $item->refresh();
+        $this->assertEquals('#EF4444', $item->color);
+        $this->assertEquals('#EF4444', $item->bg_color);
+    }
+
+    public function test_can_toggle_style_type_directly_from_list(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $item = InstallationType::firstOrCreate(
+            ['name' => 'STYLE TOGGLE TEST'],
+            [
+                'color' => '#0284C7',
+                'style_type' => 'solid',
+                'bg_color' => '#0284C7',
+                'text_color' => '#FFFFFF',
+                'border_color' => '#0284C7',
+                'sort_order' => 2,
+                'is_active' => true,
+            ]
+        );
+
+        Livewire::actingAs($admin)
+            ->test(InstallationTypes::class)
+            ->call('toggleStyleType', $item->id)
+            ->assertDispatched('installation-types-updated');
+
+        $item->refresh();
+        $this->assertEquals('light', $item->style_type);
+    }
 }

@@ -36,13 +36,40 @@ class InstallationType extends Model
 
     protected static function booted(): void
     {
-        static::saved(function () {
+        static::saved(function (self $model) {
             static::clearCache();
+            if (! empty($model->name)) {
+                $existing = Supplier::all();
+                $match = $existing->first(fn ($s) => mb_strtolower(trim($s->name)) === mb_strtolower(trim($model->name)));
+                if (! $match) {
+                    Supplier::create([
+                        'name' => $model->name,
+                        'is_active' => true,
+                    ]);
+                }
+            }
         });
 
         static::deleted(function () {
             static::clearCache();
         });
+    }
+
+    public static function syncAllToSuppliers(): void
+    {
+        $existing = Supplier::all();
+        foreach (static::all() as $item) {
+            if (empty($item->name)) {
+                continue;
+            }
+            $match = $existing->first(fn ($s) => mb_strtolower(trim($s->name)) === mb_strtolower(trim($item->name)));
+            if (! $match) {
+                Supplier::create([
+                    'name' => $item->name,
+                    'is_active' => true,
+                ]);
+            }
+        }
     }
 
     public static function clearCache(): void
@@ -219,15 +246,29 @@ class InstallationType extends Model
         }
 
         $cached = static::getAllCached();
-        $item = $cached->firstWhere('name', $name);
+        $normalized = mb_strtolower(trim($name));
 
-        if ($item && $item->bg_color && $item->text_color) {
-            return [
-                'inline' => $item->getInlineBadgeStyle(),
-                'bg' => $item->bg_color,
-                'text' => $item->text_color,
-                'border' => $item->border_color ?: $item->bg_color,
-            ];
+        $item = $cached->first(function ($it) use ($name, $normalized) {
+            $itName = is_array($it) ? ($it['name'] ?? '') : ($it->name ?? '');
+
+            return $itName === $name || mb_strtolower(trim($itName)) === $normalized;
+        });
+
+        if ($item) {
+            $bgColor = is_array($item) ? ($item['bg_color'] ?? null) : $item->bg_color;
+            $textColor = is_array($item) ? ($item['text_color'] ?? null) : $item->text_color;
+            $borderColor = is_array($item) ? ($item['border_color'] ?? null) : $item->border_color;
+
+            if ($bgColor && $textColor) {
+                $bColor = $borderColor ?: $bgColor;
+
+                return [
+                    'inline' => "background-color: {$bgColor}; color: {$textColor}; border-color: {$bColor};",
+                    'bg' => $bgColor,
+                    'text' => $textColor,
+                    'border' => $bColor,
+                ];
+            }
         }
 
         return [

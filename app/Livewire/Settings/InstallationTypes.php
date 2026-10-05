@@ -162,6 +162,36 @@ class InstallationTypes extends Component
         $this->dispatch('installation-types-updated');
     }
 
+    public function updateColor(int $id, string $hex): void
+    {
+        $item = InstallationType::findOrFail($id);
+
+        if (! preg_match('/^#[a-fA-F0-9]{6}$/', $hex) && ! preg_match('/^#[a-fA-F0-9]{3}$/', $hex)) {
+            return;
+        }
+
+        $palette = InstallationType::derivePaletteFromColor($hex, $item->style_type ?? 'solid');
+        $item->update($palette);
+
+        InstallationType::clearCache();
+        $this->dispatch('installation-types-updated');
+
+        session()->flash('message', __('Color de ":name" actualizado correctamente.', ['name' => $item->name]));
+    }
+
+    public function toggleStyleType(int $id): void
+    {
+        $item = InstallationType::findOrFail($id);
+        $newStyle = ($item->style_type === 'solid') ? 'light' : 'solid';
+        $palette = InstallationType::derivePaletteFromColor($item->color ?? '#0284C7', $newStyle);
+        $item->update($palette);
+
+        InstallationType::clearCache();
+        $this->dispatch('installation-types-updated');
+
+        session()->flash('message', __('Estilo de ":name" actualizado.', ['name' => $item->name]));
+    }
+
     public function closeModal(): void
     {
         $this->showModal = false;
