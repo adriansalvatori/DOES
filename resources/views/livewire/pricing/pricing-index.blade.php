@@ -207,9 +207,23 @@
                     class="flex items-stretch min-h-[110px] sm:min-h-[130px] bg-white hover:bg-stone-50/50 transition cursor-pointer select-none group border-b border-stone-100"
                 >
                     <!-- IMAGEN DE PORTADA DE CATEGORÍA (LLENA LA SECCIÓN COMPLETA A LA IZQUIERDA) -->
-                    <div class="w-28 sm:w-44 md:w-56 shrink-0 relative overflow-hidden bg-stone-100 self-stretch">
+                    <div class="w-28 sm:w-44 md:w-56 shrink-0 relative overflow-hidden bg-stone-100 self-stretch" x-data="{ imgError: false }">
                         @if($category->image_url)
-                            <img src="{{ $category->image_url }}" alt="{{ $category->name }}" class="w-full h-full object-cover absolute inset-0">
+                            <img 
+                                src="{{ $category->image_url }}" 
+                                alt="{{ $category->name }}" 
+                                x-show="!imgError" 
+                                x-on:error="imgError = true" 
+                                class="w-full h-full object-cover absolute inset-0"
+                            >
+                            <div 
+                                x-show="imgError" 
+                                x-cloak 
+                                class="w-full h-full bg-gradient-to-br from-stone-100 to-stone-200 flex flex-col items-center justify-center text-stone-400 p-3 text-center absolute inset-0"
+                            >
+                                <x-lucide-image class="w-7 h-7 stroke-[1.5]" />
+                                <span class="text-[9px] font-bold tracking-wider uppercase mt-1 text-stone-400">{{ __('Portada') }}</span>
+                            </div>
                         @else
                             <div class="w-full h-full bg-gradient-to-br from-stone-100 to-stone-200 flex flex-col items-center justify-center text-stone-400 p-3 text-center absolute inset-0">
                                 <x-lucide-image class="w-7 h-7 stroke-[1.5]" />
@@ -331,8 +345,8 @@
                                     <div class="flex items-start gap-3 min-w-0 text-left">
                                         <!-- Thumbnail Image (Only shown if image_url exists) -->
                                         @if($product->image_url)
-                                            <div class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 shrink-0 flex items-center justify-center overflow-hidden">
-                                                <img src="{{ $product->image_url }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                            <div x-data="{ imgError: false }" x-show="!imgError" class="w-12 h-12 rounded-xl bg-stone-100 border border-stone-200 shrink-0 flex items-center justify-center overflow-hidden">
+                                                <img src="{{ $product->image_url }}" alt="{{ $product->name }}" x-on:error="imgError = true" class="w-full h-full object-cover">
                                             </div>
                                         @endif
 
@@ -380,12 +394,14 @@
                                                 <!-- Subproduct Thumbnail Image Box -->
                                                 <button 
                                                     type="button"
+                                                    x-data="{ imgError: false }"
                                                     @if(auth()->user()?->canManagePricing()) wire:click="openEditVariantModal({{ $variant->id }})" @endif
                                                     class="w-9 h-9 rounded-xl bg-white border border-stone-200 shrink-0 overflow-hidden flex items-center justify-center relative group/vimg cursor-pointer transition hover:border-stone-400 shadow-2xs"
                                                     title="{{ __('Subir o cambiar imagen de este subproducto') }}"
                                                 >
                                                     @if($variant->image_url)
-                                                        <img src="{{ $variant->image_url }}" alt="{{ $variant->name }}" class="w-full h-full object-cover">
+                                                        <img src="{{ $variant->image_url }}" alt="{{ $variant->name }}" x-show="!imgError" x-on:error="imgError = true" class="w-full h-full object-cover">
+                                                        <x-lucide-image x-show="imgError" x-cloak class="w-4 h-4 text-stone-400 group-hover/vimg:text-stone-700 transition stroke-[1.5]" />
                                                     @else
                                                         <x-lucide-image class="w-4 h-4 text-stone-400 group-hover/vimg:text-stone-700 transition stroke-[1.5]" />
                                                     @endif
@@ -970,11 +986,12 @@
 
                         <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
+                                <div x-data="{ imgError: false }" class="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
                                     @if ($newVariantFile && method_exists($newVariantFile, 'temporaryUrl'))
                                         <img src="{{ $newVariantFile->temporaryUrl() }}" class="w-full h-full object-cover">
                                     @elseif ($newVariantImageUrl)
-                                        <img src="{{ $newVariantImageUrl }}" class="w-full h-full object-cover">
+                                        <img src="{{ $newVariantImageUrl }}" x-show="!imgError" x-on:error="imgError = true" class="w-full h-full object-cover">
+                                        <x-lucide-image x-show="imgError" x-cloak class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @else
                                         <x-lucide-image class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @endif
@@ -1138,11 +1155,12 @@
 
                         <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
+                                <div x-data="{ imgError: false }" class="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
                                     @if ($editVariantFile && method_exists($editVariantFile, 'temporaryUrl'))
                                         <img src="{{ $editVariantFile->temporaryUrl() }}" class="w-full h-full object-cover">
                                     @elseif ($editVariantImageUrl)
-                                        <img src="{{ $editVariantImageUrl }}" class="w-full h-full object-cover">
+                                        <img src="{{ $editVariantImageUrl }}" x-show="!imgError" x-on:error="imgError = true" class="w-full h-full object-cover">
+                                        <x-lucide-image x-show="imgError" x-cloak class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @else
                                         <x-lucide-image class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @endif
@@ -1315,11 +1333,12 @@
 
                         <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5">
                             <div class="flex items-center gap-3">
-                                <div class="w-16 h-12 rounded-lg bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
+                                <div x-data="{ imgError: false }" class="w-16 h-12 rounded-lg bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
                                     @if ($newCategoryFile && method_exists($newCategoryFile, 'temporaryUrl'))
                                         <img src="{{ $newCategoryFile->temporaryUrl() }}" class="w-full h-full object-cover">
                                     @elseif ($newCategoryImageUrl)
-                                        <img src="{{ $newCategoryImageUrl }}" class="w-full h-full object-cover">
+                                        <img src="{{ $newCategoryImageUrl }}" x-show="!imgError" x-on:error="imgError = true" class="w-full h-full object-cover">
+                                        <x-lucide-image x-show="imgError" x-cloak class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @else
                                         <x-lucide-image class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @endif
@@ -1429,11 +1448,12 @@
 
                         <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5">
                             <div class="flex items-center gap-3">
-                                <div class="w-16 h-12 rounded-lg bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
+                                <div x-data="{ imgError: false }" class="w-16 h-12 rounded-lg bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
                                     @if ($editCategoryFile && method_exists($editCategoryFile, 'temporaryUrl'))
                                         <img src="{{ $editCategoryFile->temporaryUrl() }}" class="w-full h-full object-cover">
                                     @elseif ($editCategoryImageUrl)
-                                        <img src="{{ $editCategoryImageUrl }}" class="w-full h-full object-cover">
+                                        <img src="{{ $editCategoryImageUrl }}" x-show="!imgError" x-on:error="imgError = true" class="w-full h-full object-cover">
+                                        <x-lucide-image x-show="imgError" x-cloak class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @else
                                         <x-lucide-image class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @endif
@@ -1583,11 +1603,12 @@
 
                         <div class="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-2.5">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
+                                <div x-data="{ imgError: false }" class="w-12 h-12 rounded-xl bg-stone-200 border border-stone-300 overflow-hidden shrink-0 flex items-center justify-center relative shadow-2xs">
                                     @if ($editProductFile && method_exists($editProductFile, 'temporaryUrl'))
                                         <img src="{{ $editProductFile->temporaryUrl() }}" class="w-full h-full object-cover">
                                     @elseif ($editProductImageUrl)
-                                        <img src="{{ $editProductImageUrl }}" class="w-full h-full object-cover">
+                                        <img src="{{ $editProductImageUrl }}" x-show="!imgError" x-on:error="imgError = true" class="w-full h-full object-cover">
+                                        <x-lucide-box x-show="imgError" x-cloak class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @else
                                         <x-lucide-box class="w-5 h-5 text-stone-400 stroke-[1.5]" />
                                     @endif

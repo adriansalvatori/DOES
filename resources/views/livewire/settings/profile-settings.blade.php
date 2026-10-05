@@ -32,7 +32,12 @@
             @if($avatar_file && ! $errors->has('avatar_file') && in_array(strtolower($avatar_file->getClientOriginalExtension()), ['jpg', 'jpeg', 'png', 'webp', 'gif']))
                 <img src="{{ $avatar_file->temporaryUrl() }}" alt="{{ $user->name }}" class="w-14 h-14 rounded-full object-cover shadow-sm border border-stone-200" />
             @elseif($user->avatar_url)
-                <img src="{{ $user->avatar_url }}" alt="{{ $user->name }}" class="w-14 h-14 rounded-full object-cover shadow-sm border border-stone-200" />
+                <div x-data="{ imgError: false }" class="shrink-0">
+                    <img src="{{ $user->avatar_url }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $user->name }}" class="w-14 h-14 rounded-full object-cover shadow-sm border border-stone-200" />
+                    <div x-show="imgError" x-cloak class="w-14 h-14 rounded-full bg-stone-900 text-white font-bold text-lg flex items-center justify-center shadow-md shrink-0">
+                        {{ $user->initials }}
+                    </div>
+                </div>
             @else
                 <div class="w-14 h-14 rounded-full bg-stone-900 text-white font-bold text-lg flex items-center justify-center shadow-md shrink-0">
                     {{ $user->initials }}
@@ -323,11 +328,12 @@
                         
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl bg-stone-50/70 border border-stone-200">
                             <!-- Avatar Preview -->
-                            <div class="relative shrink-0 w-16 h-16 rounded-full overflow-hidden ring-2 ring-stone-300 shadow-xs bg-stone-200 flex items-center justify-center">
+                            <div x-data="{ imgError: false }" class="relative shrink-0 w-16 h-16 rounded-full overflow-hidden ring-2 ring-stone-300 shadow-xs bg-stone-200 flex items-center justify-center">
                                 @if ($avatar_file && ! $errors->has('avatar_file') && in_array(strtolower($avatar_file->getClientOriginalExtension()), ['jpg', 'jpeg', 'png', 'webp', 'gif']))
                                     <img src="{{ $avatar_file->temporaryUrl() }}" alt="Preview" class="w-full h-full object-cover">
                                 @elseif ($avatar_url)
-                                    <img src="{{ $avatar_url }}" alt="{{ $user->name }}" class="w-full h-full object-cover">
+                                    <img src="{{ $avatar_url }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $user->name }}" class="w-full h-full object-cover">
+                                    <span x-show="imgError" x-cloak class="text-stone-700 font-bold text-lg select-none">{{ $user->initials }}</span>
                                 @else
                                     <span class="text-stone-700 font-bold text-lg select-none">{{ $user->initials }}</span>
                                 @endif

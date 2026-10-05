@@ -522,7 +522,12 @@
                     class="flex items-center gap-2 min-w-0 group hover:opacity-80 transition" 
                     title="{{ auth()->user()->name }}">
                     @if(auth()->user()->avatar_url)
-                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-7 h-7 rounded-full object-cover shrink-0 shadow-2xs border border-stone-200" />
+                        <div x-data="{ imgError: false }" class="shrink-0">
+                            <img src="{{ auth()->user()->avatar_url }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ auth()->user()->name }}" class="w-7 h-7 rounded-full object-cover shadow-2xs border border-stone-200" />
+                            <div x-show="imgError" x-cloak class="w-7 h-7 rounded-full bg-stone-900 text-white font-bold text-[11px] flex items-center justify-center shadow-2xs">
+                                {{ auth()->user()->initials }}
+                            </div>
+                        </div>
                     @else
                         <div class="w-7 h-7 rounded-full bg-stone-900 text-white font-bold text-[11px] flex items-center justify-center shrink-0 shadow-2xs">
                             {{ auth()->user()->initials }}
@@ -542,7 +547,10 @@
                     class="w-7 h-7 mx-auto rounded-full overflow-hidden flex items-center justify-center shrink-0 hover:ring-2 hover:ring-stone-400 transition cursor-pointer shadow-2xs {{ auth()->user()->avatar_url ? 'border border-stone-200' : 'bg-stone-900 text-white font-bold text-[11px]' }}"
                     title="{{ auth()->user()->name }}">
                     @if(auth()->user()->avatar_url)
-                        <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover" />
+                        <div x-data="{ imgError: false }" class="w-full h-full flex items-center justify-center">
+                            <img src="{{ auth()->user()->avatar_url }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover" />
+                            <span x-show="imgError" x-cloak class="font-bold text-[11px] text-white bg-stone-900 w-full h-full flex items-center justify-center">{{ auth()->user()->initials }}</span>
+                        </div>
                     @else
                         {{ auth()->user()->initials }}
                     @endif
@@ -670,7 +678,12 @@
                             class="flex items-center gap-1.5 p-1 rounded-lg hover:bg-stone-200/60 transition cursor-pointer"
                             title="{{ auth()->user()->name }} ({{ auth()->user()->role?->label() }})">
                             @if(auth()->user()->avatar_url)
-                                <img src="{{ auth()->user()->avatar_url }}" alt="{{ auth()->user()->name }}" class="w-6 h-6 rounded-full object-cover shrink-0 shadow-2xs border border-stone-200" />
+                                <div x-data="{ imgError: false }" class="shrink-0">
+                                    <img src="{{ auth()->user()->avatar_url }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ auth()->user()->name }}" class="w-6 h-6 rounded-full object-cover shadow-2xs border border-stone-200" />
+                                    <div x-show="imgError" x-cloak class="w-6 h-6 rounded-full bg-stone-900 text-white font-bold text-[10px] flex items-center justify-center shadow-2xs">
+                                        {{ auth()->user()->initials }}
+                                    </div>
+                                </div>
                             @else
                                 <div class="w-6 h-6 rounded-full bg-stone-900 text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
                                     {{ auth()->user()->initials }}

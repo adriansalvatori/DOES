@@ -2246,7 +2246,12 @@
                                                                 type="button" 
                                                                 wire:click="previewMedia('{{ $event->metadata['approval_image'] }}', '{{ __('Soporte de Aprobación') }}', 'image')" 
                                                                 class="inline-flex items-center gap-2 p-1 rounded-md bg-white border border-emerald-200 hover:border-emerald-300 text-emerald-950 transition cursor-pointer group shadow-2xs">
-                                                                <img src="{{ $event->metadata['approval_image'] }}" alt="{{ __('Comprobante') }}" class="w-8 h-8 object-cover rounded border border-stone-200 shrink-0">
+                                                                <div x-data="{ imgError: false }" class="shrink-0">
+                                                                    <img src="{{ $event->metadata['approval_image'] }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ __('Comprobante') }}" class="w-8 h-8 object-cover rounded border border-stone-200">
+                                                                    <div x-show="imgError" x-cloak class="w-8 h-8 rounded border border-stone-200 bg-stone-100 flex items-center justify-center text-stone-400">
+                                                                        <x-lucide-file-text class="w-4 h-4" />
+                                                                    </div>
+                                                                </div>
                                                                 <span class="font-medium text-[11px] group-hover:underline text-emerald-800 pr-1.5">{{ __('Ver comprobante adjunto') }}</span>
                                                             </button>
                                                         </div>
@@ -2799,7 +2804,12 @@
                                             <div class="flex items-center justify-between gap-2">
                                                 <div class="flex items-center gap-2 min-w-0">
                                                     @if(!empty($comment['author_avatar']))
-                                                        <img src="{{ $comment['author_avatar'] }}" alt="{{ $comment['author_name'] }}" class="w-6 h-6 rounded-full object-cover shrink-0 shadow-2xs border border-stone-200">
+                                                        <div x-data="{ imgError: false }" class="shrink-0">
+                                                            <img src="{{ $comment['author_avatar'] }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $comment['author_name'] }}" class="w-6 h-6 rounded-full object-cover shadow-2xs border border-stone-200">
+                                                            <div x-show="imgError" x-cloak class="w-6 h-6 rounded-full {{ !empty($comment['is_kudos']) ? 'bg-stone-900 text-white' : 'bg-sky-100 text-sky-700' }} font-bold text-[10px] flex items-center justify-center shadow-2xs">
+                                                                {{ !empty($comment['author_initials']) ? $comment['author_initials'] : strtoupper(substr($comment['author_name'] ?? 'U', 0, 2)) }}
+                                                            </div>
+                                                        </div>
                                                     @else
                                                         <div class="w-6 h-6 rounded-full {{ !empty($comment['is_kudos']) ? 'bg-stone-900 text-white' : 'bg-sky-100 text-sky-700' }} font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
                                                             {{ !empty($comment['author_initials']) ? $comment['author_initials'] : strtoupper(substr($comment['author_name'] ?? 'U', 0, 2)) }}
@@ -3482,7 +3492,13 @@
             <!-- Content Area -->
             <div class="w-full max-w-5xl bg-zinc-950 border-x border-b border-zinc-800 rounded-b-2xl p-2 sm:p-4 flex items-center justify-center min-h-[50vh] max-h-[80vh] overflow-auto shadow-2xl relative">
                 @if($previewMediaType === 'image')
-                    <img src="{{ $previewMediaUrl }}" alt="{{ $previewMediaTitle }}" class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-md">
+                    <div x-data="{ imgError: false }" class="flex flex-col items-center justify-center">
+                        <img src="{{ $previewMediaUrl }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $previewMediaTitle }}" class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-md">
+                        <div x-show="imgError" x-cloak class="p-8 text-center text-zinc-400 flex flex-col items-center gap-2">
+                            <x-lucide-image-off class="w-12 h-12 stroke-[1.5]" />
+                            <p class="text-sm font-medium">{{ __('No se pudo cargar la vista previa de la imagen') }}</p>
+                        </div>
+                    </div>
                 @elseif($previewMediaType === 'pdf')
                     <iframe src="{{ $previewMediaUrl }}" class="w-full h-[75vh] rounded-lg border-0 bg-white"></iframe>
                 @else

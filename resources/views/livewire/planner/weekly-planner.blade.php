@@ -693,18 +693,6 @@
                                     $isToday = !$isNextWeek && $day['date']->isToday();
                                     $isFirstDayOfWeek = !$isNextWeek && $loop->first;
                                     
-                                    $dayOrders = $isNextWeek
-                                        ? $designer->orders->filter(fn($o) => $o->scheduled_date && $o->scheduled_date->gte(Carbon\Carbon::parse($day['date_string'])))
-                                        : $designer->orders->filter(function ($o) use ($day, $isFirstDayOfWeek) {
-                                            if ($o->scheduled_date?->toDateString() === $day['date_string']) {
-                                                return true;
-                                            }
-                                            if ($isFirstDayOfWeek && $o->scheduled_date && $o->scheduled_date->lt(Carbon\Carbon::parse($day['date_string'])) && $o->core_status !== \App\Enums\CoreStatus::EN_PRODUCCION && $o->core_status !== \App\Enums\CoreStatus::ARCHIVED) {
-                                                return true;
-                                            }
-                                            return false;
-                                        });
-
                                     $daySubtasks = $isNextWeek
                                         ? $designerSubtasks->filter(fn($st) => $st->scheduled_date && $st->scheduled_date->gte(Carbon\Carbon::parse($day['date_string'])))
                                         : $designerSubtasks->filter(function ($st) use ($day, $isFirstDayOfWeek) {
@@ -780,7 +768,7 @@
                                                 {{ $isNextWeek ? $day['range_label'] : $day['date']->format('d M') }}
                                             </span>
                                             <span class="px-1.5 py-0.5 rounded bg-white text-[9.5px] font-mono text-zinc-600 border border-stone-200 font-semibold shrink-0">
-                                                {{ $dayOrders->count() + $daySubtasks->count() }}
+                                                {{ $daySubtasks->count() }}
                                             </span>
                                             <button 
                                                 type="button"
@@ -794,127 +782,12 @@
 
                                     <!-- Kanban Cards Body -->
                                     <div class="p-2 overflow-y-auto flex-1 space-y-2 min-h-0">
-                                        @if($dayOrders->isEmpty() && $daySubtasks->isEmpty())
+                                        @if($daySubtasks->isEmpty())
                                             <div class="py-6 text-center border border-dashed border-stone-200/80 rounded-lg my-1 bg-stone-50/40">
                                                 <span class="text-[10px] text-zinc-400 font-normal select-none">Sin trabajo agendado</span>
                                             </div>
                                         @else
                                             <div class="space-y-2">
-                                                <!-- Main Order Kanban Cards -->
-                                                @foreach($dayOrders as $order)
-                                                    <div 
-                                                        draggable="true" 
-                                                        @dragstart="$event.dataTransfer.setData('text/plain', 'order:{{ $order->id }}')"
-                                                        x-data="{ openSub: false, customTitle: '', targetDate: '{{ $day['date_string'] }}' }"
-                                                        class="bg-white border rounded-xl p-2.5 space-y-1.5 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $order->done_today ? 'opacity-65 bg-stone-50 border-stone-200' : ($order->isUrgente() ? 'border-red-400 border-l-4 border-l-red-500 bg-red-50/30' : ($order->isOverdue() ? 'border-amber-400 border-l-4 border-l-amber-500 bg-amber-50/20' : 'border-[#e9e9e7] hover:border-stone-400')) }}">
-                                                        
-                                                        <div class="flex items-start justify-between gap-1.5 min-w-0">
-                                                            <div class="flex items-center gap-2 min-w-0 flex-1">
-                                                                <button 
-                                                                    wire:click="toggleDoneToday({{ $order->id }})" 
-                                                                    type="button"
-                                                                    class="w-3.5 h-3.5 rounded-md border transition flex items-center justify-center shrink-0 cursor-pointer mt-0.5 {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
-                                                                    <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
-                                                                </button>
-                                                                <div class="min-w-0 flex-1">
-                                                                    <h4 class="font-semibold text-[11.5px] text-zinc-900 truncate leading-tight uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->company_name }}</h4>
-                                                                    <p class="font-normal text-[10px] text-zinc-500 truncate leading-tight mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}">{{ $order->task_name }}</p>
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button wire:click="unscheduleOrder({{ $order->id }})" class="p-0.5 text-zinc-400 hover:text-red-600 transition" title="Desprogramar">
-                                                                    <x-lucide-x-circle class="w-3 h-3" />
-                                                                </button>
-                                                                <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" class="p-0.5 text-zinc-400 hover:text-zinc-700 transition" title="Ver detalle">
-                                                                    <x-lucide-panel-right class="w-3 h-3" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-
-                                                        @if($order->current_due_date)
-                                                            @php
-                                                                $orderOverSla = ! $order->isSlaExempt() && $order->scheduled_date && $order->scheduled_date->gt($order->current_due_date);
-                                                                $orderOverdue = $order->isOverdue();
-                                                                $orderDueToday = $order->current_due_date->isToday();
-                                                            @endphp
-                                                            <div class="flex items-center justify-between pt-1 border-t border-stone-100 text-[9px]">
-                                                                @if($orderOverSla || $orderOverdue)
-                                                                    <span class="font-semibold text-red-600 inline-flex items-center gap-1 bg-red-50 px-1.5 py-0.2 rounded border border-red-200/60" title="SLA: {{ $order->current_due_date->format('d M, Y') }}">
-                                                                        <x-lucide-alert-triangle class="w-2.5 h-2.5 text-red-600 shrink-0" />
-                                                                        <span>SLA Excedido</span>
-                                                                    </span>
-                                                                @elseif($orderDueToday)
-                                                                    <span class="font-bold text-amber-800 inline-flex items-center gap-1 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 shadow-2xs" title="SLA Límite Hoy: {{ $order->current_due_date->format('d M, Y') }}">
-                                                                        <x-lucide-clock class="w-2.5 h-2.5 text-amber-700 shrink-0 stroke-[2.5]" />
-                                                                        <span>SLA HOY</span>
-                                                                    </span>
-                                                                @else
-                                                                    <span class="text-zinc-400 font-mono">
-                                                                        SLA: {{ $order->current_due_date->format('d M') }}
-                                                                    </span>
-                                                                @endif
-
-                                                                <button 
-                                                                    @click="openSub = !openSub"
-                                                                    type="button" 
-                                                                    class="text-violet-700 hover:text-violet-900 font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 px-1 py-0.2 rounded hover:bg-violet-50">
-                                                                    <x-lucide-plus-circle class="w-2.5 h-2.5" />
-                                                                    <span>+ Subtarea</span>
-                                                                </button>
-                                                            </div>
-                                                        @else
-                                                            <div class="pt-1 border-t border-stone-100 flex items-center justify-end text-[9px]">
-                                                                <button 
-                                                                    @click="openSub = !openSub"
-                                                                    type="button" 
-                                                                    class="text-violet-700 hover:text-violet-900 font-semibold opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 px-1 py-0.2 rounded hover:bg-violet-50">
-                                                                    <x-lucide-plus-circle class="w-2.5 h-2.5" />
-                                                                    <span>+ Subtarea</span>
-                                                                </button>
-                                                            </div>
-                                                        @endif
-
-                                                        <div 
-                                                            x-show="openSub" 
-                                                            x-cloak
-                                                            @click.outside="openSub = false"
-                                                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl p-2 text-xs space-y-1.5"
-                                                            style="display: none;">
-                                                            <div>
-                                                                <span class="text-[9px] text-zinc-400 block mb-0.5">Programar para día:</span>
-                                                                <select x-model="targetDate" class="w-full bg-stone-50 border border-stone-200 rounded px-1 py-0.5 text-[10px] text-zinc-800 focus:outline-none">
-                                                                    @foreach($days as $d)
-                                                                        <option value="{{ $d['date_string'] }}">{{ $d['day_name'] }} ({{ ($d['is_next_week'] ?? false) ? $d['range_label'] : $d['date']->format('d M') }})</option>
-                                                                    @endforeach
-                                                                </select>
-                                                            </div>
-                                                            <div class="flex flex-wrap gap-1 pt-1 border-t border-stone-100">
-                                                                @foreach($subtaskPresets as $preset)
-                                                                    @php
-                                                                        $safePlannerIcon = (preg_match('/^[a-z0-9\-]+$/i', $preset->emoji ?? '')) ? $preset->emoji : 'tag';
-                                                                    @endphp
-                                                                    <button 
-                                                                        type="button"
-                                                                        @click="$wire.scheduleSubtask({{ $order->id }}, '{{ addslashes($preset->title) }}', targetDate, {{ $designer->id }}); openSub = false"
-                                                                        class="px-1.5 py-0.5 rounded font-medium text-[10px] border transition shadow-2xs inline-flex items-center gap-1 {{ $preset->badgeStyle() }}">
-                                                                        <x-dynamic-component :component="'lucide-' . $safePlannerIcon" class="w-3 h-3" />
-                                                                        <span>{{ $preset->title }}</span>
-                                                                    </button>
-                                                                @endforeach
-                                                            </div>
-                                                            <div class="pt-1 border-t border-stone-100">
-                                                                <input 
-                                                                    type="text" 
-                                                                    x-model="customTitle"
-                                                                    @keyup.enter="if(customTitle.trim()) { $wire.scheduleSubtask({{ $order->id }}, customTitle, targetDate, {{ $designer->id }}); customTitle = ''; openSub = false; }"
-                                                                    placeholder="Escribe subtarea custom... (Enter)" 
-                                                                    class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
-                                                            </div>
-                                                        </div>
-
-                                                    </div>
-                                                @endforeach
 
                                                 <!-- Day Subtask Kanban Cards -->
                                                 @foreach($daySubtasks as $stask)
