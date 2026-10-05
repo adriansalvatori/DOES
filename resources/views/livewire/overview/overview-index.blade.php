@@ -1064,22 +1064,39 @@
                             @php
                                 $procDateVal = $order->production_processed_at ? $order->production_processed_at->format('Y-m-d') : '';
                                 $procDateDisplay = $order->production_processed_at ? $order->production_processed_at->format('d/m/Y') : '—';
+                                $hasProcDate = !empty($procDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
-                                <input 
-                                    type="date"
-                                    data-initial="{{ $procDateVal }}"
-                                    value="{{ $procDateVal }}"
-                                    @input.stop
-                                    @change.stop="
-                                        if ($el.value !== $el.dataset.initial) {
-                                            $el.dataset.initial = $el.value;
-                                            $wire.quickUpdateField({{ $order->id }}, 'production_processed_at', $el.value);
-                                        }
-                                    "
-                                    class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
-                                    title="{{ $procDateDisplay }} (Procesado en Producción - Clic para editar)"
-                                >
+                                <div x-data="{ editing: false }" class="w-full flex items-center min-w-0">
+                                    @if(!$hasProcDate)
+                                        <button 
+                                            type="button" 
+                                            x-show="!editing"
+                                            @click="editing = true; $nextTick(() => { if ($refs.procInput.showPicker) { try { $refs.procInput.showPicker(); } catch(e){} } $refs.procInput.focus(); })" 
+                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm transition-colors cursor-pointer"
+                                            title="Sin fecha - Clic para asignar fecha de procesado">
+                                            —
+                                        </button>
+                                    @endif
+                                    <input 
+                                        x-ref="procInput"
+                                        @if(!$hasProcDate) x-show="editing" x-cloak @endif
+                                        type="date"
+                                        data-initial="{{ $procDateVal }}"
+                                        value="{{ $procDateVal }}"
+                                        @input.stop
+                                        @blur="if (!$el.value) editing = false;"
+                                        @change.stop="
+                                            if ($el.value !== $el.dataset.initial) {
+                                                $el.dataset.initial = $el.value;
+                                                $wire.quickUpdateField({{ $order->id }}, 'production_processed_at', $el.value);
+                                            }
+                                            if (!$el.value) editing = false;
+                                        "
+                                        class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                                        title="{{ $procDateDisplay }} (Procesado en Producción - Clic para editar)"
+                                    >
+                                </div>
                             </td>
 
                             <!-- 2. Order Due Date (Delivery Deadline) -->
@@ -1089,21 +1106,37 @@
                                 $isDueDateFilled = !empty($dueDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
-                                <input 
-                                    type="date"
-                                    data-initial="{{ $dueDateVal }}"
-                                    value="{{ $dueDateVal }}"
-                                    @input.stop
-                                    @change.stop="
-                                        if ($el.value !== $el.dataset.initial) {
-                                            $el.dataset.initial = $el.value;
-                                            $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', $el.value);
-                                        }
-                                    "
-                                    class="w-full text-[10px] font-mono px-1 py-0.5 rounded-sm border-0 transition-colors cursor-pointer {{ $isDueDateFilled ? 'bg-red-600 text-white font-bold shadow-2xs focus:ring-1 focus:ring-red-700' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
-                                    style="{{ $isDueDateFilled ? 'color-scheme: dark;' : '' }}"
-                                    title="{{ $dueDateDisplay }} (Due Date / Fecha Límite de Entrega - Clic para editar)"
-                                >
+                                <div x-data="{ editing: false }" class="w-full flex items-center min-w-0">
+                                    @if(!$isDueDateFilled)
+                                        <button 
+                                            type="button" 
+                                            x-show="!editing"
+                                            @click="editing = true; $nextTick(() => { if ($refs.dueInput.showPicker) { try { $refs.dueInput.showPicker(); } catch(e){} } $refs.dueInput.focus(); })" 
+                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm transition-colors cursor-pointer"
+                                            title="Sin Due Date - Clic para asignar fecha de entrega">
+                                            —
+                                        </button>
+                                    @endif
+                                    <input 
+                                        x-ref="dueInput"
+                                        @if(!$isDueDateFilled) x-show="editing" x-cloak @endif
+                                        type="date"
+                                        data-initial="{{ $dueDateVal }}"
+                                        value="{{ $dueDateVal }}"
+                                        @input.stop
+                                        @blur="if (!$el.value) editing = false;"
+                                        @change.stop="
+                                            if ($el.value !== $el.dataset.initial) {
+                                                $el.dataset.initial = $el.value;
+                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', $el.value);
+                                            }
+                                            if (!$el.value) editing = false;
+                                        "
+                                        class="w-full text-[10px] font-mono px-1 py-0.5 rounded-sm border-0 transition-colors cursor-pointer {{ $isDueDateFilled ? 'bg-red-600 text-white font-bold shadow-2xs focus:ring-1 focus:ring-red-700' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
+                                        style="{{ $isDueDateFilled ? 'color-scheme: dark;' : '' }}"
+                                        title="{{ $dueDateDisplay }} (Due Date / Fecha Límite de Entrega - Clic para editar)"
+                                    >
+                                </div>
                             </td>
 
                             <!-- 3. WO # (Click opens modal if exists + Backlog pill if in_workspace is false) -->
@@ -1279,22 +1312,39 @@
                             @php
                                 $emailDateVal = $order->email_date ? $order->email_date->format('Y-m-d') : '';
                                 $emailDateDisplay = $order->email_date ? $order->email_date->format('d/m/Y') : '—';
+                                $hasEmailDate = !empty($emailDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
-                                <input 
-                                    type="date"
-                                    data-initial="{{ $emailDateVal }}"
-                                    value="{{ $emailDateVal }}"
-                                    @input.stop
-                                    @change.stop="
-                                        if ($el.value !== $el.dataset.initial) {
-                                            $el.dataset.initial = $el.value;
-                                            $wire.quickUpdateField({{ $order->id }}, 'email_date', $el.value);
-                                        }
-                                    "
-                                    class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
-                                    title="{{ $emailDateDisplay }} (Clic para editar)"
-                                >
+                                <div x-data="{ editing: false }" class="w-full flex items-center min-w-0">
+                                    @if(!$hasEmailDate)
+                                        <button 
+                                            type="button" 
+                                            x-show="!editing"
+                                            @click="editing = true; $nextTick(() => { if ($refs.emailInput.showPicker) { try { $refs.emailInput.showPicker(); } catch(e){} } $refs.emailInput.focus(); })" 
+                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm transition-colors cursor-pointer"
+                                            title="Sin fecha de email - Clic para asignar">
+                                            —
+                                        </button>
+                                    @endif
+                                    <input 
+                                        x-ref="emailInput"
+                                        @if(!$hasEmailDate) x-show="editing" x-cloak @endif
+                                        type="date"
+                                        data-initial="{{ $emailDateVal }}"
+                                        value="{{ $emailDateVal }}"
+                                        @input.stop
+                                        @blur="if (!$el.value) editing = false;"
+                                        @change.stop="
+                                            if ($el.value !== $el.dataset.initial) {
+                                                $el.dataset.initial = $el.value;
+                                                $wire.quickUpdateField({{ $order->id }}, 'email_date', $el.value);
+                                            }
+                                            if (!$el.value) editing = false;
+                                        "
+                                        class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                                        title="{{ $emailDateDisplay }} (Clic para editar)"
+                                    >
+                                </div>
                             </td>
 
                             <!-- 9. Instalación -->
