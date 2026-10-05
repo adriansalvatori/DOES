@@ -483,10 +483,10 @@ class PricingIndex extends Component
             'targetProductId' => 'required|exists:products,id',
             'newVariantName' => 'required|string|max:255',
             'newVariantSupplierId' => 'nullable|exists:suppliers,id',
-            'newVariantWebsiteUrl' => 'nullable|url|max:500',
-            'newVariantMockupUrl' => 'nullable|url|max:500',
-            'newVariantTemplateUrl' => 'nullable|url|max:500',
-            'newVariantImageUrl' => 'nullable|url|max:500',
+            'newVariantWebsiteUrl' => 'nullable|string|max:500',
+            'newVariantMockupUrl' => 'nullable|string|max:500',
+            'newVariantTemplateUrl' => 'nullable|string|max:500',
+            'newVariantImageUrl' => 'nullable|string|max:500',
             'newVariantFile' => 'nullable|image|max:5120',
         ]);
 
@@ -549,10 +549,10 @@ class PricingIndex extends Component
             'editingVariantId' => 'required|exists:product_variants,id',
             'editVariantName' => 'required|string|max:255',
             'editVariantSupplierId' => 'nullable|exists:suppliers,id',
-            'editVariantWebsiteUrl' => 'nullable|url|max:500',
-            'editVariantMockupUrl' => 'nullable|url|max:500',
-            'editVariantTemplateUrl' => 'nullable|url|max:500',
-            'editVariantImageUrl' => 'nullable|url|max:500',
+            'editVariantWebsiteUrl' => 'nullable|string|max:500',
+            'editVariantMockupUrl' => 'nullable|string|max:500',
+            'editVariantTemplateUrl' => 'nullable|string|max:500',
+            'editVariantImageUrl' => 'nullable|string|max:500',
             'editVariantFile' => 'nullable|image|max:5120',
         ]);
 
@@ -615,7 +615,7 @@ class PricingIndex extends Component
             'editProductName' => 'required|string|max:255',
             'editProductCategoryId' => 'required|exists:product_categories,id',
             'editProductSupplierId' => 'nullable|exists:suppliers,id',
-            'editProductImageUrl' => 'nullable|url|max:500',
+            'editProductImageUrl' => 'nullable|string|max:500',
             'editProductFile' => 'nullable|image|max:5120',
         ]);
 
@@ -673,7 +673,7 @@ class PricingIndex extends Component
 
         $this->validate([
             'newCategoryName' => 'required|string|max:255|unique:product_categories,name',
-            'newCategoryImageUrl' => 'nullable|url|max:500',
+            'newCategoryImageUrl' => 'nullable|string|max:500',
             'newCategoryFile' => 'nullable|image|max:5120',
         ]);
 
@@ -718,7 +718,7 @@ class PricingIndex extends Component
         $this->validate([
             'editingCategoryId' => 'required|exists:product_categories,id',
             'editCategoryName' => 'required|string|max:255',
-            'editCategoryImageUrl' => 'nullable|url|max:500',
+            'editCategoryImageUrl' => 'nullable|string|max:500',
             'editCategoryFile' => 'nullable|image|max:5120',
         ]);
 

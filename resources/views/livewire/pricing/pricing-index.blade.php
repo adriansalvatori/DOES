@@ -944,7 +944,7 @@
                         <div>
                             <label class="block font-semibold text-stone-600 mb-0.5">{{ __('URL Web del Proveedor') }}</label>
                             <input 
-                                type="url" 
+                                type="text" 
                                 wire:model="newVariantWebsiteUrl"
                                 placeholder="https://4over.com/producto..."
                                 class="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono"
@@ -956,7 +956,7 @@
                             <div>
                                 <label class="block font-semibold text-stone-600 mb-0.5">{{ __('URL de Mockup') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model="newVariantMockupUrl"
                                     placeholder="https://.../mockup.zip"
                                     class="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono"
@@ -965,7 +965,7 @@
                             <div>
                                 <label class="block font-semibold text-stone-600 mb-0.5">{{ __('URL de Template') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model="newVariantTemplateUrl"
                                     placeholder="https://.../template.zip"
                                     class="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono"
@@ -1022,7 +1022,7 @@
                             <div class="pt-2 border-t border-stone-200/60">
                                 <label class="block text-[10px] font-semibold text-stone-500 mb-1">{{ __('O pegar URL directa de imagen:') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model.live="newVariantImageUrl"
                                     placeholder="https://ejemplo.com/subproducto.jpg"
                                     class="w-full px-2.5 py-1 bg-white border border-stone-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-stone-800"
@@ -1113,7 +1113,7 @@
                         <div>
                             <label class="block font-semibold text-stone-600 mb-0.5">{{ __('URL Web del Proveedor') }}</label>
                             <input 
-                                type="url" 
+                                type="text" 
                                 wire:model="editVariantWebsiteUrl"
                                 placeholder="https://4over.com/producto..."
                                 class="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono"
@@ -1125,7 +1125,7 @@
                             <div>
                                 <label class="block font-semibold text-stone-600 mb-0.5">{{ __('URL de Mockup') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model="editVariantMockupUrl"
                                     placeholder="https://.../mockup.zip"
                                     class="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono"
@@ -1134,7 +1134,7 @@
                             <div>
                                 <label class="block font-semibold text-stone-600 mb-0.5">{{ __('URL de Template') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model="editVariantTemplateUrl"
                                     placeholder="https://.../template.zip"
                                     class="w-full px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs font-mono"
@@ -1191,7 +1191,7 @@
                             <div class="pt-2 border-t border-stone-200/60">
                                 <label class="block text-[10px] font-semibold text-stone-500 mb-1">{{ __('O editar URL directa:') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model.live="editVariantImageUrl"
                                     placeholder="https://ejemplo.com/subproducto.jpg"
                                     class="w-full px-2.5 py-1 bg-white border border-stone-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-stone-800"
@@ -1369,7 +1369,7 @@
                             <div class="pt-2 border-t border-stone-200/60">
                                 <label class="block text-[10px] font-semibold text-stone-500 mb-1">{{ __('O pegar URL directa de imagen:') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model.live="newCategoryImageUrl"
                                     placeholder="https://ejemplo.com/portada.jpg"
                                     class="w-full px-2.5 py-1 bg-white border border-stone-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-stone-800"
@@ -1484,7 +1484,7 @@
                             <div class="pt-2 border-t border-stone-200/60">
                                 <label class="block text-[10px] font-semibold text-stone-500 mb-1">{{ __('O editar URL directa:') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model.live="editCategoryImageUrl"
                                     placeholder="https://ejemplo.com/portada-categoria.jpg"
                                     class="w-full px-2.5 py-1 bg-white border border-stone-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-stone-800"
@@ -1639,7 +1639,7 @@
                             <div class="pt-2 border-t border-stone-200/60">
                                 <label class="block text-[10px] font-semibold text-stone-500 mb-1">{{ __('O editar URL directa:') }}</label>
                                 <input 
-                                    type="url" 
+                                    type="text" 
                                     wire:model.live="editProductImageUrl"
                                     placeholder="https://ejemplo.com/producto.jpg"
                                     class="w-full px-2.5 py-1 bg-white border border-stone-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-stone-800"

@@ -202,7 +202,7 @@ class ProfileSettings extends Component
             'email' => 'required|email|max:255|unique:users,email,'.$user->id,
             'phone' => 'nullable|string|max:50',
             'avatar_file' => 'nullable|image|max:3072',
-            'avatar_url' => 'nullable|url|max:500',
+            'avatar_url' => 'nullable|string|max:500',
         ]);
 
         if ($this->avatar_file) {

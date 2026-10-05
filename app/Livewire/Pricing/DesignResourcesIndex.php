@@ -100,9 +100,9 @@ class DesignResourcesIndex extends Component
 
         $this->validate([
             'editingProductId' => 'required|exists:products,id',
-            'editWebsiteUrl' => 'nullable|url|max:500',
-            'editMockupUrl' => 'nullable|url|max:500',
-            'editTemplateUrl' => 'nullable|url|max:500',
+            'editWebsiteUrl' => 'nullable|string|max:500',
+            'editMockupUrl' => 'nullable|string|max:500',
+            'editTemplateUrl' => 'nullable|string|max:500',
         ]);
 
         $product = Product::findOrFail($this->editingProductId);
