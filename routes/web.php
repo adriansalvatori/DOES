@@ -11,6 +11,8 @@ use App\Livewire\Orders\TrashBin;
 use App\Livewire\Overview\OverviewIndex;
 use App\Livewire\Planner\WeeklyPlanner;
 use App\Livewire\Portal\ClientPortal;
+use App\Livewire\Pricing\DesignResourcesIndex;
+use App\Livewire\Pricing\PricingIndex;
 use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\ColorCoding;
@@ -74,6 +76,8 @@ Route::get('/demo-login/{role}', function (string $role) {
 Route::middleware(['auth'])->group(function () {
     Route::get('/', Index::class)->name('dashboard');
     Route::get('/overview', OverviewIndex::class)->name('overview');
+    Route::get('/pricing', PricingIndex::class)->name('pricing');
+    Route::get('/design-resources', DesignResourcesIndex::class)->name('design-resources');
     Route::get('/clients', ClientIndex::class)->name('clients');
     Route::get('/analytics', Analytics::class)->name('analytics');
     Route::get('/backlog', BacklogIndex::class)->name('backlog');

@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->role === UserRole::SALES;
     }
 
+    public function canManagePricing(): bool
+    {
+        return $this->isAdmin() || $this->isCoordinator();
+    }
+
     public function hasRole(UserRole|string $role): bool
     {
         $roleValue = $role instanceof UserRole ? $role->value : $role;

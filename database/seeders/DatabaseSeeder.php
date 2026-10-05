@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             SubtaskPresetSeeder::class,
             SystemTaskConfigSeeder::class,
             UserSeeder::class,
+            ProductPricingSeeder::class,
         ]);
     }
 }

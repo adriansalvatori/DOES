@@ -216,6 +216,26 @@
                 <!-- (separador) -->
                 <div class="my-2 border-t border-[#e9e9e7]"></div>
 
+                <!-- Catálogo & Precios (Agrupado en sección aparte) -->
+                <div class="space-y-1">
+                    <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2.5 mb-1.5">{{ __('Catálogo & Precios') }}</span>
+                    
+                    <!-- Precios & Calculadora -->
+                    <a href="/pricing" wire:navigate title="{{ __('Precios & Calculadora') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('pricing*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-badge-percent class="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Precios & Calculadora') }}</span>
+                    </a>
+
+                    <!-- Recursos de Diseño -->
+                    <a href="/design-resources" wire:navigate title="{{ __('Recursos de Diseño') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('design-resources*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                        <x-lucide-folder-down class="w-4 h-4 text-indigo-600 shrink-0" />
+                        <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Recursos de Diseño') }}</span>
+                    </a>
+                </div>
+
+                <!-- (separador) -->
+                <div class="my-2 border-t border-[#e9e9e7]"></div>
+
                 <!-- Team Designers List -->
                 <div id="tour-designer-colors" class="space-y-1">
                     <span x-show="sidebarOpen" x-transition.opacity class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block px-2.5 mb-1.5">{{ __('Diseñadores') }}</span>
@@ -708,7 +728,7 @@
         </header>
 
         <!-- Main Slot -->
-        <main class="app-main-content flex-1 w-full px-6 py-4 flex flex-col min-h-0 overflow-hidden">
+        <main class="app-main-content flex-1 w-full px-6 py-4 flex flex-col min-h-0 overflow-y-auto custom-vertical-scrollbar">
             {{ $slot }}
         </main>
     </div>
