@@ -213,6 +213,7 @@
         targetFlags: [],
         menuStyle: '',
         menuSearch: '',
+        activeTriggerEl: null,
         matchesMenuSearch(text) {
             if (!this.menuSearch || !this.menuSearch.trim()) return true;
             if (!text) return false;
@@ -226,30 +227,28 @@
             const q = clean(this.menuSearch);
             return items.some(item => clean(item).includes(q));
         },
-        openMenu(type, orderId, triggerEl, extraData = {}) {
-            if (this.activeMenu === type && this.targetOrderId === orderId) {
+        updateMenuPosition() {
+            if (!this.activeMenu || !this.activeTriggerEl) return;
+            if (!document.body.contains(this.activeTriggerEl)) {
                 this.closeMenu();
                 return;
             }
-            this.activeMenu = type;
-            this.targetOrderId = orderId;
-            this.menuSearch = '';
-            const st = this.ordersState[orderId] || {};
-            this.targetSubstatus = st.substatus !== undefined ? st.substatus : (extraData.substatus !== undefined ? extraData.substatus : null);
-            this.targetInstallationType = st.installation_type !== undefined ? st.installation_type : (extraData.installationType !== undefined ? extraData.installationType : null);
-            this.targetFlags = Array.isArray(st.flags) ? st.flags : (Array.isArray(extraData.flags) ? extraData.flags : []);
-
-            const rect = triggerEl.getBoundingClientRect();
+            const rect = this.activeTriggerEl.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
-            
+
+            // Close only if trigger cell is scrolled far off-screen
+            if (rect.bottom < 10 || rect.top > window.innerHeight - 10) {
+                this.closeMenu();
+                return;
+            }
+
             let menuHeight = 240;
             let menuWidth = 220;
-            if (type === 'substatus') { menuHeight = 460; menuWidth = 295; }
-            if (type === 'designer') { menuHeight = 280; menuWidth = 230; }
-            if (type === 'installation') { menuHeight = 340; menuWidth = 260; }
-            if (type === 'review') { menuHeight = 170; menuWidth = 210; }
+            if (this.activeMenu === 'substatus') { menuHeight = 460; menuWidth = 295; }
+            if (this.activeMenu === 'designer') { menuHeight = 280; menuWidth = 230; }
+            if (this.activeMenu === 'installation') { menuHeight = 340; menuWidth = 260; }
+            if (this.activeMenu === 'review') { menuHeight = 170; menuWidth = 210; }
 
-            this.scrollStartTop = this.$el ? this.$el.scrollTop : 0;
             const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
             let left = Math.min(Math.max(10, rect.left), window.innerWidth - menuWidth - 15);
 
@@ -260,6 +259,22 @@
                 const top = rect.bottom + 4;
                 this.menuStyle = `position: fixed; left: ${left}px; top: ${top}px; width: ${menuWidth}px; max-height: ${Math.min(menuHeight, spaceBelow - 15)}px; z-index: 99999;`;
             }
+        },
+        openMenu(type, orderId, triggerEl, extraData = {}) {
+            if (this.activeMenu === type && this.targetOrderId === orderId) {
+                this.closeMenu();
+                return;
+            }
+            this.activeMenu = type;
+            this.targetOrderId = orderId;
+            this.activeTriggerEl = triggerEl;
+            this.menuSearch = '';
+            const st = this.ordersState[orderId] || {};
+            this.targetSubstatus = st.substatus !== undefined ? st.substatus : (extraData.substatus !== undefined ? extraData.substatus : null);
+            this.targetInstallationType = st.installation_type !== undefined ? st.installation_type : (extraData.installationType !== undefined ? extraData.installationType : null);
+            this.targetFlags = Array.isArray(st.flags) ? st.flags : (Array.isArray(extraData.flags) ? extraData.flags : []);
+
+            this.updateMenuPosition();
 
             this.$nextTick(() => {
                 const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
@@ -275,6 +290,7 @@
             this.targetInstallationType = null;
             this.targetFlags = [];
             this.menuSearch = '';
+            this.activeTriggerEl = null;
         },
         setDesigner(dId, dName, badgeStyle, inlineStyle) {
             const orderId = this.targetOrderId;
@@ -379,7 +395,9 @@
         }
     }"
     @keydown.escape.window="closeMenu()"
-    @scroll.passive="if (activeMenu && Math.abs($el.scrollTop - scrollStartTop) > 35) closeMenu()"
+    @scroll.passive="if (activeMenu) updateMenuPosition()"
+    @scroll.window.passive="if (activeMenu) updateMenuPosition()"
+    @resize.window.passive="if (activeMenu) updateMenuPosition()"
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
     <!-- Top Summary Metrics & Filtering Cards Bar (3 Cards) -->
@@ -1561,7 +1579,7 @@
         @click.outside="if (!$event.target.closest('[data-popover-trigger]')) closeMenu()"
         @wheel.stop
         :style="menuStyle"
-        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-2 z-[99999] flex flex-col overflow-hidden text-stone-900 overscroll-contain select-none"
+        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-2 z-[99999] flex flex-col overflow-hidden text-stone-900 overscroll-contain"
         style="display: none;">
 
         <!-- 1. Designer Popover Content -->
@@ -1591,7 +1609,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-0.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
+                <div @wheel.stop class="space-y-0.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
                     <button 
                         type="button"
                         x-show="matchesMenuSearch('sin asignar')"
@@ -1655,7 +1673,11 @@
             <div class="flex flex-col h-full min-h-0 space-y-1.5">
                 <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between shrink-0">
                     <span>{{ __('Tipo de Instalación') }}</span>
-                    <a href="{{ route('settings.installation-types') }}" wire:navigate class="text-[9px] text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-0.5">
+                    <a 
+                        href="{{ route('settings.installation-types') }}" 
+                        @click.stop="closeMenu(); if (window.Livewire) { Livewire.navigate('{{ route('settings.installation-types') }}'); } else { window.location.href = '{{ route('settings.installation-types') }}'; }" 
+                        wire:navigate 
+                        class="text-[9px] text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-0.5 cursor-pointer pointer-events-auto z-10">
                         <x-lucide-settings class="w-2.5 h-2.5" />
                         <span>{{ __('Ajustes') }}</span>
                     </a>
@@ -1681,7 +1703,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
+                <div @wheel.stop class="space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
                     @foreach($installationTypes as $instType)
                         <button 
                             type="button"
@@ -1735,7 +1757,7 @@
                     </div>
                 </div>
 
-                <div class="space-y-1.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
+                <div @wheel.stop class="space-y-1.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
                     <!-- Section 1: Global Flags (First) -->
                     <div 
                         x-show="!menuSearch"

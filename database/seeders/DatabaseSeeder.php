@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SubstatusSeeder::class,
             SubtaskPresetSeeder::class,
+            InstallationTypeSeeder::class,
             SystemTaskConfigSeeder::class,
             UserSeeder::class,
             ProductPricingSeeder::class,

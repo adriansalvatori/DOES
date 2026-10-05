@@ -88,7 +88,7 @@ class InstallationTypes extends Component
     {
         $this->reset(['editingId', 'name', 'main_color', 'style_type', 'bg_color', 'text_color', 'border_color', 'is_active']);
         $this->main_color = '#0284C7';
-        $this->style_type = 'light';
+        $this->style_type = 'solid';
         $this->is_active = true;
         $this->recalculatePalette();
         $this->showModal = true;
@@ -100,10 +100,10 @@ class InstallationTypes extends Component
         $this->editingId = $item->id;
         $this->name = $item->name;
         $this->main_color = $item->color ?? '#0284C7';
-        $this->style_type = $item->style_type ?? 'light';
-        $this->bg_color = $item->bg_color ?: 'hsl(201, 96%, 96%)';
-        $this->text_color = $item->text_color ?: 'hsl(201, 80%, 30%)';
-        $this->border_color = $item->border_color ?: 'hsl(201, 96%, 86%)';
+        $this->style_type = $item->style_type ?? 'solid';
+        $this->bg_color = $item->bg_color ?: $this->main_color;
+        $this->text_color = $item->text_color ?: '#FFFFFF';
+        $this->border_color = $item->border_color ?: $this->main_color;
         $this->is_active = (bool) $item->is_active;
         $this->showModal = true;
     }
@@ -136,6 +136,9 @@ class InstallationTypes extends Component
             session()->flash('message', __('Nuevo tipo de instalación creado correctamente.'));
         }
 
+        InstallationType::clearCache();
+        $this->dispatch('installation-types-updated');
+
         $this->showModal = false;
         $this->reset(['editingId', 'name', 'main_color', 'style_type', 'bg_color', 'text_color', 'border_color', 'is_active']);
     }
@@ -145,6 +148,8 @@ class InstallationTypes extends Component
         $item = InstallationType::findOrFail($id);
         $name = $item->name;
         $item->delete();
+        InstallationType::clearCache();
+        $this->dispatch('installation-types-updated');
 
         session()->flash('message', __('Opción de instalación ":name" eliminada.', ['name' => $name]));
     }
@@ -153,6 +158,8 @@ class InstallationTypes extends Component
     {
         $item = InstallationType::findOrFail($id);
         $item->update(['is_active' => ! $item->is_active]);
+        InstallationType::clearCache();
+        $this->dispatch('installation-types-updated');
     }
 
     public function closeModal(): void
