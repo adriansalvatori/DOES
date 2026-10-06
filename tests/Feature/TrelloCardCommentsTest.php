@@ -361,4 +361,17 @@ class TrelloCardCommentsTest extends TestCase
         $this->assertStringContainsString('Línea 2', $renderedBreaks);
         $this->assertStringContainsString('<p>Línea 3</p>', $renderedBreaks);
     }
+
+    public function test_comment_markdown_rendering_supports_headings_and_dividers(): void
+    {
+        $component = new OrderDetailModal;
+
+        $input = "# Título Principal\n\n## Subtítulo Secundario\n\n---\n\nContenido normal de comentario.";
+        $rendered = $component->renderCommentMarkdown($input);
+
+        $this->assertStringContainsString('<h1>Título Principal</h1>', $rendered);
+        $this->assertStringContainsString('<h2>Subtítulo Secundario</h2>', $rendered);
+        $this->assertStringContainsString('<hr', $rendered);
+        $this->assertStringContainsString('Contenido normal de comentario.', $rendered);
+    }
 }

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
 
 class SyncOverviewExcelDataTest extends TestCase
@@ -25,6 +26,16 @@ class SyncOverviewExcelDataTest extends TestCase
 
     public function test_sync_command_dry_run_executes_successfully(): void
     {
+        Process::fake([
+            '*' => Process::result(json_encode([
+                [
+                    'wo' => '13919',
+                    'company' => 'TEST COMPANY',
+                    'task' => 'TEST TASK',
+                ],
+            ])),
+        ]);
+
         $this->artisan('app:sync-overview-excel', ['--dry-run' => true])
             ->expectsOutputToContain('MODO SIMULACIÓN (DRY RUN) ACTIVADO')
             ->expectsOutputToContain('Simulación finalizada con éxito')

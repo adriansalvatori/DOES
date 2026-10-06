@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -20,7 +21,8 @@ class CsvReconciliation extends Component
     // File Upload
     public $csvFile = null;
 
-    // Active Section / Tab
+    // Active Section / Tab (persisted across page reloads via URL query param)
+    #[Url(as: 'tab')]
     public string $activeTab = 'full_match'; // 'full_match', 'partial_match', 'unmatched', 'history'
 
     // Filtering & Search
@@ -51,6 +53,8 @@ class CsvReconciliation extends Component
 
     public array $trelloError = [];
 
+    public bool $isSearchingTrello = false;
+
     // Modals
     public bool $showBatchConfirmModal = false;
 
@@ -76,6 +80,22 @@ class CsvReconciliation extends Component
         if ($meta) {
             $this->meta = $meta;
             $this->hasAnalysis = true;
+            $cached = $service->getCachedAnalysis();
+            foreach ($cached['unmatched'] ?? [] as $item) {
+                if (! empty($item['suggested_trello_card'])) {
+                    $this->trelloCardPreview[$item['row_id']] = $item['suggested_trello_card'];
+                    $this->trelloInput[$item['row_id']] = $item['suggested_trello_card']['url'] ?? '';
+                }
+            }
+
+            // If active tab is full_match and has 0 records, automatically route to the first tab with pending records
+            if (! request()->has('tab') && $this->activeTab === 'full_match' && ($this->meta['full_match_count'] ?? 0) === 0) {
+                if (($this->meta['partial_match_count'] ?? 0) > 0) {
+                    $this->activeTab = 'partial_match';
+                } elseif (($this->meta['unmatched_count'] ?? 0) > 0) {
+                    $this->activeTab = 'unmatched';
+                }
+            }
         }
     }
 
@@ -111,6 +131,12 @@ class CsvReconciliation extends Component
             $this->selectedFull = [];
             $this->selectedPartial = [];
             $this->selectAllFull = true;
+
+            // Reset Trello inspection state to prevent stale previews across file uploads
+            $this->trelloInput = [];
+            $this->trelloCardPreview = [];
+            $this->trelloChecking = [];
+            $this->trelloError = [];
 
             // Pick the most relevant tab to show first
             if (($this->meta['full_match_count'] ?? 0) > 0) {
@@ -218,6 +244,20 @@ class CsvReconciliation extends Component
         }
     }
 
+    public function quickCreateClient(string $rowId): void
+    {
+        $this->resetMessages();
+        $service = app(OrderReconciliationService::class);
+        $client = $service->quickCreateClientFromRow($rowId);
+
+        if ($client) {
+            $this->successMessage = "Cliente \"{$client->name}\" registrado exitosamente en el catálogo oficial de Kudos.";
+            $this->meta = $service->getAnalysisMeta();
+        } else {
+            $this->errorMessage = 'No se pudo crear el cliente para esta orden.';
+        }
+    }
+
     public function checkTrelloCard(string $rowId): void
     {
         $this->resetMessages();
@@ -253,11 +293,22 @@ class CsvReconciliation extends Component
 
             if ($res['success'] && ! empty($res['card'])) {
                 $card = $res['card'];
+                $service = app(OrderReconciliationService::class);
+                $cached = $service->getCachedAnalysis();
+                $targetItem = collect($cached['unmatched'] ?? [])->firstWhere('row_id', $rowId);
+                $rawWo = $targetItem['parsed_data']['raw_wo'] ?? ($targetItem['raw_wo'] ?? '');
+                $cleanComp = $targetItem['clean_company'] ?? ($targetItem['csv_company'] ?? '');
+                $dedup = $service->inspectTrelloCardDeduplication($card['id'], $rawWo, $cleanComp);
+
                 $this->trelloCardPreview[$rowId] = [
                     'id' => $card['id'],
                     'name' => $card['name'] ?? 'Sin título',
                     'desc' => $card['desc'] ?? '',
                     'url' => $card['shortUrl'] ?? "https://trello.com/c/{$card['id']}",
+                    'is_closed' => (bool) ($card['closed'] ?? false),
+                    'dedup_action' => $dedup['action_type'],
+                    'dedup_reason' => $dedup['reason'],
+                    'existing_order_id' => $dedup['order_id'],
                 ];
             } else {
                 $this->trelloError[$rowId] = 'No se pudo obtener información de la tarjeta en Trello. Verifica los permisos o el enlace.';
@@ -266,6 +317,72 @@ class CsvReconciliation extends Component
             $this->trelloError[$rowId] = 'Error al consultar Trello: '.$e->getMessage();
         } finally {
             $this->trelloChecking[$rowId] = false;
+        }
+    }
+
+    public function searchSingleTrelloCard(string $rowId): void
+    {
+        $this->resetMessages();
+        $this->trelloChecking[$rowId] = true;
+        $this->trelloError[$rowId] = null;
+
+        try {
+            $service = app(OrderReconciliationService::class);
+            $res = $service->searchTrelloForUnmatchedRow($rowId);
+            if ($res['success']) {
+                $this->trelloCardPreview[$rowId] = $res['preview'];
+                $this->trelloInput[$rowId] = $res['preview']['url'];
+            } else {
+                $this->trelloError[$rowId] = $res['message'] ?? 'No se encontró tarjeta en Trello.';
+            }
+        } catch (\Throwable $e) {
+            $this->trelloError[$rowId] = 'Error al buscar en Trello: '.$e->getMessage();
+        } finally {
+            $this->trelloChecking[$rowId] = false;
+        }
+    }
+
+    public function autoSearchAllTrello(): void
+    {
+        @set_time_limit(120);
+        $this->resetMessages();
+        $this->isSearchingTrello = true;
+
+        try {
+            $service = app(OrderReconciliationService::class);
+            $res = $service->autoSearchTrelloForUnmatched();
+
+            if ($res['success']) {
+                $this->successMessage = $res['message'];
+                $cached = $service->getCachedAnalysis();
+                foreach ($cached['unmatched'] ?? [] as $item) {
+                    if (! empty($item['suggested_trello_card'])) {
+                        $this->trelloCardPreview[$item['row_id']] = $item['suggested_trello_card'];
+                        $this->trelloInput[$item['row_id']] = $item['suggested_trello_card']['url'] ?? '';
+                    }
+                }
+            } else {
+                $this->errorMessage = $res['message'] ?? 'Error durante la búsqueda en Trello.';
+            }
+        } catch (\Throwable $e) {
+            $this->errorMessage = 'Error al consultar Trello: '.$e->getMessage();
+        } finally {
+            $this->isSearchingTrello = false;
+        }
+    }
+
+    public function linkAllFoundTrello(): void
+    {
+        $this->resetMessages();
+        $service = app(OrderReconciliationService::class);
+        $res = $service->linkAllFoundTrelloCards();
+
+        if ($res['success']) {
+            $this->successMessage = $res['message'];
+            $this->meta = $service->getAnalysisMeta();
+            $this->trelloCardPreview = [];
+        } else {
+            $this->errorMessage = $res['message'] ?? 'Error al vincular tarjetas de Trello.';
         }
     }
 

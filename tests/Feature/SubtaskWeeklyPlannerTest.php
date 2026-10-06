@@ -1010,4 +1010,31 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertViewHas('slaBreachedList', fn ($list) => $list->isEmpty())
             ->assertDontSee('Alertas SLA');
     }
+
+    public function test_weekly_planner_workspace_orders_list_contains_search_attributes_for_multi_word_subtask_matching(): void
+    {
+        $order = Order::create([
+            'company_name' => 'PORKYS',
+            'task_name' => 'Varios Locacion',
+            'location_name' => 'Plaza Central',
+            'wo_number' => 'WO-9912',
+            'responsible_person' => 'Camila',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertViewHas('workspaceOrdersList', function ($list) use ($order) {
+                $item = collect($list)->firstWhere('id', (string) $order->id);
+
+                return $item !== null
+                    && $item['company'] === 'PORKYS'
+                    && $item['task'] === 'VARIOS LOCACION'
+                    && $item['location'] === 'Plaza Central'
+                    && $item['wo_number'] === 'WO-9912'
+                    && $item['responsible_person'] === 'Camila'
+                    && str_contains($item['text'], 'PORKYS');
+            })
+            ->assertSee('filterWorkspaceOrders');
+    }
 }

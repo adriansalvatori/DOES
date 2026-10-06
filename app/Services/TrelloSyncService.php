@@ -1025,6 +1025,171 @@ class TrelloSyncService
     }
 
     /**
+     * Search cards on a Trello Board using Trello Search API.
+     * Searches both active and archived/closed cards.
+     *
+     * @return array{success: bool, cards: array, error?: string, status?: int}
+     */
+    public function searchCards(string $query, ?string $boardId = null, ?string $apiKey = null, ?string $apiToken = null): array
+    {
+        if ($this->isDemoMode()) {
+            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.', 'cards' => []];
+        }
+
+        $query = trim($query);
+        if (empty($query)) {
+            return ['success' => true, 'cards' => []];
+        }
+
+        $boardId = $boardId ?: Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54')));
+        $boardId = $this->extractBoardId($boardId);
+
+        $apiKey = $apiKey ?: Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = $apiToken ?: Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+
+        if (empty($apiKey) || empty($apiToken)) {
+            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.', 'cards' => []];
+        }
+
+        $params = [
+            'query' => $query,
+            'idBoards' => $boardId,
+            'modelTypes' => 'cards',
+            'cards_limit' => 5,
+            'card_fields' => 'id,name,desc,closed,shortUrl,url,idList,dateLastActivity',
+            'partial' => 'true',
+            'key' => $apiKey,
+            'token' => $apiToken,
+        ];
+
+        try {
+            $response = Http::timeout(15)->get("{$this->baseUrl}/search", $params);
+
+            // Handle rate limit (429) defensively with backoff
+            if ($response->status() === 429) {
+                sleep(2);
+                $response = Http::timeout(15)->get("{$this->baseUrl}/search", $params);
+            }
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $cards = $data['cards'] ?? [];
+
+                return ['success' => true, 'cards' => $cards];
+            }
+
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'error' => $response->body(),
+                'cards' => [],
+            ];
+        } catch (\Exception $e) {
+            Log::error("Trello API error searching cards for query '{$query}': ".$e->getMessage());
+
+            return [
+                'success' => false,
+                'status' => 500,
+                'error' => $e->getMessage(),
+                'cards' => [],
+            ];
+        }
+    }
+
+    /**
+     * Fetch all cards (open and archived) from a board for instant CSV reconciliation lookup.
+     * Uses cache to avoid redundant API round-trips.
+     *
+     * @return array{success: bool, cards: array, error?: string}
+     */
+    public function fetchAllBoardCardsForLookup(?string $boardId = null, ?string $apiKey = null, ?string $apiToken = null, bool $forceFresh = false): array
+    {
+        if ($this->isDemoMode()) {
+            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.', 'cards' => []];
+        }
+
+        $boardId = $boardId ?: Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54')));
+        $boardId = $this->extractBoardId($boardId);
+
+        $apiKey = $apiKey ?: Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = $apiToken ?: Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+
+        if (empty($apiKey) || empty($apiToken)) {
+            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.', 'cards' => []];
+        }
+
+        $cacheKey = "trello_board_cards_lookup_{$boardId}";
+        if (! $forceFresh && Cache::has($cacheKey)) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached)) {
+                return ['success' => true, 'cards' => $cached];
+            }
+        }
+
+        $allCards = [];
+        $before = null;
+        $maxPages = 5;
+
+        for ($page = 0; $page < $maxPages; $page++) {
+            $params = [
+                'key' => $apiKey,
+                'token' => $apiToken,
+                'filter' => 'all',
+                'fields' => 'id,name,desc,closed,shortUrl,url,idList,dateLastActivity',
+                'limit' => 1000,
+            ];
+
+            if ($before) {
+                $params['before'] = $before;
+            }
+
+            try {
+                $response = Http::timeout(20)->get("{$this->baseUrl}/boards/{$boardId}/cards", $params);
+
+                if ($response->status() === 429) {
+                    sleep(2);
+                    $response = Http::timeout(20)->get("{$this->baseUrl}/boards/{$boardId}/cards", $params);
+                }
+
+                if (! $response->successful()) {
+                    Log::error("Trello API error fetching board cards on page {$page}: ".$response->body());
+                    if (empty($allCards)) {
+                        return ['success' => false, 'error' => 'Error al conectar con Trello: '.$response->status(), 'cards' => []];
+                    }
+                    break;
+                }
+
+                $batch = $response->json();
+                if (empty($batch) || ! is_array($batch)) {
+                    break;
+                }
+
+                $allCards = array_merge($allCards, $batch);
+
+                if (count($batch) < 1000) {
+                    break;
+                }
+
+                $lastCard = end($batch);
+                $before = $lastCard['id'] ?? null;
+                if (! $before) {
+                    break;
+                }
+            } catch (\Exception $e) {
+                Log::error('Trello API exception fetching board cards: '.$e->getMessage());
+                if (empty($allCards)) {
+                    return ['success' => false, 'error' => $e->getMessage(), 'cards' => []];
+                }
+                break;
+            }
+        }
+
+        Cache::put($cacheKey, $allCards, now()->addMinutes(5));
+
+        return ['success' => true, 'cards' => $allCards];
+    }
+
+    /**
      * Fetch all attachments for a given Trello card.
      */
     public function getCardAttachments(string $cardId, ?string $apiKey = null, ?string $apiToken = null): array

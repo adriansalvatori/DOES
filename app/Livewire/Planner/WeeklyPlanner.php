@@ -808,7 +808,8 @@ class WeeklyPlanner extends Component
                 'location' => $loc,
                 'task' => $o->task_name ?? '',
                 'wo_number' => $o->wo_number ?? '',
-                'trello_card_title' => $o->trello_card_title ?? '',
+                'trello_card_title' => $o->trello_title ?? $o->trello_card_title ?? '',
+                'responsible_person' => $o->responsible_person ?? '',
                 'text' => $text,
                 'designer_id' => (string) ($o->designer_id ?? $o->designers->first()?->id ?? ''),
             ];

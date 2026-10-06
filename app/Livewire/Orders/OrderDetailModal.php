@@ -788,6 +788,9 @@ class OrderDetailModal extends Component
         $clean = preg_replace('/(?<!_)_([^_\s\n](?:[^_\n]*?[^_\s\n])?)\s+_(?!_)/u', '_$1_ ', $clean);
         $clean = preg_replace('/(?<!_)_\s+([^_\s\n](?:[^_\n]*?[^_\s\n])?)_(?!_)/u', ' _$1_', $clean);
 
+        // Ensure dividers (---, ***, ___) have a blank line before them so they don't turn into Setext headings
+        $clean = preg_replace('/(?<!\n)\n(---|---|\*\*\*|___)\n/u', "\n\n$1\n\n", $clean);
+
         return Str::markdown($clean, [
             'html_input' => 'strip',
             'allow_unsafe_links' => false,

@@ -55,19 +55,22 @@
                 }
             });
         },
-        getFilteredLinkNoteOrders() {
-            if (!this.linkNoteSearchQuery) {
-                return this.workspaceOrdersList;
+        filterWorkspaceOrders(query) {
+            if (typeof window.filterWorkspaceOrders === 'function') {
+                return window.filterWorkspaceOrders(this.workspaceOrdersList, query);
             }
-            const q = this.linkNoteSearchQuery.toLowerCase().trim();
-            return this.workspaceOrdersList.filter(o => 
-                (o.text && o.text.toLowerCase().includes(q)) || 
-                (o.company && o.company.toLowerCase().includes(q)) || 
-                (o.location && o.location.toLowerCase().includes(q)) ||
-                (o.task && o.task.toLowerCase().includes(q)) ||
-                (o.wo_number && o.wo_number.toLowerCase().includes(q)) ||
-                (o.trello_card_title && o.trello_card_title.toLowerCase().includes(q))
-            );
+            if (!query) return this.workspaceOrdersList || [];
+            const clean = (query || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            const tokens = clean.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+            if (!tokens.length) return this.workspaceOrdersList || [];
+            return (this.workspaceOrdersList || []).filter(o => {
+                const norm = (str) => (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                const h = `${norm(o.company)} ${norm(o.location)} ${norm(o.task)} ${norm(o.wo_number)} ${norm(o.trello_card_title)} ${norm(o.responsible_person)} ${norm(o.text)}`;
+                return tokens.every(t => h.includes(t));
+            });
+        },
+        getFilteredLinkNoteOrders() {
+            return this.filterWorkspaceOrders(this.linkNoteSearchQuery);
         },
         navigateLinkNoteOrder(step) {
             const list = this.getFilteredLinkNoteOrders();
@@ -106,18 +109,7 @@
             this.linkNoteModalOpen = false;
         },
         getFilteredOrders() {
-            if (!this.orderSearchQuery) {
-                return this.workspaceOrdersList;
-            }
-            const q = this.orderSearchQuery.toLowerCase().trim();
-            return this.workspaceOrdersList.filter(o => 
-                (o.text && o.text.toLowerCase().includes(q)) || 
-                (o.company && o.company.toLowerCase().includes(q)) || 
-                (o.location && o.location.toLowerCase().includes(q)) ||
-                (o.task && o.task.toLowerCase().includes(q)) ||
-                (o.wo_number && o.wo_number.toLowerCase().includes(q)) ||
-                (o.trello_card_title && o.trello_card_title.toLowerCase().includes(q))
-            );
+            return this.filterWorkspaceOrders(this.orderSearchQuery);
         },
         navigateModalOrder(step) {
             const list = this.getFilteredOrders();
@@ -1073,16 +1065,10 @@
                                         orderHighlightedIndex: -1,
                                         titleFocused: false,
                                         getFilteredOrders() {
-                                            if (!this.orderSearch) return this.workspaceOrdersList || [];
-                                            const q = this.orderSearch.toLowerCase().trim();
-                                            return (this.workspaceOrdersList || []).filter(o => 
-                                                (o.text && o.text.toLowerCase().includes(q)) || 
-                                                (o.company && o.company.toLowerCase().includes(q)) || 
-                                                (o.location && o.location.toLowerCase().includes(q)) ||
-                                                (o.task && o.task.toLowerCase().includes(q)) ||
-                                                (o.wo_number && o.wo_number.toLowerCase().includes(q)) ||
-                                                (o.trello_card_title && o.trello_card_title.toLowerCase().includes(q))
-                                            );
+                                            if (typeof window.filterWorkspaceOrders === 'function') {
+                                                return window.filterWorkspaceOrders(this.workspaceOrdersList, this.orderSearch);
+                                            }
+                                            return this.filterWorkspaceOrders ? this.filterWorkspaceOrders(this.orderSearch) : (this.workspaceOrdersList || []);
                                         },
                                         navigateOrder(step) {
                                             const list = this.getFilteredOrders();
@@ -1119,8 +1105,11 @@
                                         getFilteredPresets() {
                                             const list = this.subtaskPresetsList || [];
                                             if (!this.subtaskTitle) return list;
-                                            const q = this.subtaskTitle.toLowerCase().trim();
-                                            return list.filter(p => p.title.toLowerCase().includes(q));
+                                            const q = (this.subtaskTitle || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                            return list.filter(p => {
+                                                const titleNorm = (p.title || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+                                                return titleNorm.includes(q);
+                                            });
                                         },
                                         selectPreset(preset) {
                                             this.subtaskTitle = preset.title;
@@ -2228,4 +2217,93 @@
         </button>
     </div>
 
+    <script>
+        (function() {
+            function normalizeSearchText(str) {
+                return (str || '')
+                    .toString()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim();
+            }
+
+            window.filterWorkspaceOrders = function(orders, rawQuery) {
+                if (!orders || !Array.isArray(orders)) return [];
+                if (!rawQuery || !rawQuery.trim()) return orders;
+
+                const cleanQuery = normalizeSearchText(rawQuery);
+                const tokens = cleanQuery
+                    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+                    .split(/\s+/)
+                    .filter(Boolean);
+
+                if (tokens.length === 0) return orders;
+
+                const scored = [];
+
+                for (let i = 0; i < orders.length; i++) {
+                    const o = orders[i];
+                    const compNorm = normalizeSearchText(o.company);
+                    const locNorm = normalizeSearchText(o.location);
+                    const taskNorm = normalizeSearchText(o.task);
+                    const woNorm = normalizeSearchText(o.wo_number);
+                    const trelloNorm = normalizeSearchText(o.trello_card_title);
+                    const respNorm = normalizeSearchText(o.responsible_person);
+                    const textNorm = normalizeSearchText(o.text);
+
+                    // Combined search haystack across all relevant order fields
+                    const haystack = `${compNorm} ${locNorm} ${taskNorm} ${woNorm} ${trelloNorm} ${respNorm} ${textNorm}`;
+
+                    // All search tokens must appear in the order's searchable haystack
+                    let matches = true;
+                    for (let j = 0; j < tokens.length; j++) {
+                        if (!haystack.includes(tokens[j])) {
+                            matches = false;
+                            break;
+                        }
+                    }
+
+                    if (!matches) continue;
+
+                    // Calculate relevance score
+                    let score = 0;
+
+                    // Exact full query matches
+                    if (compNorm === cleanQuery) {
+                        score += 2000;
+                    } else if (compNorm.startsWith(cleanQuery)) {
+                        score += 1000;
+                    } else if (textNorm.startsWith(cleanQuery)) {
+                        score += 800;
+                    } else if (compNorm.includes(cleanQuery)) {
+                        score += 500;
+                    } else if (textNorm.includes(cleanQuery)) {
+                        score += 400;
+                    }
+
+                    // Token-level matches
+                    for (let j = 0; j < tokens.length; j++) {
+                        const tok = tokens[j];
+                        if (compNorm === tok) score += 300;
+                        else if (compNorm.startsWith(tok)) score += 200;
+                        else if (compNorm.includes(tok)) score += 100;
+
+                        if (locNorm === tok) score += 150;
+                        else if (locNorm.startsWith(tok)) score += 100;
+                        else if (locNorm.includes(tok)) score += 60;
+
+                        if (taskNorm.includes(tok)) score += 40;
+                        if (woNorm === tok || woNorm.startsWith(tok)) score += 200;
+                    }
+
+                    scored.push({ order: o, score: score, index: i });
+                }
+
+                scored.sort((a, b) => b.score - a.score || a.index - b.index);
+
+                return scored.map(item => item.order);
+            };
+        })();
+    </script>
 </div>

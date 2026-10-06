@@ -2766,175 +2766,876 @@
                                     @endif
                                 </h5>
                             </div>
-                            <!-- Add Comment Form with Live Inline Preview Inside Typing Box -->
-                            <div class="space-y-2" x-data="{
-                                init() {
-                                    this.syncFromLivewire();
-                                    this.$watch('$wire.newTrelloComment', (val) => {
-                                        if (!val || val.trim() === '') {
-                                            if (this.$refs.editor) this.$refs.editor.innerHTML = '';
-                                        }
-                                    });
-                                },
-                                syncFromLivewire() {
-                                    if (!this.$refs.editor) return;
-                                    if (! $wire.newTrelloComment) {
-                                        this.$refs.editor.innerHTML = '';
-                                    }
-                                },
-                                syncToLivewire() {
-                                    const editor = this.$refs.editor;
-                                    if (!editor) return;
-                                    $wire.newTrelloComment = this.getMarkdownFromDOM(editor);
-                                },
-                                getMarkdownFromDOM(node) {
-                                    let text = '';
-                                    for (let child of node.childNodes) {
-                                        if (child.nodeType === Node.TEXT_NODE) {
-                                            text += child.nodeValue;
-                                        } else if (child.nodeType === Node.ELEMENT_NODE) {
-                                            const tag = child.tagName.toLowerCase();
-                                            const childContent = this.getMarkdownFromDOM(child);
+                            <!-- Add Comment Form with Modern Rich Editor -->
+                            <div 
+                                wire:ignore
+                                class="bg-white border border-[#e9e9e7] focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 rounded-xl transition-all duration-150 shadow-2xs overflow-hidden" 
+                                x-data="{
+                                    isBold: false,
+                                    isItalic: false,
+                                    isOrderedList: false,
+                                    isUnorderedList: false,
+                                    isH1: false,
+                                    isH2: false,
+                                    isEmpty: true,
+                                    isSubmitting: false,
 
-                                            if (tag === 'b' || tag === 'strong') {
-                                                const trimmed = childContent.trim();
-                                                if (trimmed) {
-                                                    const leading = childContent.match(/^\s*/)[0];
-                                                    const trailing = childContent.match(/\s*$/)[0];
-                                                    text += leading + '**' + trimmed + '**' + trailing;
-                                                } else {
-                                                    text += childContent;
+                                    init() {
+                                        this.syncFromLivewire();
+                                        this.updateEmptyState();
+
+                                        this.$watch('$wire.newTrelloComment', (val) => {
+                                            if (!val || val.trim() === '') {
+                                                if (this.$refs.editor && this.$refs.editor.innerHTML !== '') {
+                                                    this.$refs.editor.innerHTML = '';
+                                                    this.updateEmptyState();
+                                                    this.updateActiveFormatting();
                                                 }
-                                            } else if (tag === 'i' || tag === 'em') {
-                                                const trimmed = childContent.trim();
-                                                if (trimmed) {
-                                                    const leading = childContent.match(/^\s*/)[0];
-                                                    const trailing = childContent.match(/\s*$/)[0];
-                                                    text += leading + '*' + trimmed + '*' + trailing;
+                                            }
+                                        });
+                                    },
+
+                                    focusEditor() {
+                                        if (this.$refs.editor) {
+                                            this.$refs.editor.focus();
+                                        }
+                                    },
+
+                                    syncFromLivewire() {
+                                        if (!this.$refs.editor) return;
+                                        if (!$wire.newTrelloComment) {
+                                            this.$refs.editor.innerHTML = '';
+                                        }
+                                    },
+
+                                    updateEmptyState() {
+                                        const editor = this.$refs.editor;
+                                        if (!editor) return;
+                                        const text = (editor.textContent || '').replace(/\u200B/g, '').trim();
+                                        const hasHr = Boolean(editor.querySelector('hr'));
+                                        this.isEmpty = text.length === 0 && !hasHr;
+                                        editor.setAttribute('data-empty', this.isEmpty ? 'true' : 'false');
+                                    },
+
+                                    updateActiveFormatting() {
+                                        try {
+                                            const sel = window.getSelection();
+                                            const li = this.getClosestLi(sel ? sel.anchorNode : null);
+                                            const list = li ? li.closest('ul, ol') : null;
+                                            const currentBlock = this.getCurrentBlock();
+                                            const blockTag = currentBlock ? currentBlock.tagName.toLowerCase() : '';
+
+                                            this.isBold = document.queryCommandState('bold');
+                                            this.isItalic = document.queryCommandState('italic');
+                                            this.isOrderedList = Boolean(list && list.tagName.toLowerCase() === 'ol');
+                                            this.isUnorderedList = Boolean(list && list.tagName.toLowerCase() === 'ul');
+                                            this.isH1 = blockTag === 'h1';
+                                            this.isH2 = blockTag === 'h2';
+                                        } catch (e) {}
+                                    },
+
+                                    getClosestLi(node) {
+                                        let curr = node;
+                                        while (curr && curr !== this.$refs.editor) {
+                                            if (curr.nodeName === 'LI') return curr;
+                                            curr = curr.parentNode;
+                                        }
+                                        return null;
+                                    },
+
+                                    isInList(node) {
+                                        return Boolean(this.getClosestLi(node));
+                                    },
+
+                                    getCurrentBlock() {
+                                        const editor = this.$refs.editor;
+                                        if (!editor) return null;
+
+                                        const sel = window.getSelection();
+                                        if (!sel || sel.rangeCount === 0) {
+                                            return editor.lastElementChild || null;
+                                        }
+
+                                        let node = sel.anchorNode;
+                                        if (!node || !editor.contains(node)) {
+                                            return editor.lastElementChild || null;
+                                        }
+
+                                        if (node === editor) {
+                                            const offset = sel.anchorOffset;
+                                            if (editor.childNodes[offset]) {
+                                                return editor.childNodes[offset];
+                                            }
+                                            return editor.lastElementChild || null;
+                                        }
+
+                                        while (node && node.parentNode !== editor) {
+                                            node = node.parentNode;
+                                        }
+
+                                        return node;
+                                    },
+
+                                    setCursorTo(el, offset = 0) {
+                                        if (!el) return;
+                                        el.focus();
+                                        const sel = window.getSelection();
+                                        if (!sel) return;
+                                        const range = document.createRange();
+                                        if (el.firstChild && el.firstChild.nodeType === Node.TEXT_NODE) {
+                                            const textLen = el.firstChild.length;
+                                            range.setStart(el.firstChild, Math.min(offset, textLen));
+                                        } else {
+                                            range.setStart(el, Math.min(offset, el.childNodes.length));
+                                        }
+                                        range.collapse(true);
+                                        sel.removeAllRanges();
+                                        sel.addRange(range);
+                                    },
+
+                                    setCursorToStart(el) {
+                                        if (!el) return;
+                                        el.focus();
+                                        const sel = window.getSelection();
+                                        if (!sel) return;
+                                        const range = document.createRange();
+                                        range.setStart(el, 0);
+                                        range.collapse(true);
+                                        sel.removeAllRanges();
+                                        sel.addRange(range);
+                                    },
+
+                                    setCursorToEnd(el) {
+                                        if (!el) return;
+                                        el.focus();
+                                        const sel = window.getSelection();
+                                        if (!sel) return;
+                                        const range = document.createRange();
+                                        if (el.lastChild && el.lastChild.nodeType === Node.TEXT_NODE) {
+                                            range.setStart(el.lastChild, el.lastChild.length);
+                                            range.collapse(true);
+                                        } else if (el.childNodes.length === 1 && el.firstChild.nodeName === 'BR') {
+                                            range.setStart(el, 0);
+                                            range.collapse(true);
+                                        } else {
+                                            range.selectNodeContents(el);
+                                            range.collapse(false);
+                                        }
+                                        sel.removeAllRanges();
+                                        sel.addRange(range);
+                                    },
+
+                                    exitList(li) {
+                                        const list = li.parentElement;
+                                        if (!list) return;
+
+                                        li.remove();
+
+                                        const newBlock = document.createElement('div');
+                                        newBlock.innerHTML = '<br>';
+
+                                        if (list.nextSibling) {
+                                            list.parentNode.insertBefore(newBlock, list.nextSibling);
+                                        } else {
+                                            list.parentNode.appendChild(newBlock);
+                                        }
+
+                                        if (list.children.length === 0) {
+                                            list.remove();
+                                        }
+
+                                        this.setCursorToStart(newBlock);
+                                        this.handleAfterChange();
+                                    },
+
+                                    toggleList(type) {
+                                        this.$refs.editor.focus();
+                                        const sel = window.getSelection();
+                                        if (!sel || sel.rangeCount === 0) return;
+
+                                        const li = this.getClosestLi(sel.anchorNode);
+                                        if (li) {
+                                            const currentList = li.closest('ul, ol');
+                                            if (currentList) {
+                                                const currentType = currentList.tagName.toLowerCase();
+                                                if (currentType === type) {
+                                                    // Toggle off: unwrap li into div
+                                                    const div = document.createElement('div');
+                                                    div.innerHTML = li.innerHTML || '<br>';
+                                                    currentList.parentNode.insertBefore(div, currentList.nextSibling);
+                                                    li.remove();
+                                                    if (currentList.children.length === 0) {
+                                                        currentList.remove();
+                                                    }
+                                                    this.setCursorToEnd(div);
+                                                    this.handleAfterChange();
+                                                    return;
                                                 } else {
-                                                    text += childContent;
+                                                    // Switch list type between ul and ol
+                                                    const newList = document.createElement(type);
+                                                    while (currentList.firstChild) {
+                                                        newList.appendChild(currentList.firstChild);
+                                                    }
+                                                    currentList.parentNode.replaceChild(newList, currentList);
+                                                    this.handleAfterChange();
+                                                    return;
                                                 }
-                                            } else if (tag === 'code') {
-                                                const trimmed = childContent.trim();
-                                                if (trimmed) {
-                                                    const leading = childContent.match(/^\s*/)[0];
-                                                    const trailing = childContent.match(/\s*$/)[0];
-                                                    text += leading + '`' + trimmed + '`' + trailing;
-                                                } else {
-                                                    text += childContent;
+                                            }
+                                        }
+
+                                        // Not in list: convert ONLY the current line / block!
+                                        this.convertCurrentLineToList(type);
+                                    },
+
+                                    convertCurrentLineToList(type) {
+                                        const sel = window.getSelection();
+                                        if (!sel || sel.rangeCount === 0) return;
+
+                                        const editor = this.$refs.editor;
+                                        let currentBlock = this.getCurrentBlock();
+
+                                        if (!currentBlock || currentBlock === editor) {
+                                            const list = document.createElement(type);
+                                            const newLi = document.createElement('li');
+                                            newLi.innerHTML = '<br>';
+                                            list.appendChild(newLi);
+                                            editor.appendChild(list);
+                                            this.setCursorToStart(newLi);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        if (currentBlock.tagName === 'UL' || currentBlock.tagName === 'OL') {
+                                            return;
+                                        }
+
+                                        // If currentBlock has <br> tags, split it so each line has its own div
+                                        if (currentBlock.innerHTML && currentBlock.innerHTML.includes('<br>') && currentBlock.childNodes.length > 1) {
+                                            this.splitBlockByBr(currentBlock);
+                                            currentBlock = this.getCurrentBlock();
+                                        }
+
+                                        // Now convert ONLY currentBlock into list of requested type
+                                        const list = document.createElement(type);
+                                        const newLi = document.createElement('li');
+
+                                        let html = currentBlock.innerHTML ? currentBlock.innerHTML.trim() : '';
+                                        html = html.replace(/^(\s*[-*]|\s*\d+[.)])\s*/, '');
+
+                                        if (!html || html === '<br>') {
+                                            newLi.innerHTML = '<br>';
+                                            list.appendChild(newLi);
+                                            currentBlock.parentNode.replaceChild(list, currentBlock);
+                                            this.setCursorToStart(newLi);
+                                        } else {
+                                            newLi.innerHTML = html;
+                                            list.appendChild(newLi);
+                                            currentBlock.parentNode.replaceChild(list, currentBlock);
+                                            this.setCursorToEnd(newLi);
+                                        }
+
+                                        this.handleAfterChange();
+                                    },
+
+                                    convertLineToHeading(level, remainingText) {
+                                        let currentBlock = this.getCurrentBlock();
+                                        const editor = this.$refs.editor;
+                                        if (!currentBlock || currentBlock === editor) {
+                                            currentBlock = document.createElement('div');
+                                            currentBlock.innerHTML = '<br>';
+                                            editor.appendChild(currentBlock);
+                                        }
+
+                                        const heading = document.createElement(level);
+                                        const cleanText = (remainingText || '').replace(/^[\s\u00A0]+/, '');
+
+                                        if (!cleanText) {
+                                            heading.innerHTML = '<br>';
+                                            currentBlock.parentNode.replaceChild(heading, currentBlock);
+                                            this.setCursorToStart(heading);
+                                        } else {
+                                            heading.textContent = cleanText;
+                                            currentBlock.parentNode.replaceChild(heading, currentBlock);
+                                            this.setCursorToEnd(heading);
+                                        }
+
+                                        this.handleAfterChange();
+                                    },
+
+                                    toggleHeading(level) {
+                                        this.$refs.editor.focus();
+                                        const editor = this.$refs.editor;
+                                        let currentBlock = this.getCurrentBlock();
+
+                                        if (!currentBlock || currentBlock === editor) {
+                                            const heading = document.createElement(level);
+                                            heading.innerHTML = '<br>';
+                                            editor.appendChild(heading);
+                                            this.setCursorToStart(heading);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        // If currently in a list item, detach and convert
+                                        const sel = window.getSelection();
+                                        const li = this.getClosestLi(sel ? sel.anchorNode : null);
+                                        if (li) {
+                                            const list = li.closest('ul, ol');
+                                            const heading = document.createElement(level);
+                                            heading.innerHTML = li.innerHTML || '<br>';
+
+                                            li.remove();
+                                            if (list && list.nextSibling) {
+                                                list.parentNode.insertBefore(heading, list.nextSibling);
+                                            } else if (list) {
+                                                list.parentNode.appendChild(heading);
+                                            }
+                                            if (list && list.children.length === 0) {
+                                                list.remove();
+                                            }
+                                            this.setCursorToEnd(heading);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        if (currentBlock.tagName === 'UL' || currentBlock.tagName === 'OL') {
+                                            return;
+                                        }
+
+                                        const currentTag = currentBlock.tagName.toLowerCase();
+                                        if (currentTag === level) {
+                                            // Toggle off back to normal div
+                                            const div = document.createElement('div');
+                                            div.innerHTML = currentBlock.innerHTML && currentBlock.innerHTML !== '<br>' ? currentBlock.innerHTML : '<br>';
+                                            currentBlock.parentNode.replaceChild(div, currentBlock);
+                                            this.setCursorToEnd(div);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        // Split by <br> if needed
+                                        if (currentBlock.innerHTML && currentBlock.innerHTML.includes('<br>') && currentBlock.childNodes.length > 1) {
+                                            this.splitBlockByBr(currentBlock);
+                                            currentBlock = this.getCurrentBlock();
+                                        }
+
+                                        const heading = document.createElement(level);
+                                        let html = currentBlock.innerHTML ? currentBlock.innerHTML.trim() : '';
+                                        html = html.replace(/^#{1,3}\s*/, '');
+
+                                        if (!html || html === '<br>') {
+                                            heading.innerHTML = '<br>';
+                                            currentBlock.parentNode.replaceChild(heading, currentBlock);
+                                            this.setCursorToStart(heading);
+                                        } else {
+                                            heading.innerHTML = html;
+                                            currentBlock.parentNode.replaceChild(heading, currentBlock);
+                                            this.setCursorToEnd(heading);
+                                        }
+
+                                        this.handleAfterChange();
+                                    },
+
+                                    insertDivider() {
+                                        this.$refs.editor.focus();
+                                        const editor = this.$refs.editor;
+                                        let currentBlock = this.getCurrentBlock();
+
+                                        const sel = window.getSelection();
+                                        if (sel) {
+                                            const li = this.getClosestLi(sel.anchorNode);
+                                            if (li) {
+                                                const list = li.closest('ul, ol');
+                                                if (list) currentBlock = list;
+                                            }
+                                        }
+
+                                        const hr = document.createElement('hr');
+                                        const newDiv = document.createElement('div');
+                                        newDiv.innerHTML = '<br>';
+
+                                        if (!currentBlock || currentBlock === editor) {
+                                            editor.appendChild(hr);
+                                            editor.appendChild(newDiv);
+                                            this.setCursorToStart(newDiv);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        const text = (currentBlock.textContent || '').replace(/\u200B/g, '').trim();
+                                        if (text === '' || text === '---' || text === '***' || text === '___') {
+                                            currentBlock.parentNode.insertBefore(hr, currentBlock);
+                                            currentBlock.parentNode.insertBefore(newDiv, currentBlock);
+                                            currentBlock.remove();
+                                        } else {
+                                            if (currentBlock.nextSibling) {
+                                                editor.insertBefore(hr, currentBlock.nextSibling);
+                                                editor.insertBefore(newDiv, hr.nextSibling);
+                                            } else {
+                                                editor.appendChild(hr);
+                                                editor.appendChild(newDiv);
+                                            }
+                                        }
+
+                                        this.setCursorToStart(newDiv);
+                                        this.handleAfterChange();
+                                    },
+
+                                    splitBlockByBr(block) {
+                                        const sel = window.getSelection();
+                                        const anchorNode = sel ? sel.anchorNode : null;
+
+                                        const lines = [];
+                                        let currentDiv = document.createElement('div');
+                                        let targetDiv = null;
+
+                                        Array.from(block.childNodes).forEach(child => {
+                                            if (child.nodeName === 'BR') {
+                                                if (currentDiv.childNodes.length === 0) currentDiv.innerHTML = '<br>';
+                                                lines.push(currentDiv);
+                                                currentDiv = document.createElement('div');
+                                            } else {
+                                                if (child === anchorNode || (child.contains && child.contains(anchorNode))) {
+                                                    targetDiv = currentDiv;
                                                 }
-                                            } else if (tag === 'a') {
-                                                const href = child.getAttribute('href') || childContent;
-                                                text += '[' + childContent + '](' + href + ')';
-                                            } else if (tag === 'li') {
-                                                const parentTag = child.parentElement ? child.parentElement.tagName.toLowerCase() : '';
-                                                if (parentTag === 'ol') {
-                                                    const siblings = Array.from(child.parentElement.children).filter(c => c.tagName.toLowerCase() === 'li');
-                                                    const idx = siblings.indexOf(child) + 1;
-                                                    text += idx + '. ' + childContent.trim() + '\n';
-                                                } else {
-                                                    text += '- ' + childContent.trim() + '\n';
+                                                currentDiv.appendChild(child.cloneNode(true));
+                                            }
+                                        });
+
+                                        if (currentDiv.childNodes.length > 0 || lines.length === 0) {
+                                            if (currentDiv.childNodes.length === 0) currentDiv.innerHTML = '<br>';
+                                            lines.push(currentDiv);
+                                        }
+
+                                        if (!targetDiv) {
+                                            targetDiv = lines[lines.length - 1];
+                                        }
+
+                                        const frag = document.createDocumentFragment();
+                                        lines.forEach(lineDiv => frag.appendChild(lineDiv));
+                                        block.parentNode.replaceChild(frag, block);
+
+                                        this.setCursorToEnd(targetDiv);
+                                    },
+
+                                    insertNewline() {
+                                        const sel = window.getSelection();
+                                        if (!sel || sel.rangeCount === 0) return;
+
+                                        const li = this.getClosestLi(sel.anchorNode);
+                                        if (li) {
+                                            const text = (li.textContent || '').replace(/\u200B/g, '').trim();
+                                            if (!text) {
+                                                this.exitList(li);
+                                                return;
+                                            }
+
+                                            // In list: insert a new <li> directly inside this list
+                                            const newLi = document.createElement('li');
+                                            newLi.innerHTML = '<br>';
+                                            if (li.nextSibling) {
+                                                li.parentNode.insertBefore(newLi, li.nextSibling);
+                                            } else {
+                                                li.parentNode.appendChild(newLi);
+                                            }
+                                            this.setCursorToStart(newLi);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        // Outside list: create an isolated <div> for the next line
+                                        const editor = this.$refs.editor;
+                                        let currentBlock = this.getCurrentBlock();
+
+                                        if (!currentBlock || currentBlock === editor) {
+                                            const div1 = document.createElement('div');
+                                            div1.innerHTML = '<br>';
+                                            const div2 = document.createElement('div');
+                                            div2.innerHTML = '<br>';
+                                            editor.innerHTML = '';
+                                            editor.appendChild(div1);
+                                            editor.appendChild(div2);
+                                            this.setCursorToStart(div2);
+                                            this.handleAfterChange();
+                                            return;
+                                        }
+
+                                        if (currentBlock.nodeType === Node.TEXT_NODE) {
+                                            const div = document.createElement('div');
+                                            currentBlock.parentNode.insertBefore(div, currentBlock);
+                                            div.appendChild(currentBlock);
+                                            currentBlock = div;
+                                        }
+
+                                        const newDiv = document.createElement('div');
+                                        newDiv.innerHTML = '<br>';
+
+                                        const range = sel.getRangeAt(0);
+                                        const afterRange = document.createRange();
+                                        afterRange.setStart(range.endContainer, range.endOffset);
+                                        afterRange.setEnd(currentBlock, currentBlock.childNodes.length);
+                                        const afterContent = afterRange.extractContents();
+
+                                        if (afterContent.textContent.length > 0 || afterContent.querySelector('img, a, br')) {
+                                            newDiv.innerHTML = '';
+                                            newDiv.appendChild(afterContent);
+                                        }
+
+                                        if (!currentBlock.textContent && !currentBlock.querySelector('br, img')) {
+                                            currentBlock.innerHTML = '<br>';
+                                        }
+
+                                        if (currentBlock.nextSibling) {
+                                            editor.insertBefore(newDiv, currentBlock.nextSibling);
+                                        } else {
+                                            editor.appendChild(newDiv);
+                                        }
+
+                                        this.setCursorToStart(newDiv);
+                                        this.handleAfterChange();
+                                    },
+
+                                    insertLineBreak() {
+                                        const sel = window.getSelection();
+                                        if (!sel || sel.rangeCount === 0) return;
+
+                                        const success = document.execCommand('insertLineBreak', false, null);
+                                        if (!success) {
+                                            const range = sel.getRangeAt(0);
+                                            const br = document.createElement('br');
+                                            range.deleteContents();
+                                            range.insertNode(br);
+                                            range.setStartAfter(br);
+                                            range.setEndAfter(br);
+                                            sel.removeAllRanges();
+                                            sel.addRange(range);
+                                        }
+
+                                        this.handleAfterChange();
+                                    },
+
+                                    handleKeydown(e) {
+                                        const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+                                        // Cmd+Enter / Ctrl+Enter: Submit
+                                        if (isCmdOrCtrl && e.key === 'Enter') {
+                                            e.preventDefault();
+                                            this.submit();
+                                            return;
+                                        }
+
+                                        // Cmd+B / Ctrl+B: Bold
+                                        if (isCmdOrCtrl && (e.key === 'b' || e.key === 'B')) {
+                                            e.preventDefault();
+                                            this.format('bold');
+                                            return;
+                                        }
+
+                                        // Cmd+I / Ctrl+I: Italic
+                                        if (isCmdOrCtrl && (e.key === 'i' || e.key === 'I')) {
+                                            e.preventDefault();
+                                            this.format('italic');
+                                            return;
+                                        }
+
+                                        // Cmd+K / Ctrl+K: Link
+                                        if (isCmdOrCtrl && (e.key === 'k' || e.key === 'K')) {
+                                            e.preventDefault();
+                                            this.promptLink();
+                                            return;
+                                        }
+
+                                        // Shift+Enter: Soft line break within line/item
+                                        if (e.key === 'Enter' && e.shiftKey) {
+                                            e.preventDefault();
+                                            this.insertLineBreak();
+                                            return;
+                                        }
+
+                                        // Plain Enter: JUMP to next line, divider conversion or next list item
+                                        if (e.key === 'Enter' && !e.shiftKey && !isCmdOrCtrl) {
+                                            const sel = window.getSelection();
+                                            const currentBlock = this.getCurrentBlock();
+                                            if (currentBlock && !this.isInList(sel ? sel.anchorNode : null)) {
+                                                const text = (currentBlock.textContent || '').replace(/\u200B/g, '').trim();
+                                                if (text === '---' || text === '***' || text === '___') {
+                                                    e.preventDefault();
+                                                    this.insertDivider();
+                                                    return;
                                                 }
-                                            } else if (tag === 'ul' || tag === 'ol') {
-                                                text += (text && !text.endsWith('\n') ? '\n' : '') + childContent + (childContent.endsWith('\n') ? '' : '\n');
-                                            } else if (tag === 'div' || tag === 'p') {
-                                                if (childContent === '\n' || childContent === '') {
+                                            }
+
+                                            e.preventDefault();
+                                            this.insertNewline();
+                                            return;
+                                        }
+
+                                        // Backspace on empty list item exits list; on empty heading reverts to div
+                                        if (e.key === 'Backspace') {
+                                            const sel = window.getSelection();
+                                            const li = this.getClosestLi(sel ? sel.anchorNode : null);
+                                            if (li) {
+                                                const text = (li.textContent || '').replace(/\u200B/g, '').trim();
+                                                if (!text) {
+                                                    e.preventDefault();
+                                                    this.exitList(li);
+                                                    return;
+                                                }
+                                            }
+
+                                            const currentBlock = this.getCurrentBlock();
+                                            if (currentBlock && (currentBlock.tagName === 'H1' || currentBlock.tagName === 'H2' || currentBlock.tagName === 'H3')) {
+                                                const text = (currentBlock.textContent || '').replace(/\u200B/g, '').trim();
+                                                if (!text) {
+                                                    e.preventDefault();
+                                                    const div = document.createElement('div');
+                                                    div.innerHTML = '<br>';
+                                                    currentBlock.parentNode.replaceChild(div, currentBlock);
+                                                    this.setCursorToStart(div);
+                                                    this.handleAfterChange();
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                    },
+
+                                    handleKeyup(e) {
+                                        this.updateActiveFormatting();
+                                        this.updateEmptyState();
+                                    },
+
+                                    handleInput() {
+                                        const sel = window.getSelection();
+                                        if (sel && sel.rangeCount > 0) {
+                                            const node = sel.anchorNode;
+                                            if (node && node.nodeType === Node.TEXT_NODE) {
+                                                const rawText = node.nodeValue || '';
+                                                const text = rawText.replace(/\u200B/g, '');
+
+                                                // Check for divider: '---', '***', '___'
+                                                if (/^(---|---|\*\*\*|___)[\s\u00A0]?$/.test(text.trim()) && !this.isInList(node)) {
+                                                    this.insertDivider();
+                                                    return;
+                                                }
+
+                                                // Check for headings: '# ', '## ', '### '
+                                                if (/^#[\s\u00A0]/.test(text) && !this.isInList(node)) {
+                                                    const rem = text.replace(/^#[\s\u00A0]/, '');
+                                                    this.convertLineToHeading('h1', rem);
+                                                    return;
+                                                } else if (/^##[\s\u00A0]/.test(text) && !this.isInList(node)) {
+                                                    const rem = text.replace(/^##[\s\u00A0]/, '');
+                                                    this.convertLineToHeading('h2', rem);
+                                                    return;
+                                                } else if (/^###[\s\u00A0]/.test(text) && !this.isInList(node)) {
+                                                    const rem = text.replace(/^###[\s\u00A0]/, '');
+                                                    this.convertLineToHeading('h2', rem);
+                                                    return;
+                                                }
+
+                                                // Check for lists: '- ', '* ', '1. ', '1) '
+                                                if (/^[\-\*][\s\u00A0]/.test(text) && !this.isInList(node)) {
+                                                    node.nodeValue = text.replace(/^[\-\*][\s\u00A0]/, '');
+                                                    this.toggleList('ul');
+                                                    return;
+                                                } else if (/^\d+[\.\)][\s\u00A0]/.test(text) && !this.isInList(node)) {
+                                                    node.nodeValue = text.replace(/^\d+[\.\)][\s\u00A0]/, '');
+                                                    this.toggleList('ol');
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                        this.handleAfterChange();
+                                    },
+
+                                    handleBlur() {
+                                        this.syncToLivewire();
+                                    },
+
+                                    handleAfterChange() {
+                                        this.updateEmptyState();
+                                        this.updateActiveFormatting();
+                                        this.syncToLivewire();
+                                        this.$nextTick(() => {
+                                            this.scrollCursorIntoView();
+                                        });
+                                    },
+
+                                    scrollCursorIntoView() {
+                                        const sel = window.getSelection();
+                                        if (sel && sel.anchorNode) {
+                                            const el = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+                                            if (el && typeof el.scrollIntoView === 'function') {
+                                                el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                                            }
+                                        }
+                                    },
+
+                                    format(cmd, arg = null) {
+                                        this.$refs.editor.focus();
+                                        document.execCommand(cmd, false, arg);
+                                        this.handleAfterChange();
+                                    },
+
+                                    promptLink() {
+                                        this.$refs.editor.focus();
+                                        const url = prompt('{{ __('Ingrese URL del enlace:') }}', 'https://');
+                                        if (url && url.trim() && url !== 'https://') {
+                                            document.execCommand('createLink', false, url.trim());
+                                            this.handleAfterChange();
+                                        }
+                                    },
+
+                                    syncToLivewire() {
+                                        const editor = this.$refs.editor;
+                                        if (!editor) return;
+                                        const md = this.getMarkdownFromDOM(editor);
+                                        if (window.Livewire) {
+                                            $wire.set('newTrelloComment', md, false);
+                                        }
+                                    },
+
+                                    submit() {
+                                        const editor = this.$refs.editor;
+                                        if (!editor) return;
+                                        const md = this.getMarkdownFromDOM(editor).trim();
+                                        if (!md) return;
+
+                                        this.isSubmitting = true;
+                                        $wire.set('newTrelloComment', md);
+                                        $wire.addTrelloComment().then(() => {
+                                            this.isSubmitting = false;
+                                        }).catch(() => {
+                                            this.isSubmitting = false;
+                                        });
+                                    },
+
+                                    getMarkdownFromDOM(node) {
+                                        let text = '';
+                                        for (let child of node.childNodes) {
+                                            if (child.nodeType === Node.TEXT_NODE) {
+                                                text += child.nodeValue;
+                                            } else if (child.nodeType === Node.ELEMENT_NODE) {
+                                                const tag = child.tagName.toLowerCase();
+                                                const childContent = this.getMarkdownFromDOM(child);
+
+                                                if (tag === 'b' || tag === 'strong') {
+                                                    const trimmed = childContent.trim();
+                                                    if (trimmed) {
+                                                        const leading = childContent.match(/^\s*/)[0];
+                                                        const trailing = childContent.match(/\s*$/)[0];
+                                                        text += leading + '**' + trimmed + '**' + trailing;
+                                                    } else {
+                                                        text += childContent;
+                                                    }
+                                                } else if (tag === 'i' || tag === 'em') {
+                                                    const trimmed = childContent.trim();
+                                                    if (trimmed) {
+                                                        const leading = childContent.match(/^\s*/)[0];
+                                                        const trailing = childContent.match(/\s*$/)[0];
+                                                        text += leading + '*' + trimmed + '*' + trailing;
+                                                    } else {
+                                                        text += childContent;
+                                                    }
+                                                } else if (tag === 'code') {
+                                                    const trimmed = childContent.trim();
+                                                    if (trimmed) {
+                                                        const leading = childContent.match(/^\s*/)[0];
+                                                        const trailing = childContent.match(/\s*$/)[0];
+                                                        text += leading + '`' + trimmed + '`' + trailing;
+                                                    } else {
+                                                        text += childContent;
+                                                    }
+                                                } else if (tag === 'a') {
+                                                    const href = child.getAttribute('href') || childContent;
+                                                    text += '[' + childContent + '](' + href + ')';
+                                                } else if (tag === 'h1') {
+                                                    const trimmed = childContent.trim();
+                                                    if (trimmed) {
+                                                        if (text && !text.endsWith('\n')) text += '\n';
+                                                        text += '# ' + trimmed + '\n\n';
+                                                    }
+                                                } else if (tag === 'h2') {
+                                                    const trimmed = childContent.trim();
+                                                    if (trimmed) {
+                                                        if (text && !text.endsWith('\n')) text += '\n';
+                                                        text += '## ' + trimmed + '\n\n';
+                                                    }
+                                                } else if (tag === 'h3') {
+                                                    const trimmed = childContent.trim();
+                                                    if (trimmed) {
+                                                        if (text && !text.endsWith('\n')) text += '\n';
+                                                        text += '### ' + trimmed + '\n\n';
+                                                    }
+                                                } else if (tag === 'hr') {
+                                                    if (text) {
+                                                        if (!text.endsWith('\n\n')) {
+                                                            text += text.endsWith('\n') ? '\n' : '\n\n';
+                                                        }
+                                                    }
+                                                    text += '---\n\n';
+                                                } else if (tag === 'li') {
+                                                    const parentTag = child.parentElement ? child.parentElement.tagName.toLowerCase() : '';
+                                                    if (parentTag === 'ol') {
+                                                        const siblings = Array.from(child.parentElement.children).filter(c => c.tagName.toLowerCase() === 'li');
+                                                        const idx = siblings.indexOf(child) + 1;
+                                                        text += idx + '. ' + childContent.trim() + '\n';
+                                                    } else {
+                                                        text += '- ' + childContent.trim() + '\n';
+                                                    }
+                                                } else if (tag === 'ul' || tag === 'ol') {
+                                                    text += (text && !text.endsWith('\n') ? '\n' : '') + childContent + (childContent.endsWith('\n') ? '' : '\n');
+                                                } else if (tag === 'div' || tag === 'p') {
+                                                    if (childContent === '\n' || childContent === '') {
+                                                        text += '\n';
+                                                    } else {
+                                                        if (text && !text.endsWith('\n')) {
+                                                            text += '\n';
+                                                        }
+                                                        text += childContent + '\n';
+                                                    }
+                                                } else if (tag === 'br') {
                                                     text += '\n';
                                                 } else {
-                                                    if (text && !text.endsWith('\n')) {
-                                                        text += '\n';
-                                                    }
-                                                    text += childContent + '\n';
+                                                    text += childContent;
                                                 }
-                                            } else if (tag === 'br') {
-                                                text += '\n';
-                                            } else {
-                                                text += childContent;
                                             }
                                         }
+                                        return text;
                                     }
-                                    return text;
-                                },
-                                handleInput() {
-                                    const sel = window.getSelection();
-                                    if (sel && sel.rangeCount > 0) {
-                                        const node = sel.anchorNode;
-                                        if (node && node.nodeType === Node.TEXT_NODE) {
-                                            const text = node.nodeValue || '';
-                                            if (/^[\-\*]\s/.test(text) && !this.isInList(node)) {
-                                                node.nodeValue = text.replace(/^[\-\*]\s/, '');
-                                                document.execCommand('insertUnorderedList', false, null);
-                                            } else if (/^\d+[\.\)]\s/.test(text) && !this.isInList(node)) {
-                                                node.nodeValue = text.replace(/^\d+[\.\)]\s/, '');
-                                                document.execCommand('insertOrderedList', false, null);
-                                            }
-                                        }
-                                    }
-                                    this.syncToLivewire();
-                                },
-                                isInList(node) {
-                                    let curr = node;
-                                    while (curr && curr !== this.$refs.editor) {
-                                        if (curr.nodeName === 'UL' || curr.nodeName === 'OL' || curr.nodeName === 'LI') {
-                                            return true;
-                                        }
-                                        curr = curr.parentNode;
-                                    }
-                                    return false;
-                                },
-                                handleKeydown(e) {
-                                    const isCmdOrCtrl = e.metaKey || e.ctrlKey;
-
-                                    // Cmd+Enter / Ctrl+Enter: Submit
-                                    if (isCmdOrCtrl && e.key === 'Enter') {
-                                        e.preventDefault();
-                                        this.syncToLivewire();
-                                        $wire.addTrelloComment();
-                                        return;
-                                    }
-
-                                    // Shift+Enter explicitly inserts a line break
-                                    if (e.key === 'Enter' && e.shiftKey) {
-                                        e.preventDefault();
-                                        document.execCommand('insertLineBreak');
-                                        this.syncToLivewire();
-                                        return;
-                                    }
-
-                                    // Cmd+B / Ctrl+B: Bold
-                                    if (isCmdOrCtrl && (e.key === 'b' || e.key === 'B')) {
-                                        e.preventDefault();
-                                        document.execCommand('bold', false, null);
-                                        this.syncToLivewire();
-                                        return;
-                                    }
-
-                                    // Cmd+I / Ctrl+I: Italic
-                                    if (isCmdOrCtrl && (e.key === 'i' || e.key === 'I')) {
-                                        e.preventDefault();
-                                        document.execCommand('italic', false, null);
-                                        this.syncToLivewire();
-                                        return;
-                                    }
-
-                                    // Cmd+K / Ctrl+K: Link
-                                    if (isCmdOrCtrl && (e.key === 'k' || e.key === 'K')) {
-                                        e.preventDefault();
-                                        const url = prompt('{{ __('Ingrese URL del enlace:') }}', 'https://');
-                                        if (url) {
-                                            document.execCommand('createLink', false, url);
-                                            this.syncToLivewire();
-                                        }
-                                        return;
-                                    }
-                                },
-                                format(cmd, arg = null) {
-                                    this.$refs.editor.focus();
-                                    document.execCommand(cmd, false, arg);
-                                    this.syncToLivewire();
-                                }
-                            }">
+                                }">
                                 <style>
+                                    .comment-editor-box h1 {
+                                        font-size: 1.1rem !important;
+                                        font-weight: 700 !important;
+                                        color: #18181b !important;
+                                        margin-top: 0.4rem !important;
+                                        margin-bottom: 0.25rem !important;
+                                        line-height: 1.35 !important;
+                                    }
+                                    .comment-editor-box h2 {
+                                        font-size: 0.975rem !important;
+                                        font-weight: 600 !important;
+                                        color: #27272a !important;
+                                        margin-top: 0.35rem !important;
+                                        margin-bottom: 0.2rem !important;
+                                        line-height: 1.35 !important;
+                                    }
+                                    .comment-editor-box h3 {
+                                        font-size: 0.85rem !important;
+                                        font-weight: 600 !important;
+                                        color: #3f3f46 !important;
+                                        margin-top: 0.25rem !important;
+                                        margin-bottom: 0.15rem !important;
+                                        line-height: 1.4 !important;
+                                    }
+                                    .comment-editor-box hr {
+                                        border: none !important;
+                                        border-top: 2px solid #e4e4e7 !important;
+                                        margin-top: 0.625rem !important;
+                                        margin-bottom: 0.625rem !important;
+                                        cursor: default;
+                                    }
                                     .comment-editor-box ul {
                                         list-style-type: disc !important;
                                         padding-left: 1.25rem !important;
@@ -2960,41 +3661,172 @@
                                     .comment-editor-box a:hover {
                                         color: #0369a1 !important;
                                     }
+                                    .comment-editor-box:empty:before,
+                                    .comment-editor-box[data-empty="true"]:before {
+                                        content: attr(data-placeholder);
+                                        color: #a1a1aa;
+                                        pointer-events: none;
+                                        display: block;
+                                    }
                                 </style>
 
-                                <!-- Unified Typing Box (Live Inline Preview) -->
-                                <div 
-                                    x-ref="editor"
-                                    contenteditable="true"
-                                    @input="handleInput()"
-                                    @keyup="syncToLivewire()"
-                                    @blur="syncToLivewire()"
-                                    @keydown="handleKeydown($event)"
-                                    data-placeholder="{{ __('Escribe un comentario...') }}"
-                                    class="comment-editor-box w-full bg-white border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition min-h-[84px] max-h-[220px] overflow-y-auto font-sans leading-relaxed outline-none prose prose-xs max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-400 empty:before:pointer-events-none whitespace-pre-wrap break-words"></div>
+                                <!-- Formatting Toolbar (Top, Clean Notion/Linear Style) -->
+                                <div class="border-b border-[#f0f0ee] bg-[#fafaf9]/90 px-3 py-1.5 flex items-center justify-between gap-1 select-none flex-wrap">
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <!-- Bold -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="format('bold')" 
+                                            :class="isBold ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="p-1.5 rounded-md border text-xs font-bold transition flex items-center justify-center cursor-pointer" 
+                                            title="{{ __('Negrita (⌘B / Ctrl+B)') }}"
+                                        >
+                                            <x-lucide-bold class="w-3.5 h-3.5" />
+                                        </button>
 
-                                <div class="flex items-center justify-between pt-1">
-                                    <!-- Quick Formatting Buttons -->
-                                    <div class="flex items-center gap-1 text-[11px]">
-                                        <button type="button" @click="format('bold')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 font-bold text-zinc-700 transition" title="{{ __('Negrita') }}">B</button>
-                                        <button type="button" @click="format('italic')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 italic text-zinc-700 transition" title="{{ __('Cursiva') }}">I</button>
-                                        <button type="button" @click="const url = prompt('{{ __('URL del enlace:') }}', 'https://'); if(url) format('createLink', url);" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition underline" title="{{ __('Enlace') }}">{{ __('Link') }}</button>
-                                        <button type="button" @click="format('insertUnorderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="{{ __('Lista con viñetas') }}">• {{ __('Viñetas') }}</button>
-                                        <button type="button" @click="format('insertOrderedList')" class="px-2 py-0.5 rounded border border-stone-200 bg-white hover:bg-stone-100 text-zinc-700 transition" title="{{ __('Lista numerada') }}">1. {{ __('Lista') }}</button>
+                                        <!-- Italic -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="format('italic')" 
+                                            :class="isItalic ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="p-1.5 rounded-md border text-xs italic transition flex items-center justify-center cursor-pointer" 
+                                            title="{{ __('Cursiva (⌘I / Ctrl+I)') }}"
+                                        >
+                                            <x-lucide-italic class="w-3.5 h-3.5" />
+                                        </button>
+
+                                        <!-- Link -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="promptLink()" 
+                                            class="p-1.5 rounded-md border border-transparent text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 text-xs transition flex items-center justify-center cursor-pointer" 
+                                            title="{{ __('Insertar enlace (⌘K / Ctrl+K)') }}"
+                                        >
+                                            <x-lucide-link class="w-3.5 h-3.5" />
+                                        </button>
+
+                                        <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
+
+                                        <!-- Heading 1 -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="toggleHeading('h1')" 
+                                            :class="isH1 ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="p-1.5 rounded-md border text-xs font-semibold transition flex items-center justify-center cursor-pointer" 
+                                            title="{{ __('Título principal (# )') }}"
+                                        >
+                                            <x-lucide-heading-1 class="w-3.5 h-3.5" />
+                                        </button>
+
+                                        <!-- Heading 2 -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="toggleHeading('h2')" 
+                                            :class="isH2 ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="p-1.5 rounded-md border text-xs font-semibold transition flex items-center justify-center cursor-pointer" 
+                                            title="{{ __('Subtítulo (## )') }}"
+                                        >
+                                            <x-lucide-heading-2 class="w-3.5 h-3.5" />
+                                        </button>
+
+                                        <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
+
+                                        <!-- Bullet List -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="toggleList('ul')" 
+                                            :class="isUnorderedList ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="px-2 py-1 rounded-md border text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer" 
+                                            title="{{ __('Lista con viñetas (- o *)') }}"
+                                        >
+                                            <x-lucide-list class="w-3.5 h-3.5" />
+                                            <span class="hidden sm:inline">{{ __('Viñetas') }}</span>
+                                        </button>
+
+                                        <!-- Ordered List -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="toggleList('ol')" 
+                                            :class="isOrderedList ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="px-2 py-1 rounded-md border text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer" 
+                                            title="{{ __('Lista numerada (1.)') }}"
+                                        >
+                                            <x-lucide-list-ordered class="w-3.5 h-3.5" />
+                                            <span class="hidden sm:inline">{{ __('Lista') }}</span>
+                                        </button>
+
+                                        <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
+
+                                        <!-- Divider Line -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="insertDivider()" 
+                                            class="p-1.5 rounded-md border border-transparent text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 text-xs transition flex items-center justify-center cursor-pointer" 
+                                            title="{{ __('Línea divisoria (---)') }}"
+                                        >
+                                            <x-lucide-separator-horizontal class="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
 
-                                    <div class="flex items-center gap-2">
-                                        <span class="text-[10px] text-zinc-400 hidden sm:inline">
-                                            {{ __('Como:') }} <strong class="text-zinc-600 font-medium">{{ auth()->user()?->name ?? __('Usuario') }}</strong>
+                                    <div class="text-[10px] text-zinc-400 hidden md:flex items-center gap-1 font-mono">
+                                        <span>Markdown</span>
+                                    </div>
+                                </div>
+
+                                <!-- Contenteditable Input Area -->
+                                <div 
+                                    @click="focusEditor()"
+                                    class="p-3 min-h-[90px] max-h-[220px] overflow-y-auto cursor-text bg-white"
+                                >
+                                    <div 
+                                        x-ref="editor"
+                                        contenteditable="true"
+                                        @input="handleInput()"
+                                        @blur="handleBlur()"
+                                        @keydown="handleKeydown($event)"
+                                        @keyup="handleKeyup($event)"
+                                        @pointerup="updateActiveFormatting()"
+                                        data-placeholder="{{ __('Escribe un comentario (# Título, - viñetas, --- divisor)...') }}"
+                                        class="comment-editor-box w-full text-xs text-zinc-900 font-sans leading-relaxed outline-none break-words min-h-[64px]"
+                                    ></div>
+                                </div>
+
+                                <!-- Action Bar (Bottom) -->
+                                <div class="border-t border-[#f0f0ee] bg-[#fafaf9] px-3 py-2 flex items-center justify-between gap-2">
+                                    <div class="flex items-center gap-2 text-[10.5px] text-zinc-400 font-sans select-none">
+                                        <span class="flex items-center gap-1">
+                                            <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">Enter</kbd>
+                                            <span class="hidden sm:inline">{{ __('nueva línea') }}</span>
+                                        </span>
+                                        <span class="text-zinc-300">•</span>
+                                        <span class="flex items-center gap-1">
+                                            <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">⌘ / Ctrl + Enter</kbd>
+                                            <span class="hidden sm:inline">{{ __('publicar') }}</span>
+                                        </span>
+                                    </div>
+
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-[11px] text-zinc-400 hidden sm:inline">
+                                            {{ __('Como:') }} <strong class="text-zinc-700 font-medium">{{ auth()->user()?->name ?? __('Usuario') }}</strong>
                                         </span>
                                         <button 
-                                            @click="syncToLivewire()"
-                                            wire:click="addTrelloComment" 
+                                            @click="submit()"
+                                            :disabled="isSubmitting || isEmpty"
                                             wire:loading.attr="disabled"
+                                            wire:target="addTrelloComment"
                                             type="button" 
-                                            class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0">
-                                            <x-lucide-send wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
-                                            <x-lucide-loader-2 wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
+                                            class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
+                                        >
+                                            <x-lucide-send x-show="!isSubmitting" wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
+                                            <x-lucide-loader-2 x-show="isSubmitting" wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
                                             <span>{{ __('Publicar en Trello') }}</span>
                                         </button>
                                     </div>
@@ -3069,7 +3901,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5">
+                                            <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:text-sm [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h1]:mt-2.5 [&_h1]:mb-1 [&_h2]:text-xs [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h2]:mt-2 [&_h2]:mb-0.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-zinc-800 [&_h3]:mt-1.5 [&_h3]:mb-0.5 [&_hr]:my-2.5 [&_hr]:border-stone-200">
                                                 {!! $this->renderCommentMarkdown(!empty($comment['clean_text']) ? $comment['clean_text'] : ($comment['text'] ?? '')) !!}
                                             </div>
                                         </div>

@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\Substatus;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,13 +18,39 @@ use Illuminate\Support\Str;
 
 class OrderReconciliationService
 {
+    /**
+     * Known Georgia cities / local municipalities for location pattern detection.
+     */
+    public const LOCAL_LOCATIONS = [
+        'atlanta', 'duluth', 'lawrenceville', 'norcross', 'lilburn', 'marietta', 'suwanee',
+        'buford', 'roswell', 'alpharetta', 'decatur', 'gainesville', 'cumming', 'smyrna',
+        'peachtree', 'woodstock', 'snellville', 'conyers', 'kennesaw', 'johns creek',
+        'chamblee', 'doraville', 'sandy springs', 'tucker', 'stone mountain', 'flowery branch',
+        'braselton', 'cartersville', 'canton', 'forest park', 'riverdale', 'morrow',
+        'jonesboro', 'fayetteville', 'newnan', 'carrollton', 'athens', 'macon', 'augusta',
+        'savannah', 'columbus', 'buckhead', 'midtown', 'downtown',
+    ];
+
+    /**
+     * Common product categories to prevent cross-matching incompatible jobs for the same client.
+     */
+    public const PRODUCT_CATEGORIES = [
+        'textile' => ['embroidery', 'bordado', 'shirt', 'shirts', 'camisa', 'camisas', 'hoodie', 'hoodies', 'gorra', 'gorras', 'dtf', 'polo', 'polos', 'playera', 'playeras', 'sueter', 'sweater'],
+        'vehicle' => ['wrap', 'van', 'truck', 'trailer', 'vehiculo', 'carro', 'auto', 'camioneta', 'food truck', 'flecha vehicular'],
+        'window' => ['window perf', 'microperforado', 'frosted', 'vinil ventana', 'perforated', '50/50'],
+        'paper_print' => ['business cards', 'tarjetas', 'flyer', 'flyers', 'menu', 'menus', 'trifold', 'brochure', 'carpetas', 'folder'],
+        'signage' => ['channel letters', 'letrero', 'acrilico', 'acrylic', 'caja de luz', 'light box', 'banner', 'lona', 'sala de ventas', 'locacion', 'dimensional letters', 'coroplast', 'yard signs', 'pylon', 'monument'],
+    ];
+
     protected string $storageDir;
 
     protected string $historyFile;
 
     public function __construct()
     {
-        $this->storageDir = storage_path('app/reconciliation');
+        $this->storageDir = app()->environment('testing')
+            ? storage_path('framework/testing/reconciliation')
+            : storage_path('app/reconciliation');
         $this->historyFile = $this->storageDir.'/migration_history.json';
         File::ensureDirectoryExists($this->storageDir);
     }
@@ -58,12 +86,16 @@ class OrderReconciliationService
         }
 
         // Cache existing DB orders for fast in-memory matching
+        // Cache existing DB orders for fast in-memory matching
         $dbOrders = Order::query()
             ->select([
                 'id',
                 'wo_number',
                 'company_name',
                 'task_name',
+                'client_id',
+                'location_name',
+                'responsible_person',
                 'designer_id',
                 'core_status',
                 'substatus',
@@ -80,6 +112,9 @@ class OrderReconciliationService
                 'in_workspace',
             ])
             ->get();
+
+        // Cache all clients for entity mapping and typo matching
+        $clients = Client::all();
 
         // Build lookup map by normalized WO number
         $ordersByWo = [];
@@ -127,24 +162,55 @@ class OrderReconciliationService
                 }
             }
 
+            // Extract patterns (parentheses, quotes, locations, contacts)
+            $compPatterns = $this->parseCompanyPatterns($parsedRow['company_name']);
+            $cleanCompany = $compPatterns['clean_name'];
+
+            $taskPatterns = $this->parseTaskPatterns($parsedRow['task_name'], $cleanCompany);
+            $cleanTask = $taskPatterns['clean_task'];
+
+            // Resolve against Client model with typo tolerance
+            $clientResolution = $this->resolveClientEntity($cleanCompany, $clients);
+            $resolvedClient = $clientResolution['client'];
+
+            // Append any non-location/non-contact details to production note
+            if (! empty($compPatterns['extracted_detail'])) {
+                $detailAppend = "(Detalle: {$compPatterns['extracted_detail']})";
+                $parsedRow['production_note'] = $parsedRow['production_note'] ? ($parsedRow['production_note'].' '.$detailAppend) : $detailAppend;
+            }
+
+            // Populate enriched parsed data
+            $parsedRow['clean_company'] = $cleanCompany;
+            $parsedRow['clean_task'] = $cleanTask;
+            $parsedRow['extracted_location'] = $compPatterns['extracted_location'];
+            $parsedRow['extracted_contact'] = $compPatterns['extracted_contact'];
+            $parsedRow['extracted_alias'] = $compPatterns['extracted_alias'];
+            $parsedRow['resolved_client_id'] = $resolvedClient?->id;
+            $parsedRow['resolved_client_name'] = $resolvedClient?->name;
+            $parsedRow['typo_detected'] = $clientResolution['typo_detected'];
+            $parsedRow['client_match_type'] = $clientResolution['match_type'];
+
             $csvWo = $parsedRow['normalized_wo'];
             $csvCompany = $parsedRow['company_name'];
             $csvTask = $parsedRow['task_name'];
 
-            // 1. Try matching by WO number
+            // 1. SUPREME ANCHOR: Try matching by WO number
             if (! empty($csvWo) && isset($ordersByWo[$csvWo])) {
                 $matchedOrder = $ordersByWo[$csvWo];
-                $simScore = $this->calculateCombinedSimilarity(
-                    $csvCompany,
-                    $csvTask,
-                    $matchedOrder->company_name,
-                    $matchedOrder->task_name
-                );
+
+                // Verify company compatibility to detect potential WO typo conflicts
+                $compSim = $this->calculateStringSimilarity($cleanCompany, $matchedOrder->company_name);
+                $isSameClient = ($resolvedClient && $matchedOrder->client_id === $resolvedClient->id);
+
+                // Extreme conflict condition: two totally unrelated corporations (< 15% similarity)
+                $isConflict = (! $isSameClient && $compSim < 0.15 && ! empty($cleanCompany) && ! empty($matchedOrder->company_name)
+                    && ! str_contains(strtolower($cleanCompany), strtolower($matchedOrder->company_name))
+                    && ! str_contains(strtolower($matchedOrder->company_name), strtolower($cleanCompany)));
 
                 $diffs = $this->calculateOrderDiffs($matchedOrder, $parsedRow);
 
-                if ($simScore >= $similarityThreshold) {
-                    // Full match
+                if (! $isConflict) {
+                    // FULL MATCH: WO is king
                     $fullMatches[] = [
                         'row_id' => $rowId,
                         'order_id' => $matchedOrder->id,
@@ -153,13 +219,21 @@ class OrderReconciliationService
                         'db_task' => $matchedOrder->task_name,
                         'csv_company' => $csvCompany,
                         'csv_task' => $csvTask,
-                        'similarity' => round($simScore * 100, 1),
+                        'clean_company' => $cleanCompany,
+                        'clean_task' => $cleanTask,
+                        'extracted_contact' => $parsedRow['extracted_contact'],
+                        'extracted_location' => $parsedRow['extracted_location'],
+                        'extracted_alias' => $parsedRow['extracted_alias'],
+                        'resolved_client_id' => $parsedRow['resolved_client_id'],
+                        'resolved_client_name' => $parsedRow['resolved_client_name'],
+                        'typo_detected' => $parsedRow['typo_detected'],
+                        'similarity' => 100.0,
                         'parsed_data' => $parsedRow,
                         'diffs' => $diffs,
                         'has_changes' => count($diffs) > 0,
                     ];
                 } else {
-                    // WO matches but names differ
+                    // WO matches, but company is completely different
                     $partialMatches[] = [
                         'row_id' => $rowId,
                         'order_id' => $matchedOrder->id,
@@ -168,9 +242,17 @@ class OrderReconciliationService
                         'db_task' => $matchedOrder->task_name,
                         'csv_company' => $csvCompany,
                         'csv_task' => $csvTask,
-                        'similarity' => round($simScore * 100, 1),
-                        'reason' => "Mismo WO ({$csvWo}), pero la similitud de Empresa y Tarea es de ".round($simScore * 100).'%',
-                        'match_type' => 'wo_name_divergence',
+                        'clean_company' => $cleanCompany,
+                        'clean_task' => $cleanTask,
+                        'extracted_contact' => $parsedRow['extracted_contact'],
+                        'extracted_location' => $parsedRow['extracted_location'],
+                        'extracted_alias' => $parsedRow['extracted_alias'],
+                        'resolved_client_id' => $parsedRow['resolved_client_id'],
+                        'resolved_client_name' => $parsedRow['resolved_client_name'],
+                        'typo_detected' => $parsedRow['typo_detected'],
+                        'similarity' => round($compSim * 100, 1),
+                        'reason' => "⚠️ Mismo WO ({$csvWo}), pero la empresa en BD ({$matchedOrder->company_name}) difiere de ({$csvCompany})",
+                        'match_type' => 'wo_conflict',
                         'parsed_data' => $parsedRow,
                         'diffs' => $diffs,
                     ];
@@ -179,37 +261,86 @@ class OrderReconciliationService
                 continue;
             }
 
-            // 2. WO not found or blank in CSV: search by similarity in DB
+            // 2. SECONDARY ANCHORS for rows without WO:
             $bestCandidate = null;
+            $bestReason = '';
             $bestScore = 0.0;
 
-            foreach ($dbOrders as $candidateOrder) {
-                $score = $this->calculateCombinedSimilarity(
-                    $csvCompany,
-                    $csvTask,
-                    $candidateOrder->company_name,
-                    $candidateOrder->task_name
-                );
-
-                if ($score > $bestScore) {
-                    $bestScore = $score;
-                    $bestCandidate = $candidateOrder;
+            // Anchor 2A: Match by Estimate/Invoice Number + Client
+            $csvEst = $parsedRow['estimate_invoice_number'];
+            if (! empty($csvEst)) {
+                foreach ($dbOrders as $candidateOrder) {
+                    if (! empty($candidateOrder->estimate_invoice_number) && $candidateOrder->estimate_invoice_number === $csvEst) {
+                        $compScore = $this->calculateStringSimilarity($cleanCompany, $candidateOrder->company_name);
+                        if ($compScore >= 0.3 || ($resolvedClient && $candidateOrder->client_id === $resolvedClient->id)) {
+                            // Check product category compatibility
+                            if ($this->areTaskCategoriesCompatible($cleanTask, $candidateOrder->task_name)) {
+                                $bestCandidate = $candidateOrder;
+                                $bestScore = 95.0;
+                                $bestReason = "Misma Factura/Estimado (#{$csvEst}) y cliente coincidente ({$candidateOrder->company_name})";
+                                break;
+                            }
+                        }
+                    }
                 }
             }
 
-            if ($bestCandidate && $bestScore >= $similarityThreshold) {
+            // Anchor 2B: Match by Client + Nearby Date Window (+- 14 days) + Mandatory Task Guard (>= 40%)
+            if (! $bestCandidate && $resolvedClient) {
+                $targetDate = $parsedRow['production_processed_at'] ?? ($parsedRow['email_date'] ?? $parsedRow['delivery_due_date']);
+                if ($targetDate) {
+                    try {
+                        $targetCarbon = Carbon::parse($targetDate);
+                        foreach ($dbOrders as $candidateOrder) {
+                            if ($candidateOrder->client_id === $resolvedClient->id || $this->cleanForMatching($candidateOrder->company_name) === $this->cleanForMatching($cleanCompany)) {
+                                $cDate = $candidateOrder->production_processed_at ?? ($candidateOrder->email_date ?? $candidateOrder->delivery_due_date);
+                                if ($cDate) {
+                                    $daysDiff = abs($targetCarbon->diffInDays(Carbon::parse($cDate)));
+                                    if ($daysDiff <= 14) {
+                                        // 1. Mandatory category check (blocks cross-matching textile with signs/vehicles)
+                                        if (! $this->areTaskCategoriesCompatible($cleanTask, $candidateOrder->task_name)) {
+                                            continue;
+                                        }
+
+                                        // 2. Mandatory Task Similarity check (>= 40%)
+                                        $taskScore = $this->calculateStringSimilarity($cleanTask, $candidateOrder->task_name);
+                                        if ($taskScore >= 0.40) {
+                                            $bestCandidate = $candidateOrder;
+                                            $bestScore = round(($taskScore * 100), 1);
+                                            $bestReason = "Mismo cliente oficial ({$resolvedClient->name}), tarea compatible (".round($taskScore * 100)."%) y fecha cercana ({$daysDiff}d de diferencia)";
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Throwable) {
+                        // Ignore date parse issues
+                    }
+                }
+            }
+
+            if ($bestCandidate) {
                 $diffs = $this->calculateOrderDiffs($bestCandidate, $parsedRow);
                 $partialMatches[] = [
                     'row_id' => $rowId,
                     'order_id' => $bestCandidate->id,
-                    'wo_number' => $bestCandidate->wo_number ?? 'Sin WO en BD',
+                    'wo_number' => ! empty($parsedRow['raw_wo']) ? ('WO '.$parsedRow['normalized_wo']) : ($bestCandidate->wo_number ? ($bestCandidate->wo_number.' (en BD)') : 'Sin WO'),
                     'db_company' => $bestCandidate->company_name,
                     'db_task' => $bestCandidate->task_name,
                     'csv_company' => $csvCompany,
                     'csv_task' => $csvTask,
-                    'similarity' => round($bestScore * 100, 1),
-                    'reason' => 'Sin WO exacto en CSV, pero coincide con orden #'.$bestCandidate->id.' ('.($bestCandidate->wo_number ?? 'Sin WO').') al '.round($bestScore * 100).'%',
-                    'match_type' => 'fuzzy_names_match',
+                    'clean_company' => $cleanCompany,
+                    'clean_task' => $cleanTask,
+                    'extracted_contact' => $parsedRow['extracted_contact'],
+                    'extracted_location' => $parsedRow['extracted_location'],
+                    'extracted_alias' => $parsedRow['extracted_alias'],
+                    'resolved_client_id' => $parsedRow['resolved_client_id'],
+                    'resolved_client_name' => $parsedRow['resolved_client_name'],
+                    'typo_detected' => $parsedRow['typo_detected'],
+                    'similarity' => $bestScore,
+                    'reason' => $bestReason,
+                    'match_type' => 'secondary_anchor_match',
                     'parsed_data' => $parsedRow,
                     'diffs' => $diffs,
                 ];
@@ -217,12 +348,20 @@ class OrderReconciliationService
                 continue;
             }
 
-            // 3. Not enough match
+            // 3. Not enough match (Orphan order ready for Trello connection)
             $unmatched[] = [
                 'row_id' => $rowId,
                 'raw_wo' => $parsedRow['raw_wo'],
                 'csv_company' => $csvCompany,
                 'csv_task' => $csvTask,
+                'clean_company' => $cleanCompany,
+                'clean_task' => $cleanTask,
+                'extracted_contact' => $parsedRow['extracted_contact'],
+                'extracted_location' => $parsedRow['extracted_location'],
+                'extracted_alias' => $parsedRow['extracted_alias'],
+                'resolved_client_id' => $parsedRow['resolved_client_id'],
+                'resolved_client_name' => $parsedRow['resolved_client_name'],
+                'typo_detected' => $parsedRow['typo_detected'],
                 'parsed_data' => $parsedRow,
                 'suggested_trello_link' => null,
             ];
@@ -691,7 +830,228 @@ class OrderReconciliationService
             ];
         }
 
+        if (! empty($parsed['resolved_client_name']) && empty($order->client_id)) {
+            $diffs['client'] = [
+                'field' => 'Cliente Oficial',
+                'current' => $order->client?->name ?? '-',
+                'proposed' => $parsed['resolved_client_name'].(! empty($parsed['typo_detected']) ? ' (Typo corregido)' : ''),
+            ];
+        }
+
+        if (! empty($parsed['extracted_contact']) && empty($order->responsible_person)) {
+            $diffs['responsible_person'] = [
+                'field' => 'Contacto / Resp.',
+                'current' => $order->responsible_person ?? '-',
+                'proposed' => $parsed['extracted_contact'],
+            ];
+        }
+
+        if (! empty($parsed['extracted_location']) && empty($order->location_name)) {
+            $diffs['location_name'] = [
+                'field' => 'Locación',
+                'current' => $order->location_name ?? '-',
+                'proposed' => $parsed['extracted_location'],
+            ];
+        }
+
+        // Semantic Smart Merge: Harmonize DB task name and CSV task name to prevent data loss
+        $dbTask = trim((string) ($order->task_name ?? ''));
+        $csvTask = trim((string) ($parsed['task_name'] ?? ''));
+
+        if (! empty($csvTask)) {
+            $mergedTask = $this->mergeTaskNames($dbTask, $csvTask);
+            if (! empty($mergedTask) && mb_strtolower($dbTask) !== mb_strtolower($mergedTask)) {
+                $diffs['task_name'] = [
+                    'field' => 'Nombre de Tarea',
+                    'current' => $dbTask ?: '-',
+                    'proposed' => $mergedTask,
+                    'is_smart_merge' => true,
+                ];
+            }
+        }
+
         return $diffs;
+    }
+
+    /**
+     * Intelligently merges DB task name and CSV task name, preserving all dimensions,
+     * quantities, materials/finishes, and distinct descriptive terms without duplicating words.
+     */
+    public function mergeTaskNames(?string $dbTask, ?string $csvTask): string
+    {
+        $db = trim((string) $dbTask);
+        $csv = trim((string) $csvTask);
+
+        if ($db === '' && $csv === '') {
+            return '';
+        }
+        if ($db === '') {
+            return $csv;
+        }
+        if ($csv === '') {
+            return $db;
+        }
+        if (mb_strtolower($db) === mb_strtolower($csv)) {
+            return $db;
+        }
+
+        // 1. Extract Dimensions (e.g. "2x3", "2 x 3", "24x36", "3ft x 5ft", "12\" x 18\"")
+        $dimRegex = '/(?:(?<=\s|^)|\()(\d+(?:\.\d+)?)\s*(?:x|\*|by|por)\s*(\d+(?:\.\d+)?)(?:\s*(?:in|ft|cm|mm|pie|pies|pul|pulg|"))?\b(?:\))?/i';
+        $dimension = null;
+        if (preg_match($dimRegex, $db, $mDb)) {
+            $dimension = $mDb[1].'x'.$mDb[2];
+            $db = trim(preg_replace($dimRegex, ' ', $db, 1));
+        }
+        if (preg_match($dimRegex, $csv, $mCsv)) {
+            if (! $dimension) {
+                $dimension = $mCsv[1].'x'.$mCsv[2];
+            }
+            $csv = trim(preg_replace($dimRegex, ' ', $csv, 1));
+        }
+
+        // 2. Extract Quantities (e.g. "qty. 500", "cant 100", "500 pcs", "x 1000")
+        $qtyRegex1 = '/\b(?:qty\.?|cant\.?|cantidad|pcs|unidades|pz|pzs|piezas|x)\s*[:#]?\s*(\d+(?:,\d+)?)\b/i';
+        $qtyRegex2 = '/\b(\d+(?:,\d+)?)\s*(?:pcs|unidades|cant|qty|piezas)\b/i';
+        $quantity = null;
+        if (preg_match($qtyRegex1, $csv, $mQ) || preg_match($qtyRegex2, $csv, $mQ)) {
+            $quantity = 'Qty. '.$mQ[1];
+            $csv = trim(preg_replace([$qtyRegex1, $qtyRegex2], ' ', $csv, 1));
+        } elseif (preg_match($qtyRegex1, $db, $mQ) || preg_match($qtyRegex2, $db, $mQ)) {
+            $quantity = 'Qty. '.$mQ[1];
+            $db = trim(preg_replace([$qtyRegex1, $qtyRegex2], ' ', $db, 1));
+        }
+
+        // 3. Extract Parenthetical Notes (e.g. "(INTERNO)", "(SALA DE VENTAS)")
+        $parentheticalNotes = [];
+        if (preg_match_all('/\(([^)]+)\)/', $db, $mNotesDb)) {
+            foreach ($mNotesDb[0] as $idx => $full) {
+                $content = trim($mNotesDb[1][$idx]);
+                if (! empty($content)) {
+                    $parentheticalNotes[] = '('.ucwords(mb_strtolower($content)).')';
+                }
+            }
+            $db = trim(preg_replace('/\([^)]+\)/', ' ', $db));
+        }
+        if (preg_match_all('/\(([^)]+)\)/', $csv, $mNotesCsv)) {
+            foreach ($mNotesCsv[0] as $idx => $full) {
+                $content = trim($mNotesCsv[1][$idx]);
+                $formatted = '('.ucwords(mb_strtolower($content)).')';
+                if (! empty($content) && ! in_array($formatted, $parentheticalNotes, true)) {
+                    $parentheticalNotes[] = $formatted;
+                }
+            }
+            $csv = trim(preg_replace('/\([^)]+\)/', ' ', $csv));
+        }
+
+        // 4. Extract Core Product / Item Keyword
+        $productKeywords = [
+            'sticker', 'stickers', 'banner', 'banners', 'letrero', 'letreros', 'sign', 'signs',
+            'menu', 'menus', 'window perf', 'window', 'windows', 'wrap', 'partial wrap', 'full wrap',
+            'flyer', 'flyers', 'business cards', 'tarjetas', 'hoodie', 'hoodies', 'shirt', 'shirts',
+            'playera', 'playeras', 'gorra', 'gorras', 'polo', 'polos', 'coroplast', 'acrilico',
+            'canvas', 'poster', 'posters', 'carpetas', 'folder', 'magnets', 'magnetico',
+            'caja de luz', 'light box', 'yard signs', 'cartelera',
+        ];
+
+        $matchedProduct = null;
+        foreach ($productKeywords as $kw) {
+            $pattern = '/\b'.preg_quote($kw, '/').'\b/i';
+            if (preg_match($pattern, $db) || preg_match($pattern, $csv)) {
+                $matchedProduct = ucwords(mb_strtolower($kw));
+                $db = trim(preg_replace($pattern, ' ', $db, 1));
+                $csv = trim(preg_replace($pattern, ' ', $csv, 1));
+                break;
+            }
+        }
+
+        // 5. Extract Materials / Finishes
+        $finishKeywords = [
+            'con ojalillos', 'grommets', 'laminado', 'laminated', 'coroplast', 'acrilico',
+            'acrylic', 'aluminio', 'aluminum', 'foam board', 'pvc', 'sintra', 'microperforado',
+            'frosted', 'reflectivo', 'reflective', 'gloss', 'matte', 'mate', 'h-stakes',
+            'estacas', 'pole pockets', 'bolsillos', 'hemmed', 'costura', 'imantado', 'magnetico', 'alta',
+        ];
+
+        $matchedFinishes = [];
+        foreach ($finishKeywords as $fk) {
+            $pattern = '/\b'.preg_quote($fk, '/').'\b/i';
+            if (preg_match($pattern, $db) || preg_match($pattern, $csv)) {
+                $formattedFk = ucwords(mb_strtolower($fk));
+                if (! in_array($formattedFk, $matchedFinishes, true)) {
+                    $matchedFinishes[] = $formattedFk;
+                }
+                $db = trim(preg_replace($pattern, ' ', $db, 1));
+                $csv = trim(preg_replace($pattern, ' ', $csv, 1));
+            }
+        }
+
+        // 6. Tokenize Remaining Descriptive Words from both DB and CSV
+        $cleanPunct = fn (string $s) => trim(preg_replace('/[,\-\/:]+/', ' ', $s));
+        $dbClean = $cleanPunct($db);
+        $csvClean = $cleanPunct($csv);
+
+        $descriptors = [];
+        $seenWords = [];
+
+        if ($matchedProduct) {
+            foreach (preg_split('/\s+/', mb_strtolower($matchedProduct)) as $w) {
+                $seenWords[$w] = true;
+            }
+        }
+        foreach ($matchedFinishes as $f) {
+            foreach (preg_split('/\s+/', mb_strtolower($f)) as $w) {
+                $seenWords[$w] = true;
+            }
+        }
+
+        $addWords = function (string $text) use (&$descriptors, &$seenWords) {
+            $words = preg_split('/\s+/', trim($text));
+            foreach ($words as $word) {
+                $lower = mb_strtolower(trim($word));
+                if ($lower === '' || isset($seenWords[$lower])) {
+                    continue;
+                }
+                if (in_array($lower, ['de', 'con', 'y', 'para', 'en', 'el', 'la', 'los', 'las', 'un', 'una'], true) && empty($descriptors)) {
+                    continue;
+                }
+                $seenWords[$lower] = true;
+                $descriptors[] = ucwords($lower);
+            }
+        };
+
+        $addWords($dbClean);
+        $addWords($csvClean);
+
+        // 7. Assembly
+        $finalParts = [];
+
+        if ($matchedProduct) {
+            $finalParts[] = $matchedProduct;
+        }
+
+        if (! empty($descriptors)) {
+            $finalParts[] = implode(' ', $descriptors);
+        }
+
+        if (! empty($matchedFinishes)) {
+            $finalParts[] = implode(' ', $matchedFinishes);
+        }
+
+        if ($dimension) {
+            $finalParts[] = $dimension;
+        }
+
+        if ($quantity) {
+            $finalParts[] = $quantity;
+        }
+
+        if (! empty($parentheticalNotes)) {
+            $finalParts[] = implode(' ', $parentheticalNotes);
+        }
+
+        $assembled = trim(implode(' ', $finalParts));
+
+        return $assembled !== '' ? $assembled : ($dbTask ?: ($csvTask ?? ''));
     }
 
     /**
@@ -759,7 +1119,391 @@ class OrderReconciliationService
         similar_text($s1, $s2, $simPercent);
         $simText = $simPercent / 100.0;
 
+        // If comparing multi-word strings, do not treat random character coincidence as similarity
+        if (count($tokens1) > 1 || count($tokens2) > 1) {
+            if ($jaccard === 0.0) {
+                // If there is zero word overlap, check if there is at least one close typo token
+                $hasCloseToken = false;
+                foreach ($tokens1 as $t1) {
+                    foreach ($tokens2 as $t2) {
+                        if (levenshtein($t1, $t2) <= 2) {
+                            $hasCloseToken = true;
+                            break 2;
+                        }
+                    }
+                }
+
+                return $hasCloseToken ? ($simText * 0.5) : 0.0;
+            }
+
+            return ($jaccard * 0.6) + ($simText * 0.4);
+        }
+
         return max($jaccard, $simText);
+    }
+
+    /**
+     * Detects product category for a task description.
+     */
+    public function detectTaskCategory(?string $task): ?string
+    {
+        if (empty($task)) {
+            return null;
+        }
+
+        $norm = ' '.$this->cleanForMatching($task).' ';
+
+        foreach (self::PRODUCT_CATEGORIES as $category => $keywords) {
+            foreach ($keywords as $kw) {
+                $cleanKw = $this->cleanForMatching($kw);
+                if (str_contains($norm, ' '.$cleanKw.' ') || str_contains($norm, $cleanKw)) {
+                    return $category;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks if two task descriptions belong to compatible product categories.
+     * Prevents cross-matching e.g. embroidery jobs with sign/storefront jobs for the same client.
+     */
+    public function areTaskCategoriesCompatible(?string $task1, ?string $task2): bool
+    {
+        $cat1 = $this->detectTaskCategory($task1);
+        $cat2 = $this->detectTaskCategory($task2);
+
+        // If both tasks have an identified category and they differ, they are incompatible
+        if ($cat1 !== null && $cat2 !== null && $cat1 !== $cat2) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Extracts locations, contacts, quotes/aliases, and clean name from raw company string.
+     *
+     * @return array{
+     *     clean_name: string,
+     *     raw_company: string,
+     *     extracted_location: ?string,
+     *     extracted_contact: ?string,
+     *     extracted_alias: ?string,
+     *     extracted_detail: ?string
+     * }
+     */
+    public function parseCompanyPatterns(?string $rawCompany): array
+    {
+        $raw = trim((string) $rawCompany);
+        if ($raw === '') {
+            return [
+                'clean_name' => '',
+                'raw_company' => '',
+                'extracted_location' => null,
+                'extracted_contact' => null,
+                'extracted_alias' => null,
+                'extracted_detail' => null,
+            ];
+        }
+
+        $location = null;
+        $contact = null;
+        $alias = null;
+        $detail = null;
+
+        // 1. Quoted segments (e.g. JOSE DIAZ "EL GALLO" or "TACOS EL REY")
+        if (preg_match('/["\']([^"\']+)["\']/', $raw, $quoteMatch)) {
+            $alias = trim($quoteMatch[1]);
+            $raw = trim(str_replace($quoteMatch[0], '', $raw));
+        }
+
+        // 2. Parentheses segments (e.g. "(CESAR CHAVEZ)", "(LAWRENCEVILLE)", "(STORE #4)")
+        if (preg_match_all('/\(([^)]+)\)/', $raw, $parenMatches)) {
+            foreach ($parenMatches[1] as $content) {
+                $contentTrim = trim($content);
+                $contentLower = strtolower($contentTrim);
+
+                // Check if it's a location (contains store #, suite, or known GA city)
+                $isLoc = false;
+                if (preg_match('/\b(store\s*#?\d+|ste\s*#?\d+|suite\s*#?\d+|hwy|rd|blvd|ave|mall|plaza|north|south|east|west)\b/i', $contentTrim)) {
+                    $isLoc = true;
+                } else {
+                    foreach (self::LOCAL_LOCATIONS as $locCity) {
+                        if (str_contains($contentLower, $locCity)) {
+                            $isLoc = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($isLoc) {
+                    $location = $location ? ($location.', '.$contentTrim) : $contentTrim;
+
+                    continue;
+                }
+
+                // Check if it looks like a person's name (1-3 words, letters only)
+                if (! preg_match('/\d/', $contentTrim) && preg_match('/^[A-Za-zÁÉÍÓÚáéíóúÑñ\s\.\-]+$/', $contentTrim)) {
+                    $words = array_values(array_filter(explode(' ', $contentTrim)));
+                    $notPersonWords = ['garantia', 'nuevo', 'cliente', 'revisado', 'urgente', 'kudos', 'orden', 'copia', 'cancelado', 'pendiente'];
+                    $hasNoise = false;
+                    foreach ($words as $w) {
+                        if (in_array(strtolower($w), $notPersonWords, true)) {
+                            $hasNoise = true;
+                            break;
+                        }
+                    }
+
+                    if (! $hasNoise && count($words) >= 1 && count($words) <= 3) {
+                        $contact = $contact ? ($contact.' / '.$contentTrim) : $contentTrim;
+
+                        continue;
+                    }
+                }
+
+                // Otherwise treat as detail/note
+                $detail = $detail ? ($detail.' / '.$contentTrim) : $contentTrim;
+            }
+
+            // Remove all parentheses from working string
+            $raw = trim(preg_replace('/\s*\([^)]*\)/', '', $raw));
+        }
+
+        // 3. Dash or Slash Separators (e.g. "POLLO CAMPERO - DULUTH")
+        if (preg_match('/\s+[-–—\/]\s+(.+)$/', $raw, $sepMatch)) {
+            $suffix = trim($sepMatch[1]);
+            $suffixLower = strtolower($suffix);
+
+            $isSuffixLoc = false;
+            foreach (self::LOCAL_LOCATIONS as $locCity) {
+                if (str_contains($suffixLower, $locCity)) {
+                    $isSuffixLoc = true;
+                    break;
+                }
+            }
+
+            if ($isSuffixLoc) {
+                $location = $location ?: $suffix;
+                $raw = trim(substr($raw, 0, -strlen($sepMatch[0])));
+            }
+        }
+
+        // Clean up remaining company name
+        $cleanName = trim(preg_replace('/\s+/', ' ', $raw), " \t\n\r\0\x0B-–—/,");
+
+        return [
+            'clean_name' => $cleanName ?: trim((string) $rawCompany),
+            'raw_company' => trim((string) $rawCompany),
+            'extracted_location' => $location,
+            'extracted_contact' => $contact,
+            'extracted_alias' => $alias,
+            'extracted_detail' => $detail,
+        ];
+    }
+
+    /**
+     * Cleans task name and removes redundant company name prefixes.
+     */
+    public function parseTaskPatterns(?string $rawTask, string $cleanCompany = ''): array
+    {
+        $task = trim((string) $rawTask);
+        if ($task === '') {
+            return ['clean_task' => ''];
+        }
+
+        if ($cleanCompany !== '') {
+            $cLower = strtolower($cleanCompany);
+            $tLower = strtolower($task);
+            if (str_starts_with($tLower, $cLower)) {
+                $remainder = trim(substr($task, strlen($cleanCompany)));
+                $remainder = trim(ltrim($remainder, " \t\n\r\0\x0B-–—/:"));
+                if (! empty($remainder)) {
+                    $task = $remainder;
+                }
+            }
+        }
+
+        return [
+            'clean_task' => $task,
+        ];
+    }
+
+    /**
+     * Resolves a raw/clean company name to an existing Client model, with typo tolerance.
+     *
+     * @param  Collection<int, Client>  $clients
+     * @return array{
+     *     client: ?Client,
+     *     match_type: ?string,
+     *     typo_detected: bool,
+     *     original_term: ?string
+     * }
+     */
+    public function resolveClientEntity(string $cleanCompany, $clients): array
+    {
+        $compTrim = trim($cleanCompany);
+        if ($compTrim === '') {
+            return ['client' => null, 'match_type' => null, 'typo_detected' => false, 'original_term' => null];
+        }
+
+        $compNormalized = $this->cleanForMatching($compTrim);
+        if ($compNormalized === '') {
+            return ['client' => null, 'match_type' => null, 'typo_detected' => false, 'original_term' => null];
+        }
+
+        // Stage 1: Exact Name Match (case & legal suffix insensitive)
+        foreach ($clients as $client) {
+            $clientNorm = $this->cleanForMatching($client->name);
+            if ($clientNorm !== '' && $clientNorm === $compNormalized) {
+                return [
+                    'client' => $client,
+                    'match_type' => 'exact',
+                    'typo_detected' => false,
+                    'original_term' => $compTrim,
+                ];
+            }
+        }
+
+        // Stage 2: Existing Aliases Match
+        foreach ($clients as $client) {
+            if ($client->matchesNameOrAlias($compTrim)) {
+                return [
+                    'client' => $client,
+                    'match_type' => 'alias',
+                    'typo_detected' => false,
+                    'original_term' => $compTrim,
+                ];
+            }
+            if (is_array($client->aliases)) {
+                foreach ($client->aliases as $alias) {
+                    if ($this->cleanForMatching($alias) === $compNormalized) {
+                        return [
+                            'client' => $client,
+                            'match_type' => 'alias',
+                            'typo_detected' => false,
+                            'original_term' => $compTrim,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Stage 3: Fuzzy Match with Typo Tolerance (Levenshtein <= 2 or similar_text >= 88%)
+        $bestClient = null;
+        $bestScore = 0.0;
+        $compLen = strlen($compNormalized);
+
+        foreach ($clients as $client) {
+            $clientNorm = $this->cleanForMatching($client->name);
+            if ($clientNorm === '') {
+                continue;
+            }
+
+            // A. Levenshtein Check for Typos
+            $lev = levenshtein($compNormalized, $clientNorm);
+            if (($compLen > 6 && $lev <= 2) || ($compLen <= 6 && $lev <= 1)) {
+                return [
+                    'client' => $client,
+                    'match_type' => 'typo',
+                    'typo_detected' => true,
+                    'original_term' => $compTrim,
+                ];
+            }
+
+            // B. High Token / Substring Similarity
+            similar_text($compNormalized, $clientNorm, $simPercent);
+            $score = $simPercent / 100.0;
+            if ($score >= 0.88 && $score > $bestScore) {
+                $bestScore = $score;
+                $bestClient = $client;
+            }
+        }
+
+        if ($bestClient && $bestScore >= 0.88) {
+            return [
+                'client' => $bestClient,
+                'match_type' => 'typo',
+                'typo_detected' => true,
+                'original_term' => $compTrim,
+            ];
+        }
+
+        return [
+            'client' => null,
+            'match_type' => null,
+            'typo_detected' => false,
+            'original_term' => null,
+        ];
+    }
+
+    /**
+     * Quickly creates a new Client record from an unmapped row in the active analysis cache.
+     */
+    public function quickCreateClientFromRow(string $rowId): ?Client
+    {
+        $cached = $this->getCachedAnalysis();
+        if (! $cached) {
+            return null;
+        }
+
+        $targetItem = null;
+        $tabKey = null;
+
+        foreach (['full_matches', 'partial_matches', 'unmatched'] as $tab) {
+            foreach ($cached[$tab] as $idx => $item) {
+                if (($item['row_id'] ?? '') === $rowId) {
+                    $targetItem = $item;
+                    $tabKey = $tab;
+                    break 2;
+                }
+            }
+        }
+
+        if (! $targetItem) {
+            return null;
+        }
+
+        $cleanName = $targetItem['clean_company'] ?? ($targetItem['csv_company'] ?? null);
+        if (empty($cleanName)) {
+            return null;
+        }
+
+        $cleanName = mb_strtoupper(trim($cleanName), 'UTF-8');
+        $rawName = $targetItem['csv_company'] ?? '';
+        $alias = $targetItem['extracted_alias'] ?? null;
+
+        $aliases = [];
+        if (! empty($rawName) && mb_strtoupper($rawName, 'UTF-8') !== $cleanName) {
+            $aliases[] = $rawName;
+        }
+        if (! empty($alias) && ! in_array($alias, $aliases, true)) {
+            $aliases[] = $alias;
+        }
+
+        $client = Client::firstOrCreate(
+            ['name' => $cleanName],
+            ['aliases' => array_values(array_unique($aliases))]
+        );
+
+        // Update all items sharing this clean company across all tabs in cache
+        $searchKey = $targetItem['clean_company'] ?? $targetItem['csv_company'];
+        foreach (['full_matches', 'partial_matches', 'unmatched'] as $tk) {
+            foreach ($cached[$tk] as $k => $item) {
+                $itemComp = $item['clean_company'] ?? ($item['csv_company'] ?? '');
+                if ($itemComp === $searchKey) {
+                    $cached[$tk][$k]['resolved_client_id'] = $client->id;
+                    $cached[$tk][$k]['resolved_client_name'] = $client->name;
+                    $cached[$tk][$k]['parsed_data']['resolved_client_id'] = $client->id;
+                    $cached[$tk][$k]['parsed_data']['resolved_client_name'] = $client->name;
+                }
+            }
+        }
+
+        $this->storeAnalysisCache($cached);
+
+        return $client;
     }
 
     /**
@@ -851,15 +1595,45 @@ class OrderReconciliationService
                 }
 
                 // If updating a partial match where WO was missing in DB, assign it
-                if (! empty($parsed['raw_wo'])) {
-                    $order = Order::find($orderId);
-                    if ($order && empty($order->wo_number)) {
-                        $updateData['wo_number'] = 'WO '.$parsed['normalized_wo'];
+                $order = Order::find($orderId);
+                if (! empty($parsed['raw_wo']) && $order && empty($order->wo_number)) {
+                    $updateData['wo_number'] = 'WO '.$parsed['normalized_wo'];
+                }
+
+                // Client, Contact, and Location enrichment
+                if ($order) {
+                    if (! empty($parsed['resolved_client_id']) && empty($order->client_id)) {
+                        $updateData['client_id'] = $parsed['resolved_client_id'];
+                    }
+                    if (! empty($parsed['extracted_contact']) && empty($order->responsible_person)) {
+                        $updateData['responsible_person'] = $parsed['extracted_contact'];
+                    }
+                    if (! empty($parsed['extracted_location']) && empty($order->location_name)) {
+                        $updateData['location_name'] = $parsed['extracted_location'];
                     }
                 }
 
-                // Strictly ensure company_name and task_name are NEVER updated
-                unset($updateData['company_name'], $updateData['task_name']);
+                // Auto-learn typos into client's aliases
+                if (! empty($parsed['resolved_client_id']) && ! empty($parsed['typo_detected']) && ! empty($parsed['clean_company'])) {
+                    $client = Client::find($parsed['resolved_client_id']);
+                    if ($client) {
+                        $term = $parsed['clean_company'];
+                        $aliases = $client->aliases ?? [];
+                        if (! in_array($term, $aliases, true) && mb_strtolower($term, 'UTF-8') !== mb_strtolower($client->name, 'UTF-8')) {
+                            $aliases[] = $term;
+                            $client->aliases = array_values(array_unique($aliases));
+                            $client->save();
+                        }
+                    }
+                }
+
+                // Apply smart merged task name if proposed in diffs
+                if (! empty($item['diffs']['task_name']['proposed'])) {
+                    $updateData['task_name'] = $item['diffs']['task_name']['proposed'];
+                }
+
+                // Strictly ensure company_name is NEVER updated to preserve DB client name
+                unset($updateData['company_name']);
 
                 if (! empty($updateData)) {
                     // ZERO AUTOMATION: execute without model observers or dispatchers
@@ -894,6 +1668,451 @@ class OrderReconciliationService
     }
 
     /**
+     * Fail-safe deduplication inspector: Checks whether a Trello card or WO already exists in local DB.
+     *
+     * @return array{action_type: string, reason: string, order_id: ?int}
+     */
+    public function inspectTrelloCardDeduplication(string $cardId, ?string $rawWo, ?string $cleanCompany = null): array
+    {
+        $normWo = $this->normalizeWo($rawWo);
+
+        // Level 1: Check if an Order already has this trello_card_id
+        $existingByTrello = Order::where('trello_card_id', trim($cardId))->first();
+        if ($existingByTrello) {
+            return [
+                'action_type' => 'reuse_existing',
+                'reason' => "Esta tarjeta ya está vinculada a la orden #{$existingByTrello->id} (".($existingByTrello->wo_number ?: 'Sin WO previo').') en el sistema. Se actualizará sin duplicar.',
+                'order_id' => $existingByTrello->id,
+            ];
+        }
+
+        // Level 2: Check if an Order already exists with this exact WO
+        if (! empty($normWo)) {
+            $existingByWo = Order::where('wo_number', 'WO '.$normWo)
+                ->orWhere('wo_number', $normWo)
+                ->first();
+
+            if ($existingByWo) {
+                return [
+                    'action_type' => 'reuse_existing',
+                    'reason' => "Ya existe la orden #{$existingByWo->id} ({$existingByWo->wo_number}) en la base de datos. Se le asignará esta tarjeta de Trello sin duplicar.",
+                    'order_id' => $existingByWo->id,
+                ];
+            }
+        }
+
+        // Level 3: 100% Brand New Order
+        return [
+            'action_type' => 'create_new',
+            'reason' => 'Tarjeta no encontrada en la base de datos local. Se creará como nueva orden en Backlog.',
+            'order_id' => null,
+        ];
+    }
+
+    /**
+     * Extracts candidate WO numbers (digits without leading zeros) from a Trello card.
+     *
+     * @param  array<string, mixed>  $card
+     * @return array<string>
+     */
+    public function extractCandidateWosFromCard(array $card): array
+    {
+        $wos = [];
+        $title = (string) ($card['name'] ?? '');
+        $desc = (string) ($card['desc'] ?? '');
+
+        // 1. Explicit WO / OT / # prefix in title: e.g. "WO 13919", "WO#13919", "OT 12345"
+        if (preg_match_all('/(?:WO|W\.O\.|OT|O\.T\.|#)\s*[:#-]?\s*(\d{4,6})\b/i', $title, $matches)) {
+            foreach ($matches[1] as $m) {
+                $clean = ltrim($m, '0');
+                if ($clean !== '') {
+                    $wos[$clean] = true;
+                }
+            }
+        }
+
+        // 2. Leading digits in title: e.g. "13919 - Nike", "13919 Nike"
+        if (preg_match('/^\s*(\d{4,6})\b/', $title, $matches)) {
+            $clean = ltrim($matches[1], '0');
+            if ($clean !== '') {
+                $wos[$clean] = true;
+            }
+        }
+
+        // 3. Any 4-6 digit standalone number in title (filtering out common years 2020-2030 unless explicit)
+        if (preg_match_all('/\b(\d{4,6})\b/', $title, $matches)) {
+            foreach ($matches[1] as $m) {
+                $num = (int) $m;
+                if ($num >= 2020 && $num <= 2030) {
+                    continue; // Skip probable year
+                }
+                $clean = ltrim($m, '0');
+                if ($clean !== '') {
+                    $wos[$clean] = true;
+                }
+            }
+        }
+
+        // 4. In description: only look for explicit WO / OT / # patterns
+        if (preg_match_all('/(?:WO|W\.O\.|OT|O\.T\.|#|Work Order|Orden)\s*[:#-]?\s*(\d{4,6})\b/i', $desc, $matches)) {
+            foreach ($matches[1] as $m) {
+                $clean = ltrim($m, '0');
+                if ($clean !== '') {
+                    $wos[$clean] = true;
+                }
+            }
+        }
+
+        return array_keys($wos);
+    }
+
+    /**
+     * Picks the best candidate card from an array of matching Trello cards.
+     * Prioritizes active (non-closed) cards, company name match in title, and recent activity.
+     *
+     * @param  array<array<string, mixed>>  $cards
+     * @return array<string, mixed>
+     */
+    public function pickBestMatchingTrelloCard(array $cards, ?string $companyName = null): array
+    {
+        if (count($cards) === 1) {
+            return $cards[0];
+        }
+
+        $cleanComp = mb_strtolower(trim($companyName ?? ''));
+
+        $bestCard = $cards[0];
+        $bestScore = -1.0;
+
+        foreach ($cards as $card) {
+            $score = 0.0;
+
+            // Prioritize active cards (+100)
+            if (empty($card['closed'])) {
+                $score += 100.0;
+            }
+
+            // Company match in title (+50)
+            if ($cleanComp !== '') {
+                $cardTitle = mb_strtolower((string) ($card['name'] ?? ''));
+                if (str_contains($cardTitle, $cleanComp)) {
+                    $score += 50.0;
+                }
+            }
+
+            // Tie breaker: most recent activity
+            $lastActivity = ! empty($card['dateLastActivity']) ? strtotime($card['dateLastActivity']) : 0;
+            $score += ($lastActivity / 10000000000.0);
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestCard = $card;
+            }
+        }
+
+        return $bestCard;
+    }
+
+    /**
+     * Search Trello for a specific unmatched row using its WO number and apply fail-safe inspection.
+     *
+     * @return array{success: bool, preview?: array, message?: string}
+     */
+    public function searchTrelloForUnmatchedRow(string $rowId): array
+    {
+        @set_time_limit(60);
+
+        $cached = $this->getCachedAnalysis();
+        if (! $cached || empty($cached['unmatched'])) {
+            return ['success' => false, 'message' => 'No hay análisis activo.'];
+        }
+
+        $target = null;
+        foreach ($cached['unmatched'] as $item) {
+            if ($item['row_id'] === $rowId) {
+                $target = $item;
+                break;
+            }
+        }
+
+        if (! $target) {
+            return ['success' => false, 'message' => 'Fila no encontrada en lista sin coincidencia.'];
+        }
+
+        $rawWo = $target['parsed_data']['raw_wo'] ?? ($target['raw_wo'] ?? '');
+        $normWo = $this->normalizeWo($rawWo);
+
+        if (empty($normWo)) {
+            return ['success' => false, 'message' => 'Esta orden no tiene número de WO en el CSV para buscar en Trello.'];
+        }
+
+        $trelloService = app(TrelloSyncService::class);
+        $bestCard = null;
+
+        // 1. Fast lookup from cached board cards if available
+        $boardRes = $trelloService->fetchAllBoardCardsForLookup();
+        if ($boardRes['success'] && ! empty($boardRes['cards'])) {
+            $candidates = [];
+            foreach ($boardRes['cards'] as $card) {
+                $wos = $this->extractCandidateWosFromCard($card);
+                if (in_array($normWo, $wos, true)) {
+                    $candidates[] = $card;
+                }
+            }
+            if (! empty($candidates)) {
+                $bestCard = $this->pickBestMatchingTrelloCard($candidates, $target['clean_company'] ?? '');
+            }
+        }
+
+        // 2. Fallback to targeted search API if not found in board cards
+        if (! $bestCard) {
+            $res = $trelloService->searchCards($normWo);
+            if ($res['success'] && ! empty($res['cards'])) {
+                $cards = $res['cards'];
+                $bestCard = $cards[0];
+                foreach ($cards as $c) {
+                    if (str_contains(strval($c['name'] ?? ''), $normWo)) {
+                        $bestCard = $c;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (! $bestCard) {
+            return ['success' => false, 'message' => "No se encontró ninguna tarjeta en Trello con el WO '{$normWo}'."];
+        }
+
+        $dedup = $this->inspectTrelloCardDeduplication($bestCard['id'], $normWo, $target['clean_company'] ?? '');
+
+        $preview = [
+            'id' => $bestCard['id'],
+            'name' => $bestCard['name'] ?? 'Sin título',
+            'desc' => $bestCard['desc'] ?? '',
+            'url' => $bestCard['shortUrl'] ?? "https://trello.com/c/{$bestCard['id']}",
+            'is_closed' => (bool) ($bestCard['closed'] ?? false),
+            'dedup_action' => $dedup['action_type'],
+            'dedup_reason' => $dedup['reason'],
+            'existing_order_id' => $dedup['order_id'],
+        ];
+
+        // Store suggested card in cached item
+        foreach ($cached['unmatched'] as $k => $item) {
+            if ($item['row_id'] === $rowId) {
+                $cached['unmatched'][$k]['suggested_trello_card'] = $preview;
+                break;
+            }
+        }
+        $this->storeAnalysisCache($cached);
+
+        return [
+            'success' => true,
+            'preview' => $preview,
+        ];
+    }
+
+    /**
+     * Safely and instantly auto-searches Trello for all unmatched rows that have a WO number.
+     * Uses bulk board card fetching (1 single HTTP call) indexed in-memory to prevent timeouts.
+     */
+    public function autoSearchTrelloForUnmatched(): array
+    {
+        @set_time_limit(120);
+
+        $cached = $this->getCachedAnalysis();
+        if (! $cached || empty($cached['unmatched'])) {
+            return ['success' => false, 'message' => 'No hay órdenes sin coincidencia disponibles.'];
+        }
+
+        $trelloService = app(TrelloSyncService::class);
+        $totalChecked = 0;
+        $foundCount = 0;
+        $reusedCount = 0;
+        $newCount = 0;
+
+        // 1. Fetch all board cards in 1 single HTTP request
+        $boardResult = $trelloService->fetchAllBoardCardsForLookup();
+
+        if ($boardResult['success'] && ! empty($boardResult['cards'])) {
+            // High-speed in-memory indexing: [normalized_wo => [card, ...]]
+            $cardsByWo = [];
+            foreach ($boardResult['cards'] as $card) {
+                $candidateWos = $this->extractCandidateWosFromCard($card);
+                foreach ($candidateWos as $wo) {
+                    $cardsByWo[$wo][] = $card;
+                }
+            }
+
+            foreach ($cached['unmatched'] as $k => $item) {
+                $rawWo = $item['parsed_data']['raw_wo'] ?? ($item['raw_wo'] ?? '');
+                $normWo = $this->normalizeWo($rawWo);
+
+                if (empty($normWo)) {
+                    continue;
+                }
+
+                $totalChecked++;
+
+                $matchedCards = $cardsByWo[$normWo] ?? [];
+                if (! empty($matchedCards)) {
+                    $bestCard = $this->pickBestMatchingTrelloCard($matchedCards, $item['clean_company'] ?? '');
+                    $dedup = $this->inspectTrelloCardDeduplication($bestCard['id'], $normWo, $item['clean_company'] ?? '');
+
+                    $preview = [
+                        'id' => $bestCard['id'],
+                        'name' => $bestCard['name'] ?? 'Sin título',
+                        'desc' => $bestCard['desc'] ?? '',
+                        'url' => $bestCard['shortUrl'] ?? "https://trello.com/c/{$bestCard['id']}",
+                        'is_closed' => (bool) ($bestCard['closed'] ?? false),
+                        'dedup_action' => $dedup['action_type'],
+                        'dedup_reason' => $dedup['reason'],
+                        'existing_order_id' => $dedup['order_id'],
+                    ];
+
+                    $cached['unmatched'][$k]['suggested_trello_card'] = $preview;
+                    $foundCount++;
+
+                    if ($dedup['action_type'] === 'reuse_existing') {
+                        $reusedCount++;
+                    } else {
+                        $newCount++;
+                    }
+                }
+            }
+        } else {
+            // Fallback for mocked test environments or if board cards endpoint is unavailable
+            foreach ($cached['unmatched'] as $k => $item) {
+                $rawWo = $item['parsed_data']['raw_wo'] ?? ($item['raw_wo'] ?? '');
+                $normWo = $this->normalizeWo($rawWo);
+
+                if (empty($normWo)) {
+                    continue;
+                }
+
+                $totalChecked++;
+
+                $res = $trelloService->searchCards($normWo);
+                if ($res['success'] && ! empty($res['cards'])) {
+                    $cards = $res['cards'];
+                    $bestCard = $cards[0];
+                    foreach ($cards as $c) {
+                        if (str_contains(strval($c['name'] ?? ''), $normWo)) {
+                            $bestCard = $c;
+                            break;
+                        }
+                    }
+
+                    $dedup = $this->inspectTrelloCardDeduplication($bestCard['id'], $normWo, $item['clean_company'] ?? '');
+
+                    $preview = [
+                        'id' => $bestCard['id'],
+                        'name' => $bestCard['name'] ?? 'Sin título',
+                        'desc' => $bestCard['desc'] ?? '',
+                        'url' => $bestCard['shortUrl'] ?? "https://trello.com/c/{$bestCard['id']}",
+                        'is_closed' => (bool) ($bestCard['closed'] ?? false),
+                        'dedup_action' => $dedup['action_type'],
+                        'dedup_reason' => $dedup['reason'],
+                        'existing_order_id' => $dedup['order_id'],
+                    ];
+
+                    $cached['unmatched'][$k]['suggested_trello_card'] = $preview;
+                    $foundCount++;
+
+                    if ($dedup['action_type'] === 'reuse_existing') {
+                        $reusedCount++;
+                    } else {
+                        $newCount++;
+                    }
+                }
+            }
+        }
+
+        $this->storeAnalysisCache($cached);
+
+        return [
+            'success' => true,
+            'total_checked' => $totalChecked,
+            'found_count' => $foundCount,
+            'reused_count' => $reusedCount,
+            'new_count' => $newCount,
+            'message' => "Búsqueda instantánea completada: Se revisaron {$totalChecked} órdenes con WO y se localizaron {$foundCount} tarjetas en Trello ({$reusedCount} para actualizar existentes, {$newCount} nuevas en Backlog).",
+        ];
+    }
+
+    /**
+     * Batch links and approves all unmatched rows where a Trello card has been found and previewed.
+     */
+    public function linkAllFoundTrelloCards(): array
+    {
+        $cached = $this->getCachedAnalysis();
+        if (! $cached || empty($cached['unmatched'])) {
+            return ['success' => false, 'message' => 'No hay órdenes sin coincidencia.'];
+        }
+
+        $foundRows = [];
+        foreach ($cached['unmatched'] as $item) {
+            if (! empty($item['suggested_trello_card'])) {
+                $foundRows[] = $item;
+            }
+        }
+
+        if (empty($foundRows)) {
+            return ['success' => false, 'message' => 'No hay tarjetas de Trello localizadas pendientes de vincular.'];
+        }
+
+        $backupFile = $this->createSafetyBackup();
+        $linkedOrderIds = [];
+        $reusedCount = 0;
+        $newCount = 0;
+
+        DB::transaction(function () use ($foundRows, &$linkedOrderIds, &$reusedCount, &$newCount) {
+            foreach ($foundRows as $item) {
+                $card = $item['suggested_trello_card'];
+                $parsed = $item['parsed_data'];
+                $res = $this->linkTrelloCard($parsed, $card['id'], $card);
+                if ($res['success']) {
+                    $linkedOrderIds[] = $res['order_id'];
+                    if (! empty($res['is_new'])) {
+                        $newCount++;
+                    } else {
+                        $reusedCount++;
+                    }
+                }
+            }
+        });
+
+        // Record single consolidated migration history
+        $this->recordMigrationHistory([
+            'id' => 'mig_trello_batch_'.date('Ymd_His'),
+            'type' => 'trello_batch_link',
+            'user_id' => Auth::id() ?? 1,
+            'user_name' => Auth::user()?->name ?? 'Admin',
+            'updated_count' => count($linkedOrderIds),
+            'order_ids' => $linkedOrderIds,
+            'backup_file' => $backupFile,
+            'created_at' => now()->toIso8601String(),
+            'status' => 'applied',
+        ]);
+
+        // Remove linked items from cache
+        $linkedRowIds = array_flip(array_column($foundRows, 'row_id'));
+        $cached['unmatched'] = array_values(array_filter(
+            $cached['unmatched'],
+            fn ($i) => ! isset($linkedRowIds[$i['row_id']])
+        ));
+        $cached['meta']['unmatched_count'] = count($cached['unmatched']);
+        $this->storeAnalysisCache($cached);
+
+        return [
+            'success' => true,
+            'linked_count' => count($linkedOrderIds),
+            'reused_count' => $reusedCount,
+            'new_count' => $newCount,
+            'message' => 'Se vincularon exitosamente '.count($linkedOrderIds)." órdenes ({$reusedCount} existentes actualizadas, {$newCount} nuevas en Backlog) sin duplicados.",
+        ];
+    }
+
+    /**
      * Link an unmatched CSV row to a Trello card, verifying card and saving silently.
      */
     public function linkTrelloCard(array $parsedData, string $trelloCardId, array $cardDetails): array
@@ -901,20 +2120,41 @@ class OrderReconciliationService
         $backupFile = $this->createSafetyBackup();
 
         $cleanCardId = trim($trelloCardId);
+
+        // Level 1: Find by trello_card_id
         $order = Order::where('trello_card_id', $cleanCardId)->first();
+
+        // Level 2: Find by exact normalized WO
+        if (! $order && ! empty($parsedData['normalized_wo'])) {
+            $norm = $parsedData['normalized_wo'];
+            $order = Order::where('wo_number', 'WO '.$norm)
+                ->orWhere('wo_number', $norm)
+                ->first();
+        }
+
         $isNew = false;
 
         DB::transaction(function () use (&$order, &$isNew, $cleanCardId, $parsedData, $cardDetails) {
             $woNumber = ! empty($parsedData['normalized_wo']) ? ('WO '.$parsedData['normalized_wo']) : null;
 
             if ($order) {
-                // Order already exists in DB with this Trello card: update silently
+                // Order already exists in DB with this Trello card or WO: update silently without duplicating!
                 $updateData = [
+                    'trello_card_id' => $cleanCardId,
                     'in_workspace' => false,
                 ];
 
                 if ($woNumber && empty($order->wo_number)) {
                     $updateData['wo_number'] = $woNumber;
+                }
+                if (! empty($parsedData['resolved_client_id']) && empty($order->client_id)) {
+                    $updateData['client_id'] = $parsedData['resolved_client_id'];
+                }
+                if (! empty($parsedData['extracted_contact']) && empty($order->responsible_person)) {
+                    $updateData['responsible_person'] = $parsedData['extracted_contact'];
+                }
+                if (! empty($parsedData['extracted_location']) && empty($order->location_name)) {
+                    $updateData['location_name'] = $parsedData['extracted_location'];
                 }
                 if (! empty($parsedData['production_note'])) {
                     $updateData['production_note'] = $parsedData['production_note'];
@@ -948,9 +2188,11 @@ class OrderReconciliationService
 
                 $createData = [
                     'trello_card_id' => $cleanCardId,
-                    'trello_title' => $cardName,
-                    'company_name' => $parsedData['company_name'] ?: ($cardDetails['name'] ?? 'Empresa'),
-                    'task_name' => $parsedData['task_name'] ?: $cardName,
+                    'company_name' => $parsedData['clean_company'] ?: ($parsedData['company_name'] ?: ($cardDetails['name'] ?? 'Empresa')),
+                    'client_id' => $parsedData['resolved_client_id'] ?? null,
+                    'responsible_person' => $parsedData['extracted_contact'] ?? null,
+                    'location_name' => $parsedData['extracted_location'] ?? null,
+                    'task_name' => $parsedData['clean_task'] ?: ($parsedData['task_name'] ?: $cardName),
                     'wo_number' => $woNumber,
                     'in_workspace' => false, // strictly in backlog inbox
                     'core_status' => 'entrante',
@@ -994,7 +2236,9 @@ class OrderReconciliationService
             'is_new' => $isNew,
             'order_id' => $order->id,
             'order_wo' => $order->wo_number,
-            'message' => $isNew ? "Orden #{$order->id} creada y vinculada con Trello exitosamente." : "Orden existente #{$order->id} actualizada y vinculada con Trello.",
+            'message' => $isNew
+                ? "Orden #{$order->id} creada y vinculada con Trello exitosamente."
+                : "Orden existente #{$order->id} (".($order->wo_number ?: 'Sin WO previo').') actualizada y vinculada con Trello sin duplicar.',
         ];
     }
 
@@ -1083,7 +2327,7 @@ class OrderReconciliationService
     /**
      * Persist current analysis to JSON storage.
      */
-    protected function storeAnalysisCache(array $data): void
+    public function storeAnalysisCache(array $data): void
     {
         $file = $this->storageDir.'/last_analysis.json';
         File::put($file, json_encode($data, JSON_PRETTY_PRINT));
