@@ -185,6 +185,23 @@ class OverviewTest extends TestCase
         $this->assertEquals('2026-10-10', $fresh->delivery_due_date?->format('Y-m-d'));
     }
 
+    public function test_overview_renders_urgent_red_background_when_order_has_due_date(): void
+    {
+        $orderWithDueDate = Order::create([
+            'wo_number' => 'WO 77777',
+            'task_name' => 'Due Date Urgent Red Test',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'delivery_due_date' => '2026-10-15',
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSeeHtml('due-date-urgent')
+            ->assertSeeHtml('bg-red-600');
+    }
+
     public function test_overview_can_move_order_between_backlog_and_workspace(): void
     {
         $order = Order::create([

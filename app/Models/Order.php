@@ -76,6 +76,7 @@ class Order extends Model
         'estimate_invoice_number',
         'review_status',
         'installation_type',
+        'installation_types',
         'overview_checked',
         'delivery_note',
     ];
@@ -236,7 +237,60 @@ class Order extends Model
     {
         return Attribute::make(
             get: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
-            set: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+            set: function (?string $value) {
+                if ($value === null || trim($value) === '') {
+                    return [
+                        'installation_type' => null,
+                    ];
+                }
+                $val = mb_strtoupper(trim($value));
+                $currentTypes = $this->installation_types ?? [];
+                if (empty($currentTypes)) {
+                    return [
+                        'installation_type' => $val,
+                        'installation_types' => json_encode([$val]),
+                    ];
+                }
+
+                return [
+                    'installation_type' => $val,
+                ];
+            },
+        );
+    }
+
+    protected function installationTypes(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if ($value === null) {
+                    return [];
+                }
+                $decoded = is_string($value) ? json_decode($value, true) : $value;
+
+                return is_array($decoded) ? array_values(array_filter(array_map('trim', $decoded))) : [];
+            },
+            set: function ($value) {
+                if ($value === null) {
+                    return [
+                        'installation_types' => null,
+                        'installation_type' => null,
+                    ];
+                }
+                $arr = is_array($value) ? $value : (is_string($value) ? (json_decode($value, true) ?: [$value]) : [$value]);
+                $normalized = [];
+                foreach ($arr as $item) {
+                    if (is_string($item) && trim($item) !== '') {
+                        $normalized[] = mb_strtoupper(trim($item));
+                    }
+                }
+                $unique = array_values(array_unique($normalized));
+
+                return [
+                    'installation_types' => ! empty($unique) ? json_encode($unique) : null,
+                    'installation_type' => $unique[0] ?? null,
+                ];
+            },
         );
     }
 
@@ -835,5 +889,62 @@ class Order extends Model
         $val = $flag instanceof Substatus ? $flag->value : $flag;
 
         return $query->whereJsonContains('flags', $val);
+    }
+
+    public function getInstallationTypesListAttribute(): array
+    {
+        $types = $this->installation_types;
+        if (! empty($types) && is_array($types)) {
+            return array_values(array_filter(array_map('trim', $types)));
+        }
+
+        if (! empty($this->installation_type)) {
+            return [mb_strtoupper(trim($this->installation_type))];
+        }
+
+        return [];
+    }
+
+    public function hasInstallationType(string $type): bool
+    {
+        $val = mb_strtoupper(trim($type));
+
+        return in_array($val, $this->installation_types_list, true);
+    }
+
+    public function addInstallationType(string $type): void
+    {
+        $val = mb_strtoupper(trim($type));
+        $types = $this->installation_types_list;
+        if (! in_array($val, $types, true)) {
+            $types[] = $val;
+            $this->installation_types = array_values($types);
+        }
+    }
+
+    public function removeInstallationType(string $type): void
+    {
+        $val = mb_strtoupper(trim($type));
+        $types = array_values(array_filter($this->installation_types_list, fn ($t) => $t !== $val));
+        $this->installation_types = $types;
+    }
+
+    public function toggleInstallationType(string $type): void
+    {
+        if ($this->hasInstallationType($type)) {
+            $this->removeInstallationType($type);
+        } else {
+            $this->addInstallationType($type);
+        }
+    }
+
+    public function scopeWithInstallationType(Builder $query, string $type): Builder
+    {
+        $val = mb_strtoupper(trim($type));
+
+        return $query->where(function (Builder $q) use ($val) {
+            $q->where('installation_type', $val)
+                ->orWhereJsonContains('installation_types', $val);
+        });
     }
 }

@@ -127,6 +127,14 @@ class InstallationTypes extends Component
             // Appwide sync: update orders if name was renamed
             if ($oldName && $oldName !== $validated['name']) {
                 Order::where('installation_type', $oldName)->update(['installation_type' => $validated['name']]);
+                Order::whereJsonContains('installation_types', $oldName)->chunkById(100, function ($orders) use ($oldName, $validated) {
+                    foreach ($orders as $order) {
+                        $types = $order->installation_types ?? [];
+                        $updated = array_map(fn ($t) => $t === $oldName ? $validated['name'] : $t, $types);
+                        $order->installation_types = array_values(array_unique($updated));
+                        $order->save();
+                    }
+                });
             }
 
             session()->flash('message', __('Tipo de instalación actualizado correctamente.'));
@@ -206,13 +214,16 @@ class InstallationTypes extends Component
             ->orderBy('name')
             ->get();
 
-        $ordersCountByInstallation = Order::query()
-            ->whereNotNull('installation_type')
-            ->where('installation_type', '!=', '')
-            ->selectRaw('installation_type, count(*) as count')
-            ->groupBy('installation_type')
-            ->pluck('count', 'installation_type')
-            ->toArray();
+        $ordersCountByInstallation = [];
+        foreach ($installationTypes as $instType) {
+            $name = $instType->name;
+            $ordersCountByInstallation[$name] = Order::query()
+                ->where(function ($q) use ($name) {
+                    $q->where('installation_type', $name)
+                        ->orWhereJsonContains('installation_types', $name);
+                })
+                ->count();
+        }
 
         return view('livewire.settings.installation-types', [
             'installationTypes' => $installationTypes,

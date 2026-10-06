@@ -8,6 +8,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Models\Substatus as SubstatusModel;
 use App\Services\AutomationEngine;
 use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
@@ -110,7 +111,7 @@ class Board extends Component
 
         if ($newStatus === CoreStatus::ARCHIVED) {
             $this->pendingArchiveOrderId = $orderId;
-            $this->archiveSubstatus = 'FINALIZADA !';
+            $this->archiveSubstatus = SubstatusModel::getDefaultArchivedSubstatus();
             $this->showArchiveModal = true;
 
             return;
@@ -228,7 +229,7 @@ class Board extends Component
     {
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
-        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->archiveSubstatus = SubstatusModel::getDefaultArchivedSubstatus();
     }
 
     public function confirmArchive(): void
@@ -630,6 +631,8 @@ class Board extends Component
         return view('livewire.kanban.board', [
             'columns' => $columns,
             'allColumns' => $allColumns,
+            'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
+            'pendingArchiveOrder' => $this->pendingArchiveOrderId ? Order::find($this->pendingArchiveOrderId) : null,
         ])->layout('components.layouts.app', ['title' => __('Kanban Board - ').config('app.name')]);
     }
 }

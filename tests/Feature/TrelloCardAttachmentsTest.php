@@ -12,6 +12,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
 
 class TrelloCardAttachmentsTest extends TestCase
@@ -219,5 +220,138 @@ class TrelloCardAttachmentsTest extends TestCase
             'previous_value' => 'logo_antiguo.png',
             'actor' => 'César Diseñador',
         ]);
+    }
+
+    public function test_order_detail_modal_can_upload_multiple_attachments_simultaneously(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Adrián Salvatori',
+            'role' => 'admin',
+        ]);
+        $this->actingAs($user);
+
+        $order = Order::create([
+            'company_name' => 'Empresa Multi Attach',
+            'task_name' => 'Diseño',
+            'trello_card_id' => 'card_modal_multi',
+            'in_workspace' => true,
+        ]);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_modal_multi/attachments*' => Http::sequence()
+                // Initial load: empty
+                ->push([], 200)
+                // First upload
+                ->push([
+                    'id' => 'attach_file_1',
+                    'name' => 'archivo_1.pdf',
+                    'bytes' => 1024,
+                    'url' => 'https://trello.com/download/archivo_1.pdf',
+                ], 200)
+                // Second upload
+                ->push([
+                    'id' => 'attach_file_2',
+                    'name' => 'archivo_2.png',
+                    'bytes' => 2048,
+                    'url' => 'https://trello.com/download/archivo_2.png',
+                ], 200)
+                // Reload after all uploads
+                ->push([
+                    [
+                        'id' => 'attach_file_1',
+                        'name' => 'archivo_1.pdf',
+                        'bytes' => 1024,
+                        'url' => 'https://trello.com/download/archivo_1.pdf',
+                    ],
+                    [
+                        'id' => 'attach_file_2',
+                        'name' => 'archivo_2.png',
+                        'bytes' => 2048,
+                        'url' => 'https://trello.com/download/archivo_2.png',
+                    ],
+                ], 200),
+            'https://api.trello.com/1/cards/card_modal_multi*' => Http::response([
+                'id' => 'card_modal_multi',
+                'name' => 'Empresa Multi Attach',
+                'desc' => 'Descripción de prueba',
+            ], 200),
+        ]);
+
+        Storage::fake('tmp-for-tests');
+        $fakePdf = UploadedFile::fake()->create('archivo_1.pdf', 500, 'application/pdf');
+        $fakeImage = UploadedFile::fake()->image('archivo_2.png', 200, 200);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertSet('trelloAttachments', [])
+            ->set('attachmentFiles', [$fakePdf, $fakeImage])
+            ->assertDispatched('toast')
+            ->assertDispatched('order-updated')
+            ->assertSet('attachmentFiles', [])
+            ->assertCount('trelloAttachments', 2);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+            'new_value' => 'archivo_1.pdf',
+            'actor' => 'Adrián Salvatori',
+        ]);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+            'new_value' => 'archivo_2.png',
+            'actor' => 'Adrián Salvatori',
+        ]);
+    }
+
+    public function test_order_detail_modal_can_download_all_attachments_as_zip(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Adrián Salvatori',
+            'role' => 'admin',
+        ]);
+        $this->actingAs($user);
+
+        $order = Order::create([
+            'company_name' => 'Empresa Zip Test',
+            'wo_number' => 'WO-9988',
+            'task_name' => 'Diseño',
+            'trello_card_id' => 'card_zip_test',
+            'in_workspace' => true,
+        ]);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_zip_test/attachments*' => Http::response([
+                [
+                    'id' => 'attach_1',
+                    'name' => 'plano_1.pdf',
+                    'bytes' => 100,
+                    'url' => 'https://trello.com/download/plano_1.pdf',
+                ],
+                [
+                    'id' => 'attach_2',
+                    'name' => 'foto_1.png',
+                    'bytes' => 200,
+                    'url' => 'https://trello.com/download/foto_1.png',
+                ],
+            ], 200),
+            'https://api.trello.com/1/cards/card_zip_test*' => Http::response([
+                'id' => 'card_zip_test',
+                'name' => 'Empresa Zip Test',
+                'desc' => 'Descripción',
+            ], 200),
+            'https://trello.com/download/plano_1.pdf*' => Http::response('FAKE PDF CONTENT', 200, ['Content-Type' => 'application/pdf']),
+            'https://trello.com/download/foto_1.png*' => Http::response('FAKE PNG CONTENT', 200, ['Content-Type' => 'image/png']),
+        ]);
+
+        $test = Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertCount('trelloAttachments', 2)
+            ->call('downloadAllAttachments');
+
+        $response = $test->instance()->downloadAllAttachments();
+        $this->assertInstanceOf(BinaryFileResponse::class, $response);
+        $this->assertStringContainsString('WO-9988_archivos.zip', $response->headers->get('content-disposition'));
     }
 }

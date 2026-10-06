@@ -141,6 +141,8 @@ class OrderDetailModal extends Component
 
     public $attachmentFile = null;
 
+    public $attachmentFiles = [];
+
     public bool $isUploadingAttachment = false;
 
     public ?string $attachmentUploadError = null;
@@ -318,6 +320,108 @@ class OrderDetailModal extends Component
         $this->uploadAttachmentToTrello();
     }
 
+    public function updatedAttachmentFiles(): void
+    {
+        $this->uploadAttachmentsToTrello();
+    }
+
+    public function uploadAttachmentsToTrello(): void
+    {
+        $files = is_array($this->attachmentFiles) ? $this->attachmentFiles : [$this->attachmentFiles];
+        $files = array_values(array_filter($files));
+
+        if (! $this->orderId || empty($files)) {
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || ! $order->trello_card_id) {
+            $this->attachmentUploadError = 'Esta orden no tiene una tarjeta de Trello vinculada.';
+            $this->attachmentFiles = [];
+
+            return;
+        }
+
+        $this->validate([
+            'attachmentFiles.*' => 'file|max:10240',
+        ], [
+            'attachmentFiles.*.file' => __('Uno o más archivos seleccionados no son válidos.'),
+            'attachmentFiles.*.max' => __('Los archivos no deben superar los 10 MB (límite de Trello).'),
+        ]);
+
+        $this->isUploadingAttachment = true;
+        $this->attachmentUploadError = null;
+
+        $authorName = auth()->user()?->name ?? 'Usuario';
+        $service = app(TrelloSyncService::class);
+        $successCount = 0;
+        $errors = [];
+        $lastSuccessFileName = '';
+
+        foreach ($files as $file) {
+            try {
+                $filePath = $file->getRealPath();
+                $fileName = $file->getClientOriginalName();
+                $mimeType = $file->getMimeType();
+
+                $res = $service->uploadCardAttachment(
+                    cardId: $order->trello_card_id,
+                    filePath: $filePath,
+                    fileName: $fileName,
+                    mimeType: $mimeType,
+                );
+
+                if ($res['success']) {
+                    $successCount++;
+                    $lastSuccessFileName = $fileName;
+
+                    OrderEvent::create([
+                        'order_id' => $order->id,
+                        'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+                        'actor' => $authorName,
+                        'previous_value' => null,
+                        'new_value' => $fileName,
+                        'metadata' => [
+                            'file_name' => $fileName,
+                            'trello_card_id' => $order->trello_card_id,
+                            'attachment_id' => $res['attachment']['id'] ?? null,
+                        ],
+                    ]);
+
+                    NotificationDispatcher::dispatch(
+                        eventType: 'new_attachments',
+                        label: 'New File',
+                        order: $order,
+                        detailText: $fileName
+                    );
+                } else {
+                    $errors[] = "{$fileName}: ".($res['error'] ?? 'Error desconocido');
+                }
+            } catch (\Throwable $e) {
+                $errors[] = "Error al subir {$file->getClientOriginalName()}: ".$e->getMessage();
+            }
+        }
+
+        if ($successCount > 0) {
+            $this->loadTrelloDetails();
+            if ($successCount === 1) {
+                $this->dispatch('toast', message: "Archivo '{$lastSuccessFileName}' adjuntado a la tarjeta de Trello exitosamente.");
+            } else {
+                $this->dispatch('toast', message: "Se adjuntaron {$successCount} archivos a la tarjeta de Trello exitosamente.");
+            }
+            $this->dispatch('order-updated');
+        }
+
+        if (! empty($errors)) {
+            $this->attachmentUploadError = implode("\n", $errors);
+            $this->dispatch('toast', message: 'Hubo problemas al subir algunos archivos: '.implode(', ', $errors));
+        }
+
+        $this->attachmentFiles = [];
+        $this->attachmentFile = null;
+        $this->isUploadingAttachment = false;
+    }
+
     public function uploadAttachmentToTrello(): void
     {
         if (! $this->orderId || ! $this->attachmentFile) {
@@ -437,6 +541,71 @@ class OrderDetailModal extends Component
         } catch (\Throwable $e) {
             $this->dispatch('toast', message: 'Error: '.$e->getMessage());
         }
+    }
+
+    public function downloadAllAttachments()
+    {
+        if (! $this->orderId || empty($this->trelloAttachments)) {
+            $this->dispatch('toast', message: __('No hay archivos adjuntos para descargar.'));
+
+            return null;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order) {
+            return null;
+        }
+
+        $service = app(TrelloSyncService::class);
+        $tempZip = tempnam(sys_get_temp_dir(), 'attachments_').'.zip';
+        $zip = new \ZipArchive;
+
+        if ($zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            $this->dispatch('toast', message: __('No se pudo generar el archivo comprimido.'));
+
+            return null;
+        }
+
+        $addedCount = 0;
+        $usedNames = [];
+
+        foreach ($this->trelloAttachments as $attachment) {
+            if (! is_array($attachment) || empty($attachment['url'])) {
+                continue;
+            }
+
+            $rawName = $attachment['name'] ?? 'archivo';
+            $cleanName = preg_replace('/[^\w\.\-\s]/u', '_', $rawName);
+            if (isset($usedNames[$cleanName])) {
+                $usedNames[$cleanName]++;
+                $info = pathinfo($cleanName);
+                $ext = ! empty($info['extension']) ? '.'.$info['extension'] : '';
+                $nameInZip = ($info['filename'] ?? 'archivo').'_'.$usedNames[$cleanName].$ext;
+            } else {
+                $usedNames[$cleanName] = 1;
+                $nameInZip = $cleanName;
+            }
+
+            $res = $service->proxyAttachment($attachment['url']);
+            if ($res['success'] && ! empty($res['content'])) {
+                $zip->addFromString($nameInZip, $res['content']);
+                $addedCount++;
+            }
+        }
+
+        $zip->close();
+
+        if ($addedCount === 0) {
+            @unlink($tempZip);
+            $this->dispatch('toast', message: __('No se pudieron obtener los archivos desde Trello.'));
+
+            return null;
+        }
+
+        $wo = ! empty($order->wo_number) ? preg_replace('/[^\w\-]/', '_', $order->wo_number) : "orden_{$order->id}";
+        $zipFileName = "{$wo}_archivos.zip";
+
+        return response()->download($tempZip, $zipFileName)->deleteFileAfterSend(true);
     }
 
     public function loadTrelloComments()
@@ -1423,6 +1592,7 @@ class OrderDetailModal extends Component
         $this->approvalComment = '';
         $this->approvalImage = null;
         $this->attachmentFile = null;
+        $this->attachmentFiles = [];
         $this->attachmentUploadError = null;
         $this->isUploadingAttachment = false;
     }

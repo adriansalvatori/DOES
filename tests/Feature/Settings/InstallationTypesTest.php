@@ -233,4 +233,117 @@ class InstallationTypesTest extends TestCase
         $item->refresh();
         $this->assertEquals('light', $item->style_type);
     }
+
+    public function test_overview_can_toggle_multiple_installation_types(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $order = Order::create([
+            'wo_number' => 'WO 88881',
+            'task_name' => 'Multiple Installation Test',
+            'company_name' => 'Multi Corp',
+            'installation_types' => ['KUDOS'],
+        ]);
+
+        $this->assertEquals(['KUDOS'], $order->installation_types);
+        $this->assertEquals('KUDOS', $order->installation_type);
+
+        // Toggle another installation type to add it
+        Livewire::actingAs($admin)
+            ->test(OverviewIndex::class)
+            ->call('toggleInstallationType', $order->id, 'CLIENTE')
+            ->assertDispatched('order-updated');
+
+        $order->refresh();
+        $this->assertEquals(['KUDOS', 'CLIENTE'], $order->installation_types);
+        $this->assertEquals('KUDOS', $order->installation_type);
+
+        // Toggle KUDOS to remove it
+        Livewire::actingAs($admin)
+            ->test(OverviewIndex::class)
+            ->call('toggleInstallationType', $order->id, 'KUDOS')
+            ->assertDispatched('order-updated');
+
+        $order->refresh();
+        $this->assertEquals(['CLIENTE'], $order->installation_types);
+        $this->assertEquals('CLIENTE', $order->installation_type);
+    }
+
+    public function test_overview_can_clear_installation_types(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $order = Order::create([
+            'wo_number' => 'WO 88882',
+            'task_name' => 'Clear Installation Test',
+            'company_name' => 'Clear Corp',
+            'installation_types' => ['KUDOS', 'CLIENTE'],
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(OverviewIndex::class)
+            ->call('clearInstallationTypes', $order->id)
+            ->assertDispatched('order-updated');
+
+        $order->refresh();
+        $this->assertEmpty($order->installation_types);
+        $this->assertNull($order->installation_type);
+    }
+
+    public function test_overview_filters_orders_with_multiple_installation_types(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $order = Order::create([
+            'wo_number' => 'WO 88883',
+            'task_name' => 'Filter Multi Test',
+            'company_name' => 'Filter Corp',
+            'installation_types' => ['KUDOS', '4OVER'],
+        ]);
+
+        // Filter by secondary installation type
+        Livewire::actingAs($admin)
+            ->test(OverviewIndex::class)
+            ->set('filterInstallation', '4OVER')
+            ->assertSee('WO 88883');
+
+        // Filter by primary installation type
+        Livewire::actingAs($admin)
+            ->test(OverviewIndex::class)
+            ->set('filterInstallation', 'KUDOS')
+            ->assertSee('WO 88883');
+    }
+
+    public function test_editing_installation_type_cascades_to_orders_with_multiple_types(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $item = InstallationType::create([
+            'name' => 'OLD MULTI TYPE',
+            'color' => '#0284C7',
+            'style_type' => 'solid',
+            'bg_color' => '#0284C7',
+            'text_color' => '#FFFFFF',
+            'border_color' => '#0284C7',
+            'sort_order' => 10,
+            'is_active' => true,
+        ]);
+
+        $order = Order::create([
+            'wo_number' => 'WO 88884',
+            'task_name' => 'Cascade Multi Test',
+            'company_name' => 'Cascade Corp',
+            'installation_types' => ['OLD MULTI TYPE', 'OTRO TIPO'],
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(InstallationTypes::class)
+            ->call('openEditModal', $item->id)
+            ->set('name', 'NEW MULTI TYPE')
+            ->call('save');
+
+        $order->refresh();
+        $this->assertContains('NEW MULTI TYPE', $order->installation_types);
+        $this->assertNotContains('OLD MULTI TYPE', $order->installation_types);
+    }
 }

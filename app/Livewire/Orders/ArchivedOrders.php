@@ -7,6 +7,7 @@ use App\Enums\Substatus;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Models\Substatus as SubstatusModel;
 use App\Services\AutomationEngine;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -55,7 +56,7 @@ class ArchivedOrders extends Component
     public function archiveOrder(int $orderId): void
     {
         $this->pendingArchiveOrderId = $orderId;
-        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->archiveSubstatus = SubstatusModel::getDefaultArchivedSubstatus();
         $this->showArchiveModal = true;
     }
 
@@ -63,7 +64,7 @@ class ArchivedOrders extends Component
     {
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
-        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->archiveSubstatus = SubstatusModel::getDefaultArchivedSubstatus();
     }
 
     public function confirmArchive(): void
@@ -223,6 +224,8 @@ class ArchivedOrders extends Component
             'inProductionOrders' => $inProductionOrders,
             'designers' => $designers,
             'globalAvgTurnaround' => $globalAvgTurnaround,
+            'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
+            'pendingArchiveOrder' => $this->pendingArchiveOrderId ? Order::find($this->pendingArchiveOrderId) : null,
         ])->layout('components.layouts.app', ['title' => __('Órdenes Archivadas & Rendimiento - ').config('app.name')]);
     }
 }

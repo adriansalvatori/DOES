@@ -35,7 +35,7 @@ class WeeklyPlanner extends Component
 
     public $selectedDesignerFilter = 'all';
 
-    public string $viewMode = 'by_day';
+    public string $viewMode = 'by_designer';
 
     public string $plannerSortBy = 'priority';
 
@@ -63,7 +63,7 @@ class WeeklyPlanner extends Component
     {
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->viewMonth = now()->format('Y-m');
-        $this->viewMode = session('weekly_planner_view_mode', 'by_day');
+        $this->viewMode = session('weekly_planner_view_mode', 'by_designer');
         $sessionSort = session('weekly_planner_sort_by', 'priority');
         $this->plannerSortBy = in_array($sessionSort, ['custom', 'priority']) ? $sessionSort : 'priority';
         $this->showSystemTasks = (bool) session('weekly_planner_show_system_tasks', true);

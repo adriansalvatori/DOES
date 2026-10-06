@@ -128,9 +128,16 @@ Route::middleware(['auth'])->group(function () {
             abort(404, $res['error'] ?? 'Attachment not found');
         }
 
-        return response($res['content'])
+        $response = response($res['content'])
             ->header('Content-Type', $res['mime'])
             ->header('Cache-Control', 'public, max-age=86400');
+
+        if (request()->has('download')) {
+            $filename = request('filename', 'archivo');
+            $response->header('Content-Disposition', 'attachment; filename="'.addslashes($filename).'"');
+        }
+
+        return $response;
     })->name('trello.attachment-proxy');
 
     Route::post('/logout', function () {

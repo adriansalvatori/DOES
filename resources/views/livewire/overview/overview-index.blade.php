@@ -73,10 +73,12 @@
         })(),
         resizingDivider: null,
         init() {
+            window.__overviewWire = $wire;
             this.lastSyncTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             this.startPolling();
             document.addEventListener('visibilitychange', () => {
-                if (!document.hidden) {
+                const isModalOpen = Boolean(window.Alpine && Alpine.store && Alpine.store('installationModal') && Alpine.store('installationModal').isOpen);
+                if (!document.hidden && !isModalOpen) {
                     this.syncState();
                 }
             });
@@ -103,7 +105,8 @@
         startPolling() {
             if (this.pollTimer) clearInterval(this.pollTimer);
             this.pollTimer = setInterval(() => {
-                if (!document.hidden && !$wire.editingOrderId && !this.activeMenu) {
+                const isModalOpen = Boolean(window.Alpine && Alpine.store && Alpine.store('installationModal') && Alpine.store('installationModal').isOpen);
+                if (!document.hidden && !$wire.editingOrderId && !this.activeMenu && !isModalOpen) {
                     this.syncState();
                 }
             }, 15000);
@@ -229,6 +232,7 @@
         targetOrderId: null,
         targetSubstatus: null,
         targetInstallationType: null,
+        targetInstallationTypes: [],
         targetFlags: [],
         menuStyle: '',
         menuSearch: '',
@@ -333,6 +337,9 @@
         },
         handleGlobalKeydown(e) {
             if (!this.activeMenu) return;
+            if (this.activeMenu === 'installation' && e.target && e.target.closest('[data-tag-input]')) {
+                return;
+            }
 
             if (e.key === 'ArrowDown' || e.key === 'Down') {
                 e.preventDefault();
@@ -380,7 +387,7 @@
             let menuWidth = 220;
             if (this.activeMenu === 'substatus') { menuHeight = 460; menuWidth = 295; }
             if (this.activeMenu === 'designer') { menuHeight = 280; menuWidth = 230; }
-            if (this.activeMenu === 'installation') { menuHeight = 340; menuWidth = 260; }
+            if (this.activeMenu === 'installation') { menuHeight = 310; menuWidth = 330; }
             if (this.activeMenu === 'review') { menuHeight = 170; menuWidth = 210; }
 
             const openUp = spaceBelow < menuHeight && rect.top > menuHeight;
@@ -406,12 +413,25 @@
             this.menuActiveIndex = 0;
             const st = this.ordersState[orderId] || {};
             this.targetSubstatus = st.substatus !== undefined ? st.substatus : (extraData.substatus !== undefined ? extraData.substatus : null);
-            this.targetInstallationType = st.installation_type !== undefined ? st.installation_type : (extraData.installationType !== undefined ? extraData.installationType : null);
+            const rawTypes = st.installation_types !== undefined 
+                ? st.installation_types 
+                : (extraData.installationTypes !== undefined 
+                    ? extraData.installationTypes 
+                    : (st.installation_type ? [st.installation_type] : (extraData.installationType ? [extraData.installationType] : [])));
+            this.targetInstallationTypes = Array.isArray(rawTypes) ? [...rawTypes] : (rawTypes ? [rawTypes] : []);
+            this.targetInstallationType = this.targetInstallationTypes.length > 0 ? this.targetInstallationTypes[0] : null;
             this.targetFlags = Array.isArray(st.flags) ? st.flags : (Array.isArray(extraData.flags) ? extraData.flags : []);
 
             this.updateMenuPosition();
 
             this.$nextTick(() => {
+                if (this.activeMenu === 'installation') {
+                    const tagInput = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-tag-input]') : null;
+                    if (tagInput) {
+                        tagInput.focus({ preventScroll: true });
+                        return;
+                    }
+                }
                 if (this.$refs.popoverContainer) {
                     this.$refs.popoverContainer.focus({ preventScroll: true });
                 }
@@ -423,6 +443,7 @@
             this.targetOrderId = null;
             this.targetSubstatus = null;
             this.targetInstallationType = null;
+            this.targetInstallationTypes = [];
             this.targetFlags = [];
             this.menuSearch = '';
             this.menuActiveIndex = 0;
@@ -445,6 +466,87 @@
             'text' => $t->text_color,
             'border' => $t->border_color ?: $t->bg_color,
         ])) }},
+        getOrderInstallationTypes(orderId, fallbackTypes = []) {
+            const st = this.ordersState[orderId];
+            if (st && st.installation_types !== undefined) {
+                return Array.isArray(st.installation_types) ? st.installation_types : (st.installation_types ? [st.installation_types] : []);
+            }
+            if (st && st.installation_type !== undefined) {
+                return st.installation_type ? [st.installation_type] : [];
+            }
+            if (Array.isArray(fallbackTypes)) return fallbackTypes;
+            return fallbackTypes ? [fallbackTypes] : [];
+        },
+        getFirstMatchingInstallationType() {
+            if (!this.menuSearch || !this.menuSearch.trim()) return null;
+            const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            const q = clean(this.menuSearch);
+            const types = this.allInstallationTypesList || [];
+            const unselected = types.filter(t => !this.isInstallationTypeSelected(t));
+            const matchUnselected = unselected.find(t => clean(t).includes(q));
+            if (matchUnselected) return matchUnselected;
+            return types.find(t => clean(t).includes(q)) || null;
+        },
+        addPrimaryMatchInstallationType() {
+            if (this.menuSearch && this.menuSearch.trim()) {
+                const match = this.getFirstMatchingInstallationType();
+                if (match) {
+                    this.toggleInstallationType(match);
+                    this.menuSearch = '';
+                    this.$nextTick(() => {
+                        const input = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-tag-input]') : null;
+                        if (input) input.focus();
+                    });
+                    return;
+                }
+            } else {
+                this.closeMenu();
+            }
+        },
+        removeLastInstallationType() {
+            if (this.targetInstallationTypes && this.targetInstallationTypes.length > 0) {
+                const last = this.targetInstallationTypes[this.targetInstallationTypes.length - 1];
+                this.toggleInstallationType(last);
+            }
+        },
+        onTagInputBackspace(e) {
+            if (!this.menuSearch && (!e.target.selectionStart || e.target.selectionStart === 0)) {
+                this.removeLastInstallationType();
+            }
+        },
+        isInstallationTypeSelected(name) {
+            if (!name || !this.targetInstallationTypes) return false;
+            const upper = String(name).toUpperCase().trim();
+            return this.targetInstallationTypes.some(t => String(t).toUpperCase().trim() === upper);
+        },
+        toggleInstallationType(name) {
+            const orderId = this.targetOrderId;
+            if (!orderId || !name) return;
+            const upper = String(name).toUpperCase().trim();
+            let current = [...(this.targetInstallationTypes || [])];
+            const idx = current.findIndex(t => String(t).toUpperCase().trim() === upper);
+            if (idx !== -1) {
+                current.splice(idx, 1);
+            } else {
+                current.push(upper);
+            }
+            this.targetInstallationTypes = current;
+            this.targetInstallationType = current.length > 0 ? current[0] : null;
+            if (!this.ordersState[orderId]) this.ordersState[orderId] = {};
+            this.ordersState[orderId].installation_types = current;
+            this.ordersState[orderId].installation_type = current.length > 0 ? current[0] : null;
+            $wire.toggleInstallationType(orderId, upper);
+        },
+        clearAllInstallationTypes() {
+            const orderId = this.targetOrderId;
+            if (!orderId) return;
+            this.targetInstallationTypes = [];
+            this.targetInstallationType = null;
+            if (!this.ordersState[orderId]) this.ordersState[orderId] = {};
+            this.ordersState[orderId].installation_types = [];
+            this.ordersState[orderId].installation_type = null;
+            $wire.clearInstallationTypes(orderId);
+        },
         getInstallationStyle(type) {
             if (!type) return '';
             const direct = this.installationTypesMap[type];
@@ -457,7 +559,7 @@
                     return `background-color: ${v.bg}; color: ${v.text}; border-color: ${v.border};`;
                 }
             }
-            return '';
+            return 'background-color: #f5f5f4; color: #44403c; border-color: #e7e5e4;';
         },
         getInstallationClass(type) {
             if (!type) return 'bg-transparent text-stone-400 hover:bg-stone-50';
@@ -501,7 +603,11 @@
             this.closeMenu();
             if (orderId) {
                 const upperType = type ? type.toUpperCase() : null;
-                this.ordersState[orderId] = Object.assign({}, this.ordersState[orderId] || {}, { installation_type: upperType });
+                const arr = upperType ? [upperType] : [];
+                this.ordersState[orderId] = Object.assign({}, this.ordersState[orderId] || {}, { 
+                    installation_type: upperType,
+                    installation_types: arr 
+                });
                 $wire.updateInstallationType(orderId, upperType);
             }
         },
@@ -537,6 +643,7 @@
     @scroll.passive="if (activeMenu) updateMenuPosition()"
     @scroll.window.passive="if (activeMenu) updateMenuPosition()"
     @resize.window.passive="if (activeMenu) updateMenuPosition()"
+    @order-installation-changed.window="if (ordersState[$event.detail.orderId]) { ordersState[$event.detail.orderId].installation_types = $event.detail.types; ordersState[$event.detail.orderId].installation_type = $event.detail.types.length > 0 ? $event.detail.types[0] : null; }"
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
     <!-- Highlighted Overview Filters Section -->
@@ -1157,7 +1264,10 @@
                                 $hasProcDate = !empty($procDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
-                                <div x-data="{ editing: false }" class="w-full flex items-center min-w-0">
+                                <div 
+                                    x-data="{ editing: false }" 
+                                    @click.away="if (!$refs.procInput.dataset.initial) { $refs.procInput.value = ''; editing = false; }"
+                                    class="w-full flex items-center min-w-0">
                                     @if(!$hasProcDate)
                                         <button 
                                             type="button" 
@@ -1170,12 +1280,21 @@
                                     @endif
                                     <input 
                                         x-ref="procInput"
-                                        @if(!$hasProcDate) x-show="editing" x-cloak @endif
+                                        @if(!$hasProcDate) x-show="editing" x-cloak style="display: none;" @endif
                                         type="date"
                                         data-initial="{{ $procDateVal }}"
                                         value="{{ $procDateVal }}"
                                         @input.stop
-                                        @blur="if (!$el.value) editing = false;"
+                                        @keydown.escape.stop.prevent="if (!$el.dataset.initial) { $el.value = ''; editing = false; } $el.blur();"
+                                        @blur="
+                                            if (!$el.dataset.initial) {
+                                                $el.value = '';
+                                                editing = false;
+                                            } else if (!$el.value) {
+                                                $el.value = $el.dataset.initial;
+                                                editing = false;
+                                            }
+                                        "
                                         @change.stop="
                                             if ($el.value !== $el.dataset.initial) {
                                                 $el.dataset.initial = $el.value;
@@ -1196,34 +1315,81 @@
                                 $isDueDateFilled = !empty($dueDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
-                                <div x-data="{ editing: false }" class="w-full flex items-center min-w-0">
-                                    @if(!$isDueDateFilled)
-                                        <button 
-                                            type="button" 
-                                            x-show="!editing"
-                                            @click="editing = true; $nextTick(() => { if ($refs.dueInput.showPicker) { try { $refs.dueInput.showPicker(); } catch(e){} } $refs.dueInput.focus(); })" 
-                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm transition-colors cursor-pointer"
-                                            title="Sin Due Date - Clic para asignar fecha de entrega">
-                                            —
-                                        </button>
-                                    @endif
+                                <div 
+                                    x-data="{
+                                        editing: false,
+                                        hasDueDate: {{ $isDueDateFilled ? 'true' : 'false' }},
+                                    }" 
+                                    @click.away="
+                                        if (!hasDueDate) {
+                                            $refs.dueInput.value = '';
+                                            editing = false;
+                                        } else {
+                                            $refs.dueInput.value = $refs.dueInput.dataset.initial || '';
+                                            editing = false;
+                                        }
+                                    "
+                                    class="w-full flex items-center min-w-0">
+                                    <button 
+                                        type="button" 
+                                        x-show="!hasDueDate && !editing"
+                                        @if($isDueDateFilled) style="display: none;" @endif
+                                        @click="editing = true; $nextTick(() => { if ($refs.dueInput.showPicker) { try { $refs.dueInput.showPicker(); } catch(e){} } $refs.dueInput.focus(); })" 
+                                        class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer"
+                                        title="Sin Due Date - Clic para asignar fecha de entrega">
+                                        —
+                                    </button>
                                     <input 
                                         x-ref="dueInput"
-                                        @if(!$isDueDateFilled) x-show="editing" x-cloak @endif
+                                        x-show="hasDueDate || editing"
+                                        x-cloak
+                                        @if(!$isDueDateFilled) style="display: none;" @endif
                                         type="date"
                                         data-initial="{{ $dueDateVal }}"
                                         value="{{ $dueDateVal }}"
                                         @input.stop
-                                        @blur="if (!$el.value) editing = false;"
-                                        @change.stop="
-                                            if ($el.value !== $el.dataset.initial) {
-                                                $el.dataset.initial = $el.value;
-                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', $el.value);
+                                        @keydown.escape.stop.prevent="
+                                            if (!hasDueDate) {
+                                                $el.value = '';
+                                                editing = false;
+                                            } else {
+                                                $el.value = $el.dataset.initial || '';
+                                                editing = false;
                                             }
-                                            if (!$el.value) editing = false;
+                                            $el.blur();
                                         "
-                                        class="w-full text-[10px] font-mono px-1 py-0.5 rounded-sm border-0 transition-colors cursor-pointer {{ $isDueDateFilled ? 'bg-red-600 text-white font-bold shadow-2xs focus:ring-1 focus:ring-red-700' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
-                                        style="{{ $isDueDateFilled ? 'color-scheme: dark;' : '' }}"
+                                        @blur="
+                                            if (!hasDueDate) {
+                                                $el.value = '';
+                                                editing = false;
+                                            } else {
+                                                $el.value = $el.dataset.initial || '';
+                                                editing = false;
+                                            }
+                                        "
+                                        @change.stop="
+                                            const val = $el.value;
+                                            if (val) {
+                                                hasDueDate = true;
+                                                $el.dataset.initial = val;
+                                                if (ordersState[{{ $order->id }}]) {
+                                                    ordersState[{{ $order->id }}].delivery_due_date = val;
+                                                }
+                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', val);
+                                                editing = false;
+                                            } else {
+                                                hasDueDate = false;
+                                                $el.dataset.initial = '';
+                                                $el.value = '';
+                                                if (ordersState[{{ $order->id }}]) {
+                                                    ordersState[{{ $order->id }}].delivery_due_date = null;
+                                                }
+                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', '');
+                                                editing = false;
+                                            }
+                                        "
+                                        class="w-full text-[10px] font-mono px-1.5 py-0.5 rounded-sm border-0 cursor-pointer transition-colors {{ $isDueDateFilled ? 'due-date-urgent bg-red-600 text-white font-bold' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
+                                        :class="hasDueDate ? 'due-date-urgent bg-red-600 text-white font-bold' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0'"
                                         title="{{ $dueDateDisplay }} (Due Date / Fecha Límite de Entrega - Clic para editar)"
                                     >
                                 </div>
@@ -1438,30 +1604,69 @@
                                 </div>
                             </td>
 
-                            <!-- 9. Instalación (Full Color Cell) -->
+                            <!-- 9. Instalación (Concept A: Micro-Pills with Overflow Counter) -->
                             @php
-                                $instTypeModel = !empty($order->installation_type) ? $installationTypes->firstWhere('name', $order->installation_type) : null;
-                                $hasInstallation = !empty($order->installation_type);
-                                $instStyle = '';
-                                if ($instTypeModel && !empty($instTypeModel->bg_color)) {
-                                    $instStyle = "background-color: {$instTypeModel->bg_color}; color: {$instTypeModel->text_color}; border-color: {$instTypeModel->border_color};";
-                                }
+                                $orderInstTypes = $order->installation_types_list;
+                                $hasInstTypes = !empty($orderInstTypes);
+                                $instSummaryTitle = $hasInstTypes ? implode(', ', $orderInstTypes) : __('Sin información');
                             @endphp
-                            <td 
-                                :style="getInstallationStyle(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
-                                @if(!empty($instStyle)) style="{{ $instStyle }}" @endif
-                                :class="getInstallationClass(ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : '{{ addslashes($order->installation_type ?? '') }}')"
-                                class="py-1 px-1.5 truncate transition font-bold text-[10px]">
+                            <td class="py-1 px-1 transition text-[10px] bg-transparent hover:bg-stone-50/80">
                                 <button 
                                     type="button"
-                                    data-popover-trigger="installation"
-                                    @click.stop="openMenu('installation', {{ $order->id }}, $el, { installationType: ordersState[{{ $order->id }}]?.installation_type !== undefined ? ordersState[{{ $order->id }}].installation_type : {{ \Illuminate\Support\Js::from($order->installation_type ?? '') }} })"
-                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 border-none bg-transparent truncate"
-                                    title="{{ __('Clic para cambiar instalación: :type', ['type' => $order->installation_type ?? __('Sin información')]) }}">
-                                    <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.installation_type !== undefined ? (ordersState[{{ $order->id }}].installation_type || '—') : '{{ $hasInstallation ? addslashes($order->installation_type) : '—' }}'">
-                                        {{ $hasInstallation ? $order->installation_type : '—' }}
-                                    </span>
-                                    <x-lucide-chevron-down class="w-2.5 h-2.5 shrink-0 opacity-60" />
+                                    @click.stop="Alpine.store('installationModal').open({ orderId: {{ $order->id }}, wo: '{{ addslashes($order->wo_number ?? '') }}', company: '{{ addslashes($order->company_name ?? '') }}', types: getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}) })"
+                                    class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 px-0.5 rounded border border-transparent hover:border-stone-200 transition bg-transparent overflow-hidden"
+                                    title="{{ __('Instalación: :types (Clic para cambiar)', ['types' => $instSummaryTitle]) }}">
+                                    
+                                    <div class="flex items-center gap-1 overflow-hidden min-w-0 flex-1">
+                                        <template x-if="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).length === 0">
+                                            <span class="text-stone-400 font-normal truncate block pl-0.5">—</span>
+                                        </template>
+
+                                        <template x-if="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).length === 1">
+                                            <span 
+                                                :style="getInstallationStyle(getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[0])"
+                                                class="truncate font-bold text-[9px] px-1.5 py-0.5 rounded shadow-2xs block border leading-tight"
+                                                x-text="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[0]">
+                                                {{ $orderInstTypes[0] ?? '—' }}
+                                            </span>
+                                        </template>
+
+                                        <template x-if="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).length === 2">
+                                            <div class="flex items-center gap-1 overflow-hidden min-w-0">
+                                                <span 
+                                                    :style="getInstallationStyle(getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[0])"
+                                                    class="truncate font-bold text-[9px] px-1.5 py-0.5 rounded shadow-2xs block border leading-tight shrink"
+                                                    x-text="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[0]">
+                                                    {{ $orderInstTypes[0] ?? '' }}
+                                                </span>
+                                                <span 
+                                                    :style="getInstallationStyle(getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[1])"
+                                                    class="truncate font-bold text-[9px] px-1.5 py-0.5 rounded shadow-2xs block border leading-tight shrink"
+                                                    x-text="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[1]">
+                                                    {{ $orderInstTypes[1] ?? '' }}
+                                                </span>
+                                            </div>
+                                        </template>
+
+                                        <template x-if="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).length > 2">
+                                            <div class="flex items-center gap-1 overflow-hidden min-w-0">
+                                                <span 
+                                                    :style="getInstallationStyle(getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[0])"
+                                                    class="truncate font-bold text-[9px] px-1.5 py-0.5 rounded shadow-2xs block border leading-tight shrink"
+                                                    x-text="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }})[0]">
+                                                    {{ $orderInstTypes[0] ?? '' }}
+                                                </span>
+                                                <span 
+                                                    class="font-extrabold text-[9px] px-1.5 py-0.5 rounded bg-stone-200 text-stone-800 border border-stone-300 shadow-2xs shrink-0 leading-tight"
+                                                    x-text="'+' + (getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).length - 1)"
+                                                    :title="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).slice(1).join(', ')">
+                                                    +{{ count($orderInstTypes) - 1 }}
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <x-lucide-chevron-down class="w-2.5 h-2.5 shrink-0 opacity-40 text-stone-500" />
                                 </button>
                             </td>
 
@@ -1764,77 +1969,7 @@
             </div>
         </template>
 
-        <!-- 3. Installation Popover Content -->
-        <template x-if="activeMenu === 'installation'">
-            <div class="flex flex-col h-full min-h-0 space-y-1.5">
-                <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between shrink-0">
-                    <span>{{ __('Tipo de Instalación') }}</span>
-                    <a 
-                        href="{{ route('settings.installation-types') }}" 
-                        @click.stop="closeMenu(); if (window.Livewire) { Livewire.navigate('{{ route('settings.installation-types') }}'); } else { window.location.href = '{{ route('settings.installation-types') }}'; }" 
-                        wire:navigate 
-                        class="text-[9px] text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-0.5 cursor-pointer pointer-events-auto z-10">
-                        <x-lucide-settings class="w-2.5 h-2.5" />
-                        <span>{{ __('Ajustes') }}</span>
-                    </a>
-                </div>
 
-                <!-- Search Input -->
-                <div class="px-1 shrink-0">
-                    <div class="relative flex items-center">
-                        <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
-                        <input 
-                            data-menu-search
-                            data-menu-item
-                            @mouseenter="updateActiveFromHover($el)"
-                            x-model="menuSearch"
-                            @input="onMenuSearchInput()"
-                            type="text" 
-                            placeholder="{{ __('Buscar instalación...') }}" 
-                            class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
-                        >
-                        <button 
-                            x-show="menuSearch" 
-                            @click="menuSearch = ''; $el.previousElementSibling.focus()" 
-                            type="button" 
-                            class="absolute right-2 text-stone-400 hover:text-stone-600 text-xs">✕</button>
-                    </div>
-                </div>
-
-                <div @wheel.stop class="space-y-1 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
-                    @foreach($installationTypes as $instType)
-                        <button 
-                            type="button"
-                            data-menu-item
-                            @mouseenter="updateActiveFromHover($el)"
-                            x-show="matchesMenuSearch('{{ addslashes($instType->name) }}')"
-                            @click="setInstallationType('{{ $instType->name }}')"
-                            class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold border transition flex items-center justify-between cursor-pointer shadow-2xs hover:opacity-90"
-                            style="background-color: {{ $instType->bg_color }}; color: {{ $instType->text_color }}; border-color: {{ $instType->border_color }};">
-                            <span class="truncate">{{ $instType->name }}</span>
-                            <template x-if="targetInstallationType === '{{ $instType->name }}'">
-                                <x-lucide-check class="w-3.5 h-3.5 shrink-0" />
-                            </template>
-                        </button>
-                    @endforeach
-                </div>
-
-                <div class="pt-1 border-t border-stone-100 shrink-0">
-                    <button 
-                        type="button"
-                        data-menu-item
-                        @mouseenter="updateActiveFromHover($el)"
-                        x-show="matchesMenuSearch('vacio') || matchesMenuSearch('sin informacion')"
-                        @click="setInstallationType(null)"
-                        class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs bg-stone-50 hover:bg-stone-100 text-stone-600 border border-stone-200 transition flex items-center justify-between cursor-pointer">
-                        <span>{{ __('Vacío (Sin información)') }}</span>
-                        <template x-if="!targetInstallationType">
-                            <x-lucide-check class="w-3.5 h-3.5 shrink-0 text-stone-500" />
-                        </template>
-                    </button>
-                </div>
-            </div>
-        </template>
 
         <!-- 4. Substatus & Global Flags Popover Content -->
         <template x-if="activeMenu === 'substatus'">
@@ -2068,7 +2203,343 @@
             </div>
         </template>
     </div>
+
+    <!-- Dedicated Centered Installation Tags Modal Teleported to Body -->
+    <template x-teleport="body">
+        <div 
+            x-data
+            x-show="$store.installationModal && $store.installationModal.isOpen"
+            x-cloak
+            @open-installation-modal.window="$store.installationModal && $store.installationModal.open($event.detail)"
+            @keydown.escape.window="if ($store.installationModal && $store.installationModal.isOpen) $store.installationModal.close()"
+            @click.self="$store.installationModal && $store.installationModal.close()"
+            class="fixed inset-0 z-[999999] flex items-center justify-center p-4"
+            style="display: none;">
+            
+            <!-- Backdrop (clicking dark area closes) -->
+            <div 
+                x-show="$store.installationModal && $store.installationModal.isOpen"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs cursor-pointer"
+                @click="$store.installationModal.close()">
+            </div>
+
+            <!-- Modal Dialog Container (click inside does NOT close) -->
+            <div 
+                x-show="$store.installationModal && $store.installationModal.isOpen"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                @click.stop
+                class="relative z-10 bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                
+                <!-- Modal Header -->
+                <div class="px-5 py-4 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center border border-emerald-200/60 shadow-2xs">
+                            <x-lucide-tags class="w-5 h-5 text-emerald-700" />
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-sm font-bold text-stone-900">{{ __('Tipo de Instalación') }}</h3>
+                                <span 
+                                    x-show="$store.installationModal && $store.installationModal.types.length > 0" 
+                                    class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold"
+                                    x-text="$store.installationModal ? ($store.installationModal.types.length + ' ' + ($store.installationModal.types.length === 1 ? '{{ __('seleccionada') }}' : '{{ __('seleccionadas') }}')) : ''">
+                                </span>
+                            </div>
+                            <p class="text-xs text-stone-500 mt-0.5 flex items-center gap-1.5 truncate">
+                                <span class="font-mono font-semibold text-stone-700" x-text="($store.installationModal && $store.installationModal.orderWo) || 'Sin WO'"></span>
+                                <span class="text-stone-300">•</span>
+                                <span class="truncate" x-text="($store.installationModal && $store.installationModal.orderCompany) || 'Sin Cliente'"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <a 
+                            href="{{ route('settings.installation-types') }}" 
+                            @click.stop="$store.installationModal.close()" 
+                            wire:navigate 
+                            class="text-xs text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-1 py-1 px-2 rounded hover:bg-stone-100 transition cursor-pointer"
+                            title="{{ __('Administrar tipos y colores') }}">
+                            <x-lucide-settings class="w-3.5 h-3.5" />
+                            <span class="hidden sm:inline">{{ __('Ajustes') }}</span>
+                        </a>
+                        <button 
+                            type="button" 
+                            @click="$store.installationModal.close()" 
+                            class="text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 p-1.5 rounded-lg transition cursor-pointer"
+                            title="{{ __('Cerrar') }}">
+                            <x-lucide-x class="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-5 overflow-y-auto space-y-4 custom-vertical-scrollbar flex-1 min-h-0">
+                    <!-- 1. Input Box con Tags Seleccionados -->
+                    <div>
+                        <label class="block text-xs font-bold text-stone-600 uppercase tracking-wider mb-1.5">
+                            {{ __('Etiquetas asignadas') }}
+                        </label>
+                        <div 
+                            onclick="document.getElementById('installation-modal-tag-input')?.focus()"
+                            class="p-2 bg-stone-50/70 hover:bg-stone-50 focus-within:bg-white border-2 border-stone-200 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-500/10 rounded-xl transition flex flex-wrap items-center gap-1.5 min-h-[46px] cursor-text">
+                            
+                            <!-- Pills seleccionadas -->
+                            <template x-for="type in ($store.installationModal ? $store.installationModal.types : [])" :key="type">
+                                <span 
+                                    :style="$store.installationModal.getStyle(type)"
+                                    class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 rounded-lg text-xs font-bold border shadow-2xs leading-tight animate-in fade-in zoom-in-95 duration-100">
+                                    <span x-text="type"></span>
+                                    <button 
+                                        type="button" 
+                                        @click.stop="$store.installationModal.toggleType(type)" 
+                                        class="hover:bg-black/15 active:bg-black/25 rounded-full p-0.5 text-current cursor-pointer transition inline-flex items-center justify-center"
+                                        title="{{ __('Quitar') }}">
+                                        <x-lucide-x class="w-3 h-3 stroke-[2.5]" />
+                                    </button>
+                                </span>
+                            </template>
+
+                            <!-- Input de texto -->
+                            <input 
+                                id="installation-modal-tag-input"
+                                type="text" 
+                                x-model="$store.installationModal.search"
+                                @keydown.enter.prevent.stop="$store.installationModal.addMatch()"
+                                @keydown.backspace="$store.installationModal.onBackspace($event)"
+                                placeholder="{{ __('Escribe para buscar o presiona Enter para añadir...') }}" 
+                                class="flex-1 min-w-[160px] bg-transparent border-0 p-1 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0 leading-tight"
+                            >
+                        </div>
+                        <p class="text-[11px] text-stone-400 mt-1">
+                            <span class="font-medium text-stone-500">Tip:</span> Escribe el nombre y presiona <kbd class="px-1 py-0.5 text-[10px] bg-stone-100 border border-stone-200 rounded font-mono text-stone-600">Enter</kbd> para agregar. Pulsa <kbd class="px-1 py-0.5 text-[10px] bg-stone-100 border border-stone-200 rounded font-mono text-stone-600">Backspace</kbd> para borrar la última.
+                        </p>
+                    </div>
+
+                    <!-- 2. Catálogo de Tipos Disponibles (Chips clickeables) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-stone-600 uppercase tracking-wider">
+                                <span x-text="$store.installationModal && $store.installationModal.search ? '{{ __('Sugerencias coincidentes') }}' : '{{ __('Opciones disponibles') }}'"></span>
+                            </span>
+                            <template x-if="$store.installationModal && $store.installationModal.getFirstMatch() && $store.installationModal.search">
+                                <span class="text-xs text-emerald-600 font-medium">
+                                    Presiona ↵ para agregar <strong class="font-bold underline" x-text="$store.installationModal.getFirstMatch()"></strong>
+                                </span>
+                            </template>
+                        </div>
+
+                        <div class="flex flex-wrap gap-1.5 p-1 bg-stone-50/50 rounded-xl border border-stone-150 max-h-[220px] overflow-y-auto custom-vertical-scrollbar">
+                            @foreach($installationTypes as $instType)
+                                <button 
+                                    type="button"
+                                    x-show="$store.installationModal && $store.installationModal.matchesSearch('{{ addslashes($instType->name) }}')"
+                                    @click.stop="$store.installationModal.toggleType('{{ addslashes($instType->name) }}')"
+                                    :class="[
+                                        $store.installationModal && $store.installationModal.isSelected('{{ addslashes($instType->name) }}') 
+                                            ? 'ring-2 ring-stone-900/40 font-extrabold shadow-sm scale-[1.02]' 
+                                            : 'opacity-85 hover:opacity-100 hover:scale-[1.02] shadow-2xs',
+                                        $store.installationModal && $store.installationModal.getFirstMatch() === '{{ addslashes($instType->name) }}' && $store.installationModal.search
+                                            ? 'ring-2 ring-emerald-500 scale-[1.04]' 
+                                            : ''
+                                    ]"
+                                    style="background-color: {{ $instType->bg_color }}; color: {{ $instType->text_color }}; border-color: {{ $instType->border_color }};"
+                                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border transition cursor-pointer select-none">
+                                    <template x-if="$store.installationModal && $store.installationModal.isSelected('{{ addslashes($instType->name) }}')">
+                                        <x-lucide-check class="w-3.5 h-3.5 stroke-[3]" />
+                                    </template>
+                                    <template x-if="!$store.installationModal || !$store.installationModal.isSelected('{{ addslashes($instType->name) }}')">
+                                        <x-lucide-plus class="w-3.5 h-3.5 opacity-60" />
+                                    </template>
+                                    <span>{{ $instType->name }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-5 py-3 border-t border-stone-100 bg-stone-50/80 flex items-center justify-between">
+                    <div>
+                        <button 
+                            type="button"
+                            x-show="$store.installationModal && $store.installationModal.types.length > 0"
+                            @click.stop="$store.installationModal.clearAll()"
+                            class="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 font-semibold cursor-pointer">
+                            <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                            <span>{{ __('Vaciar selección') }}</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button 
+                            type="button" 
+                            @click.stop="$store.installationModal.close()" 
+                            class="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                            <x-lucide-check class="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>{{ __('Guardar y Cerrar') }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
+
+<script>
+    (function() {
+        const registerInstallationModalStore = () => {
+            if (!window.Alpine) return;
+            if (Alpine.store('installationModal')) return;
+
+            Alpine.store('installationModal', {
+                isOpen: false,
+                orderId: null,
+                orderWo: '',
+                orderCompany: '',
+                types: [],
+                search: '',
+                allTypes: {{ \Illuminate\Support\Js::from($installationTypes->pluck('name')) }},
+                typesMap: {{ \Illuminate\Support\Js::from($installationTypes->keyBy('name')->map(fn($t) => [
+                    'bg' => $t->bg_color,
+                    'text' => $t->text_color,
+                    'border' => $t->border_color ?: $t->bg_color,
+                ])) }},
+
+                getStyle(t) {
+                    if (!t) return '';
+                    const direct = this.typesMap[t];
+                    if (direct && direct.bg) return `background-color: ${direct.bg}; color: ${direct.text}; border-color: ${direct.border};`;
+                    const lower = String(t).toLowerCase().trim();
+                    for (const [k, v] of Object.entries(this.typesMap)) {
+                        if (k.toLowerCase().trim() === lower && v.bg) return `background-color: ${v.bg}; color: ${v.text}; border-color: ${v.border};`;
+                    }
+                    return 'background-color: #f5f5f4; color: #44403c; border-color: #e7e5e4;';
+                },
+
+                isSelected(t) {
+                    if (!t || !this.types) return false;
+                    const upper = String(t).toUpperCase().trim();
+                    return this.types.some(item => String(item).toUpperCase().trim() === upper);
+                },
+
+                toggleType(t) {
+                    if (!this.orderId || !t) return;
+                    const upper = String(t).toUpperCase().trim();
+                    let current = [...(this.types || [])];
+                    const idx = current.findIndex(item => String(item).toUpperCase().trim() === upper);
+                    if (idx !== -1) {
+                        current.splice(idx, 1);
+                    } else {
+                        current.push(upper);
+                    }
+                    this.types = current;
+
+                    // Update overview table cell immediately in 0ms
+                    window.dispatchEvent(new CustomEvent('order-installation-changed', {
+                        detail: { orderId: this.orderId, types: current }
+                    }));
+
+                    // Silently persist on backend
+                    const wire = window.__overviewWire || (window.Livewire ? Livewire.first() : null);
+                    if (wire && typeof wire.toggleInstallationType === 'function') {
+                        wire.toggleInstallationType(this.orderId, upper);
+                    }
+                },
+
+                clearAll() {
+                    if (!this.orderId) return;
+                    this.types = [];
+
+                    window.dispatchEvent(new CustomEvent('order-installation-changed', {
+                        detail: { orderId: this.orderId, types: [] }
+                    }));
+
+                    const wire = window.__overviewWire || (window.Livewire ? Livewire.first() : null);
+                    if (wire && typeof wire.clearInstallationTypes === 'function') {
+                        wire.clearInstallationTypes(this.orderId);
+                    }
+                },
+
+                getFirstMatch() {
+                    if (!this.search || !this.search.trim()) return null;
+                    const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                    const q = clean(this.search);
+                    const unselected = this.allTypes.filter(t => !this.isSelected(t));
+                    const matchUnselected = unselected.find(t => clean(t).includes(q));
+                    if (matchUnselected) return matchUnselected;
+                    return this.allTypes.find(t => clean(t).includes(q)) || null;
+                },
+
+                addMatch() {
+                    if (this.search && this.search.trim()) {
+                        const match = this.getFirstMatch();
+                        if (match) {
+                            this.toggleType(match);
+                            this.search = '';
+                            setTimeout(() => {
+                                const input = document.getElementById('installation-modal-tag-input');
+                                if (input) input.focus();
+                            }, 30);
+                        }
+                    }
+                },
+
+                onBackspace(e) {
+                    if (!this.search && (!e.target.selectionStart || e.target.selectionStart === 0)) {
+                        if (this.types && this.types.length > 0) {
+                            const last = this.types[this.types.length - 1];
+                            this.toggleType(last);
+                        }
+                    }
+                },
+
+                matchesSearch(t) {
+                    if (!this.search || !this.search.trim()) return true;
+                    if (!t) return false;
+                    const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                    return clean(t).includes(clean(this.search));
+                },
+
+                open(detail) {
+                    if (!detail) return;
+                    this.orderId = detail.orderId;
+                    this.orderWo = detail.wo || '';
+                    this.orderCompany = detail.company || '';
+                    this.types = Array.isArray(detail.types) ? [...detail.types] : (detail.types ? [detail.types] : []);
+                    this.search = '';
+                    this.isOpen = true;
+                    setTimeout(() => {
+                        const input = document.getElementById('installation-modal-tag-input');
+                        if (input) input.focus();
+                    }, 60);
+                },
+
+                close() {
+                    this.isOpen = false;
+                    this.search = '';
+                }
+            });
+        };
+
+        if (window.Alpine) {
+            registerInstallationModalStore();
+        } else {
+            document.addEventListener('alpine:init', registerInstallationModalStore);
+        }
+    })();
+</script>
 
 <style>
     .menu-item-active {

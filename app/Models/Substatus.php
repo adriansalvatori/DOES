@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 
 class Substatus extends Model
 {
@@ -62,6 +63,54 @@ class Substatus extends Model
     public function scopeGlobal(Builder $query): Builder
     {
         return $query->where('is_global', true);
+    }
+
+    public function scopeArchived(Builder $query): Builder
+    {
+        return $query->where('core_status', CoreStatus::ARCHIVED->value)
+            ->where('is_global', false);
+    }
+
+    /**
+     * Get all substatuses belonging to ARCHIVED status, with default first and sorted.
+     *
+     * @return Collection<int, self>
+     */
+    public static function getArchivedSubstatuses(): Collection
+    {
+        $db = static::archived()
+            ->orderByDesc('is_default')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        if ($db->isNotEmpty()) {
+            return $db;
+        }
+
+        return collect(CoreStatus::ARCHIVED->validSubstatuses())->map(function ($enum) {
+            return new static([
+                'name' => $enum->value,
+                'core_status' => CoreStatus::ARCHIVED,
+                'is_default' => $enum === CoreStatus::ARCHIVED->defaultSubstatus(),
+            ]);
+        });
+    }
+
+    /**
+     * Get the name of default substatus for ARCHIVED status.
+     */
+    public static function getDefaultArchivedSubstatus(): string
+    {
+        $default = static::archived()
+            ->where('is_default', true)
+            ->value('name');
+
+        if ($default) {
+            return $default;
+        }
+
+        return \App\Enums\Substatus::FINALIZADA->value;
     }
 
     public function getInlineBadgeStyle(): string

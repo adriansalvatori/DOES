@@ -2399,7 +2399,60 @@
                         </div>
 
                         <!-- TRELLO ATTACHMENTS BLOCK -->
-                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-3 shadow-2xs">
+                        <div 
+                            x-data="{ 
+                                isDragging: false, 
+                                dragCounter: 0,
+                                handleDrop(event) {
+                                    this.isDragging = false;
+                                    this.dragCounter = 0;
+                                    const dt = event.dataTransfer;
+                                    if (!dt || !dt.files || dt.files.length === 0) return;
+
+                                    let oversized = [];
+                                    for (let i = 0; i < dt.files.length; i++) {
+                                        if (dt.files[i].size > 10 * 1024 * 1024) {
+                                            oversized.push(dt.files[i].name);
+                                        }
+                                    }
+                                    if (oversized.length > 0) {
+                                        $wire.dispatch('toast', { message: '{{ __('El archivo supera los 10 MB (límite de Trello): ') }}' + oversized.join(', ') });
+                                        return;
+                                    }
+
+                                    const input = $refs.multiAttachmentInput;
+                                    if (input) {
+                                        input.files = dt.files;
+                                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                }
+                            }"
+                            x-on:dragenter.prevent="dragCounter++; isDragging = true"
+                            x-on:dragleave.prevent="dragCounter--; if (dragCounter <= 0) { isDragging = false; dragCounter = 0; }"
+                            x-on:dragover.prevent="isDragging = true"
+                            x-on:drop.prevent="handleDrop($event)"
+                            class="relative bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-3 shadow-2xs transition-all duration-200"
+                            :class="{ 'ring-2 ring-sky-500 border-sky-400 bg-sky-50/25': isDragging }"
+                        >
+                            {{-- Animated Drag & Drop Overlay --}}
+                            <div 
+                                x-show="isDragging" 
+                                x-transition:enter="transition ease-out duration-150"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-100"
+                                x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute inset-0 z-20 rounded-xl bg-sky-50/95 backdrop-blur-[2px] border-2 border-dashed border-sky-500 flex flex-col items-center justify-center p-6 text-center shadow-lg pointer-events-none"
+                                style="display: none;"
+                            >
+                                <div class="w-12 h-12 rounded-full bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-600 mb-2 animate-bounce">
+                                    <x-lucide-upload-cloud class="w-6 h-6" />
+                                </div>
+                                <p class="text-sm font-bold text-sky-950">{{ __('Suelta los archivos aquí para adjuntarlos') }}</p>
+                                <p class="text-xs text-sky-700 mt-1 max-w-sm">{{ __('Se adjuntarán automáticamente a la tarjeta de Trello (puedes soltar varios archivos, máx. 10 MB c/u)') }}</p>
+                            </div>
+
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-paperclip class="w-4 h-4 text-sky-600 shrink-0" />
@@ -2419,37 +2472,71 @@
                                         </div>
                                     @endif
 
+                                    @if(!empty($trelloAttachments))
+                                        <button 
+                                            type="button"
+                                            wire:click="downloadAllAttachments"
+                                            wire:loading.attr="disabled"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-stone-50 text-zinc-700 hover:text-zinc-900 border border-stone-200/90 shadow-2xs cursor-pointer transition select-none disabled:opacity-50"
+                                            title="{{ __('Descargar todos los archivos adjuntos en un archivo ZIP') }}"
+                                        >
+                                            <x-lucide-download class="w-3.5 h-3.5 text-zinc-500 shrink-0" wire:loading.remove wire:target="downloadAllAttachments" />
+                                            <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600 shrink-0" wire:loading wire:target="downloadAllAttachments" />
+                                            <span>{{ __('Descargar todos') }}</span>
+                                        </button>
+                                    @endif
+
                                     @if($order && $order->trello_card_id)
-                                        <label 
-                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 hover:text-sky-800 border border-sky-200/90 shadow-2xs cursor-pointer transition select-none disabled:opacity-50">
+                                        <button 
+                                            type="button"
+                                            @click="$refs.multiAttachmentInput.click()"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 hover:text-sky-800 border border-sky-200/90 shadow-2xs cursor-pointer transition select-none disabled:opacity-50"
+                                            @disabled($isUploadingAttachment)
+                                        >
                                             <x-lucide-upload class="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                                            <span>{{ __('Subir archivo') }}</span>
-                                            <input 
-                                                type="file" 
-                                                wire:model="attachmentFile" 
-                                                class="hidden" 
-                                                @disabled($isUploadingAttachment)
-                                            >
-                                        </label>
+                                            <span>{{ __('Subir archivos') }}</span>
+                                        </button>
+                                        <input 
+                                            type="file" 
+                                            x-ref="multiAttachmentInput"
+                                            wire:model="attachmentFiles" 
+                                            multiple
+                                            class="hidden" 
+                                            @disabled($isUploadingAttachment)
+                                        >
                                     @endif
                                 </div>
                             </div>
 
                             {{-- Livewire loading indicator during file upload --}}
-                            <div wire:loading.flex wire:target="attachmentFile" class="flex flex-row items-center gap-2.5 py-2.5 px-3 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-800 shadow-2xs" style="display: none;">
+                            <div wire:loading.flex wire:target="attachmentFiles, attachmentFile" class="flex flex-row items-center gap-2.5 py-2.5 px-3 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-800 shadow-2xs" style="display: none;">
                                 <x-lucide-loader-2 class="w-4 h-4 animate-spin text-sky-600 shrink-0 inline-block" />
-                                <span class="leading-snug font-medium">{{ __('Cargando archivo y sincronizando con la tarjeta de Trello...') }}</span>
+                                <span class="leading-snug font-medium">{{ __('Cargando archivos y sincronizando con la tarjeta de Trello...') }}</span>
                             </div>
 
                             @if($attachmentUploadError)
                                 <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2">
                                     <div class="flex items-center gap-2 min-w-0">
                                         <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
-                                        <span class="truncate">{{ $attachmentUploadError }}</span>
+                                        <span class="truncate whitespace-pre-line">{{ $attachmentUploadError }}</span>
                                     </div>
                                     <button type="button" wire:click="$set('attachmentUploadError', null)" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
                             @endif
+
+                            @error('attachmentFiles')
+                                <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                                    <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
+                                    <span>{{ $message }}</span>
+                                </div>
+                            @enderror
+
+                            @error('attachmentFiles.*')
+                                <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+                                    <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
+                                    <span>{{ $message }}</span>
+                                </div>
+                            @enderror
 
                             @error('attachmentFile')
                                 <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
@@ -2464,109 +2551,156 @@
                                     <span>{{ __('Cargando archivos adjuntos desde Trello...') }}</span>
                                 </div>
                             @elseif(empty($trelloAttachments))
-                                <div class="p-4 rounded-xl bg-stone-50/80 border border-dashed border-stone-300 text-center space-y-2">
-                                    <p class="text-xs text-zinc-500 italic">{{ __('Sin archivos adjuntos en la tarjeta de Trello.') }}</p>
+                                @if($order && $order->trello_card_id)
+                                    <div 
+                                        @click="$refs.multiAttachmentInput.click()"
+                                        class="group p-6 rounded-xl bg-white/70 hover:bg-sky-50/40 border-2 border-dashed border-stone-200 hover:border-sky-400 text-center space-y-2 cursor-pointer transition shadow-2xs"
+                                    >
+                                        <div class="w-10 h-10 rounded-full bg-stone-100 group-hover:bg-sky-100 text-zinc-400 group-hover:text-sky-600 flex items-center justify-center mx-auto transition">
+                                            <x-lucide-upload-cloud class="w-5 h-5" />
+                                        </div>
+                                        <p class="text-xs font-semibold text-zinc-700 group-hover:text-sky-800 transition">
+                                            {{ __('Arrastra y suelta tus archivos aquí') }}
+                                            <span class="text-sky-600 underline ml-1 font-medium">{{ __('o haz clic para explorar') }}</span>
+                                        </p>
+                                        <p class="text-[11px] text-zinc-400">
+                                            {{ __('Puedes soltar múltiples archivos (imágenes, planos, PDFs, etc. — máx. 10 MB c/u)') }}
+                                        </p>
+                                @else
+                                    <div class="p-4 rounded-xl bg-stone-50/80 border border-dashed border-stone-300 text-center">
+                                        <p class="text-xs text-zinc-500 italic">{{ __('Sin archivos adjuntos en la tarjeta de Trello.') }}</p>
+                                    </div>
+                                @endif
+                            @else
+                                <div class="space-y-2.5">
+                                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                                        @foreach($trelloAttachments as $attachment)
+                                            @if(!is_array($attachment))
+                                                @continue
+                                            @endif
+                                            @php
+                                                $isImage = !empty($attachment['previews']) || (isset($attachment['mimeType']) && str_starts_with($attachment['mimeType'], 'image/')) || preg_match('/\.(jpg|jpeg|png|gif|webp|svg)$/i', $attachment['name'] ?? '');
+                                                $previewUrl = null;
+                                                if ($isImage && !empty($attachment['previews'])) {
+                                                    $previewUrl = $attachment['previews'][min(2, count($attachment['previews']) - 1)]['url'] ?? $attachment['url'];
+                                                } elseif ($isImage) {
+                                                    $previewUrl = $attachment['url'];
+                                                }
+
+                                                $bytes = $attachment['bytes'] ?? null;
+                                                $sizeFormatted = null;
+                                                if ($bytes && $bytes > 0) {
+                                                    $units = ['B', 'KB', 'MB', 'GB'];
+                                                    $i = (int) floor(log($bytes, 1024));
+                                                    $sizeFormatted = round($bytes / pow(1024, $i), 1) . ' ' . ($units[$i] ?? 'B');
+                                                }
+
+                                                $directDownloadUrl = route('trello.attachment-proxy', ['url' => $attachment['url'], 'download' => 1, 'filename' => $attachment['name'] ?? 'archivo']);
+                                            @endphp
+                                            
+                                            <div 
+                                                wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
+                                                x-data="{ imgError: false }" 
+                                                class="group bg-white hover:bg-stone-50/60 border border-stone-200/90 hover:border-sky-300 rounded-lg overflow-hidden flex flex-col transition-all duration-200 shadow-2xs hover:shadow-xs cursor-pointer relative"
+                                            >
+                                                {{-- Thumbnail on top --}}
+                                                <div class="relative w-full aspect-[4/3] bg-stone-100/90 border-b border-stone-100 overflow-hidden flex items-center justify-center group/thumb">
+                                                    @if($isImage && $previewUrl)
+                                                        @php
+                                                            $proxiedUrl = route('trello.attachment-proxy', ['url' => $previewUrl]);
+                                                        @endphp
+                                                        <template x-if="!imgError">
+                                                            <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? __('Adjunto') }}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                                        </template>
+                                                        <template x-if="imgError">
+                                                            <div class="w-full h-full bg-stone-100 text-stone-400 flex flex-col items-center justify-center gap-1">
+                                                                <x-lucide-image class="w-6 h-6 stroke-[1.5]" />
+                                                                <span class="text-[9px] text-stone-400 font-medium">{{ __('Imagen') }}</span>
+                            </div>
+                                                        </template>
+                                                        <div class="absolute inset-0 bg-sky-950/20 backdrop-blur-[0.5px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
+                                                            <div class="w-6 h-6 rounded-full bg-white/95 text-sky-700 flex items-center justify-center shadow-xs">
+                                                                <x-lucide-maximize-2 class="w-3 h-3" />
+                                                            </div>
+                                                        </div>
+                                                    @elseif(isset($attachment['mimeType']) && str_contains($attachment['mimeType'], 'pdf'))
+                                                        <div class="w-full h-full bg-rose-50/60 text-rose-500 flex flex-col items-center justify-center gap-1 p-2">
+                                                            <x-lucide-file-text class="w-6 h-6 stroke-[1.5]" />
+                                                            <span class="text-[9px] font-bold uppercase tracking-wider text-rose-600 bg-rose-100/80 px-1.5 py-0.2 rounded">PDF</span>
+                                                        </div>
+                                                    @elseif($isImage)
+                                                        <div class="w-full h-full bg-sky-50/60 text-sky-600 flex flex-col items-center justify-center gap-1 p-2">
+                                                            <x-lucide-image class="w-6 h-6 stroke-[1.5]" />
+                                                            <span class="text-[9px] font-bold uppercase tracking-wider text-sky-700 bg-sky-100/80 px-1.5 py-0.2 rounded">IMG</span>
+                                                        </div>
+                                                    @else
+                                                        <div class="w-full h-full bg-stone-50 text-zinc-400 flex flex-col items-center justify-center gap-1 p-2">
+                                                            <x-lucide-file class="w-6 h-6 stroke-[1.5]" />
+                                                            <span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500 bg-stone-200/70 px-1.5 py-0.2 rounded">DOC</span>
+                                                        </div>
+                                                    @endif
+                                                </div>
+
+                                                {{-- Ribbon below with subtle details and smaller buttons --}}
+                                                <div class="p-2 bg-white flex flex-col gap-1 flex-1 justify-between">
+                                                    <p class="text-[11px] font-semibold text-zinc-800 group-hover:text-sky-700 truncate leading-snug transition-colors" title="{{ $attachment['name'] ?? __('Archivo') }}">
+                                                        {{ $attachment['name'] ?? __('Archivo') }}
+                                                    </p>
+
+                                                    <div class="flex items-center justify-between gap-1 pt-1 border-t border-stone-100">
+                                                        <div class="flex items-center gap-1 text-[9px] text-zinc-400 min-w-0">
+                                                            @if($sizeFormatted)
+                                                                <span class="font-mono text-[9px] text-zinc-500 bg-stone-100/90 border border-stone-200/60 px-1 py-0.2 rounded font-medium shrink-0">{{ $sizeFormatted }}</span>
+                                                            @endif
+                                                            @if(!empty($attachment['date']))
+                                                                <span class="truncate">{{ \Carbon\Carbon::parse($attachment['date'])->format('d M') }}</span>
+                                                            @endif
+                                                        </div>
+
+                                                        <div class="flex items-center gap-0.5 shrink-0" @click.stop>
+                                                            <a 
+                                                                href="{{ $directDownloadUrl }}" 
+                                                                download="{{ $attachment['name'] ?? 'archivo' }}" 
+                                                                class="p-0.5 rounded text-zinc-400 hover:text-sky-600 hover:bg-sky-50 transition cursor-pointer" 
+                                                                title="{{ __('Descargar') }}"
+                                                            >
+                                                                <x-lucide-download class="w-3 h-3" />
+                                                            </a>
+                                                            <button 
+                                                                type="button" 
+                                                                wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
+                                                                class="p-0.5 rounded text-zinc-400 hover:text-sky-600 hover:bg-sky-50 transition cursor-pointer" 
+                                                                title="{{ __('Vista previa') }}"
+                                                            >
+                                                                <x-lucide-maximize-2 class="w-3 h-3" />
+                                                            </button>
+                                                            @if(!empty($attachment['id']))
+                                                                <button 
+                                                                    type="button" 
+                                                                    wire:click="deleteAttachment('{{ $attachment['id'] }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
+                                                                    wire:confirm="{{ __('¿Estás seguro de que deseas eliminar este archivo adjunto de la tarjeta de Trello?') }}" 
+                                                                    class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-70 group-hover:opacity-100" 
+                                                                    title="{{ __('Eliminar') }}"
+                                                                >
+                                                                    <x-lucide-trash-2 class="w-3 h-3" />
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
                                     @if($order && $order->trello_card_id)
-                                        <div>
-                                            <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 shadow-2xs cursor-pointer transition">
-                                                <x-lucide-upload class="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                                                <span>{{ __('Haz clic para subir un archivo a Trello') }}</span>
-                                                <input type="file" wire:model="attachmentFile" class="hidden" @disabled($isUploadingAttachment)>
-                                            </label>
+                                        <div 
+                                            @click="$refs.multiAttachmentInput.click()"
+                                            class="group border border-dashed border-stone-300 hover:border-sky-400 bg-stone-50/60 hover:bg-sky-50/50 rounded-lg py-2 px-3 text-center cursor-pointer transition flex items-center justify-center gap-2 text-xs text-zinc-500 hover:text-sky-700 font-medium"
+                                        >
+                                            <x-lucide-upload class="w-3.5 h-3.5 text-zinc-400 group-hover:text-sky-600 transition" />
+                                            <span>{{ __('Arrastra más archivos aquí o haz clic para agregar') }}</span>
                                         </div>
                                     @endif
-                                </div>
-                            @else
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
-                                    @foreach($trelloAttachments as $attachment)
-                                        @if(!is_array($attachment))
-                                            @continue
-                                        @endif
-                                        @php
-                                            $isImage = !empty($attachment['previews']) || (isset($attachment['mimeType']) && str_starts_with($attachment['mimeType'], 'image/')) || preg_match('/\.(jpg|jpeg|png|gif|webp|svg)$/i', $attachment['name'] ?? '');
-                                            $previewUrl = null;
-                                            if ($isImage && !empty($attachment['previews'])) {
-                                                $previewUrl = $attachment['previews'][min(2, count($attachment['previews']) - 1)]['url'] ?? $attachment['url'];
-                                            } elseif ($isImage) {
-                                                $previewUrl = $attachment['url'];
-                                            }
-
-                                            $bytes = $attachment['bytes'] ?? null;
-                                            $sizeFormatted = null;
-                                            if ($bytes && $bytes > 0) {
-                                                $units = ['B', 'KB', 'MB', 'GB'];
-                                                $i = (int) floor(log($bytes, 1024));
-                                                $sizeFormatted = round($bytes / pow(1024, $i), 1) . ' ' . ($units[$i] ?? 'B');
-                                            }
-                                        @endphp
-                                        
-                                        <div 
-                                            wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
-                                            x-data="{ imgError: false }" 
-                                            class="group border border-[#e9e9e7] hover:border-sky-400 bg-white hover:bg-sky-50/40 rounded-lg p-2.5 flex items-center gap-3 transition shadow-2xs min-w-0 cursor-pointer">
-                                            @if($isImage && $previewUrl)
-                                                @php
-                                                    $proxiedUrl = route('trello.attachment-proxy', ['url' => $previewUrl]);
-                                                @endphp
-                                                <div class="w-11 h-11 rounded-md bg-stone-100 border border-stone-200 overflow-hidden shrink-0 relative group-hover:ring-2 group-hover:ring-sky-400/40 transition flex items-center justify-center">
-                                                    <template x-if="!imgError">
-                                                        <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? __('Adjunto') }}" class="w-full h-full object-cover">
-                                                    </template>
-                                                    <template x-if="imgError">
-                                                        <div class="w-full h-full bg-sky-50 text-sky-600 flex items-center justify-center">
-                                                            <x-lucide-image class="w-5.5 h-5.5" />
-                                                        </div>
-                                                    </template>
-                                                </div>
-                                            @elseif(isset($attachment['mimeType']) && str_contains($attachment['mimeType'], 'pdf'))
-                                                <div class="w-11 h-11 rounded-md bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center shrink-0">
-                                                    <x-lucide-file-text class="w-5.5 h-5.5" />
-                                                </div>
-                                            @elseif($isImage)
-                                                <div class="w-11 h-11 rounded-md bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center shrink-0">
-                                                    <x-lucide-image class="w-5.5 h-5.5" />
-                                                </div>
-                                            @else
-                                                <div class="w-11 h-11 rounded-md bg-sky-50 border border-sky-200 text-sky-600 flex items-center justify-center shrink-0">
-                                                    <x-lucide-file class="w-5.5 h-5.5" />
-                                                </div>
-                                            @endif
-
-                                            <div class="min-w-0 flex-1 space-y-0.5">
-                                                <p class="text-xs font-semibold text-zinc-800 group-hover:text-sky-700 truncate" title="{{ $attachment['name'] ?? __('Archivo') }}">
-                                                    {{ $attachment['name'] ?? __('Archivo') }}
-                                                </p>
-                                                <div class="flex items-center gap-2 text-[10px] text-zinc-400">
-                                                    @if($sizeFormatted)
-                                                        <span class="font-mono bg-stone-100 px-1.5 py-0.2 rounded text-zinc-600 font-medium">{{ $sizeFormatted }}</span>
-                                                    @endif
-                                                    @if(!empty($attachment['date']))
-                                                        <span class="truncate">{{ \Carbon\Carbon::parse($attachment['date'])->format('d M, Y') }}</span>
-                                                    @endif
-                                                </div>
-                                            </div>
-
-                                            <div class="flex items-center gap-0.5 shrink-0">
-                                                <button 
-                                                    type="button" 
-                                                    wire:click.stop="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
-                                                    class="p-1.5 rounded-md text-zinc-400 hover:text-sky-600 hover:bg-sky-100/60 transition cursor-pointer" 
-                                                    title="{{ __('Ver Vista Previa') }}">
-                                                    <x-lucide-maximize-2 class="w-3.5 h-3.5" />
-                                                </button>
-                                                @if(!empty($attachment['id']))
-                                                    <button 
-                                                        type="button" 
-                                                        wire:click.stop="deleteAttachment('{{ $attachment['id'] }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
-                                                        wire:confirm="{{ __('¿Estás seguro de que deseas eliminar este archivo adjunto de la tarjeta de Trello?') }}" 
-                                                        class="p-1.5 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-70 group-hover:opacity-100" 
-                                                        title="{{ __('Eliminar archivo de Trello') }}">
-                                                        <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                                    </button>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
                                 </div>
                             @endif
                         </div>
@@ -3464,45 +3598,50 @@
     <!-- IN-APP MEDIA PREVIEW LIGHTBOX MODAL -->
     @if($showMediaPreviewModal)
         <div 
-            class="fixed inset-0 z-[450] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-3 sm:p-6 transition-all animate-in fade-in duration-150"
+            class="fixed inset-0 z-[450] bg-zinc-950/80 backdrop-blur-xl flex flex-col items-center justify-center p-3 sm:p-6 transition-all animate-in fade-in duration-150"
             @keydown.window.escape.prevent="$wire.closeMediaPreview()">
             
             <!-- Header Bar -->
-            <div class="w-full max-w-5xl bg-zinc-900 border border-zinc-700/80 rounded-t-2xl p-3.5 sm:px-5 flex items-center justify-between gap-3 text-white shadow-2xl">
+            <div class="w-full max-w-5xl bg-zinc-900/90 border border-white/10 rounded-t-2xl p-3 sm:px-5 flex items-center justify-between gap-3 text-white shadow-2xl backdrop-blur-md">
                 <div class="flex items-center gap-2.5 min-w-0">
-                    <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-sky-500/20 text-sky-300 border border-sky-400/30">
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-medium tracking-wide bg-sky-500/15 text-sky-300 border border-sky-400/25">
                         {{ strtoupper($previewMediaType) }}
                     </span>
-                    <h3 class="font-bold text-xs sm:text-sm text-zinc-100 truncate" title="{{ $previewMediaTitle }}">
+                    <h3 class="font-medium text-xs sm:text-sm text-zinc-100 truncate" title="{{ $previewMediaTitle }}">
                         {{ $previewMediaTitle }}
                     </h3>
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
-                    <a href="{{ $previewMediaUrl }}" download target="_blank" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold border border-zinc-700 transition flex items-center gap-1.5 shadow-2xs">
+                    @php
+                        $lightboxDownloadUrl = str_contains($previewMediaUrl, '?') 
+                            ? $previewMediaUrl . '&download=1&filename=' . urlencode($previewMediaTitle) 
+                            : $previewMediaUrl . '?download=1&filename=' . urlencode($previewMediaTitle);
+                    @endphp
+                    <a href="{{ $lightboxDownloadUrl }}" download="{{ $previewMediaTitle }}" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 transition flex items-center gap-1.5 shadow-2xs">
                         <x-lucide-download class="w-3.5 h-3.5 text-sky-400" />
-                        <span class="hidden sm:inline">{{ __('Descargar / Abrir') }}</span>
+                        <span class="hidden sm:inline">{{ __('Descargar') }}</span>
                     </a>
-                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center border border-zinc-700 transition cursor-pointer" title="{{ __('Cerrar (Esc)') }}">
-                        <x-lucide-x class="w-4.5 h-4.5" />
+                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center border border-white/10 transition cursor-pointer" title="{{ __('Cerrar (Esc)') }}">
+                        <x-lucide-x class="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
             <!-- Content Area -->
-            <div class="w-full max-w-5xl bg-zinc-950 border-x border-b border-zinc-800 rounded-b-2xl p-2 sm:p-4 flex items-center justify-center min-h-[50vh] max-h-[80vh] overflow-auto shadow-2xl relative">
+            <div class="w-full max-w-5xl bg-zinc-950/90 border-x border-b border-white/10 rounded-b-2xl p-3 sm:p-5 flex items-center justify-center min-h-[50vh] max-h-[82vh] overflow-auto shadow-2xl relative">
                 @if($previewMediaType === 'image')
-                    <div x-data="{ imgError: false }" class="flex flex-col items-center justify-center">
-                        <img src="{{ $previewMediaUrl }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $previewMediaTitle }}" class="max-w-full max-h-[75vh] object-contain rounded-lg shadow-md">
+                    <div x-data="{ imgError: false }" class="flex flex-col items-center justify-center p-2">
+                        <img src="{{ $previewMediaUrl }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $previewMediaTitle }}" class="max-w-full max-h-[76vh] object-contain rounded-xl shadow-2xl border border-white/10">
                         <div x-show="imgError" x-cloak class="p-8 text-center text-zinc-400 flex flex-col items-center gap-2">
-                            <x-lucide-image-off class="w-12 h-12 stroke-[1.5]" />
+                            <x-lucide-image-off class="w-12 h-12 stroke-[1.5] text-zinc-500" />
                             <p class="text-sm font-medium">{{ __('No se pudo cargar la vista previa de la imagen') }}</p>
                         </div>
                     </div>
                 @elseif($previewMediaType === 'pdf')
-                    <iframe src="{{ $previewMediaUrl }}" class="w-full h-[75vh] rounded-lg border-0 bg-white"></iframe>
+                    <iframe src="{{ $previewMediaUrl }}" class="w-full h-[76vh] rounded-xl border-0 bg-white shadow-xl"></iframe>
                 @else
-                    <iframe src="{{ $previewMediaUrl }}" class="w-full h-[75vh] rounded-lg border-0 bg-white"></iframe>
+                    <iframe src="{{ $previewMediaUrl }}" class="w-full h-[76vh] rounded-xl border-0 bg-white shadow-xl"></iframe>
                 @endif
             </div>
         </div>

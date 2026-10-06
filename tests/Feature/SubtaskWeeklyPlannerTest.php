@@ -279,18 +279,18 @@ class SubtaskWeeklyPlannerTest extends TestCase
         ]);
 
         Livewire::test(WeeklyPlanner::class)
-            ->assertSet('viewMode', 'by_day')
+            ->assertSet('viewMode', 'by_designer')
             ->assertSeeHtml(__('Por Días'))
             ->assertSeeHtml(__('Por Diseñador'))
-            ->call('changeViewMode', 'by_designer')
-            ->assertSet('viewMode', 'by_designer')
-            ->assertSessionHas('weekly_planner_view_mode', 'by_designer')
             ->assertSeeHtml('RESTAURANTE EL TACO')
-            ->assertSeeHtml('Ajuste de colores');
+            ->assertSeeHtml('Ajuste de colores')
+            ->call('changeViewMode', 'by_day')
+            ->assertSet('viewMode', 'by_day')
+            ->assertSessionHas('weekly_planner_view_mode', 'by_day');
 
         // Verify next component mount initializes with persisted viewMode
         Livewire::test(WeeklyPlanner::class)
-            ->assertSet('viewMode', 'by_designer');
+            ->assertSet('viewMode', 'by_day');
     }
 
     public function test_working_subtask_promotes_order_to_working_today(): void

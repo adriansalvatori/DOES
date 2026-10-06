@@ -66,8 +66,16 @@ class OverviewIndex extends Component
     #[On('order-updated')]
     #[On('order-created')]
     #[On('order-deleted')]
-    public function handleOrderUpdated(): void
+    public function handleOrderUpdated($payload = null, ?string $source = null, ...$rest): void
     {
+        $resolvedSource = $source ?? (is_array($payload) ? ($payload['source'] ?? null) : (is_string($payload) ? $payload : null));
+
+        if ($resolvedSource === 'OverviewIndex') {
+            $this->skipRender();
+
+            return;
+        }
+
         $this->clearOverviewCache();
     }
 
@@ -316,6 +324,7 @@ class OverviewIndex extends Component
                 'flags',
                 'designer_id',
                 'installation_type',
+                'installation_types',
                 'review_status',
                 'wo_number',
                 'production_note',
@@ -367,6 +376,7 @@ class OverviewIndex extends Component
                 'designer_badge_style' => $order->getDesignerBadgeStyle(),
                 'review_status' => $order->review_status,
                 'installation_type' => $order->installation_type,
+                'installation_types' => $order->installation_types_list,
                 'core_status' => $order->core_status?->value ?? (is_string($order->core_status) ? $order->core_status : null),
                 'in_workspace' => (bool) $order->in_workspace,
                 'wo_number' => $order->wo_number,
@@ -875,11 +885,83 @@ class OverviewIndex extends Component
             return;
         }
 
-        $order->update(['installation_type' => $type]);
+        $clean = $type ? mb_strtoupper(trim($type)) : null;
+        $order->installation_types = $clean ? [$clean] : [];
+        $order->installation_type = $clean;
+        $order->save();
+
         $this->clearOverviewCache();
-        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Tipo de instalación actualizado: '.($type ?? 'Vacío'));
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Tipo de instalación actualizado: '.($clean ?? 'Vacío'));
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Instalación actualizada.'));
+    }
+
+    #[Renderless]
+    public function toggleInstallationType(?int $orderId, ?string $type): void
+    {
+        if (! $orderId || ! $type) {
+            return;
+        }
+
+        $order = Order::find($orderId);
+        if (! $order) {
+            return;
+        }
+
+        $clean = mb_strtoupper(trim($type));
+        $order->toggleInstallationType($clean);
+        $order->save();
+
+        $this->clearOverviewCache();
+        $types = $order->installation_types_list;
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación actualizada: '.(empty($types) ? 'Vacío' : implode(', ', $types)));
+        $this->dispatch('order-updated', source: 'OverviewIndex');
+        $this->dispatch('toast', message: __('Instalación actualizada.'));
+    }
+
+    #[Renderless]
+    public function setInstallationTypes(?int $orderId, array $types): void
+    {
+        if (! $orderId) {
+            return;
+        }
+
+        $order = Order::find($orderId);
+        if (! $order) {
+            return;
+        }
+
+        $cleanTypes = array_values(array_unique(array_filter(array_map(fn ($t) => mb_strtoupper(trim((string) $t)), $types))));
+        $order->installation_types = $cleanTypes;
+        $order->installation_type = ! empty($cleanTypes) ? $cleanTypes[0] : null;
+        $order->save();
+
+        $this->clearOverviewCache();
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación actualizada: '.(empty($cleanTypes) ? 'Vacío' : implode(', ', $cleanTypes)));
+        $this->dispatch('order-updated', source: 'OverviewIndex');
+        $this->dispatch('toast', message: __('Instalación actualizada.'));
+    }
+
+    #[Renderless]
+    public function clearInstallationTypes(?int $orderId): void
+    {
+        if (! $orderId) {
+            return;
+        }
+
+        $order = Order::find($orderId);
+        if (! $order) {
+            return;
+        }
+
+        $order->installation_types = [];
+        $order->installation_type = null;
+        $order->save();
+
+        $this->clearOverviewCache();
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación eliminada');
+        $this->dispatch('order-updated', source: 'OverviewIndex');
+        $this->dispatch('toast', message: __('Instalación vaciada.'));
     }
 
     #[Renderless]
@@ -1079,9 +1161,22 @@ class OverviewIndex extends Component
 
         if (! empty(trim($this->filterInstallation))) {
             if ($this->filterInstallation === 'NONE') {
-                $query->whereNull('installation_type');
+                $query->where(function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->whereNull('installation_type')
+                            ->orWhere('installation_type', '');
+                    })->where(function ($sub) {
+                        $sub->whereNull('installation_types')
+                            ->orWhere('installation_types', '[]')
+                            ->orWhere('installation_types', 'null');
+                    });
+                });
             } else {
-                $query->where('installation_type', $this->filterInstallation);
+                $val = mb_strtoupper(trim($this->filterInstallation));
+                $query->where(function ($q) use ($val) {
+                    $q->where('installation_type', $val)
+                        ->orWhereJsonContains('installation_types', $val);
+                });
             }
         }
 

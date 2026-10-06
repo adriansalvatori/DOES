@@ -1351,6 +1351,12 @@
                                                                             </div>
                                                                         </div>
 
+                                                                        @if($stask->order->isArchived())
+                                                                            <span class="inline-flex items-center px-1 py-0.2 text-[8.5px] font-semibold bg-zinc-100 text-zinc-600 rounded border border-zinc-200/80 shrink-0">
+                                                                                {{ __('Archivada') }}
+                                                                            </span>
+                                                                        @endif
+
                                                                         @if($stask->order->location_text)
                                                                             <!-- Location Name with Instant Tooltip -->
                                                                             <div class="relative group/tip min-w-0 shrink flex items-center gap-0.5">
