@@ -1,4 +1,44 @@
-<div class="relative" x-data="{ open: false }" @click.outside="open = false" wire:poll.30s>
+<div 
+    class="relative" 
+    x-data="{ 
+        open: false,
+        permission: (window.KudosNotifier ? window.KudosNotifier.getPermissionState() : ('Notification' in window ? Notification.permission : 'unsupported')),
+        soundEnabled: (window.KudosNotifier ? window.KudosNotifier.getSoundEnabled() : (localStorage.getItem('kudos_sound_enabled') !== 'false')),
+        init() {
+            window.addEventListener('kudos-notification-permission-changed', (e) => {
+                this.permission = e.detail.permission;
+            });
+            window.addEventListener('kudos-sound-preference-changed', (e) => {
+                this.soundEnabled = e.detail.enabled;
+            });
+        },
+        requestPerm() {
+            if (window.KudosNotifier) {
+                window.KudosNotifier.requestPermission().then(p => { this.permission = p; });
+            } else if ('Notification' in window) {
+                Notification.requestPermission().then(p => { this.permission = p; });
+            }
+        },
+        toggleSound() {
+            this.soundEnabled = !this.soundEnabled;
+            if (window.KudosNotifier) {
+                window.KudosNotifier.setSoundEnabled(this.soundEnabled);
+            }
+        },
+        testNotification() {
+            if (window.KudosNotifier) {
+                window.KudosNotifier.playChime();
+                if (this.permission === 'granted') {
+                    window.KudosNotifier.showSystemNotification({
+                        title: '🔔 Kudos DOES (Prueba)',
+                        body: '{{ __('¡El sonido y las notificaciones del sistema están activos!') }}',
+                    });
+                }
+            }
+        }
+    }" 
+    @click.outside="open = false" 
+    wire:poll.30s>
     
     <!-- Bell Icon Trigger Button -->
     <button 
@@ -63,6 +103,33 @@
                     {{ __('Marcar leídas') }}
                 </button>
             @endif
+        </div>
+
+        <!-- 1-Click Permission Incentive Card (Only visible if permission is 'default') -->
+        <div 
+            x-show="permission === 'default'" 
+            x-cloak
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 -translate-y-1"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            class="px-3.5 py-2.5 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/5 border-b border-amber-200/80 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0 shadow-2xs">
+                    <x-lucide-bell-ring class="w-4 h-4 animate-bounce" />
+                </div>
+                <div class="min-w-0">
+                    <p class="text-xs font-bold text-zinc-900 leading-tight">{{ __('¿Activar alertas en tu equipo?') }}</p>
+                    <p class="text-[10px] text-zinc-600 leading-tight mt-0.5 truncate">{{ __('Recibe avisos con sonido de tus órdenes') }}</p>
+                </div>
+            </div>
+
+            <button 
+                @click="requestPerm()" 
+                type="button" 
+                class="shrink-0 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs shadow-xs hover:shadow transition-all duration-150 cursor-pointer flex items-center gap-1 active:scale-95">
+                <x-lucide-check class="w-3.5 h-3.5 text-amber-400" />
+                <span>{{ __('Activar') }}</span>
+            </button>
         </div>
 
         <!-- Notification Items List -->
@@ -231,53 +298,8 @@
 
         <!-- Footer: System Notification & Sound Controls -->
         <div 
-            x-data="{
-                permission: (window.KudosNotifier ? window.KudosNotifier.getPermissionState() : ('Notification' in window ? Notification.permission : 'unsupported')),
-                soundEnabled: (window.KudosNotifier ? window.KudosNotifier.getSoundEnabled() : (localStorage.getItem('kudos_sound_enabled') !== 'false')),
-                init() {
-                    window.addEventListener('kudos-notification-permission-changed', (e) => {
-                        this.permission = e.detail.permission;
-                    });
-                    window.addEventListener('kudos-sound-preference-changed', (e) => {
-                        this.soundEnabled = e.detail.enabled;
-                    });
-                },
-                requestPerm() {
-                    if (window.KudosNotifier) {
-                        window.KudosNotifier.requestPermission().then(p => { this.permission = p; });
-                    } else if ('Notification' in window) {
-                        Notification.requestPermission().then(p => { this.permission = p; });
-                    }
-                },
-                toggleSound() {
-                    this.soundEnabled = !this.soundEnabled;
-                    if (window.KudosNotifier) {
-                        window.KudosNotifier.setSoundEnabled(this.soundEnabled);
-                    }
-                },
-                testNotification() {
-                    if (window.KudosNotifier) {
-                        window.KudosNotifier.playChime();
-                        if (this.permission === 'granted') {
-                            window.KudosNotifier.showSystemNotification({
-                                title: '🔔 Kudos DOES (Prueba)',
-                                body: '{{ __('¡El sonido y las notificaciones del sistema están activos!') }}',
-                            });
-                        }
-                    }
-                }
-            }"
+            x-show="permission !== 'default'"
             class="px-3.5 py-2 bg-stone-50/90 border-t border-stone-100 flex items-center justify-between text-[11px] text-zinc-500">
-            
-            <template x-if="permission === 'default'">
-                <button 
-                    @click="requestPerm()" 
-                    type="button" 
-                    class="w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-800 font-medium transition cursor-pointer text-[11px]">
-                    <x-lucide-bell-ring class="w-3.5 h-3.5 text-amber-500" />
-                    <span>{{ __('Activar avisos de escritorio y sonido') }}</span>
-                </button>
-            </template>
 
             <template x-if="permission === 'granted'">
                 <div class="w-full flex items-center justify-between">
