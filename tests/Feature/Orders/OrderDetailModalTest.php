@@ -24,11 +24,14 @@ class OrderDetailModalTest extends TestCase
 
     public function test_can_soft_delete_order_to_trashcan_from_flyout(): void
     {
+        $adminUser = User::factory()->create(['role' => UserRole::ADMIN]);
         $order = Order::create([
             'company_name' => 'EMPRESA PARA ELIMINAR',
             'task_name' => 'DISENO TARJETA',
             'in_workspace' => true,
         ]);
+
+        $this->actingAs($adminUser);
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
@@ -958,5 +961,52 @@ class OrderDetailModalTest extends TestCase
         $fresh = $order->fresh();
         $this->assertEquals(CoreStatus::ARCHIVED, $fresh->core_status);
         $this->assertNotNull($fresh->archived_at);
+    }
+
+    public function test_admin_and_lead_designer_can_see_trash_and_delete_orders(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $order1 = Order::create([
+            'company_name' => 'EMPRESA ADMIN TRASH',
+            'task_name' => 'TASK ADMIN TRASH',
+            'wo_number' => 'WO 99001',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($admin);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order1->id)
+            ->assertSeeHtml(__('Archivar orden'))
+            ->assertSeeHtml(__('Enviar a papelera'))
+            ->call('deleteOrder')
+            ->assertDispatched('order-updated')
+            ->assertSet('showModal', false);
+
+        $this->assertSoftDeleted('orders', ['id' => $order1->id]);
+
+        $leadUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $leadDesigner = Designer::create(['name' => 'Lead Des', 'is_lead' => true, 'user_id' => $leadUser->id]);
+
+        $order2 = Order::create([
+            'company_name' => 'EMPRESA LEAD TRASH',
+            'task_name' => 'TASK LEAD TRASH',
+            'wo_number' => 'WO 99002',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($leadUser);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order2->id)
+            ->assertSeeHtml(__('Archivar orden'))
+            ->assertSeeHtml(__('Enviar a papelera'))
+            ->call('deleteOrder')
+            ->assertDispatched('order-updated')
+            ->assertSet('showModal', false);
+
+        $this->assertSoftDeleted('orders', ['id' => $order2->id]);
     }
 }

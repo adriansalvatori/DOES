@@ -359,27 +359,6 @@
                                         </div>
                                     @endif
 
-                                    <!-- Option 5: Active orders from this client -->
-                                    <button 
-                                        type="button"
-                                        wire:click="openClientDetail" 
-                                        @click="open = false"
-                                        class="w-full text-left px-3 py-2 hover:bg-stone-50 text-zinc-800 transition flex items-center justify-between gap-2.5 cursor-pointer group">
-                                        <div class="flex items-center gap-2.5 min-w-0">
-                                            <div class="w-6 h-6 rounded-md bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shrink-0 group-hover:bg-indigo-100">
-                                                <x-lucide-layers class="w-3.5 h-3.5" />
-                                            </div>
-                                            <div class="min-w-0">
-                                                <span class="font-medium text-zinc-800 block truncate leading-tight">{{ __('Órdenes activas del cliente') }}</span>
-                                                <span class="text-[10px] text-zinc-400 block truncate leading-tight">{{ $order->company_name ?: __('Ver cliente') }}</span>
-                                            </div>
-                                        </div>
-                                        @if(isset($clientOtherActiveOrders) && $clientOtherActiveOrders->isNotEmpty())
-                                            <span class="px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-mono text-[10px] font-bold shrink-0">
-                                                {{ $clientOtherActiveOrders->count() + 1 }}
-                                            </span>
-                                        @endif
-                                    </button>
                                 </div>
 
                                 <!-- Option 4: Archivar Orden -->
@@ -396,6 +375,26 @@
                                             <div class="min-w-0 flex-1">
                                                 <span class="font-medium text-zinc-800 block leading-tight">{{ __('Archivar orden') }}</span>
                                                 <span class="text-[10px] text-zinc-400 block leading-tight">{{ __('Finalizar o cerrar orden') }}</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                @endif
+
+                                <!-- Option 5: Enviar a papelera (Lead Designer, Coordinators & Admins) -->
+                                @if(auth()->user()?->canDeleteOrders())
+                                    <div class="py-1 border-t border-[#e9e9e7]">
+                                        <button 
+                                            type="button"
+                                            wire:click="deleteOrder" 
+                                            wire:confirm="{{ __('¿Estás seguro de mover la orden :name a la Papelera de Reciclaje?', ['name' => $order->company_name]) }}" 
+                                            @click="open = false"
+                                            class="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-700 transition flex items-center gap-2.5 cursor-pointer group">
+                                            <div class="w-6 h-6 rounded-md bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-100">
+                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                            </div>
+                                            <div class="min-w-0 flex-1">
+                                                <span class="font-medium text-rose-700 block leading-tight">{{ __('Enviar a papelera') }}</span>
+                                                <span class="text-[10px] text-rose-500/80 block leading-tight">{{ __('Mover a reciclaje') }}</span>
                                             </div>
                                         </button>
                                     </div>
@@ -597,7 +596,7 @@
                                 <span>{{ __('Conservar') }} {{ $order->wo_number ?: __('actual') }} (DOES)</span>
                             </button>
 
-                            @if(!auth()->user()?->isDesigner())
+                            @if(auth()->user()?->canManageWorkOrders())
                                 <button 
                                     type="button" 
                                     wire:click="acceptPendingWo" 
@@ -608,7 +607,7 @@
                             @else
                                 <span class="px-2.5 py-1.5 rounded-lg bg-amber-100 text-amber-900 font-medium text-xs flex items-center gap-1.5">
                                     <x-lucide-lock class="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                                    <span>{{ __('Sugerencia de WO: :wo (Solo coordinadores pueden aplicar cambios)', ['wo' => $order->pending_wo_number]) }}</span>
+                                    <span>{{ __('Sugerencia de WO: :wo (Solo coordinadores y líderes pueden aplicar cambios)', ['wo' => $order->pending_wo_number]) }}</span>
                                 </span>
                             @endif
                         </div>
@@ -630,7 +629,7 @@
                             <div class="space-y-1">
                                 <div class="flex items-center justify-between">
                                     <label class="font-medium text-zinc-700 block">{{ __('Número de Orden:') }}</label>
-                                    @if(!auth()->user()?->isDesigner())
+                                    @if(auth()->user()?->canManageWorkOrders())
                                         <button 
                                             type="button" 
                                             wire:click="generateWoNumber" 
@@ -651,10 +650,10 @@
                                         type="text" 
                                         wire:model="editWoNumber" 
                                         placeholder="16253" 
-                                        @if(auth()->user()?->isDesigner()) disabled readonly @endif
-                                        class="bg-white border border-[#e9e9e7] rounded-r-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono font-semibold {{ auth()->user()?->isDesigner() ? 'bg-stone-100! text-zinc-500! cursor-not-allowed select-none' : '' }}">
+                                        @if(!auth()->user()?->canManageWorkOrders()) disabled readonly @endif
+                                        class="bg-white border border-[#e9e9e7] rounded-r-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full font-mono font-semibold {{ !auth()->user()?->canManageWorkOrders() ? 'bg-stone-100! text-zinc-500! cursor-not-allowed select-none' : '' }}">
                                 </div>
-                                @if(auth()->user()?->isDesigner())
+                                @if(!auth()->user()?->canManageWorkOrders())
                                     <p class="text-[10px] text-zinc-400 flex items-center gap-1 mt-0.5">
                                         <x-lucide-lock class="w-3 h-3 text-zinc-400 shrink-0" />
                                         <span>{{ __('Los diseñadores no pueden modificar el número de WO.') }}</span>

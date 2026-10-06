@@ -446,11 +446,7 @@ class Board extends Component
         $order = Order::findOrFail($orderId);
         $user = Auth::user();
 
-        if ($user && $user->isDesigner() && ! $order->hasNoWo()) {
-            abort(403, __('Los diseñadores no pueden enviar órdenes con WO a la papelera. Debe archivar la orden.'));
-        }
-
-        if ($user && ($user->isDesigner() || $user->isSales())) {
+        if ($user && ! $user->canDeleteOrders()) {
             abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
         }
 

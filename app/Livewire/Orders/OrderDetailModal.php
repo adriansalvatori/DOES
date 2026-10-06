@@ -827,7 +827,7 @@ class OrderDetailModal extends Component
     public function generateWoNumber(?WorkOrderNumberGenerator $generator = null): void
     {
         $user = Auth::user();
-        if ($user && $user->isDesigner()) {
+        if ($user && ! $user->canManageWorkOrders()) {
             return;
         }
 
@@ -1290,8 +1290,8 @@ class OrderDetailModal extends Component
         }
 
         $user = Auth::user();
-        if ($user && $user->isDesigner()) {
-            abort(403, __('Los diseñadores no tienen permisos para modificar el número de WO.'));
+        if ($user && ! $user->canManageWorkOrders()) {
+            abort(403, __('No tiene permisos para modificar el número de WO.'));
         }
 
         $order = Order::findOrFail($this->orderId);
@@ -1453,7 +1453,7 @@ class OrderDetailModal extends Component
         $user = Auth::user();
         $finalWoNumber = ! empty($cleanWo) ? "WO {$cleanWo}" : null;
         $finalPendingWoNumber = null;
-        if ($user && $user->isDesigner()) {
+        if ($user && ! $user->canManageWorkOrders()) {
             $finalWoNumber = $order->wo_number;
             $finalPendingWoNumber = $order->pending_wo_number;
         }
@@ -1747,11 +1747,7 @@ class OrderDetailModal extends Component
         $order = Order::findOrFail($this->orderId);
         $user = Auth::user();
 
-        if ($user && $user->isDesigner() && ! $order->hasNoWo()) {
-            abort(403, __('Los diseñadores no pueden enviar órdenes con WO a la papelera. Debe archivar la orden.'));
-        }
-
-        if ($user && ($user->isDesigner() || $user->isSales())) {
+        if ($user && ! $user->canDeleteOrders()) {
             abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
         }
 

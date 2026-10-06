@@ -74,6 +74,21 @@ class User extends Authenticatable
         return $this->role === UserRole::SALES;
     }
 
+    public function isLeadDesigner(): bool
+    {
+        return (bool) $this->designer?->is_lead;
+    }
+
+    public function canDeleteOrders(): bool
+    {
+        return $this->isAdmin() || $this->isCoordinator() || $this->isLeadDesigner();
+    }
+
+    public function canManageWorkOrders(): bool
+    {
+        return $this->isAdmin() || $this->isCoordinator() || $this->isLeadDesigner();
+    }
+
     public function canManagePricing(): bool
     {
         return $this->isAdmin() || $this->isCoordinator();

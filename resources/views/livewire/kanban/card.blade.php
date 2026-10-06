@@ -230,7 +230,7 @@
             <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" @click.stop class="p-1 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : ($isUrgent ? 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' : 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-700 hover:text-zinc-900') }}" title="{{ __('Ver detalle de la orden') }}">
                 <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-600" />
             </button>
-            @if(!auth()->user()?->isSales() && !(auth()->user()?->isDesigner() && ! $order->hasNoWo()))
+            @if(auth()->user()?->canDeleteOrders())
                 <button
                     wire:click="trashOrder({{ $order->id }})"
                     @click.stop
