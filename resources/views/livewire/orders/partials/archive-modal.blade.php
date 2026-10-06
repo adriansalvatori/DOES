@@ -66,7 +66,7 @@
                     </div>
                 @endif
 
-                <div class="space-y-1 max-h-72 overflow-y-auto pr-0.5 scrollbar-thin">
+                <div class="space-y-0.5 max-h-72 overflow-y-auto pr-0.5 scrollbar-thin">
                     @forelse($archivedSubstatuses as $sub)
                         @php
                             $subName = $sub instanceof \App\Models\Substatus ? $sub->name : ($sub->value ?? (string) $sub);
@@ -90,18 +90,18 @@
 
                         <label 
                             x-show="!search || '{{ strtolower(addslashes($subName . ' ' . ($desc ?? ''))) }}'.includes(search.toLowerCase().trim())"
-                            class="flex items-center justify-between px-2.5 py-1.5 rounded-lg border cursor-pointer transition select-none text-xs group"
+                            class="flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition select-none text-xs"
                             :class="$wire.archiveSubstatus === '{{ addslashes($subName) }}' 
-                                ? 'bg-rose-50/70 border-rose-300 ring-1 ring-rose-400/40 shadow-2xs' 
-                                : 'bg-white border-stone-200/90 hover:bg-stone-50 hover:border-stone-300'"
+                                ? 'bg-rose-50' 
+                                : 'hover:bg-stone-100/80'"
                             @if($desc) title="{{ $desc }}" @endif>
+                            <input 
+                                type="radio" 
+                                wire:model.live="archiveSubstatus" 
+                                value="{{ $subName }}" 
+                                class="sr-only">
+                            
                             <div class="flex items-center gap-2 min-w-0">
-                                <input 
-                                    type="radio" 
-                                    wire:model.live="archiveSubstatus" 
-                                    value="{{ $subName }}" 
-                                    class="text-rose-600 focus:ring-rose-500 w-3.5 h-3.5 shrink-0 cursor-pointer">
-                                
                                 <span class="px-2 py-0.5 rounded text-[11px] font-semibold border shrink-0 tracking-tight" style="{{ $inlineStyle }}">
                                     {{ $subName }}
                                 </span>
@@ -111,12 +111,6 @@
                                         {{ __('Default') }}
                                     </span>
                                 @endif
-                            </div>
-
-                            <div class="flex items-center gap-1.5 shrink-0 ml-2">
-                                <span x-show="$wire.archiveSubstatus === '{{ addslashes($subName) }}'" class="transition">
-                                    <x-lucide-check class="w-3.5 h-3.5 text-rose-600 stroke-[2.5]" />
-                                </span>
                             </div>
                         </label>
                     @empty
