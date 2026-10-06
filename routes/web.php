@@ -16,6 +16,7 @@ use App\Livewire\Pricing\PricingIndex;
 use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\ColorCoding;
+use App\Livewire\Settings\CsvReconciliation;
 use App\Livewire\Settings\Documentation;
 use App\Livewire\Settings\InstallationTypes;
 use App\Livewire\Settings\LanguageSettings;
@@ -33,6 +34,7 @@ use App\Services\TrelloSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 
 // Public Client Portal Routes (Auto-authenticated via unique QR token)
 Route::get('/c/{token}', ClientPortal::class)->name('client.portal');
@@ -95,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/installation-types', InstallationTypes::class)->name('settings.installation-types');
     Route::get('/settings/subtasks', SubtaskPresets::class)->name('settings.subtasks');
     Route::get('/settings/trello-mapping', TrelloMapping::class)->name('settings.trello-mapping');
+    Route::get('/settings/csv-reconciliation', CsvReconciliation::class)->name('settings.csv-reconciliation');
     Route::get('/settings/backups', Backups::class)->name('settings.backups');
     Route::get('/settings/profile', ProfileSettings::class)->name('settings.profile');
     Route::get('/settings/users', UserManagement::class)->name('settings.users');
@@ -158,3 +161,26 @@ Route::get('/set-locale/{locale}', function (string $locale) {
 
     return redirect()->back();
 })->name('set-locale');
+
+// Safe fallback for accidental or browser-cached GET requests to Livewire update endpoint
+$livewireUpdatePath = class_exists(EndpointResolver::class)
+    ? EndpointResolver::updatePath()
+    : '/livewire/update';
+
+Route::get($livewireUpdatePath, function (Request $request) {
+    $referer = $request->header('Referer');
+    if ($referer && str_starts_with($referer, (string) config('app.url'))) {
+        return redirect()->to($referer);
+    }
+
+    return redirect()->route('dashboard');
+});
+
+Route::get('/livewire/update', function (Request $request) {
+    $referer = $request->header('Referer');
+    if ($referer && str_starts_with($referer, (string) config('app.url'))) {
+        return redirect()->to($referer);
+    }
+
+    return redirect()->route('dashboard');
+});

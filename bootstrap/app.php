@@ -6,6 +6,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -21,6 +22,17 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
+            if ($request->isMethod('GET') && str_contains($request->path(), 'update') && str_contains($request->path(), 'livewire')) {
+                $referer = $request->header('Referer');
+                if ($referer && str_starts_with($referer, (string) config('app.url'))) {
+                    return redirect()->to($referer);
+                }
+
+                return redirect()->route('dashboard');
+            }
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

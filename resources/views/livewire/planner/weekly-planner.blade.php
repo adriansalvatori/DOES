@@ -908,9 +908,9 @@
                                                             </div>
                                                             @if($stask->order->current_due_date)
                                                                 @php
-                                                                    $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
-                                                                    $staskOverdue = $stask->order->isOverdue();
-                                                                    $staskDueToday = $stask->order->current_due_date->isToday();
+                                                                    $staskOverSla = ! $stask->isDone() && ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
+                                                                    $staskOverdue = ! $stask->isDone() && $stask->order->isOverdue();
+                                                                    $staskDueToday = ! $stask->isDone() && $stask->order->current_due_date->isToday();
                                                                 @endphp
                                                                 @if($staskOverSla || $staskOverdue)
                                                                     <div class="pt-0.5 text-[9px] font-semibold text-red-600 flex items-center gap-1" title="SLA: {{ $stask->order->current_due_date->format('d M, Y') }}">
@@ -1412,9 +1412,9 @@
                                                                         <!-- SLA Badge with Instant Tooltip -->
                                                                         @if($stask->order->current_due_date)
                                                                             @php
-                                                                                $staskOverSla = ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
-                                                                                $staskOverdue = $stask->order->isOverdue();
-                                                                                $staskDueToday = $stask->order->current_due_date->isToday();
+                                                                                $staskOverSla = ! $stask->isDone() && ! $stask->isFollowUp() && ! $stask->order->isSlaExempt() && $stask->scheduled_date && $stask->scheduled_date->gt($stask->order->current_due_date);
+                                                                                $staskOverdue = ! $stask->isDone() && $stask->order->isOverdue();
+                                                                                $staskDueToday = ! $stask->isDone() && $stask->order->current_due_date->isToday();
                                                                             @endphp
                                                                             @if($staskOverSla || $staskOverdue)
                                                                                 <div class="relative group/tip shrink-0">

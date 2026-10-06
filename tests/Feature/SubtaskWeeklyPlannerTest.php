@@ -900,4 +900,114 @@ class SubtaskWeeklyPlannerTest extends TestCase
         $this->assertEquals($task1->id, $sorted->first()->id);
         $this->assertEquals($task2->id, $sorted->last()->id);
     }
+
+    public function test_newly_added_subtask_is_added_to_bottom_of_day_list_even_with_done_and_urgent_tasks(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+        $dateStr = now()->startOfWeek(Carbon::MONDAY)->addDay()->toDateString(); // Tuesday
+
+        $completedOrder = Order::create([
+            'company_name' => 'MOVIDAGRAFICA',
+            'task_name' => 'Website',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $existingTask1 = RelatedTask::create([
+            'order_id' => $completedOrder->id,
+            'title' => 'Enviar correo de bienvenida',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'done',
+            'scheduled_date' => $dateStr,
+            'assignee_id' => $designer->id,
+            'sort_order' => 0,
+        ]);
+
+        $inProgressOrder = Order::create([
+            'company_name' => 'KUDOS PRINT MEDIA',
+            'task_name' => 'Signs',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $existingTask2 = RelatedTask::create([
+            'order_id' => $inProgressOrder->id,
+            'title' => 'First Proposal',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => $dateStr,
+            'assignee_id' => $designer->id,
+            'sort_order' => 1,
+        ]);
+
+        $urgentOrder = Order::create([
+            'company_name' => 'ALTITUDE DISTRIBUTIONS LLC',
+            'task_name' => 'POLOS DTF',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => Carbon::parse($dateStr), // SLA HOY
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        // Add a new subtask (Poner en alta) for ALTITUDE DISTRIBUTIONS LLC
+        $planner = Livewire::test(WeeklyPlanner::class)
+            ->call('scheduleSubtask', $urgentOrder->id, 'Poner en alta', $dateStr, $designer->id)
+            ->assertSet('plannerSortBy', 'custom')
+            ->assertSessionHas('weekly_planner_sort_by', 'custom');
+
+        $newTask = RelatedTask::where('title', 'Poner en alta')->first();
+        $this->assertNotNull($newTask);
+
+        // It must have a sort_order greater than all existing tasks
+        $this->assertEquals(2, $newTask->sort_order);
+
+        // When retrieved for the day list, the new task must be at the very bottom
+        $subtasksForDay = $planner->instance()->getExistingSubtasksForDay(Carbon::parse($dateStr), $designer->id);
+        $this->assertCount(3, $subtasksForDay);
+        $this->assertEquals($existingTask2->id, $subtasksForDay->values()[0]->id);
+        $this->assertEquals($existingTask1->id, $subtasksForDay->values()[1]->id);
+        $this->assertEquals($newTask->id, $subtasksForDay->values()[2]->id);
+    }
+
+    public function test_checked_subtask_does_not_trigger_sla_alerts_banner(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-06'));
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'SUPERMERCADOS TALPA',
+            'task_name' => 'PROPUESTA GIMNASIO, AJUSTES',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => Carbon::parse('2026-09-21'),
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'PROPUESTA GIMNASIO, AJUSTES',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => Carbon::parse('2026-10-06'),
+            'assignee_id' => $designer->id,
+        ]);
+
+        // When subtask is pending, it should be in slaBreachedList and trigger the SLA alerts banner
+        Livewire::test(WeeklyPlanner::class)
+            ->assertViewHas('slaBreachedList', fn ($list) => $list->count() === 1 && $list->first()['task_name'] === 'PROPUESTA GIMNASIO, AJUSTES')
+            ->assertSee('Alertas SLA');
+
+        // Check off the subtask
+        Livewire::test(WeeklyPlanner::class)
+            ->call('toggleSubtaskComplete', $subtask->id);
+
+        $this->assertTrue($subtask->fresh()->isDone());
+
+        // When subtask is checked, it must NOT appear in slaBreachedList and must NOT show SLA alerts banner
+        Livewire::test(WeeklyPlanner::class)
+            ->assertViewHas('slaBreachedList', fn ($list) => $list->isEmpty())
+            ->assertDontSee('Alertas SLA');
+    }
 }

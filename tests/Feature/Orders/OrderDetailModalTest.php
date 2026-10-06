@@ -4,12 +4,14 @@ namespace Tests\Feature\Orders;
 
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
+use App\Enums\UserRole;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\Substatus as SubstatusModel;
 use App\Models\SubtaskPreset;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -841,5 +843,120 @@ class OrderDetailModalTest extends TestCase
             ->assertDispatched('order-updated');
 
         $this->assertEquals($newDueDate, $order->fresh()->current_due_date->toDateString());
+    }
+
+    public function test_designer_cannot_change_wo_number_when_editing_order(): void
+    {
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $order = Order::create([
+            'company_name' => 'EMPRESA ORIGINAL',
+            'task_name' => 'TAREA ORIGINAL',
+            'wo_number' => 'WO 12345',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id, true)
+            ->set('editWoNumber', '99999')
+            ->set('editTaskName', 'TAREA MODIFICADA')
+            ->call('saveOrder')
+            ->assertDispatched('order-updated');
+
+        $fresh = $order->fresh();
+        $this->assertEquals('WO 12345', $fresh->wo_number);
+        $this->assertEquals('TAREA MODIFICADA', $fresh->task_name);
+    }
+
+    public function test_designer_cannot_generate_wo_number(): void
+    {
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $order = Order::create([
+            'company_name' => 'EMPRESA AUTO WO',
+            'task_name' => 'TAREA AUTO WO',
+            'wo_number' => 'WO 10001',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id, true)
+            ->call('generateWoNumber')
+            ->assertSet('editWoNumber', '10001');
+    }
+
+    public function test_designer_cannot_accept_pending_wo(): void
+    {
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $order = Order::create([
+            'company_name' => 'EMPRESA PENDING WO',
+            'task_name' => 'TAREA PENDING WO',
+            'wo_number' => 'WO 11111',
+            'pending_wo_number' => 'WO 22222',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('acceptPendingWo')
+            ->assertStatus(403);
+
+        $this->assertEquals('WO 11111', $order->fresh()->wo_number);
+    }
+
+    public function test_designer_cannot_delete_order_with_wo(): void
+    {
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $order = Order::create([
+            'company_name' => 'EMPRESA NO DELETE WO',
+            'task_name' => 'TAREA NO DELETE WO',
+            'wo_number' => 'WO 88888',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('deleteOrder')
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_can_archive_order_from_order_detail_modal_dropdown(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA ARCHIVAR',
+            'task_name' => 'TAREA ARCHIVAR',
+            'wo_number' => 'WO 77777',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertSeeHtml(__('Archivar orden'))
+            ->assertDontSeeHtml(__('Enviar a papelera'))
+            ->call('openArchiveModal')
+            ->assertSet('showArchiveModal', true)
+            ->call('confirmArchive')
+            ->assertDispatched('order-updated')
+            ->assertSet('showModal', false);
+
+        $fresh = $order->fresh();
+        $this->assertEquals(CoreStatus::ARCHIVED, $fresh->core_status);
+        $this->assertNotNull($fresh->archived_at);
     }
 }

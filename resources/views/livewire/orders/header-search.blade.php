@@ -63,14 +63,14 @@
             </div>
         </div>
 
-        <!-- Create Task Button -->
+        <!-- Create Order Button -->
         <button 
             type="button" 
             @click="$dispatch('open-create-order')"
             class="h-7.5 px-2.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs transition shrink-0 flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            title="{{ __('Nueva Tarea') }}">
+            title="{{ __('Nueva Orden') }}">
             <x-lucide-plus class="w-3.5 h-3.5 text-stone-300" />
-            <span class="hidden sm:inline">{{ __('Nueva Tarea') }}</span>
+            <span class="hidden sm:inline">{{ __('Nueva Orden') }}</span>
         </button>
     </div>
 

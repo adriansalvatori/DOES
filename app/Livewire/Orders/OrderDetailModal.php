@@ -826,6 +826,11 @@ class OrderDetailModal extends Component
 
     public function generateWoNumber(?WorkOrderNumberGenerator $generator = null): void
     {
+        $user = Auth::user();
+        if ($user && $user->isDesigner()) {
+            return;
+        }
+
         $generator ??= app(WorkOrderNumberGenerator::class);
 
         $this->editWoNumber = $generator->generateNextDigits([
@@ -1052,6 +1057,7 @@ class OrderDetailModal extends Component
             }
         }
 
+        $this->closeModal();
         $this->dispatch('order-updated');
         session()->flash('message', __('Orden archivada exitosamente con el subestatus seleccionado.'));
     }
@@ -1283,6 +1289,11 @@ class OrderDetailModal extends Component
             return;
         }
 
+        $user = Auth::user();
+        if ($user && $user->isDesigner()) {
+            abort(403, __('Los diseñadores no tienen permisos para modificar el número de WO.'));
+        }
+
         $order = Order::findOrFail($this->orderId);
         if (! $order->pending_wo_number) {
             return;
@@ -1439,9 +1450,17 @@ class OrderDetailModal extends Component
 
         $isDoneStatus = in_array($newCoreStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION], true);
 
+        $user = Auth::user();
+        $finalWoNumber = ! empty($cleanWo) ? "WO {$cleanWo}" : null;
+        $finalPendingWoNumber = null;
+        if ($user && $user->isDesigner()) {
+            $finalWoNumber = $order->wo_number;
+            $finalPendingWoNumber = $order->pending_wo_number;
+        }
+
         $updateData = [
-            'wo_number' => ! empty($cleanWo) ? "WO {$cleanWo}" : null,
-            'pending_wo_number' => null,
+            'wo_number' => $finalWoNumber,
+            'pending_wo_number' => $finalPendingWoNumber,
             'trello_card_id' => ! empty($cleanTrelloId) ? $cleanTrelloId : null,
             'company_name' => $this->editCompanyName,
             'location_name' => $cleanLocationName,
@@ -1725,12 +1744,17 @@ class OrderDetailModal extends Component
             return;
         }
 
+        $order = Order::findOrFail($this->orderId);
         $user = Auth::user();
+
+        if ($user && $user->isDesigner() && ! $order->hasNoWo()) {
+            abort(403, __('Los diseñadores no pueden enviar órdenes con WO a la papelera. Debe archivar la orden.'));
+        }
+
         if ($user && ($user->isDesigner() || $user->isSales())) {
             abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
         }
 
-        $order = Order::findOrFail($this->orderId);
         $name = $order->company_name ?? __('Orden');
 
         $order->delete();

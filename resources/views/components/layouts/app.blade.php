@@ -381,6 +381,14 @@
                             <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
                         </a>
                         <a 
+                            href="/settings/csv-reconciliation" 
+                            wire:navigate
+                            title="{{ __('Conciliación CSV') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/csv-reconciliation*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-file-spreadsheet class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span class="truncate">{{ __('Conciliación CSV') }}</span>
+                        </a>
+                        <a 
                             href="/settings/backups" 
                             wire:navigate
                             title="{{ __('Respaldos de Base de Datos (⌘S)') }}" 
@@ -490,6 +498,14 @@
                             class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/trello-mapping*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
                             <x-lucide-sliders class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                             <span class="truncate">{{ __('Mapeo Listas Trello') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/csv-reconciliation" 
+                            wire:navigate
+                            title="{{ __('Conciliación CSV') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/csv-reconciliation*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-file-spreadsheet class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span class="truncate">{{ __('Conciliación CSV') }}</span>
                         </a>
                         <a 
                             href="/settings/backups" 

@@ -118,6 +118,7 @@ class WeeklyPlanner extends Component
                 $isOverdue = $order && ($order->isOverdue() || ($st->scheduled_date && $order->current_due_date && $st->scheduled_date->gt($order->current_due_date)));
 
                 $rank = match (true) {
+                    $isDone => 5,
                     $isUrgente => 1,
                     $isOverdue => 2,
                     ! $isDone && $st->priority !== 'low' => 3,
@@ -256,45 +257,76 @@ class WeeklyPlanner extends Component
         return collect($grid);
     }
 
-    public function getNextSortOrderForDay(Carbon $scheduledDate, ?int $designerId = null): int
+    public function getExistingSubtasksForDay(Carbon $scheduledDate, ?int $designerId = null, ?int $excludeTaskId = null)
     {
-        $startDate = Carbon::parse($this->selectedWeekStart ?? now()->startOfWeek(Carbon::MONDAY)->toDateString());
+        $startDate = Carbon::parse($this->selectedWeekStart ?? now()->startOfWeek(Carbon::MONDAY)->toDateString())->startOfWeek(Carbon::MONDAY);
         $nextWeekMonday = $startDate->copy()->addWeek()->startOfWeek(Carbon::MONDAY);
+        $isNextWeek = $scheduledDate->gte($nextWeekMonday);
+        $isFirstDayOfWeek = ! $isNextWeek && $scheduledDate->toDateString() === $startDate->toDateString();
 
-        $query = RelatedTask::query()
-            ->where(function ($q) use ($scheduledDate, $nextWeekMonday) {
-                if ($scheduledDate->gte($nextWeekMonday)) {
-                    $q->whereDate('scheduled_date', '>=', $nextWeekMonday->toDateString());
-                } elseif ($scheduledDate->isMonday()) {
-                    $q->whereDate('scheduled_date', $scheduledDate->toDateString())
-                        ->orWhere(function ($sq) use ($scheduledDate) {
-                            $sq->whereDate('scheduled_date', '<', $scheduledDate->toDateString())
-                                ->where('status', '!=', 'done');
-                        });
-                } else {
-                    $q->whereDate('scheduled_date', $scheduledDate->toDateString());
-                }
-            });
-
-        if ($designerId) {
-            $query->where(function ($q) use ($designerId) {
-                $q->where('assignee_id', $designerId)
-                    ->orWhere(function ($sq) use ($designerId) {
-                        $sq->whereNull('assignee_id')
-                            ->whereHas('order', function ($oq) use ($designerId) {
-                                $oq->where('designer_id', $designerId)
-                                    ->orWhereHas('designers', fn ($dq) => $dq->where('designers.id', $designerId));
-                            });
-                    })
+        $subtasks = RelatedTask::with(['order.clientLocation', 'order.designer', 'order.designers'])
+            ->where(function ($q) {
+                $q->whereNull('order_id')
+                    ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
+            })
+            ->where(function ($q) {
+                $q->whereNotNull('scheduled_date')
                     ->orWhere(function ($sq) {
-                        $sq->whereNull('assignee_id')->whereNull('order_id');
+                        $sq->whereNull('scheduled_date')
+                            ->whereNotNull('due_date');
                     });
-            });
+            })
+            ->when($excludeTaskId, fn ($q) => $q->where('id', '!=', $excludeTaskId))
+            ->get();
+
+        foreach ($subtasks as $st) {
+            if (! $st->scheduled_date && $st->due_date) {
+                $st->scheduled_date = $st->due_date;
+            }
         }
 
-        $maxSort = $query->max('sort_order');
+        $designerSubtasks = $subtasks->filter(function ($st) use ($designerId) {
+            if (! $designerId) {
+                return true;
+            }
+            if ($st->assignee_id) {
+                return (int) $st->assignee_id === (int) $designerId;
+            }
+            if ($st->order) {
+                return (int) $st->order->designer_id === (int) $designerId || $st->order->designers->contains('id', $designerId);
+            }
 
-        return ($maxSort !== null) ? (int) $maxSort + 1 : 0;
+            return false;
+        });
+
+        $daySubtasks = $isNextWeek
+            ? $designerSubtasks->filter(fn ($st) => $st->scheduled_date && $st->scheduled_date->gte(Carbon::parse($scheduledDate->toDateString())))
+            : $designerSubtasks->filter(function ($st) use ($scheduledDate, $isFirstDayOfWeek) {
+                if ($st->scheduled_date?->toDateString() === $scheduledDate->toDateString()) {
+                    return true;
+                }
+                if ($isFirstDayOfWeek && $st->scheduled_date && $st->scheduled_date->lt($scheduledDate) && $st->status !== 'done') {
+                    return true;
+                }
+
+                return false;
+            });
+
+        return $this->sortSubtaskCollection($daySubtasks);
+    }
+
+    public function getNextSortOrderForDay(Carbon $scheduledDate, ?int $designerId = null, ?int $excludeTaskId = null): int
+    {
+        $existing = $this->getExistingSubtasksForDay($scheduledDate, $designerId, $excludeTaskId);
+
+        foreach ($existing->values() as $index => $task) {
+            if ($task->sort_order !== $index) {
+                RelatedTask::where('id', $task->id)->update(['sort_order' => $index]);
+                $task->sort_order = $index;
+            }
+        }
+
+        return $existing->count();
     }
 
     public function scheduleOrder($orderId, $dateString)
@@ -436,6 +468,8 @@ class WeeklyPlanner extends Component
             ]));
         }
 
+        $this->changePlannerSortBy('custom');
+
         $this->dispatch('order-updated');
     }
 
@@ -444,7 +478,7 @@ class WeeklyPlanner extends Component
         $subtask = RelatedTask::with('order')->findOrFail($taskId);
         $scheduledDate = Carbon::parse($dateString);
 
-        $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $subtask->assignee_id);
+        $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $subtask->assignee_id, (int) $taskId);
 
         $subtask->update([
             'scheduled_date' => $scheduledDate->toDateString(),
@@ -479,7 +513,7 @@ class WeeklyPlanner extends Component
             $order->update($updateData);
         }
 
-        if ($subtask->order && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
+        if (! $subtask->isDone() && $subtask->order && ! $subtask->order->isSlaExempt() && ! $subtask->isFollowUp() && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
             $daysOverdue = (int) $subtask->order->current_due_date->diffInDays($scheduledDate);
             $this->slaWarningDetails = [
                 'company_name' => $subtask->order->company_name,
@@ -497,6 +531,8 @@ class WeeklyPlanner extends Component
         } else {
             session()->flash('message', __('Subtarea ":title" reprogramada para el :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]));
         }
+
+        $this->changePlannerSortBy('custom');
 
         $this->dispatch('order-updated');
     }
@@ -800,6 +836,9 @@ class WeeklyPlanner extends Component
 
         $slaBreachedList = collect();
         foreach ($subtasks as $st) {
+            if ($st->isDone()) {
+                continue;
+            }
             if (! $this->showSystemTasks && ! $st->isWorkTask()) {
                 continue;
             }
@@ -822,6 +861,9 @@ class WeeklyPlanner extends Component
 
         foreach ($designers as $des) {
             foreach ($des->orders as $ord) {
+                if ($ord->done_today) {
+                    continue;
+                }
                 if ($ord->current_due_date && $ord->scheduled_date && ! $ord->isSlaExempt()) {
                     if ($ord->scheduled_date->gt($ord->current_due_date) || $ord->isOverdue()) {
                         $alreadyAdded = $slaBreachedList->contains(fn ($item) => $item['company_name'] === $ord->company_name && $item['task_name'] === ($ord->task_name ?? 'Orden Principal'));

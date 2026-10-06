@@ -443,12 +443,17 @@ class Board extends Component
 
     public function trashOrder($orderId)
     {
+        $order = Order::findOrFail($orderId);
         $user = Auth::user();
+
+        if ($user && $user->isDesigner() && ! $order->hasNoWo()) {
+            abort(403, __('Los diseñadores no pueden enviar órdenes con WO a la papelera. Debe archivar la orden.'));
+        }
+
         if ($user && ($user->isDesigner() || $user->isSales())) {
             abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
         }
 
-        $order = Order::findOrFail($orderId);
         $order->delete(); // soft delete
 
         OrderEvent::create([
