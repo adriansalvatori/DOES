@@ -2324,6 +2324,320 @@
             </div>
         </div>
     </template>
+
+    <!-- Dedicated Centered Substatus & Flags Modal Teleported to Body -->
+    <template x-teleport="body">
+        <div 
+            x-data
+            x-show="$store.substatusModal && $store.substatusModal.isOpen"
+            x-cloak
+            @open-substatus-modal.window="$store.substatusModal && $store.substatusModal.open($event.detail)"
+            @keydown.escape.window="if ($store.substatusModal && $store.substatusModal.isOpen) $store.substatusModal.close()"
+            @click.self="$store.substatusModal && $store.substatusModal.close()"
+            class="fixed inset-0 z-[999999] flex items-center justify-center p-4"
+            style="display: none;">
+            
+            <!-- Backdrop (clicking dark area closes) -->
+            <div 
+                x-show="$store.substatusModal && $store.substatusModal.isOpen"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                class="fixed inset-0 bg-stone-900/60 backdrop-blur-xs cursor-pointer"
+                @click="$store.substatusModal.close()">
+            </div>
+
+            <!-- Modal Dialog Container (click inside does NOT close) -->
+            <div 
+                x-show="$store.substatusModal && $store.substatusModal.isOpen"
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                x-transition:leave-end="opacity-0 scale-95 translate-y-2"
+                @click.stop
+                class="relative z-10 bg-white rounded-2xl shadow-2xl border border-stone-200 w-full max-w-md overflow-hidden flex flex-col max-h-[85vh]">
+                
+                <!-- Modal Header -->
+                <div class="px-4 py-3 border-b border-stone-100 flex items-center justify-between bg-stone-50/70">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                            <x-lucide-activity class="w-4 h-4 text-amber-700" />
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <h3 class="text-xs font-bold text-stone-900 truncate">{{ __('Subestatus y Banderas') }}</h3>
+                                <template x-if="$store.substatusModal && $store.substatusModal.substatus">
+                                    <span 
+                                        class="text-[9px] px-1.5 py-0.2 rounded-full font-bold border truncate"
+                                        :style="$store.substatusModal.substatusStyle"
+                                        x-text="$store.substatusModal.substatusLabel || $store.substatusModal.substatus">
+                                    </span>
+                                </template>
+                            </div>
+                            <p class="text-[11px] text-stone-500 flex items-center gap-1 truncate">
+                                <span class="font-mono font-semibold text-stone-700" x-text="($store.substatusModal && $store.substatusModal.orderWo) || 'Sin WO'"></span>
+                                <span class="text-stone-300">•</span>
+                                <span class="truncate" x-text="($store.substatusModal && $store.substatusModal.orderCompany) || 'Sin Cliente'"></span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 shrink-0">
+                        <a 
+                            href="{{ route('settings.substatuses') }}" 
+                            @click.stop="$store.substatusModal.close()" 
+                            wire:navigate 
+                            class="text-[11px] text-stone-400 hover:text-stone-700 flex items-center gap-1 py-1 px-1.5 rounded hover:bg-stone-100 transition cursor-pointer"
+                            title="{{ __('Administrar subestatus y colores') }}">
+                            <x-lucide-settings class="w-3.5 h-3.5" />
+                            <span class="hidden sm:inline">{{ __('Ajustes') }}</span>
+                        </a>
+                        <button 
+                            type="button" 
+                            @click="$store.substatusModal.close()" 
+                            class="text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 p-1 rounded-lg transition cursor-pointer"
+                            title="{{ __('Cerrar') }}">
+                            <x-lucide-x class="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="p-4 overflow-y-auto space-y-3 custom-vertical-scrollbar flex-1 min-h-0">
+                    <!-- 1. Buscador minimalista -->
+                    <div class="relative flex items-center">
+                        <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2.5 pointer-events-none" />
+                        <input 
+                            id="substatus-modal-search-input"
+                            type="text" 
+                            x-model="$store.substatusModal.search"
+                            @keydown.enter.prevent.stop="$store.substatusModal.addMatch()"
+                            placeholder="{{ __('Buscar subestatus o bandera...') }}" 
+                            class="w-full bg-stone-100/80 hover:bg-stone-100 focus:bg-white text-xs text-stone-800 placeholder-stone-400 rounded-lg pl-8 pr-7 py-1.5 border border-transparent focus:border-amber-400 focus:ring-2 focus:ring-amber-500/15 transition focus:outline-none"
+                        >
+                        <button 
+                            x-show="$store.substatusModal && $store.substatusModal.search" 
+                            @click.stop="$store.substatusModal.search = ''; document.getElementById('substatus-modal-search-input')?.focus()" 
+                            type="button" 
+                            class="absolute right-2 text-stone-400 hover:text-stone-600 p-0.5 rounded transition cursor-pointer"
+                            title="{{ __('Limpiar búsqueda') }}">
+                            <x-lucide-x class="w-3 h-3" />
+                        </button>
+                    </div>
+
+                    <!-- 2. Estado asignado actualmente (chips activos sin caja si no hay selección) -->
+                    <div 
+                        x-show="$store.substatusModal && ($store.substatusModal.substatus || ($store.substatusModal.flags && $store.substatusModal.flags.length > 0))"
+                        class="flex flex-wrap items-center gap-1.5 pb-0.5">
+                        <!-- Subestatus principal -->
+                        <template x-if="$store.substatusModal && $store.substatusModal.substatus">
+                            <span 
+                                :style="$store.substatusModal.substatusStyle"
+                                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md text-[11px] font-bold border shadow-2xs leading-tight animate-in fade-in zoom-in-95 duration-100">
+                                <span x-text="$store.substatusModal.substatusLabel || $store.substatusModal.substatus"></span>
+                                <button 
+                                    type="button" 
+                                    @click.stop="$store.substatusModal.clearSubstatus()" 
+                                    class="hover:bg-black/15 active:bg-black/25 rounded-full p-0.5 text-current cursor-pointer transition inline-flex items-center justify-center"
+                                    title="{{ __('Quitar subestatus') }}">
+                                    <x-lucide-x class="w-2.5 h-2.5 stroke-[2.5]" />
+                                </button>
+                            </span>
+                        </template>
+
+                        <!-- Banderas activas -->
+                        <template x-for="flag in ($store.substatusModal ? $store.substatusModal.flags : [])" :key="flag">
+                            <span 
+                                :style="$store.substatusModal.getFlagStyle(flag)"
+                                class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md text-[11px] font-bold border shadow-2xs leading-tight animate-in fade-in zoom-in-95 duration-100">
+                                <span class="w-1.5 h-1.5 rounded-full shrink-0" :style="'background-color: ' + $store.substatusModal.getFlagSolid(flag)"></span>
+                                <span x-text="$store.substatusModal.getFlagLabel(flag)"></span>
+                                <button 
+                                    type="button" 
+                                    @click.stop="$store.substatusModal.toggleFlag(flag)" 
+                                    class="hover:bg-black/15 active:bg-black/25 rounded-full p-0.5 text-current cursor-pointer transition inline-flex items-center justify-center"
+                                    title="{{ __('Quitar bandera') }}">
+                                    <x-lucide-x class="w-2.5 h-2.5 stroke-[2.5]" />
+                                </button>
+                            </span>
+                        </template>
+                    </div>
+
+                    <!-- 3. Banderas Globales (Compactas, sin cajas gigantes) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
+                                <x-lucide-flag class="w-3 h-3 text-amber-600" />
+                                <span>{{ __('Banderas / Flags Globales') }}</span>
+                            </span>
+                            <span class="text-[10px] text-stone-400">
+                                {{ __('Múltiple selección') }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            @foreach($globalFlagsData as $flag)
+                                <button 
+                                    type="button"
+                                    x-show="!$store.substatusModal || $store.substatusModal.matchesSearch('{{ addslashes($flag['label']) }}') || $store.substatusModal.matchesSearch('{{ addslashes($flag['name']) }}')"
+                                    @click.stop="$store.substatusModal.toggleFlag('{{ addslashes($flag['name']) }}')"
+                                    :class="[
+                                        $store.substatusModal && $store.substatusModal.isFlagSelected('{{ addslashes($flag['name']) }}') 
+                                            ? 'ring-1 ring-stone-900/30 font-bold shadow-2xs' 
+                                            : 'bg-stone-50 hover:bg-stone-100/90 text-stone-700',
+                                        $store.substatusModal && $store.substatusModal.getFirstMatch() && $store.substatusModal.getFirstMatch().value === '{{ addslashes($flag['name']) }}' && $store.substatusModal.search
+                                            ? 'ring-2 ring-amber-500' 
+                                            : ''
+                                    ]"
+                                    :style="$store.substatusModal && $store.substatusModal.isFlagSelected('{{ addslashes($flag['name']) }}') 
+                                        ? 'background-color: {{ $flag['bg'] }}; color: {{ $flag['text'] }}; border-color: {{ $flag['border'] }}; font-weight: 700;' 
+                                        : 'border-color: #e7e5e4;'"
+                                    class="text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition cursor-pointer flex items-center justify-between select-none">
+                                    <div class="flex items-center gap-2 truncate">
+                                        <span class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ $flag['solid'] }};"></span>
+                                        <span class="truncate">{{ $flag['label'] }}</span>
+                                    </div>
+                                    <template x-if="$store.substatusModal && $store.substatusModal.isFlagSelected('{{ addslashes($flag['name']) }}')">
+                                        <x-lucide-check class="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
+                                    </template>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- 4. Clasificación de Proceso (1 Selección) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1">
+                                <x-lucide-layers class="w-3 h-3 text-stone-400" />
+                                <span>{{ __('Clasificación de Proceso (1 Selección)') }}</span>
+                            </span>
+                            <template x-if="$store.substatusModal && $store.substatusModal.getFirstMatch() && $store.substatusModal.getFirstMatch().type === 'substatus' && $store.substatusModal.search">
+                                <span class="text-[10px] text-amber-600 font-medium">
+                                    ↵ <strong class="font-bold underline" x-text="$store.substatusModal.getFirstMatch().label"></strong>
+                                </span>
+                            </template>
+                        </div>
+
+                        <!-- Opción "Sin Subestatus" -->
+                        <div class="mb-2" x-show="!$store.substatusModal || $store.substatusModal.matchesSearch('sin subestatus') || $store.substatusModal.matchesSearch('ninguno')">
+                            <button 
+                                type="button"
+                                @click.stop="$store.substatusModal.clearSubstatus()"
+                                :class="!$store.substatusModal || !$store.substatusModal.substatus 
+                                    ? 'bg-stone-800 text-white font-bold shadow-2xs' 
+                                    : 'bg-stone-100 hover:bg-stone-200/80 text-stone-600 font-medium'"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] transition cursor-pointer">
+                                <template x-if="!$store.substatusModal || !$store.substatusModal.substatus">
+                                    <x-lucide-check class="w-3 h-3 stroke-[2.5]" />
+                                </template>
+                                <span class="italic">-- {{ __('Sin Subestatus') }} --</span>
+                            </button>
+                        </div>
+
+                        <!-- Categorías con Chips de Subestatus DIRECTAS (sin caja dentro de caja) -->
+                        <div class="space-y-2.5">
+                            @foreach($groupedProcessSubstatuses as $groupKey => $group)
+                                @php
+                                    $searchTerms = collect($group['items'])->flatMap(function ($subItem) {
+                                        $val = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                                        $enum = \App\Enums\Substatus::tryFrom($val);
+                                        $lbl = $enum?->label() ?? $val;
+                                        return [$val, $lbl];
+                                    })->push($group['title'])->values();
+                                @endphp
+                                <div x-show="!$store.substatusModal || $store.substatusModal.groupHasMatches({{ \Illuminate\Support\Js::from($searchTerms->all()) }})" class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                                        <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $group['dot'] }}"></span>
+                                        <span class="truncate">{{ $group['title'] }}</span>
+                                    </div>
+
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach($group['items'] as $subItem)
+                                            @php
+                                                $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+                                                $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
+                                                if ($itemEnum && $itemEnum->isGlobal()) continue;
+                                                if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) continue;
+                                                $itemLabel = $itemEnum?->label() ?? $itemValue;
+                                                
+                                                if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
+                                                    $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
+                                                } else {
+                                                    $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
+                                                }
+
+                                                $itemFallbackClass = match($itemValue) {
+                                                    'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
+                                                    'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
+                                                    'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
+                                                    'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
+                                                    'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
+                                                    'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
+                                                    'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
+                                                    'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
+                                                    'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
+                                                    default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
+                                                };
+                                            @endphp
+                                            
+                                            <button 
+                                                type="button"
+                                                x-show="!$store.substatusModal || $store.substatusModal.matchesSearch('{{ addslashes($itemLabel) }}') || $store.substatusModal.matchesSearch('{{ addslashes($itemValue) }}') || $store.substatusModal.matchesSearch('{{ addslashes($group['title']) }}')"
+                                                @click.stop="$store.substatusModal.setSubstatus('{{ addslashes($itemValue) }}', '{{ addslashes($itemLabel) }}', '{{ addslashes($itemStyle) }}')"
+                                                :class="[
+                                                    $store.substatusModal && $store.substatusModal.isSelected('{{ addslashes($itemValue) }}') 
+                                                        ? 'ring-2 ring-stone-900/40 font-extrabold shadow-sm scale-[1.02]' 
+                                                        : 'opacity-90 hover:opacity-100 hover:scale-[1.01]',
+                                                    $store.substatusModal && $store.substatusModal.getFirstMatch() && $store.substatusModal.getFirstMatch().value === '{{ addslashes($itemValue) }}' && $store.substatusModal.search
+                                                        ? 'ring-2 ring-amber-500 scale-[1.02]' 
+                                                        : ''
+                                                ]"
+                                                @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
+                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border transition cursor-pointer select-none {{ empty($itemStyle) ? $itemFallbackClass : '' }}">
+                                                <template x-if="$store.substatusModal && $store.substatusModal.isSelected('{{ addslashes($itemValue) }}')">
+                                                    <x-lucide-check class="w-3 h-3 stroke-[2.5]" />
+                                                </template>
+                                                <span>{{ $itemLabel }}</span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="px-4 py-2.5 border-t border-stone-100 bg-stone-50/70 flex items-center justify-between">
+                    <div>
+                        <button 
+                            type="button"
+                            x-show="$store.substatusModal && ($store.substatusModal.substatus || ($store.substatusModal.flags && $store.substatusModal.flags.length > 0))"
+                            @click.stop="$store.substatusModal.clearAll()"
+                            class="text-[11px] text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded-md transition flex items-center gap-1 font-semibold cursor-pointer">
+                            <x-lucide-trash-2 class="w-3 h-3" />
+                            <span>{{ __('Vaciar') }}</span>
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button 
+                            type="button" 
+                            @click.stop="$store.substatusModal.close()" 
+                            class="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-lg shadow-xs transition cursor-pointer flex items-center gap-1.5">
+                            <x-lucide-check class="w-3.5 h-3.5 stroke-[2.5]" />
+                            <span>{{ __('Guardar y Cerrar') }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>
 
 <script>
@@ -2462,10 +2776,247 @@
             });
         };
 
+        const registerSubstatusModalStore = () => {
+            if (!window.Alpine) return;
+            if (Alpine.store('substatusModal')) return;
+
+            Alpine.store('substatusModal', {
+                isOpen: false,
+                orderId: null,
+                orderWo: '',
+                orderCompany: '',
+                substatus: null,
+                substatusLabel: '—',
+                substatusStyle: '',
+                flags: [],
+                search: '',
+                flagsMap: {{ \Illuminate\Support\Js::from($globalFlagsData) }},
+                processList: {{ \Illuminate\Support\Js::from($processFlatList) }},
+                substatusesMap: {{ \Illuminate\Support\Js::from($substatusStyleMap) }},
+
+                clean(str) {
+                    return (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+                },
+
+                matchesSearch(text) {
+                    if (!this.search || !this.search.trim()) return true;
+                    if (!text) return false;
+                    return this.clean(text).includes(this.clean(this.search));
+                },
+
+                groupHasMatches(terms) {
+                    if (!this.search || !this.search.trim()) return true;
+                    const q = this.clean(this.search);
+                    return terms.some(t => this.clean(t).includes(q));
+                },
+
+                isSelected(val) {
+                    if (!val || !this.substatus) return false;
+                    return String(val).toUpperCase().trim() === String(this.substatus).toUpperCase().trim();
+                },
+
+                isFlagSelected(flag) {
+                    if (!flag || !this.flags) return false;
+                    const upper = String(flag).toUpperCase().trim();
+                    return this.flags.some(f => String(f).toUpperCase().trim() === upper);
+                },
+
+                getFlagStyle(flag) {
+                    const f = this.flagsMap[flag] || this.flagsMap[String(flag).toUpperCase()];
+                    if (f && f.bg) {
+                        return `background-color: ${f.bg}; color: ${f.text}; border-color: ${f.border};`;
+                    }
+                    return 'background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border-color: var(--cc-camila-border);';
+                },
+
+                getFlagSolid(flag) {
+                    const f = this.flagsMap[flag] || this.flagsMap[String(flag).toUpperCase()];
+                    return (f && f.solid) ? f.solid : '#6B7280';
+                },
+
+                getFlagLabel(flag) {
+                    const f = this.flagsMap[flag] || this.flagsMap[String(flag).toUpperCase()];
+                    return (f && f.label) ? f.label : flag;
+                },
+
+                getFirstMatch() {
+                    if (!this.search || !this.search.trim()) return null;
+                    const q = this.clean(this.search);
+                    // Check flags first
+                    for (const [k, v] of Object.entries(this.flagsMap)) {
+                        if (this.clean(k).includes(q) || this.clean(v.label).includes(q)) {
+                            return { type: 'flag', value: k, label: v.label, solid: v.solid };
+                        }
+                    }
+                    // Then check process substatuses
+                    for (const item of this.processList) {
+                        if (this.clean(item.value).includes(q) || this.clean(item.label).includes(q)) {
+                            return { type: 'substatus', value: item.value, label: item.label, style: item.style };
+                        }
+                    }
+                    return null;
+                },
+
+                addMatch() {
+                    const match = this.getFirstMatch();
+                    if (!match) return;
+                    if (match.type === 'flag') {
+                        this.toggleFlag(match.value);
+                    } else if (match.type === 'substatus') {
+                        this.setSubstatus(match.value, match.label, match.style);
+                    }
+                    this.search = '';
+                    setTimeout(() => {
+                        const input = document.getElementById('substatus-modal-search-input');
+                        if (input) input.focus();
+                    }, 30);
+                },
+
+                setSubstatus(status, label, style) {
+                    if (!this.orderId) return;
+                    const upperStatus = status ? String(status).toUpperCase().trim() : null;
+                    const upperLabel = label ? String(label).toUpperCase().trim() : (upperStatus || '—');
+                    const finalStyle = style || (upperStatus && this.substatusesMap[upperStatus] ? this.substatusesMap[upperStatus] : '');
+
+                    // Toggle off if already selected
+                    if (this.substatus && upperStatus && String(this.substatus).toUpperCase().trim() === upperStatus) {
+                        this.clearSubstatus();
+                        return;
+                    }
+
+                    this.substatus = upperStatus;
+                    this.substatusLabel = upperLabel;
+                    this.substatusStyle = finalStyle;
+
+                    window.dispatchEvent(new CustomEvent('order-substatus-changed', {
+                        detail: {
+                            orderId: this.orderId,
+                            substatus: upperStatus,
+                            substatusLabel: upperLabel,
+                            substatusStyle: finalStyle,
+                            flags: this.flags
+                        }
+                    }));
+
+                    const wire = window.__overviewWire || (window.Livewire ? Livewire.first() : null);
+                    if (wire && typeof wire.updateSubstatus === 'function') {
+                        wire.updateSubstatus(this.orderId, upperStatus);
+                    }
+                },
+
+                toggleFlag(flag) {
+                    if (!this.orderId || !flag) return;
+                    const upper = String(flag).toUpperCase().trim();
+                    let current = [...(this.flags || [])];
+                    const idx = current.findIndex(f => String(f).toUpperCase().trim() === upper);
+                    if (idx !== -1) {
+                        current.splice(idx, 1);
+                    } else {
+                        current.push(upper);
+                    }
+                    this.flags = current;
+
+                    window.dispatchEvent(new CustomEvent('order-substatus-changed', {
+                        detail: {
+                            orderId: this.orderId,
+                            substatus: this.substatus,
+                            substatusLabel: this.substatusLabel,
+                            substatusStyle: this.substatusStyle,
+                            flags: current
+                        }
+                    }));
+
+                    const wire = window.__overviewWire || (window.Livewire ? Livewire.first() : null);
+                    if (wire && typeof wire.toggleFlag === 'function') {
+                        wire.toggleFlag(this.orderId, upper);
+                    }
+                },
+
+                clearSubstatus() {
+                    if (!this.orderId) return;
+                    this.substatus = null;
+                    this.substatusLabel = '—';
+                    this.substatusStyle = '';
+
+                    window.dispatchEvent(new CustomEvent('order-substatus-changed', {
+                        detail: {
+                            orderId: this.orderId,
+                            substatus: null,
+                            substatusLabel: '—',
+                            substatusStyle: '',
+                            flags: this.flags
+                        }
+                    }));
+
+                    const wire = window.__overviewWire || (window.Livewire ? Livewire.first() : null);
+                    if (wire && typeof wire.updateSubstatus === 'function') {
+                        wire.updateSubstatus(this.orderId, null);
+                    }
+                },
+
+                clearAll() {
+                    if (!this.orderId) return;
+                    const flagsToClear = [...(this.flags || [])];
+                    this.substatus = null;
+                    this.substatusLabel = '—';
+                    this.substatusStyle = '';
+                    this.flags = [];
+
+                    window.dispatchEvent(new CustomEvent('order-substatus-changed', {
+                        detail: {
+                            orderId: this.orderId,
+                            substatus: null,
+                            substatusLabel: '—',
+                            substatusStyle: '',
+                            flags: []
+                        }
+                    }));
+
+                    const wire = window.__overviewWire || (window.Livewire ? Livewire.first() : null);
+                    if (wire) {
+                        if (typeof wire.updateSubstatus === 'function') {
+                            wire.updateSubstatus(this.orderId, null);
+                        }
+                        flagsToClear.forEach(f => {
+                            if (typeof wire.toggleFlag === 'function') {
+                                wire.toggleFlag(this.orderId, f);
+                            }
+                        });
+                    }
+                },
+
+                open(detail) {
+                    if (!detail) return;
+                    this.orderId = detail.orderId;
+                    this.orderWo = detail.wo || '';
+                    this.orderCompany = detail.company || '';
+                    this.substatus = detail.substatus || null;
+                    this.substatusLabel = detail.substatusLabel || (detail.substatus || '—');
+                    this.substatusStyle = detail.substatusStyle || (this.substatus && this.substatusesMap[this.substatus] ? this.substatusesMap[this.substatus] : '');
+                    this.flags = Array.isArray(detail.flags) ? [...detail.flags] : (detail.flags ? [detail.flags] : []);
+                    this.search = '';
+                    this.isOpen = true;
+                    setTimeout(() => {
+                        const input = document.getElementById('substatus-modal-search-input');
+                        if (input) input.focus();
+                    }, 60);
+                },
+
+                close() {
+                    this.isOpen = false;
+                    this.search = '';
+                }
+            });
+        };
+
         if (window.Alpine) {
             registerInstallationModalStore();
+            registerSubstatusModalStore();
         } else {
-            document.addEventListener('alpine:init', registerInstallationModalStore);
+            document.addEventListener('alpine:init', () => {
+                registerInstallationModalStore();
+                registerSubstatusModalStore();
+            });
         }
     })();
 </script>
