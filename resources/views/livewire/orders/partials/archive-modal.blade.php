@@ -39,7 +39,7 @@
             </div>
 
             <!-- Modal Body -->
-            <div class="space-y-2.5 text-xs" x-data="{ search: '' }">
+            <div class="space-y-2 text-xs">
                 <div class="flex items-center justify-between">
                     <label class="font-semibold text-zinc-700 block text-xs">{{ __('Razón o subestatus de cierre:') }}</label>
                     <span class="text-[11px] text-zinc-400 font-medium">
@@ -47,26 +47,7 @@
                     </span>
                 </div>
 
-                @if(count($archivedSubstatuses) > 4)
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            x-model="search" 
-                            placeholder="{{ __('Buscar subestatus de archivo...') }}" 
-                            class="w-full bg-stone-50/80 border border-stone-200 rounded-lg px-2.5 py-1.5 pl-7.5 pr-7 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 focus:bg-white transition"
-                        >
-                        <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <button 
-                            type="button" 
-                            x-show="search" 
-                            @click="search = ''" 
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5">
-                            <x-lucide-x class="w-3 h-3" />
-                        </button>
-                    </div>
-                @endif
-
-                <div class="space-y-0.5 max-h-72 overflow-y-auto pr-0.5 scrollbar-thin">
+                <div class="space-y-0.5">
                     @forelse($archivedSubstatuses as $sub)
                         @php
                             $subName = $sub instanceof \App\Models\Substatus ? $sub->name : ($sub->value ?? (string) $sub);
@@ -89,7 +70,6 @@
                         @endphp
 
                         <label 
-                            x-show="!search || '{{ strtolower(addslashes($subName . ' ' . ($desc ?? ''))) }}'.includes(search.toLowerCase().trim())"
                             class="flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition select-none text-xs"
                             :class="$wire.archiveSubstatus === '{{ addslashes($subName) }}' 
                                 ? 'bg-rose-50' 
