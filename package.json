@@ -9,7 +9,9 @@
         "deploy": "node scripts/deploy.js",
         "deploy:dry": "node scripts/deploy.js --dry-run",
         "deploy:status": "node scripts/deploy.js --status",
-        "deploy:db": "node scripts/upload-db.js"
+        "deploy:db": "node scripts/upload-db.js",
+        "deploy:pull-db": "node scripts/pull-db.js",
+        "pull:db": "node scripts/pull-db.js"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",

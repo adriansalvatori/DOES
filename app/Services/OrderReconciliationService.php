@@ -2069,7 +2069,7 @@ class OrderReconciliationService
             foreach ($foundRows as $item) {
                 $card = $item['suggested_trello_card'];
                 $parsed = $item['parsed_data'];
-                $res = $this->linkTrelloCard($parsed, $card['id'], $card);
+                $res = $this->linkTrelloCard($parsed, $card['id'], $card, isBatch: true);
                 if ($res['success']) {
                     $linkedOrderIds[] = $res['order_id'];
                     if (! empty($res['is_new'])) {
@@ -2115,9 +2115,12 @@ class OrderReconciliationService
     /**
      * Link an unmatched CSV row to a Trello card, verifying card and saving silently.
      */
-    public function linkTrelloCard(array $parsedData, string $trelloCardId, array $cardDetails): array
+    public function linkTrelloCard(array $parsedData, string $trelloCardId, array $cardDetails, bool $isBatch = false): array
     {
-        $backupFile = $this->createSafetyBackup();
+        $backupFile = null;
+        if (! $isBatch) {
+            $backupFile = $this->createSafetyBackup();
+        }
 
         $cleanCardId = trim($trelloCardId);
 
@@ -2134,7 +2137,7 @@ class OrderReconciliationService
 
         $isNew = false;
 
-        DB::transaction(function () use (&$order, &$isNew, $cleanCardId, $parsedData, $cardDetails) {
+        $saveOperation = function () use (&$order, &$isNew, $cleanCardId, $parsedData, $cardDetails) {
             $woNumber = ! empty($parsedData['normalized_wo']) ? ('WO '.$parsedData['normalized_wo']) : null;
 
             if ($order) {
@@ -2216,20 +2219,26 @@ class OrderReconciliationService
                     $order = Order::find($id);
                 });
             }
-        });
+        };
 
-        // Record migration history
-        $this->recordMigrationHistory([
-            'id' => 'mig_trello_'.date('Ymd_His'),
-            'type' => 'trello_link',
-            'user_id' => Auth::id() ?? 1,
-            'user_name' => Auth::user()?->name ?? 'Admin',
-            'updated_count' => 1,
-            'order_ids' => [$order->id],
-            'backup_file' => $backupFile,
-            'created_at' => now()->toIso8601String(),
-            'status' => 'applied',
-        ]);
+        if ($isBatch) {
+            $saveOperation();
+        } else {
+            DB::transaction($saveOperation);
+
+            // Record migration history only for standalone links
+            $this->recordMigrationHistory([
+                'id' => 'mig_trello_'.date('Ymd_His'),
+                'type' => 'trello_link',
+                'user_id' => Auth::id() ?? 1,
+                'user_name' => Auth::user()?->name ?? 'Admin',
+                'updated_count' => 1,
+                'order_ids' => [$order->id],
+                'backup_file' => $backupFile,
+                'created_at' => now()->toIso8601String(),
+                'status' => 'applied',
+            ]);
+        }
 
         return [
             'success' => true,
@@ -2250,13 +2259,18 @@ class OrderReconciliationService
         $backupDir = config('database.backup_path', storage_path('app/backups'));
         File::ensureDirectoryExists($backupDir);
 
-        $timestamp = date('Y-m-d_His');
+        $timestamp = date('Y-m-d_His').'_'.substr(bin2hex(random_bytes(4)), 0, 6);
         $filename = "reconciliation_pre_migration_{$timestamp}.sqlite";
         $targetPath = "{$backupDir}/{$filename}";
 
         $dbPath = config('database.connections.sqlite.database');
         if ($dbPath && File::exists($dbPath)) {
-            File::copy($dbPath, $targetPath);
+            try {
+                // VACUUM INTO is SQLite's built-in atomic online backup that avoids file locking
+                DB::connection('sqlite')->statement("VACUUM INTO '{$targetPath}'");
+            } catch (\Throwable $e) {
+                File::copy($dbPath, $targetPath);
+            }
         } else {
             Artisan::call('db:backup');
         }

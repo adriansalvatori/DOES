@@ -90,3 +90,11 @@ Report the deployed version, commit hash, and health confirmation to the user.
   - Automatically creates a remote backup (`database/database.sqlite.bak-YYYYMMDD_HHmmss`) before replacing.
   - Requires interactive confirmation (`REEMPLAZAR`) or explicit `--confirm` flag.
 
+### Download Production Database (`npm run pull:db`)
+- **Purpose:** Downloads the production SQLite database (`database/database.sqlite`) to update the local development environment.
+- **Features:**
+  - Automatically creates a local timestamped backup (`database/database.sqlite.bak-YYYYMMDD_HHmmss`) before replacing.
+  - Uses `rsync` over SSH port 65002.
+  - Automatically clears local Laravel caches (`php artisan optimize:clear`).
+
+
