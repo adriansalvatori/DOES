@@ -453,6 +453,7 @@ class PricingIndex extends Component
         ]);
 
         $this->newProductFile = null;
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->createProductModalOpen = false;
         $this->feedbackMessage = __('Producto creado correctamente.');
     }
@@ -518,6 +519,7 @@ class PricingIndex extends Component
         ]);
 
         $this->newVariantFile = null;
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->addVariantModalOpen = false;
         $this->feedbackMessage = __('Nueva variante agregada con éxito.');
     }
@@ -574,7 +576,9 @@ class PricingIndex extends Component
             'turnaround_time' => trim($this->editVariantTurnaround) ?: null,
         ]);
 
+        $this->editVariantImageUrl = $imageUrl ?? '';
         $this->editVariantFile = null;
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editVariantModalOpen = false;
         $this->feedbackMessage = __('Subproducto actualizado correctamente.');
     }
@@ -586,6 +590,7 @@ class PricingIndex extends Component
         $variant = ProductVariant::findOrFail($variantId);
         $variant->delete();
 
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->feedbackMessage = __('Subproducto eliminado.');
     }
 
@@ -640,7 +645,9 @@ class PricingIndex extends Component
             'image_url' => $imageUrl,
         ]);
 
+        $this->editProductImageUrl = $imageUrl ?? '';
         $this->editProductFile = null;
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editProductModalOpen = false;
         $this->feedbackMessage = __('Producto actualizado correctamente.');
     }
@@ -652,6 +659,7 @@ class PricingIndex extends Component
         $product = Product::findOrFail($productId);
         $product->delete();
 
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editProductModalOpen = false;
         $this->feedbackMessage = __('Producto y sus variantes eliminados.');
     }
@@ -694,6 +702,7 @@ class PricingIndex extends Component
         ]);
 
         $this->newCategoryFile = null;
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->createCategoryModalOpen = false;
         $this->feedbackMessage = __('Categoría creada correctamente.');
     }
@@ -738,7 +747,9 @@ class PricingIndex extends Component
             'description' => trim($this->editCategoryDescription) ?: null,
         ]);
 
+        $this->editCategoryImageUrl = $imageUrl ?? '';
         $this->editCategoryFile = null;
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editCategoryModalOpen = false;
         $this->feedbackMessage = __('Categoría actualizada correctamente.');
     }
@@ -757,6 +768,7 @@ class PricingIndex extends Component
 
         $category->delete();
 
+        unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editCategoryModalOpen = false;
         $this->feedbackMessage = __('Categoría eliminada.');
     }

@@ -66,7 +66,6 @@ class OverviewIndex extends Component
     #[On('order-updated')]
     #[On('order-created')]
     #[On('order-deleted')]
-    #[Renderless]
     public function handleOrderUpdated(): void
     {
         $this->clearOverviewCache();
@@ -398,7 +397,7 @@ class OverviewIndex extends Component
     public string $filterDateRange = '';
 
     // Sorting
-    public string $sortBy = 'created_at';
+    public string $sortBy = 'wo_number';
 
     public string $sortDirection = 'desc';
 
@@ -442,7 +441,7 @@ class OverviewIndex extends Component
         'filterReviewStatus' => ['except' => ''],
         'filterInstallation' => ['except' => ''],
         'filterDateRange' => ['except' => ''],
-        'sortBy' => ['except' => 'created_at'],
+        'sortBy' => ['except' => 'wo_number'],
         'sortDirection' => ['except' => 'desc'],
     ];
 
@@ -500,7 +499,7 @@ class OverviewIndex extends Component
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
             $this->sortBy = $column;
-            $this->sortDirection = 'asc';
+            $this->sortDirection = $column === 'wo_number' ? 'desc' : 'asc';
         }
         $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
@@ -1104,11 +1103,15 @@ class OverviewIndex extends Component
             'installation_type',
             'substatus',
         ];
-        $sortCol = in_array($this->sortBy, $allowedColumns, true) ? $this->sortBy : 'created_at';
+        $sortCol = in_array($this->sortBy, $allowedColumns, true) ? $this->sortBy : 'wo_number';
         $dir = strtolower($this->sortDirection) === 'asc' ? 'asc' : 'desc';
 
         if ($sortCol === 'manual_creation_date') {
             return $query->orderByRaw("COALESCE(manual_creation_date, trello_created_at, created_at) {$dir}");
+        }
+
+        if ($sortCol === 'wo_number') {
+            return $query->orderByRaw("CASE WHEN wo_number IS NULL OR wo_number = '' THEN 1 ELSE 0 END, CAST(REPLACE(UPPER(wo_number), 'WO', '') AS INTEGER) {$dir}, id {$dir}");
         }
 
         return $query->orderBy($sortCol, $dir);

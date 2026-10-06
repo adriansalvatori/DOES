@@ -14,10 +14,23 @@ use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class WeeklyPlanner extends Component
 {
+    #[On('order-updated')]
+    #[On('order-created')]
+    #[On('order-deleted')]
+    #[On('task-added')]
+    #[On('subtask-updated')]
+    #[On('subtask-deleted')]
+    #[On('subtask-restored')]
+    public function refreshPlanner(): void
+    {
+        // Automatically re-renders planner view when orders or subtasks are created, updated, duplicated, or deleted
+    }
+
     public $selectedWeekStart;
 
     public $selectedDesignerFilter = 'all';

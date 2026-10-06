@@ -511,4 +511,61 @@ class OverviewTest extends TestCase
         $this->assertNotEmpty($groups['ENTRANTE']['items']);
         $this->assertNotEmpty($groups['ENTRANTE']['title']);
     }
+
+    public function test_overview_orders_list_is_sorted_by_wo_number_descending_by_default(): void
+    {
+        $orderLow = Order::create([
+            'wo_number' => 'WO 10001',
+            'task_name' => 'Low WO Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $orderHigh = Order::create([
+            'wo_number' => 'WO 15000',
+            'task_name' => 'High WO Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $orderMid = Order::create([
+            'wo_number' => 'WO 12500',
+            'task_name' => 'Mid WO Order',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSet('sortBy', 'wo_number')
+            ->assertSet('sortDirection', 'desc')
+            ->assertViewHas('orders', function ($orders) use ($orderHigh, $orderMid, $orderLow) {
+                $ids = $orders->pluck('id')->toArray();
+                $highIndex = array_search($orderHigh->id, $ids, true);
+                $midIndex = array_search($orderMid->id, $ids, true);
+                $lowIndex = array_search($orderLow->id, $ids, true);
+
+                return $highIndex !== false && $midIndex !== false && $lowIndex !== false
+                    && $highIndex < $midIndex && $midIndex < $lowIndex;
+            });
+    }
+
+    public function test_overview_updates_view_on_order_updated_event(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 10001',
+            'task_name' => 'Initial Task Name',
+            'company_name' => 'Kudos Client Test',
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $test = Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSee('WO 10001');
+
+        $order->update(['wo_number' => 'WO 99999']);
+
+        $test->dispatch('order-updated')
+            ->assertSee('WO 99999');
+    }
 }

@@ -419,6 +419,7 @@
                             <div class="grid grid-cols-7 gap-1 text-center font-medium">
                                 @foreach($this->miniCalendarDays as $calDay)
                                     <button 
+                                        wire:key="mini-cal-day-{{ $calDay['date_string'] }}"
                                         wire:click="selectWeekFromDate('{{ $calDay['date_string'] }}')"
                                         @click="calendarOpen = false"
                                         class="p-1.5 rounded-md text-xs transition relative group
@@ -548,6 +549,7 @@
                                 <div class="max-h-72 overflow-y-auto custom-vertical-scrollbar divide-y divide-stone-100">
                                     @forelse($workspaceSearchResults as $wOrder)
                                         <div 
+                                            wire:key="workspace-search-order-{{ $wOrder->id }}"
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $wOrder->id }} })"
                                             @click="open = false"
                                             class="p-2.5 hover:bg-stone-100 cursor-pointer flex items-center justify-between gap-2 transition group">
@@ -622,6 +624,7 @@
                                 <div class="max-h-72 overflow-y-auto custom-vertical-scrollbar divide-y divide-stone-100">
                                     @forelse($backlogOrders as $bOrder)
                                         <div 
+                                            wire:key="backlog-search-order-{{ $bOrder->id }}"
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $bOrder->id }} })"
                                             @click="open = false"
                                             class="p-2.5 hover:bg-stone-100 cursor-pointer flex items-center justify-between gap-2 transition group">
@@ -675,7 +678,7 @@
                         return false;
                     });
                 @endphp
-                <div class="space-y-2">
+                <div wire:key="planner-byday-designer-{{ $designer->id }}" class="space-y-2">
                     
                     <div class="flex items-center justify-between pb-1">
                         <div class="flex items-center gap-2">
@@ -722,6 +725,7 @@
                                     };
                                 @endphp
                                 <div 
+                                    wire:key="planner-byday-col-{{ $designer->id }}-{{ $day['date_string'] }}"
                                     x-data="{ 
                                         draggingOver: false,
                                         dragOverCardId: null,
@@ -795,6 +799,7 @@
                                                         $staskIsNote = ! $stask->order;
                                                     @endphp
                                                     <div 
+                                                        wire:key="planner-byday-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
                                                         draggable="true" 
                                                         data-subtask-id="{{ $stask->id }}"
                                                         @dragstart="$event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
@@ -988,7 +993,7 @@
                         $visibleDesignerSubtasks = $showSystemTasks ? $designerSubtasks : $designerSubtasks->filter(fn($st) => $st->isWorkTask());
                         $designerVisibleCount = $visibleDesignerSubtasks->count();
                     @endphp
-                    <div class="flex flex-col min-w-0 pr-4 space-y-3">
+                    <div wire:key="planner-grid-designer-{{ $designer->id }}" class="flex flex-col min-w-0 pr-4 space-y-3">
                         
                         <!-- Designer Header -->
                         <div class="flex items-center justify-between border-b border-stone-200/60 pb-2">
@@ -1051,6 +1056,7 @@
                                 @endphp
 
                                 <div 
+                                    wire:key="planner-grid-day-{{ $designer->id }}-{{ $day['date_string'] }}"
                                     x-data="{ 
                                         draggingOver: false,
                                         inlineActive: false,
@@ -1268,6 +1274,7 @@
                                                         $staskDone = $stask->isDone();
                                                     @endphp
                                                     <div 
+                                                         wire:key="planner-grid-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
                                                          draggable="true" 
                                                          data-subtask-id="{{ $stask->id }}"
                                                          @dragstart="$event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
@@ -2138,7 +2145,7 @@
                             </p>
                             <div class="divide-y divide-stone-100 border border-stone-200 rounded-lg overflow-hidden">
                                 @foreach($slaBreachedList as $item)
-                                    <div class="p-3 bg-rose-50/40 hover:bg-rose-50/80 transition flex items-start justify-between gap-3">
+                                    <div wire:key="sla-breached-{{ $loop->index }}-{{ $item['company_name'] }}" class="p-3 bg-rose-50/40 hover:bg-rose-50/80 transition flex items-start justify-between gap-3">
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? 'bg-violet-600 text-white border border-violet-700' : 'bg-violet-100 text-violet-800 border border-violet-200') : 'bg-stone-200 text-zinc-800 border border-stone-300' }}">
