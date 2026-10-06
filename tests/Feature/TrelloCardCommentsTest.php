@@ -281,4 +281,84 @@ class TrelloCardCommentsTest extends TestCase
             'actor' => 'Adrián Salvatori',
         ]);
     }
+
+    public function test_deleting_trello_card_comment(): void
+    {
+        Http::fake([
+            'https://api.trello.com/1/actions/action_delete_1*' => Http::response(['_value' => null], 200),
+        ]);
+
+        $service = new TrelloSyncService;
+        $result = $service->deleteCardComment('action_delete_1', 'fake_key', 'fake_token');
+
+        $this->assertTrue($result['success']);
+
+        Http::assertSent(function (Request $request) {
+            return $request->method() === 'DELETE'
+                && str_contains($request->url(), 'https://api.trello.com/1/actions/action_delete_1');
+        });
+    }
+
+    public function test_order_detail_modal_deletes_trello_comment(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Euralíz Bravo',
+            'email' => 'euraliz@kudos.com',
+        ]);
+        $this->actingAs($user);
+
+        $order = Order::create([
+            'company_name' => 'EMPRESA TEST',
+            'task_name' => 'Pendón Evento',
+            'trello_card_id' => 'card_delete_test',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_delete_test/actions*' => Http::response([
+                [
+                    'id' => 'action_to_delete',
+                    'date' => '2026-10-06T10:00:00.000Z',
+                    'data' => ['text' => 'Comentario para borrar'],
+                    'memberCreator' => ['fullName' => 'Euralíz Bravo'],
+                ],
+            ], 200),
+            'https://api.trello.com/1/actions/action_to_delete*' => Http::response(['_value' => null], 200),
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertCount('trelloComments', 1)
+            ->call('deleteTrelloComment', 'action_to_delete');
+
+        Http::assertSent(function (Request $request) {
+            return $request->method() === 'DELETE'
+                && str_contains($request->url(), 'https://api.trello.com/1/actions/action_to_delete');
+        });
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_COMMENT_DELETED',
+            'actor' => 'Euralíz Bravo',
+        ]);
+    }
+
+    public function test_comment_markdown_rendering_normalizes_spaces_and_line_breaks(): void
+    {
+        $component = new OrderDetailModal;
+
+        $inputWithSpacesInBold = '**¡Hola, Adrián!!!! **🎃 **Ya tenemos notificaciones. **';
+        $renderedBold = $component->renderCommentMarkdown($inputWithSpacesInBold);
+
+        $this->assertStringContainsString('<strong>¡Hola, Adrián!!!!</strong>', $renderedBold);
+        $this->assertStringContainsString('<strong>Ya tenemos notificaciones.</strong>', $renderedBold);
+
+        $inputWithLineBreaks = "Línea 1\nLínea 2\n\nLínea 3";
+        $renderedBreaks = $component->renderCommentMarkdown($inputWithLineBreaks);
+
+        $this->assertStringContainsString('Línea 1<br>', $renderedBreaks);
+        $this->assertStringContainsString('Línea 2', $renderedBreaks);
+        $this->assertStringContainsString('<p>Línea 3</p>', $renderedBreaks);
+    }
 }

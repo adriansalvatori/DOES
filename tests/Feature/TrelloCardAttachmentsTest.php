@@ -354,4 +354,51 @@ class TrelloCardAttachmentsTest extends TestCase
         $this->assertInstanceOf(BinaryFileResponse::class, $response);
         $this->assertStringContainsString('WO-9988_archivos.zip', $response->headers->get('content-disposition'));
     }
+
+    public function test_attachment_errors_are_cleared_on_close_and_reopen_and_clear_action(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Adrián Salvatori',
+            'role' => 'admin',
+        ]);
+        $this->actingAs($user);
+
+        $order = Order::create([
+            'company_name' => 'Empresa Test Errores',
+            'wo_number' => 'WO-1122',
+            'task_name' => 'Diseño',
+            'trello_card_id' => 'card_errors_test',
+            'in_workspace' => true,
+        ]);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_errors_test/attachments*' => Http::response([], 200),
+            'https://api.trello.com/1/cards/card_errors_test*' => Http::response([
+                'id' => 'card_errors_test',
+                'name' => 'Empresa Test Errores',
+            ], 200),
+        ]);
+
+        $component = Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('attachmentUploadError', 'Error al subir archivo')
+            ->assertSet('attachmentUploadError', 'Error al subir archivo');
+
+        // Test clearAttachmentErrors method
+        $component->call('clearAttachmentErrors')
+            ->assertSet('attachmentUploadError', null)
+            ->assertHasNoErrors(['attachmentFiles', 'attachmentFiles.*', 'attachmentFile']);
+
+        // Set error and close modal -> errors must be cleared
+        $component->set('attachmentUploadError', 'Error de subida persistente')
+            ->call('closeModal')
+            ->assertSet('attachmentUploadError', null)
+            ->assertHasNoErrors();
+
+        // Reopen modal -> errors must be cleared
+        $component->set('attachmentUploadError', 'Error previo')
+            ->call('openModal', $order->id)
+            ->assertSet('attachmentUploadError', null)
+            ->assertHasNoErrors();
+    }
 }

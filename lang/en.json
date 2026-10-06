@@ -980,5 +980,9 @@
     "Modo Edición Habilitado (Manager / Admin)": "Editing Mode Enabled (Manager / Admin)",
     "Modo Solo Lectura (Diseñador / Comercial)": "Read-Only Mode (Designer / Sales)",
     "Cambios guardados directamente en base de datos al editar cualquier celda.": "Changes saved directly to database upon editing any cell.",
-    "Agrega nueva opción de precio": "Add new price option"
+    "Agrega nueva opción de precio": "Add new price option",
+    "¿Estás seguro de que deseas eliminar este comentario de Trello?": "Are you sure you want to delete this comment from Trello?",
+    "Eliminar comentario de Trello": "Delete comment from Trello",
+    "Comentario eliminado de Trello exitosamente.": "Comment deleted from Trello successfully.",
+    "Error al eliminar el comentario de Trello: :error": "Error deleting comment from Trello: :error"
 }

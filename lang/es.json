@@ -937,5 +937,9 @@
     "Modo Edición Habilitado (Manager / Admin)": "Modo Edición Habilitado (Manager / Admin)",
     "Modo Solo Lectura (Diseñador / Comercial)": "Modo Solo Lectura (Diseñador / Comercial)",
     "Cambios guardados directamente en base de datos al editar cualquier celda.": "Cambios guardados directamente en base de datos al editar cualquier celda.",
-    "Agrega nueva opción de precio": "Agrega nueva opción de precio"
+    "Agrega nueva opción de precio": "Agrega nueva opción de precio",
+    "¿Estás seguro de que deseas eliminar este comentario de Trello?": "¿Estás seguro de que deseas eliminar este comentario de Trello?",
+    "Eliminar comentario de Trello": "Eliminar comentario de Trello",
+    "Comentario eliminado de Trello exitosamente.": "Comentario eliminado de Trello exitosamente.",
+    "Error al eliminar el comentario de Trello: :error": "Error al eliminar el comentario de Trello: :error"
 }

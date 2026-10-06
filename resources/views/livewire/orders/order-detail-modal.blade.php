@@ -2478,7 +2478,7 @@
                                     @if($order && $order->trello_card_id)
                                         <button 
                                             type="button"
-                                            @click="$refs.multiAttachmentInput.click()"
+                                            @click="$refs.multiAttachmentInput.value = ''; $refs.multiAttachmentInput.click()"
                                             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-sky-50 text-sky-700 hover:text-sky-800 border border-sky-200/90 shadow-2xs cursor-pointer transition select-none disabled:opacity-50"
                                             @disabled($isUploadingAttachment)
                                         >
@@ -2504,33 +2504,74 @@
                             </div>
 
                             @if($attachmentUploadError)
-                                <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2">
+                                <div 
+                                    x-data="{ show: true }"
+                                    x-show="show"
+                                    x-init="setTimeout(() => { show = false; $wire.clearAttachmentErrors(); }, 5000)"
+                                    x-transition:leave="transition ease-in duration-300"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2 shadow-2xs"
+                                >
                                     <div class="flex items-center gap-2 min-w-0">
                                         <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
                                         <span class="truncate whitespace-pre-line">{{ $attachmentUploadError }}</span>
                                     </div>
-                                    <button type="button" wire:click="$set('attachmentUploadError', null)" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
+                                    <button type="button" @click="show = false; $wire.clearAttachmentErrors()" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
                             @endif
 
                             @error('attachmentFiles')
-                                <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
-                                    <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
-                                    <span>{{ $message }}</span>
+                                <div 
+                                    x-data="{ show: true }"
+                                    x-show="show"
+                                    x-init="setTimeout(() => { show = false; $wire.clearAttachmentErrors(); }, 5000)"
+                                    x-transition:leave="transition ease-in duration-300"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2 shadow-2xs"
+                                >
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
+                                        <span>{{ $message === 'The attachmentFiles failed to upload.' ? __('No se pudieron subir los archivos. Comprueba que no superen el límite permitido.') : $message }}</span>
+                                    </div>
+                                    <button type="button" @click="show = false; $wire.clearAttachmentErrors()" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
                             @enderror
 
                             @error('attachmentFiles.*')
-                                <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
-                                    <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
-                                    <span>{{ $message }}</span>
+                                <div 
+                                    x-data="{ show: true }"
+                                    x-show="show"
+                                    x-init="setTimeout(() => { show = false; $wire.clearAttachmentErrors(); }, 5000)"
+                                    x-transition:leave="transition ease-in duration-300"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2 shadow-2xs"
+                                >
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
+                                        <span>{{ $message }}</span>
+                                    </div>
+                                    <button type="button" @click="show = false; $wire.clearAttachmentErrors()" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
                             @enderror
 
                             @error('attachmentFile')
-                                <div class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
-                                    <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
-                                    <span>{{ $message }}</span>
+                                <div 
+                                    x-data="{ show: true }"
+                                    x-show="show"
+                                    x-init="setTimeout(() => { show = false; $wire.clearAttachmentErrors(); }, 5000)"
+                                    x-transition:leave="transition ease-in duration-300"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center justify-between gap-2 shadow-2xs"
+                                >
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
+                                        <span>{{ $message === 'The attachmentFile failed to upload.' ? __('No se pudo subir el archivo. Comprueba que no supere el límite permitido.') : $message }}</span>
+                                    </div>
+                                    <button type="button" @click="show = false; $wire.clearAttachmentErrors()" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
                             @enderror
 
@@ -2542,7 +2583,7 @@
                             @elseif(empty($trelloAttachments))
                                 @if($order && $order->trello_card_id)
                                     <div 
-                                        @click="$refs.multiAttachmentInput.click()"
+                                        @click="$refs.multiAttachmentInput.value = ''; $refs.multiAttachmentInput.click()"
                                         class="group p-6 rounded-xl bg-white/70 hover:bg-sky-50/40 border-2 border-dashed border-stone-200 hover:border-sky-400 text-center space-y-2 cursor-pointer transition shadow-2xs"
                                     >
                                         <div class="w-10 h-10 rounded-full bg-stone-100 group-hover:bg-sky-100 text-zinc-400 group-hover:text-sky-600 flex items-center justify-center mx-auto transition">
@@ -2738,11 +2779,32 @@
                                             const childContent = this.getMarkdownFromDOM(child);
 
                                             if (tag === 'b' || tag === 'strong') {
-                                                text += '**' + childContent + '**';
+                                                const trimmed = childContent.trim();
+                                                if (trimmed) {
+                                                    const leading = childContent.match(/^\s*/)[0];
+                                                    const trailing = childContent.match(/\s*$/)[0];
+                                                    text += leading + '**' + trimmed + '**' + trailing;
+                                                } else {
+                                                    text += childContent;
+                                                }
                                             } else if (tag === 'i' || tag === 'em') {
-                                                text += '*' + childContent + '*';
+                                                const trimmed = childContent.trim();
+                                                if (trimmed) {
+                                                    const leading = childContent.match(/^\s*/)[0];
+                                                    const trailing = childContent.match(/\s*$/)[0];
+                                                    text += leading + '*' + trimmed + '*' + trailing;
+                                                } else {
+                                                    text += childContent;
+                                                }
                                             } else if (tag === 'code') {
-                                                text += '`' + childContent + '`';
+                                                const trimmed = childContent.trim();
+                                                if (trimmed) {
+                                                    const leading = childContent.match(/^\s*/)[0];
+                                                    const trailing = childContent.match(/\s*$/)[0];
+                                                    text += leading + '`' + trimmed + '`' + trailing;
+                                                } else {
+                                                    text += childContent;
+                                                }
                                             } else if (tag === 'a') {
                                                 const href = child.getAttribute('href') || childContent;
                                                 text += '[' + childContent + '](' + href + ')';
@@ -2756,9 +2818,16 @@
                                                     text += '- ' + childContent.trim() + '\n';
                                                 }
                                             } else if (tag === 'ul' || tag === 'ol') {
-                                                text += (text && !text.endsWith('\n') ? '\n' : '') + childContent;
+                                                text += (text && !text.endsWith('\n') ? '\n' : '') + childContent + (childContent.endsWith('\n') ? '' : '\n');
                                             } else if (tag === 'div' || tag === 'p') {
-                                                text += (text && !text.endsWith('\n') ? '\n' : '') + childContent;
+                                                if (childContent === '\n' || childContent === '') {
+                                                    text += '\n';
+                                                } else {
+                                                    if (text && !text.endsWith('\n')) {
+                                                        text += '\n';
+                                                    }
+                                                    text += childContent + '\n';
+                                                }
                                             } else if (tag === 'br') {
                                                 text += '\n';
                                             } else {
@@ -2803,6 +2872,14 @@
                                         e.preventDefault();
                                         this.syncToLivewire();
                                         $wire.addTrelloComment();
+                                        return;
+                                    }
+
+                                    // Shift+Enter explicitly inserts a line break
+                                    if (e.key === 'Enter' && e.shiftKey) {
+                                        e.preventDefault();
+                                        document.execCommand('insertLineBreak');
+                                        this.syncToLivewire();
                                         return;
                                     }
 
@@ -2872,9 +2949,11 @@
                                     x-ref="editor"
                                     contenteditable="true"
                                     @input="handleInput()"
+                                    @keyup="syncToLivewire()"
+                                    @blur="syncToLivewire()"
                                     @keydown="handleKeydown($event)"
                                     data-placeholder="{{ __('Escribe un comentario...') }}"
-                                    class="comment-editor-box w-full bg-white border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition min-h-[84px] max-h-[220px] overflow-y-auto font-sans leading-relaxed outline-none prose prose-xs max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-400 empty:before:pointer-events-none"></div>
+                                    class="comment-editor-box w-full bg-white border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition min-h-[84px] max-h-[220px] overflow-y-auto font-sans leading-relaxed outline-none prose prose-xs max-w-none empty:before:content-[attr(data-placeholder)] empty:before:text-zinc-400 empty:before:pointer-events-none whitespace-pre-wrap break-words"></div>
 
                                 <div class="flex items-center justify-between pt-1">
                                     <!-- Quick Formatting Buttons -->
@@ -2891,6 +2970,7 @@
                                             {{ __('Como:') }} <strong class="text-zinc-600 font-medium">{{ auth()->user()?->name ?? __('Usuario') }}</strong>
                                         </span>
                                         <button 
+                                            @click="syncToLivewire()"
                                             wire:click="addTrelloComment" 
                                             wire:loading.attr="disabled"
                                             type="button" 
@@ -2923,7 +3003,7 @@
                             @else
                                 <div class="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin divide-y divide-[#e9e9e7]">
                                     @foreach($trelloComments as $comment)
-                                        <div class="pt-3 first:pt-0 space-y-1.5">
+                                        <div class="pt-3 first:pt-0 space-y-1.5 group/comment">
                                             <div class="flex items-center justify-between gap-2">
                                                 <div class="flex items-center gap-2 min-w-0">
                                                     @if(!empty($comment['author_avatar']))
@@ -2951,15 +3031,28 @@
                                                         </span>
                                                     @endif
                                                 </div>
-                                                @if(!empty($comment['date']))
-                                                    <span class="text-[10px] text-zinc-400 shrink-0 font-mono">
-                                                        {{ \Carbon\Carbon::parse($comment['date'])->diffForHumans() }}
-                                                    </span>
-                                                @endif
+                                                <div class="flex items-center gap-2 shrink-0">
+                                                    @if(!empty($comment['date']))
+                                                        <span class="text-[10px] text-zinc-400 font-mono">
+                                                            {{ \Carbon\Carbon::parse($comment['date'])->diffForHumans() }}
+                                                        </span>
+                                                    @endif
+                                                    @if(!empty($comment['id']))
+                                                        <button 
+                                                            type="button"
+                                                            wire:click="deleteTrelloComment('{{ $comment['id'] }}')"
+                                                            wire:confirm="{{ __('¿Estás seguro de que deseas eliminar este comentario de Trello?') }}"
+                                                            wire:loading.attr="disabled"
+                                                            class="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                                            title="{{ __('Eliminar comentario de Trello') }}">
+                                                            <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                                        </button>
+                                                    @endif
+                                                </div>
                                             </div>
 
                                             <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5">
-                                                {!! \Illuminate\Support\Str::markdown(!empty($comment['clean_text']) ? $comment['clean_text'] : $comment['text'], ['html_input' => 'strip', 'allow_unsafe_links' => false]) !!}
+                                                {!! $this->renderCommentMarkdown(!empty($comment['clean_text']) ? $comment['clean_text'] : ($comment['text'] ?? '')) !!}
                                             </div>
                                         </div>
                                     @endforeach

@@ -23,6 +23,7 @@ use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -210,6 +211,12 @@ class OrderDetailModal extends Component
         $this->newTaskIsWork = true;
         $this->newTrelloComment = '';
 
+        $this->attachmentFile = null;
+        $this->attachmentFiles = [];
+        $this->clearAttachmentErrors();
+        $this->resetErrorBag();
+        $this->resetValidation();
+
         if ($startEdit) {
             $this->startEditing();
         } else {
@@ -319,6 +326,12 @@ class OrderDetailModal extends Component
         }
     }
 
+    public function clearAttachmentErrors(): void
+    {
+        $this->attachmentUploadError = null;
+        $this->resetErrorBag(['attachmentFiles', 'attachmentFiles.*', 'attachmentFile']);
+    }
+
     public function updatedAttachmentFile(): void
     {
         $this->uploadAttachmentToTrello();
@@ -337,6 +350,8 @@ class OrderDetailModal extends Component
         if (! $this->orderId || empty($files)) {
             return;
         }
+
+        $this->clearAttachmentErrors();
 
         $order = Order::find($this->orderId);
         if (! $order || ! $order->trello_card_id) {
@@ -431,6 +446,8 @@ class OrderDetailModal extends Component
         if (! $this->orderId || ! $this->attachmentFile) {
             return;
         }
+
+        $this->clearAttachmentErrors();
 
         $order = Order::find($this->orderId);
         if (! $order || ! $order->trello_card_id) {
@@ -716,6 +733,68 @@ class OrderDetailModal extends Component
             $this->trelloCommentError = $res['error'] ?? __('No se pudo publicar el comentario en Trello.');
             session()->flash('error', __('Error al publicar comentario en Trello: :error', ['error' => $res['error'] ?? __('Desconocido')]));
         }
+    }
+
+    public function deleteTrelloComment(string $actionId): void
+    {
+        if (! $this->orderId || empty($actionId)) {
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || ! $order->trello_card_id) {
+            session()->flash('error', __('La orden no tiene una tarjeta de Trello vinculada.'));
+
+            return;
+        }
+
+        $authorName = auth()->user()?->name ?? __('Usuario');
+        $res = app(TrelloSyncService::class)->deleteCardComment($actionId);
+
+        if ($res['success']) {
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'TRELLO_COMMENT_DELETED',
+                'actor' => $authorName,
+                'previous_value' => null,
+                'new_value' => null,
+                'metadata' => [
+                    'action_id' => $actionId,
+                    'trello_card_id' => $order->trello_card_id,
+                ],
+            ]);
+
+            $this->loadTrelloComments();
+            session()->flash('message', __('Comentario eliminado de Trello exitosamente.'));
+            $this->dispatch('order-updated');
+        } else {
+            session()->flash('error', __('Error al eliminar el comentario de Trello: :error', ['error' => $res['error'] ?? __('Desconocido')]));
+        }
+    }
+
+    public function renderCommentMarkdown(?string $text): string
+    {
+        if (empty($text)) {
+            return '';
+        }
+
+        // Fix markdown formatting when spaces were placed inside bold/italic markers (e.g. "**hello **" or "*hello *")
+        $clean = preg_replace('/\*\*([^\*\s\n](?:[^\*\n]*?[^\*\s\n])?)\s+\*\*/u', '**$1** ', $text);
+        $clean = preg_replace('/\*\*\s+([^\*\s\n](?:[^\*\n]*?[^\*\s\n])?)\*\*/u', ' **$1**', $clean);
+        $clean = preg_replace('/(?<!\*)\*([^\*\s\n](?:[^\*\n]*?[^\*\s\n])?)\s+\*(?!\*)/u', '*$1* ', $clean);
+        $clean = preg_replace('/(?<!\*)\*\s+([^\*\s\n](?:[^\*\n]*?[^\*\s\n])?)\*(?!\*)/u', ' *$1*', $clean);
+        $clean = preg_replace('/(?<!_)__([^_\s\n](?:[^_\n]*?[^_\s\n])?)\s+__(?!_)/u', '__$1__ ', $clean);
+        $clean = preg_replace('/(?<!_)__\s+([^_\s\n](?:[^_\n]*?[^_\s\n])?)__(?!_)/u', ' __$1__', $clean);
+        $clean = preg_replace('/(?<!_)_([^_\s\n](?:[^_\n]*?[^_\s\n])?)\s+_(?!_)/u', '_$1_ ', $clean);
+        $clean = preg_replace('/(?<!_)_\s+([^_\s\n](?:[^_\n]*?[^_\s\n])?)_(?!_)/u', ' _$1_', $clean);
+
+        return Str::markdown($clean, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+            'renderer' => [
+                'soft_break' => "<br>\n",
+            ],
+        ]);
     }
 
     public function startEditing()
@@ -1621,8 +1700,10 @@ class OrderDetailModal extends Component
         $this->approvalImage = null;
         $this->attachmentFile = null;
         $this->attachmentFiles = [];
-        $this->attachmentUploadError = null;
+        $this->clearAttachmentErrors();
         $this->isUploadingAttachment = false;
+        $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     public function moveToBacklog()
