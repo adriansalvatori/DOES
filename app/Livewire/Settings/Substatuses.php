@@ -5,6 +5,7 @@ namespace App\Livewire\Settings;
 use App\Enums\CoreStatus;
 use App\Models\Order;
 use App\Models\Substatus;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -189,6 +190,66 @@ class Substatuses extends Component
         session()->flash('message', 'Subestatus eliminado correctamente.');
     }
 
+    public function reorderSubstatuses(array $orderedIds): void
+    {
+        foreach ($orderedIds as $index => $id) {
+            Substatus::where('id', $id)->update(['sort_order' => $index + 1]);
+        }
+
+        session()->flash('message', __('Orden de subestatus actualizado correctamente.'));
+    }
+
+    public function moveUp(int $id): void
+    {
+        $sub = Substatus::findOrFail($id);
+        $siblings = $this->getSiblingsFor($sub);
+        $index = $siblings->search(fn ($item) => $item->id === $sub->id);
+
+        if ($index !== false && $index > 0) {
+            $ids = $siblings->pluck('id')->toArray();
+            $temp = $ids[$index];
+            $ids[$index] = $ids[$index - 1];
+            $ids[$index - 1] = $temp;
+
+            $this->reorderSubstatuses($ids);
+        }
+    }
+
+    public function moveDown(int $id): void
+    {
+        $sub = Substatus::findOrFail($id);
+        $siblings = $this->getSiblingsFor($sub);
+        $index = $siblings->search(fn ($item) => $item->id === $sub->id);
+
+        if ($index !== false && $index < $siblings->count() - 1) {
+            $ids = $siblings->pluck('id')->toArray();
+            $temp = $ids[$index];
+            $ids[$index] = $ids[$index + 1];
+            $ids[$index + 1] = $temp;
+
+            $this->reorderSubstatuses($ids);
+        }
+    }
+
+    protected function getSiblingsFor(Substatus $sub): Collection
+    {
+        return Substatus::query()
+            ->when($sub->is_global, fn ($q) => $q->where(function ($subQ) {
+                $subQ->where('is_global', true)->orWhereNull('core_status');
+            }))
+            ->when(! $sub->is_global && $sub->core_status, function ($q) use ($sub) {
+                if (CoreStatus::isPendingDesign($sub->core_status)) {
+                    $designerValues = array_map(fn ($s) => $s->value, CoreStatus::designerQueueStatuses());
+                    $q->whereIn('core_status', $designerValues)->where('is_global', false);
+                } else {
+                    $q->where('core_status', $sub->core_status->value)->where('is_global', false);
+                }
+            })
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+    }
+
     public function closeModal(): void
     {
         $this->showModal = false;
@@ -199,7 +260,7 @@ class Substatuses extends Component
         $allSubstatuses = Substatus::query()
             ->when($this->search, fn ($q) => $q->search($this->search))
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('id')
             ->get();
 
         $designerQueueValues = array_map(fn ($s) => $s->value, CoreStatus::designerQueueStatuses());

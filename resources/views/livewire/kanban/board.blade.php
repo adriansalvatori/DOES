@@ -333,20 +333,43 @@
                             <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
                         @endif
                     </button>
-                    @foreach(\App\Enums\Substatus::cases() as $sub)
-                        <button 
-                            type="button"
-                            x-show="!search || '{{ strtolower(addslashes($sub->value)) }}'.includes(search.toLowerCase())"
-                            @click="selectSub('{{ $sub->value }}')" 
-                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                            <span class="px-2 py-0.5 rounded text-[10px] font-medium border {{ $sub->badgeStyle() }}" style="{{ $sub->getInlineBadgeStyle() }}">
-                                {{ $sub->value }}
-                            </span>
-                            @if($substatusFilter === $sub->value)
-                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
-                            @endif
-                        </button>
-                    @endforeach
+                    @php
+                        $filterSubstatuses = \App\Models\Substatus::query()->orderBy('sort_order')->orderBy('id')->get();
+                    @endphp
+                    @if($filterSubstatuses->isNotEmpty())
+                        @foreach($filterSubstatuses as $sub)
+                            @php
+                                $subName = $sub->name;
+                            @endphp
+                            <button 
+                                type="button"
+                                x-show="!search || '{{ strtolower(addslashes($subName)) }}'.includes(search.toLowerCase())"
+                                @click="selectSub('{{ $subName }}')" 
+                                class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-medium border" style="{{ $sub->getInlineBadgeStyle() }}">
+                                    {{ $subName }}
+                                </span>
+                                @if($substatusFilter === $subName)
+                                    <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
+                                @endif
+                            </button>
+                        @endforeach
+                    @else
+                        @foreach(\App\Enums\Substatus::cases() as $sub)
+                            <button 
+                                type="button"
+                                x-show="!search || '{{ strtolower(addslashes($sub->value)) }}'.includes(search.toLowerCase())"
+                                @click="selectSub('{{ $sub->value }}')" 
+                                class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-medium border {{ $sub->badgeStyle() }}" style="{{ $sub->getInlineBadgeStyle() }}">
+                                    {{ $sub->value }}
+                                </span>
+                                @if($substatusFilter === $sub->value)
+                                    <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
+                                @endif
+                            </button>
+                        @endforeach
+                    @endif
                 </div>
             </div>
         </div>

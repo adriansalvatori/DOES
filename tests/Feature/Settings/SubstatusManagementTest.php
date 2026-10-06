@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Settings;
 
+use App\Enums\CoreStatus;
 use App\Livewire\Settings\Substatuses;
 use App\Models\Substatus;
 use App\Models\User;
@@ -111,5 +112,66 @@ class SubstatusManagementTest extends TestCase
         $this->assertDatabaseHas('substatuses', [
             'id' => $sub->id,
         ]);
+    }
+
+    public function test_can_reorder_substatuses_manually(): void
+    {
+        $sub1 = Substatus::create([
+            'name' => 'STATUS ONE',
+            'core_status' => CoreStatus::ARCHIVED->value,
+            'sort_order' => 1,
+        ]);
+        $sub2 = Substatus::create([
+            'name' => 'STATUS TWO',
+            'core_status' => CoreStatus::ARCHIVED->value,
+            'sort_order' => 2,
+        ]);
+        $sub3 = Substatus::create([
+            'name' => 'STATUS THREE',
+            'core_status' => CoreStatus::ARCHIVED->value,
+            'sort_order' => 3,
+        ]);
+
+        // Reorder sub3 to top, then sub1, then sub2
+        Livewire::test(Substatuses::class)
+            ->call('reorderSubstatuses', [$sub3->id, $sub1->id, $sub2->id]);
+
+        $this->assertEquals(1, $sub3->fresh()->sort_order);
+        $this->assertEquals(2, $sub1->fresh()->sort_order);
+        $this->assertEquals(3, $sub2->fresh()->sort_order);
+
+        // Verify that getArchivedSubstatuses reflects this new manual order
+        $archivedNames = Substatus::getArchivedSubstatuses()->pluck('name')->values()->toArray();
+        $this->assertEquals('STATUS THREE', $archivedNames[0]);
+        $this->assertEquals('STATUS ONE', $archivedNames[1]);
+        $this->assertEquals('STATUS TWO', $archivedNames[2]);
+    }
+
+    public function test_can_move_substatus_up_and_down(): void
+    {
+        $sub1 = Substatus::create([
+            'name' => 'ALPHA',
+            'core_status' => CoreStatus::TO_DO_TODAY->value,
+            'sort_order' => 1,
+        ]);
+        $sub2 = Substatus::create([
+            'name' => 'BETA',
+            'core_status' => CoreStatus::TO_DO_TODAY->value,
+            'sort_order' => 2,
+        ]);
+
+        // Move BETA up
+        Livewire::test(Substatuses::class)
+            ->call('moveUp', $sub2->id);
+
+        $this->assertEquals(1, $sub2->fresh()->sort_order);
+        $this->assertEquals(2, $sub1->fresh()->sort_order);
+
+        // Move BETA down
+        Livewire::test(Substatuses::class)
+            ->call('moveDown', $sub2->id);
+
+        $this->assertEquals(2, $sub2->fresh()->sort_order);
+        $this->assertEquals(1, $sub1->fresh()->sort_order);
     }
 }

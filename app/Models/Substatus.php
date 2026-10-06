@@ -52,7 +52,9 @@ class Substatus extends Model
         return $query->where(function ($q) use ($statusValue) {
             $q->where('core_status', $statusValue)
                 ->orWhere('is_global', true);
-        });
+        })
+            ->orderBy('sort_order')
+            ->orderBy('id');
     }
 
     public function scopeDefault(Builder $query): Builder
@@ -72,16 +74,15 @@ class Substatus extends Model
     }
 
     /**
-     * Get all substatuses belonging to ARCHIVED status, with default first and sorted.
+     * Get all substatuses belonging to ARCHIVED status, ordered by manual sort_order.
      *
      * @return Collection<int, self>
      */
     public static function getArchivedSubstatuses(): Collection
     {
         $db = static::archived()
-            ->orderByDesc('is_default')
             ->orderBy('sort_order')
-            ->orderBy('name')
+            ->orderBy('id')
             ->get();
 
         if ($db->isNotEmpty()) {

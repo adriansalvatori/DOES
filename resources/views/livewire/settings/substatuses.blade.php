@@ -92,11 +92,81 @@
                             {{ __('Sin subestatus específicos asignados a este Core Status.') }}
                         </div>
                     @else
-                        <div class="divide-y divide-stone-100">
+                        <div class="divide-y divide-stone-100" 
+                             data-reorder-group="core-{{ $coreCase->value }}"
+                             x-data="{ draggingId: null, dragOverId: null }">
                             @foreach($assignedSubstatuses as $sub)
-                                <div class="px-5 py-3 flex items-center justify-between hover:bg-stone-50/60 transition gap-4">
-                                    <!-- Substatus Badge Preview & Badges -->
+                                <div 
+                                    wire:key="sub-{{ $sub->id }}"
+                                    data-id="{{ $sub->id }}"
+                                    draggable="true"
+                                    @dragstart="
+                                        $event.dataTransfer.setData('text/plain', '{{ $sub->id }}');
+                                        $event.dataTransfer.effectAllowed = 'move';
+                                        draggingId = {{ $sub->id }};
+                                    "
+                                    @dragend="
+                                        draggingId = null;
+                                        dragOverId = null;
+                                    "
+                                    @dragover.prevent="
+                                        $event.dataTransfer.dropEffect = 'move';
+                                        dragOverId = {{ $sub->id }};
+                                    "
+                                    @dragleave="
+                                        if (dragOverId === {{ $sub->id }}) dragOverId = null;
+                                    "
+                                    @drop.prevent="
+                                        let srcId = parseInt($event.dataTransfer.getData('text/plain'), 10);
+                                        let targetId = {{ $sub->id }};
+                                        if (srcId && srcId !== targetId) {
+                                            let container = $el.closest('[data-reorder-group]');
+                                            let rows = Array.from(container.querySelectorAll('[data-id]'));
+                                            let ids = rows.map(r => parseInt(r.getAttribute('data-id'), 10));
+                                            let fromIndex = ids.indexOf(srcId);
+                                            let toIndex = ids.indexOf(targetId);
+                                            if (fromIndex !== -1 && toIndex !== -1) {
+                                                ids.splice(fromIndex, 1);
+                                                ids.splice(toIndex, 0, srcId);
+                                                $wire.reorderSubstatuses(ids);
+                                            }
+                                        }
+                                        draggingId = null;
+                                        dragOverId = null;
+                                    "
+                                    :class="{
+                                        'opacity-40 bg-stone-100': draggingId === {{ $sub->id }},
+                                        'border-t-2 border-stone-800 bg-stone-50': dragOverId === {{ $sub->id }} && draggingId !== {{ $sub->id }}
+                                    }"
+                                    class="px-5 py-3 flex items-center justify-between hover:bg-stone-50/60 transition gap-4 group">
+                                    
+                                    <!-- Substatus Drag Handle, Chevrons & Badge Preview -->
                                     <div class="flex items-center gap-3 min-w-0 flex-1">
+                                        <!-- Reorder Controls: Drag Handle & Up/Down Chevrons -->
+                                        <div class="flex items-center gap-1 shrink-0 text-stone-400">
+                                            <span class="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-stone-100 hover:text-stone-700 transition" title="{{ __('Arrastrar para organizar orden') }}">
+                                                <x-lucide-grip-vertical class="w-4 h-4" />
+                                            </span>
+                                            <div class="flex flex-col -space-y-1">
+                                                <button 
+                                                    type="button"
+                                                    wire:click="moveUp({{ $sub->id }})"
+                                                    @disabled($loop->first)
+                                                    class="p-0.5 rounded hover:bg-stone-200 hover:text-stone-700 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition"
+                                                    title="{{ __('Mover hacia arriba') }}">
+                                                    <x-lucide-chevron-up class="w-3.5 h-3.5" />
+                                                </button>
+                                                <button 
+                                                    type="button"
+                                                    wire:click="moveDown({{ $sub->id }})"
+                                                    @disabled($loop->last)
+                                                    class="p-0.5 rounded hover:bg-stone-200 hover:text-stone-700 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition"
+                                                    title="{{ __('Mover hacia abajo') }}">
+                                                    <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         <span 
                                             class="px-3 py-1 rounded-md text-xs font-bold border shrink-0 shadow-2xs"
                                             style="background-color: {{ $sub->bg_color }}; color: {{ $sub->text_color }}; border-color: {{ $sub->border_color }};">
@@ -173,11 +243,81 @@
                     {{ __('No hay subestatus transversales globales registrados.') }}
                 </div>
             @else
-                <div class="divide-y divide-stone-100">
+                <div class="divide-y divide-stone-100" 
+                     data-reorder-group="global"
+                     x-data="{ draggingId: null, dragOverId: null }">
                     @foreach($globalSubstatuses as $sub)
-                        <div class="px-5 py-3.5 flex items-center justify-between hover:bg-stone-50/60 transition gap-4">
-                            <!-- Substatus Badge Preview -->
+                        <div 
+                            wire:key="sub-{{ $sub->id }}"
+                            data-id="{{ $sub->id }}"
+                            draggable="true"
+                            @dragstart="
+                                $event.dataTransfer.setData('text/plain', '{{ $sub->id }}');
+                                $event.dataTransfer.effectAllowed = 'move';
+                                draggingId = {{ $sub->id }};
+                            "
+                            @dragend="
+                                draggingId = null;
+                                dragOverId = null;
+                            "
+                            @dragover.prevent="
+                                $event.dataTransfer.dropEffect = 'move';
+                                dragOverId = {{ $sub->id }};
+                            "
+                            @dragleave="
+                                if (dragOverId === {{ $sub->id }}) dragOverId = null;
+                            "
+                            @drop.prevent="
+                                let srcId = parseInt($event.dataTransfer.getData('text/plain'), 10);
+                                let targetId = {{ $sub->id }};
+                                if (srcId && srcId !== targetId) {
+                                    let container = $el.closest('[data-reorder-group]');
+                                    let rows = Array.from(container.querySelectorAll('[data-id]'));
+                                    let ids = rows.map(r => parseInt(r.getAttribute('data-id'), 10));
+                                    let fromIndex = ids.indexOf(srcId);
+                                    let toIndex = ids.indexOf(targetId);
+                                    if (fromIndex !== -1 && toIndex !== -1) {
+                                        ids.splice(fromIndex, 1);
+                                        ids.splice(toIndex, 0, srcId);
+                                        $wire.reorderSubstatuses(ids);
+                                    }
+                                }
+                                draggingId = null;
+                                dragOverId = null;
+                            "
+                            :class="{
+                                'opacity-40 bg-stone-100': draggingId === {{ $sub->id }},
+                                'border-t-2 border-stone-800 bg-stone-50': dragOverId === {{ $sub->id }} && draggingId !== {{ $sub->id }}
+                            }"
+                            class="px-5 py-3.5 flex items-center justify-between hover:bg-stone-50/60 transition gap-4 group">
+                            
+                            <!-- Substatus Drag Handle, Chevrons & Badge Preview -->
                             <div class="flex items-center gap-3 min-w-0 flex-1">
+                                <!-- Reorder Controls: Drag Handle & Up/Down Chevrons -->
+                                <div class="flex items-center gap-1 shrink-0 text-stone-400">
+                                    <span class="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-stone-100 hover:text-stone-700 transition" title="{{ __('Arrastrar para organizar orden') }}">
+                                        <x-lucide-grip-vertical class="w-4 h-4" />
+                                    </span>
+                                    <div class="flex flex-col -space-y-1">
+                                        <button 
+                                            type="button"
+                                            wire:click="moveUp({{ $sub->id }})"
+                                            @disabled($loop->first)
+                                            class="p-0.5 rounded hover:bg-stone-200 hover:text-stone-700 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition"
+                                            title="{{ __('Mover hacia arriba') }}">
+                                            <x-lucide-chevron-up class="w-3.5 h-3.5" />
+                                        </button>
+                                        <button 
+                                            type="button"
+                                            wire:click="moveDown({{ $sub->id }})"
+                                            @disabled($loop->last)
+                                            class="p-0.5 rounded hover:bg-stone-200 hover:text-stone-700 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition"
+                                            title="{{ __('Mover hacia abajo') }}">
+                                            <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <span 
                                     class="px-3 py-1 rounded-md text-xs font-bold border shrink-0 shadow-2xs"
                                     style="background-color: {{ $sub->bg_color }}; color: {{ $sub->text_color }}; border-color: {{ $sub->border_color }};">

@@ -16,7 +16,7 @@ class StatusTransitionService
     public function getValidSubstatuses(CoreStatus|string|null $coreStatus): Collection
     {
         if (! $coreStatus) {
-            $dbAll = SubstatusModel::query()->get();
+            $dbAll = SubstatusModel::query()->orderBy('sort_order')->orderBy('id')->get();
 
             return $dbAll->isNotEmpty() ? $dbAll : collect(SubstatusEnum::cases());
         }
@@ -24,7 +24,7 @@ class StatusTransitionService
         $statusEnum = $coreStatus instanceof CoreStatus ? $coreStatus : CoreStatus::tryFrom($coreStatus);
 
         if (! $statusEnum) {
-            $dbAll = SubstatusModel::query()->get();
+            $dbAll = SubstatusModel::query()->orderBy('sort_order')->orderBy('id')->get();
 
             return $dbAll->isNotEmpty() ? $dbAll : collect(SubstatusEnum::cases());
         }
@@ -41,6 +41,7 @@ class StatusTransitionService
                 $q->orWhere('is_global', true);
             })
             ->orderBy('sort_order')
+            ->orderBy('id')
             ->get();
 
         if ($dbSubstatuses->isEmpty()) {
