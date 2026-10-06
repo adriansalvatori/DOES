@@ -1218,17 +1218,6 @@
                                     <x-lucide-calendar class="w-3 h-3 shrink-0" />
                                     <span class="truncate">{{ $order->current_due_date ? $order->current_due_date->format('d M, Y') : __('Sin Fecha') }}</span>
                                 </span>
-                                @if($order->current_due_date)
-                                    <button 
-                                        wire:click="clearDueDate" 
-                                        wire:confirm="{{ __('¿Estás seguro de establecer la fecha límite como Ninguna (Sin Fecha)?') }}"
-                                        type="button"
-                                        class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-stone-100 hover:bg-rose-50 text-zinc-500 hover:text-rose-700 border border-stone-200 hover:border-rose-200 transition flex items-center gap-0.5 shrink-0 cursor-pointer"
-                                        title="{{ __('Establecer fecha límite a Ninguna') }}">
-                                        <x-lucide-calendar-off class="w-3 h-3" />
-                                        <span>{{ __('Sin Fecha') }}</span>
-                                    </button>
-                                @endif
                             </div>
                         </div>
 

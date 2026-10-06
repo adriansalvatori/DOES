@@ -1194,11 +1194,11 @@
                         <!-- 1. Fecha Procesado en Producción -->
                         <th 
                             :style="'width: ' + (colWidths['proc_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('production_processed_at')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('production_processed_at')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Procesado en Producción">Proc. Prod.</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'proc_date')"
@@ -1213,11 +1213,11 @@
                         <!-- 2. Order Due Date -->
                         <th 
                             :style="'width: ' + (colWidths['due_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('delivery_due_date')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('delivery_due_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Due Date (Fecha Límite de Entrega)">Due Date</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'due_date')"
@@ -1232,11 +1232,11 @@
                         <!-- 3. WO # -->
                         <th 
                             :style="'width: ' + (colWidths['wo'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('wo_number')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('wo_number')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="WO #">WO #</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'wo')"
@@ -1251,11 +1251,11 @@
                         <!-- 4. Client -->
                         <th 
                             :style="'width: ' + (colWidths['client'] || 12) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('company_name')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('company_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Cliente">Cliente</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'client')"
@@ -1270,11 +1270,11 @@
                         <!-- 5. Order Name -->
                         <th 
                             :style="'width: ' + (colWidths['name'] || 14) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('task_name')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('task_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nombre de Orden">Nombre de Orden</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'name')"
@@ -1340,11 +1340,11 @@
                         <!-- 8.5. Fecha Email -->
                         <th 
                             :style="'width: ' + (colWidths['email_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('email_date')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('email_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Fecha Email">Email</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'email_date')"
@@ -1410,11 +1410,11 @@
                         <!-- 12. Subestatus -->
                         <th 
                             :style="'width: ' + (colWidths['substatus'] || 7) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 cursor-pointer hover:bg-stone-100 select-none group/col transition-colors"
-                            wire:click="sortByColumn('substatus')">
+                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col"
+                            {{-- TEMPORAL: wire:click="sortByColumn('substatus')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Subestatus">Subestatus</span>
-                                <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" />
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
                     </tr>

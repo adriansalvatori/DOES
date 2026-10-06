@@ -30,6 +30,10 @@ class OverviewIndex extends Component
             return redirect()->route('kanban');
         }
 
+        // TEMPORAL: Forzar ordenamiento por número de orden descendente
+        $this->sortBy = 'wo_number';
+        $this->sortDirection = 'desc';
+
         return null;
     }
 
@@ -505,6 +509,10 @@ class OverviewIndex extends Component
 
     public function sortByColumn(string $column): void
     {
+        // TEMPORAL: Deshabilitado temporalmente a petición del usuario.
+        // Siempre se mantendrá el orden por número de orden descendente (mayor a menor).
+        // La lógica original se conserva intacta a continuación para retomarla después:
+        /*
         if ($this->sortBy === $column) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
@@ -513,6 +521,7 @@ class OverviewIndex extends Component
         }
         $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
+        */
     }
 
     public function setTab(string $tab, string $substatus = 'all'): void
@@ -1188,6 +1197,11 @@ class OverviewIndex extends Component
             };
         }
 
+        // TEMPORAL: Siempre ordenado por número de orden (WO #), de la más reciente (mayor número de WO) a la más antigua.
+        // La funcionalidad de ordenamiento dinámico por columnas se preserva comentada abajo para retomarla después.
+        return $query->orderByRaw("CASE WHEN wo_number IS NULL OR wo_number = '' THEN 1 ELSE 0 END, CAST(REPLACE(UPPER(wo_number), 'WO', '') AS INTEGER) desc, id desc");
+
+        /*
         // Sorting
         $allowedColumns = [
             'created_at',
@@ -1215,6 +1229,7 @@ class OverviewIndex extends Component
         }
 
         return $query->orderBy($sortCol, $dir);
+        */
     }
 
     public function render()
