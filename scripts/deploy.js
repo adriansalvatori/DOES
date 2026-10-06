@@ -368,7 +368,7 @@ try {
     }
 
     // B. Enlace simbólico de storage
-    runRemoteCommand(`${REMOTE_PHP} artisan storage:link`, 'Verificando enlace simbólico storage:link');
+    runRemoteCommand(`${REMOTE_PHP} artisan storage:link || true`, 'Verificando enlace simbólico storage:link');
 
     // C. Limpiar y optimizar cachés de Laravel
     runRemoteCommand(`${REMOTE_PHP} artisan optimize:clear`, 'Limpiando cachés de Laravel');
