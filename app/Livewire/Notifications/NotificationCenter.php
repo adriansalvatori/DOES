@@ -121,27 +121,48 @@ class NotificationCenter extends Component
         if ($newIncoming->isNotEmpty()) {
             foreach ($newIncoming->take(3) as $n) {
                 $label = $n->data['label'] ?? match ($n->data['event_type'] ?? '') {
-                    'new_order' => 'Nueva Orden',
-                    'order_overdue' => 'Atrasada',
-                    'status_changed' => 'Cambio de Estado',
-                    'order_blocked' => 'Bloqueada',
-                    'order_unblocked' => 'Desbloqueada',
-                    'order_approved_alta' => 'Aprobada',
-                    'new_attachments' => 'Nuevo Archivo',
-                    'new_comment' => 'Nuevo Comentario',
-                    'order_due_today' => 'Vence Hoy',
-                    'order_urgent' => 'Urgente',
-                    default => 'Notificación',
+                    'new_order' => 'New Order',
+                    'order_overdue' => 'Overdue',
+                    'status_changed' => 'Status',
+                    'order_blocked' => 'Blocked',
+                    'order_unblocked' => 'Unblocked',
+                    'order_approved_alta' => 'Approved',
+                    'new_attachments' => 'New File',
+                    'new_comment' => 'New Comment',
+                    'order_due_today' => 'Due Today',
+                    'order_urgent' => 'Urgent',
+                    'welcome_email_sent', 'overdue_email_sent' => 'Email Sent',
+                    default => 'Notification',
                 };
 
-                $company = $n->data['company_name'] ?? config('app.name', 'Kudos DOES');
-                $task = $n->data['task_name'] ?? ($n->data['detail_text'] ?? 'Tienes una nueva actualización');
+                $companyName = $n->data['company_name'] ?? null;
+                $taskName = $n->data['task_name'] ?? null;
+                $detailText = $n->data['detail_text'] ?? null;
+                $actorName = $n->data['actor_name'] ?? null;
+
+                if ($companyName && $taskName && trim(strtolower($companyName)) === trim(strtolower($taskName))) {
+                    $headlineParts = [$taskName];
+                } else {
+                    $headlineParts = array_filter([$companyName, $taskName]);
+                }
+                $headline = implode(' • ', $headlineParts) ?: config('app.name', 'Kudos DOES');
+
+                $notifTitle = "[{$label}] {$headline}";
+
+                $bodyParts = array_filter([
+                    $detailText,
+                    $actorName ? "por {$actorName}" : null,
+                ]);
+                $notifBody = implode(' • ', $bodyParts);
+                if (empty($notifBody)) {
+                    $notifBody = $taskName ?: $headline;
+                }
 
                 $this->dispatch(
                     'desktop-notification',
                     id: (string) $n->id,
-                    title: "{$company} • {$label}",
-                    body: $task,
+                    title: $notifTitle,
+                    body: $notifBody,
                     orderId: $n->data['order_id'] ?? null,
                     isUrgent: ! empty($n->data['is_urgent']) || in_array($n->data['event_type'] ?? '', ['order_overdue', 'order_urgent'], true),
                 );
