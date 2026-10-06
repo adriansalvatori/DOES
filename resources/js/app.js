@@ -515,9 +515,33 @@ window.KudosNotifier = {
         }
     },
 
+    audioElement: null,
+
     playChime() {
         if (!this.getSoundEnabled()) return;
 
+        // 1. Try playing custom audio file (/sounds/notification.mp3) if available
+        try {
+            if (!this.audioElement) {
+                this.audioElement = new Audio('/sounds/notification.mp3');
+            }
+            this.audioElement.currentTime = 0;
+            const playPromise = this.audioElement.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(() => {
+                    // If custom audio file fails to load or 404s, fall back to synthesized chime
+                    this.playSynthesizedChime();
+                });
+                return;
+            }
+        } catch (e) {
+            // Fall back to synthesized chime
+        }
+
+        this.playSynthesizedChime();
+    },
+
+    playSynthesizedChime() {
         try {
             const AudioContextClass = window.AudioContext || window.webkitAudioContext;
             if (!AudioContextClass) return;
