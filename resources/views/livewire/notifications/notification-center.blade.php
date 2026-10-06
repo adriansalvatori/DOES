@@ -1,4 +1,4 @@
-<div class="relative" x-data="{ open: false }" @click.outside="open = false" wire:poll.visible.60s>
+<div class="relative" x-data="{ open: false }" @click.outside="open = false" wire:poll.30s>
     
     <!-- Bell Icon Trigger Button -->
     <button 
@@ -227,6 +227,116 @@
                     <p class="text-xs">{{ __('No tienes notificaciones pendientes') }}</p>
                 </div>
             @endforelse
+        </div>
+
+        <!-- Footer: System Notification & Sound Controls -->
+        <div 
+            x-data="{
+                permission: (window.KudosNotifier ? window.KudosNotifier.getPermissionState() : ('Notification' in window ? Notification.permission : 'unsupported')),
+                soundEnabled: (window.KudosNotifier ? window.KudosNotifier.getSoundEnabled() : (localStorage.getItem('kudos_sound_enabled') !== 'false')),
+                init() {
+                    window.addEventListener('kudos-notification-permission-changed', (e) => {
+                        this.permission = e.detail.permission;
+                    });
+                    window.addEventListener('kudos-sound-preference-changed', (e) => {
+                        this.soundEnabled = e.detail.enabled;
+                    });
+                },
+                requestPerm() {
+                    if (window.KudosNotifier) {
+                        window.KudosNotifier.requestPermission().then(p => { this.permission = p; });
+                    } else if ('Notification' in window) {
+                        Notification.requestPermission().then(p => { this.permission = p; });
+                    }
+                },
+                toggleSound() {
+                    this.soundEnabled = !this.soundEnabled;
+                    if (window.KudosNotifier) {
+                        window.KudosNotifier.setSoundEnabled(this.soundEnabled);
+                    }
+                },
+                testNotification() {
+                    if (window.KudosNotifier) {
+                        window.KudosNotifier.playChime();
+                        if (this.permission === 'granted') {
+                            window.KudosNotifier.showSystemNotification({
+                                title: '🔔 Kudos DOES (Prueba)',
+                                body: '{{ __('¡El sonido y las notificaciones del sistema están activos!') }}',
+                            });
+                        }
+                    }
+                }
+            }"
+            class="px-3.5 py-2 bg-stone-50/90 border-t border-stone-100 flex items-center justify-between text-[11px] text-zinc-500">
+            
+            <template x-if="permission === 'default'">
+                <button 
+                    @click="requestPerm()" 
+                    type="button" 
+                    class="w-full flex items-center justify-center gap-1.5 py-1 px-2.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-800 font-medium transition cursor-pointer text-[11px]">
+                    <x-lucide-bell-ring class="w-3.5 h-3.5 text-amber-500" />
+                    <span>{{ __('Activar avisos de escritorio y sonido') }}</span>
+                </button>
+            </template>
+
+            <template x-if="permission === 'granted'">
+                <div class="w-full flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 text-emerald-700">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
+                        <span class="font-medium text-[10px] text-zinc-700">{{ __('Avisos activos') }}</span>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <button 
+                            @click="toggleSound()" 
+                            type="button" 
+                            class="p-1 rounded hover:bg-stone-200/70 text-zinc-600 transition cursor-pointer"
+                            :title="soundEnabled ? '{{ __('Silenciar sonido') }}' : '{{ __('Activar sonido') }}'">
+                            <span x-show="soundEnabled">
+                                <x-lucide-volume-2 class="w-3.5 h-3.5 text-zinc-600" />
+                            </span>
+                            <span x-show="!soundEnabled" x-cloak>
+                                <x-lucide-volume-x class="w-3.5 h-3.5 text-zinc-400" />
+                            </span>
+                        </button>
+
+                        <button 
+                            @click="testNotification()" 
+                            type="button" 
+                            class="px-2 py-0.5 rounded text-[10px] font-medium bg-stone-200/80 hover:bg-stone-200 text-zinc-700 transition cursor-pointer"
+                            title="{{ __('Reproducir sonido de prueba y mostrar notificación') }}">
+                            {{ __('Probar') }}
+                        </button>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="permission === 'denied'">
+                <div class="w-full flex items-center justify-between gap-1 text-[10px] text-amber-800">
+                    <div class="flex items-center gap-1 min-w-0">
+                        <x-lucide-bell-off class="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span class="truncate">{{ __('Avisos bloqueados en navegador') }}</span>
+                    </div>
+                    <button 
+                        @click="testNotification()" 
+                        type="button" 
+                        class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-200 hover:bg-stone-300 text-zinc-700 transition cursor-pointer shrink-0">
+                        {{ __('Probar sonido') }}
+                    </button>
+                </div>
+            </template>
+
+            <template x-if="permission === 'unsupported'">
+                <div class="w-full flex items-center justify-between gap-1 text-[10px] text-zinc-400">
+                    <span>{{ __('Avisos no soportados') }}</span>
+                    <button 
+                        @click="testNotification()" 
+                        type="button" 
+                        class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-200 hover:bg-stone-300 text-zinc-700 transition cursor-pointer shrink-0">
+                        {{ __('Probar sonido') }}
+                    </button>
+                </div>
+            </template>
         </div>
 
     </div>

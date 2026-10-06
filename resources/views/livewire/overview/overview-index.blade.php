@@ -1,3 +1,131 @@
+@php
+    $allGlobals = $substatuses->filter(function ($item) {
+        $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+        if (in_array($name, ['OVERDUE', 'ALMOST OVERDUE'], true)) {
+            return false;
+        }
+        if ($item instanceof \App\Models\Substatus) {
+            return (bool) $item->is_global;
+        }
+        $enum = \App\Enums\Substatus::tryFrom($name);
+        return $enum ? $enum->isGlobal() : false;
+    });
+
+    $coreEnums = collect(\App\Enums\Substatus::cases())->filter(fn($e) => $e->isGlobal() && !in_array($e->value, ['OVERDUE', 'ALMOST OVERDUE'], true));
+    foreach ($coreEnums as $coreEnum) {
+        $exists = $allGlobals->contains(function ($item) use ($coreEnum) {
+            $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+            return $name === $coreEnum->value;
+        });
+        if (!$exists) {
+            $allGlobals->push($coreEnum);
+        }
+    }
+
+    $preferredOrder = ['URGENTE' => 1, 'TICKET' => 2, 'POTENTIAL CUSTOMER' => 3, 'EXTERNO' => 4];
+    $globalFlagsList = $allGlobals->sortBy(function ($item) use ($preferredOrder) {
+        $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
+        $modelOrder = ($item instanceof \App\Models\Substatus && $item->sort_order) ? $item->sort_order : 999;
+        return $preferredOrder[$name] ?? $modelOrder;
+    })->values();
+
+    $globalFlagsData = [];
+    foreach ($globalFlagsList as $flagItem) {
+        $flagValue = $flagItem instanceof \App\Models\Substatus ? $flagItem->name : ($flagItem instanceof \App\Enums\Substatus ? $flagItem->value : (string) $flagItem);
+        $flagModel = ($flagItem instanceof \App\Models\Substatus) ? $flagItem : (($substatuses->first() instanceof \App\Models\Substatus) ? $substatuses->firstWhere('name', $flagValue) : null);
+        $flagEnum = \App\Enums\Substatus::tryFrom($flagValue);
+        $flagLabel = $flagEnum?->label() ?? ($flagModel?->name ?? $flagValue);
+
+        $flagVars = match($flagValue) {
+            'URGENTE', \App\Enums\Substatus::URGENTE->value => [
+                'bg' => 'var(--cc-urgent-bg-light)',
+                'text' => 'var(--cc-urgent-text-dark)',
+                'border' => 'var(--cc-urgent-border)',
+                'solid' => 'var(--cc-urgent-solid)',
+            ],
+            'TICKET', \App\Enums\Substatus::TICKET->value => [
+                'bg' => 'var(--cc-camila-bg-light)',
+                'text' => 'var(--cc-camila-text-dark)',
+                'border' => 'var(--cc-camila-border)',
+                'solid' => 'var(--cc-camila-solid)',
+            ],
+            'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
+                'bg' => 'var(--cc-todo-today-bg-light)',
+                'text' => 'var(--cc-todo-today-text-dark)',
+                'border' => 'var(--cc-todo-today-border)',
+                'solid' => 'var(--cc-todo-today-solid)',
+            ],
+            'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
+                'bg' => 'var(--cc-designer-external-bg-light)',
+                'text' => 'var(--cc-designer-external-text-dark)',
+                'border' => 'var(--cc-designer-external-border)',
+                'solid' => 'var(--cc-designer-external-solid)',
+            ],
+            default => null,
+        };
+
+        if ($flagVars) {
+            $flagBg = $flagVars['bg'];
+            $flagText = $flagVars['text'];
+            $flagBorder = $flagVars['border'];
+            $flagSolid = $flagVars['solid'];
+        } else {
+            $hex = $flagModel?->color ?: ($flagModel?->bg_color ?: '#6B7280');
+            $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
+            $flagBg = $pal['bg_color'];
+            $flagText = $pal['text_color'];
+            $flagBorder = $pal['border_color'];
+            $flagSolid = $pal['color'];
+        }
+
+        $globalFlagsData[$flagValue] = [
+            'name' => $flagValue,
+            'label' => $flagLabel,
+            'short' => \Illuminate\Support\Str::limit($flagLabel, 3, ''),
+            'bg' => $flagBg,
+            'text' => $flagText,
+            'border' => $flagBorder,
+            'solid' => $flagSolid,
+        ];
+    }
+
+    $substatusStyleMap = [];
+    foreach ($substatuses as $sItem) {
+        $sName = $sItem instanceof \App\Models\Substatus ? $sItem->name : ($sItem instanceof \App\Enums\Substatus ? $sItem->value : (string) $sItem);
+        $sEnum = \App\Enums\Substatus::tryFrom($sName);
+        if ($sItem instanceof \App\Models\Substatus && $sItem->bg_color && $sItem->text_color) {
+            $borderColor = $sItem->border_color ?: $sItem->bg_color;
+            $substatusStyleMap[$sName] = "background-color: {$sItem->bg_color}; color: {$sItem->text_color}; border-color: {$borderColor};";
+        } elseif ($sEnum) {
+            $substatusStyleMap[$sName] = $sEnum->getInlineBadgeStyle();
+        }
+    }
+    foreach (\App\Enums\Substatus::cases() as $case) {
+        if (!isset($substatusStyleMap[$case->value])) {
+            $substatusStyleMap[$case->value] = $case->getInlineBadgeStyle();
+        }
+    }
+
+    $processFlatList = [];
+    foreach ($groupedProcessSubstatuses as $g) {
+        foreach ($g['items'] as $subItem) {
+            $val = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
+            $enum = \App\Enums\Substatus::tryFrom($val);
+            if ($enum && $enum->isGlobal()) continue;
+            if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) continue;
+            $lbl = $enum?->label() ?? $val;
+            $sty = ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color)
+                ? "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};"
+                : ($enum?->customBadgeStyle() ?? '');
+            $processFlatList[] = [
+                'value' => $val,
+                'label' => $lbl,
+                'style' => $sty,
+            ];
+        }
+    }
+@endphp
+
 <div 
     x-data="{
         ordersState: {{ \Illuminate\Support\Js::from($ordersState ?? []) }},
@@ -77,7 +205,10 @@
             this.lastSyncTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             this.startPolling();
             document.addEventListener('visibilitychange', () => {
-                const isModalOpen = Boolean(window.Alpine && Alpine.store && Alpine.store('installationModal') && Alpine.store('installationModal').isOpen);
+                const isModalOpen = Boolean(window.Alpine && Alpine.store && (
+                    (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
+                    (Alpine.store('substatusModal') && Alpine.store('substatusModal').isOpen)
+                ));
                 if (!document.hidden && !isModalOpen) {
                     this.syncState();
                 }
@@ -105,7 +236,10 @@
         startPolling() {
             if (this.pollTimer) clearInterval(this.pollTimer);
             this.pollTimer = setInterval(() => {
-                const isModalOpen = Boolean(window.Alpine && Alpine.store && Alpine.store('installationModal') && Alpine.store('installationModal').isOpen);
+                const isModalOpen = Boolean(window.Alpine && Alpine.store && (
+                    (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
+                    (Alpine.store('substatusModal') && Alpine.store('substatusModal').isOpen)
+                ));
                 if (!document.hidden && !$wire.editingOrderId && !this.activeMenu && !isModalOpen) {
                     this.syncState();
                 }
@@ -466,6 +600,51 @@
             'text' => $t->text_color,
             'border' => $t->border_color ?: $t->bg_color,
         ])) }},
+        substatusesMap: {{ \Illuminate\Support\Js::from($substatusStyleMap) }},
+        flagsMap: {{ \Illuminate\Support\Js::from($globalFlagsData) }},
+        getOrderSubstatus(orderId, fallbackSubstatus = null) {
+            const st = this.ordersState[orderId];
+            if (st && st.substatus !== undefined) return st.substatus;
+            return fallbackSubstatus;
+        },
+        getOrderSubstatusLabel(orderId, fallbackLabel = '—') {
+            const st = this.ordersState[orderId];
+            if (st && st.substatus_label !== undefined) return st.substatus_label;
+            return fallbackLabel;
+        },
+        getOrderSubstatusStyle(orderId, fallbackStyle = '') {
+            const st = this.ordersState[orderId];
+            if (st && st.substatus_style !== undefined && st.substatus_style !== null) {
+                return st.substatus_style;
+            }
+            if (st && st.substatus && this.substatusesMap[st.substatus]) {
+                return this.substatusesMap[st.substatus];
+            }
+            return fallbackStyle;
+        },
+        getOrderFlags(orderId, fallbackFlags = []) {
+            const st = this.ordersState[orderId];
+            if (st && st.flags !== undefined) {
+                return Array.isArray(st.flags) ? st.flags : [];
+            }
+            return Array.isArray(fallbackFlags) ? fallbackFlags : [];
+        },
+        getFlagStyle(flagName) {
+            if (!flagName) return '';
+            const f = this.flagsMap[flagName] || this.flagsMap[String(flagName).toUpperCase()];
+            if (f && f.bg) {
+                return `background-color: ${f.bg}; color: ${f.text}; border: 1px solid ${f.border};`;
+            }
+            return 'background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border: 1px solid var(--cc-camila-border);';
+        },
+        getFlagLabel(flagName) {
+            const f = this.flagsMap[flagName] || this.flagsMap[String(flagName).toUpperCase()];
+            return (f && f.label) ? f.label : flagName;
+        },
+        getFlagShort(flagName) {
+            const f = this.flagsMap[flagName] || this.flagsMap[String(flagName).toUpperCase()];
+            return (f && f.short) ? f.short : String(flagName).slice(0, 3);
+        },
         getOrderInstallationTypes(orderId, fallbackTypes = []) {
             const st = this.ordersState[orderId];
             if (st && st.installation_types !== undefined) {
@@ -644,6 +823,13 @@
     @scroll.window.passive="if (activeMenu) updateMenuPosition()"
     @resize.window.passive="if (activeMenu) updateMenuPosition()"
     @order-installation-changed.window="if (ordersState[$event.detail.orderId]) { ordersState[$event.detail.orderId].installation_types = $event.detail.types; ordersState[$event.detail.orderId].installation_type = $event.detail.types.length > 0 ? $event.detail.types[0] : null; }"
+    @order-substatus-changed.window="
+        if (!ordersState[$event.detail.orderId]) ordersState[$event.detail.orderId] = {};
+        if ($event.detail.substatus !== undefined) ordersState[$event.detail.orderId].substatus = $event.detail.substatus;
+        if ($event.detail.substatusLabel !== undefined) ordersState[$event.detail.orderId].substatus_label = $event.detail.substatusLabel;
+        if ($event.detail.substatusStyle !== undefined) ordersState[$event.detail.orderId].substatus_style = $event.detail.substatusStyle;
+        if ($event.detail.flags !== undefined) ordersState[$event.detail.orderId].flags = [...$event.detail.flags];
+    "
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
     <!-- Highlighted Overview Filters Section -->
@@ -1738,61 +1924,38 @@
                                 };
                             @endphp
                             <td 
-                                :style="ordersState[{{ $order->id }}]?.substatus_style !== undefined ? ordersState[{{ $order->id }}].substatus_style : '{{ $subInlineStyle }}'"
+                                :style="getOrderSubstatusStyle({{ $order->id }}, '{{ addslashes($subInlineStyle) }}')"
                                 @if(!empty($subInlineStyle)) style="{{ $subInlineStyle }}" @endif
                                 class="py-1 px-1.5 truncate transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
                                 <button 
                                     type="button"
-                                    data-popover-trigger="substatus"
-                                    @click.stop="openMenu('substatus', {{ $order->id }}, $el, { substatus: {{ \Illuminate\Support\Js::from($subVal ?? '') }}, flags: {{ \Illuminate\Support\Js::from($order->flags ?? []) }} })"
+                                    @click.stop="Alpine.store('substatusModal').open({ 
+                                        orderId: {{ $order->id }}, 
+                                        wo: '{{ addslashes($order->wo_number ?? '') }}', 
+                                        company: '{{ addslashes($order->company_name ?? '') }}', 
+                                        substatus: getOrderSubstatus({{ $order->id }}, '{{ addslashes($subVal ?? '') }}'),
+                                        substatusLabel: getOrderSubstatusLabel({{ $order->id }}, '{{ addslashes($subLabel) }}'),
+                                        substatusStyle: getOrderSubstatusStyle({{ $order->id }}, '{{ addslashes($subInlineStyle) }}'),
+                                        flags: getOrderFlags({{ $order->id }}, {{ \Illuminate\Support\Js::from($order->flags ?? []) }})
+                                    })"
                                     class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
-                                    title="Clic para cambiar subestatus / banderas: {{ $subLabel }}">
+                                    title="{{ __('Subestatus y Banderas') }}: {{ $subLabel }} ({{ __('Clic para cambiar') }})">
                                     <div class="flex items-center gap-0.5 overflow-hidden truncate">
-                                        <span class="truncate font-bold text-[10px] block" x-text="ordersState[{{ $order->id }}]?.substatus_label || '{{ addslashes($subLabel) }}'">{{ $subLabel }}</span>
+                                        <span class="truncate font-bold text-[10px] block" x-text="getOrderSubstatusLabel({{ $order->id }}, '{{ addslashes($subLabel) }}')">{{ $subLabel }}</span>
                                         @if($order->isOverdue())
                                             <span class="px-0.5 py-0.2 rounded text-[8px] font-extrabold bg-red-600 text-white uppercase shrink-0">!</span>
                                         @elseif($order->isDueToday())
                                             <span class="px-0.5 py-0.2 rounded text-[8px] font-bold bg-amber-500 text-amber-950 uppercase shrink-0">PV</span>
                                         @endif
-                                        @if(!empty($order->flags))
-                                            @foreach($order->flags as $fName)
-                                                @php
-                                                    $fEnum = \App\Enums\Substatus::tryFrom($fName);
-                                                    $fLabel = $fEnum?->label() ?? $fName;
-                                                    $fVars = match($fName) {
-                                                        'URGENTE', \App\Enums\Substatus::URGENTE->value => [
-                                                            'bg' => 'var(--cc-urgent-bg-light)',
-                                                            'text' => 'var(--cc-urgent-text-dark)',
-                                                            'border' => 'var(--cc-urgent-border)',
-                                                        ],
-                                                        'TICKET', \App\Enums\Substatus::TICKET->value => [
-                                                            'bg' => 'var(--cc-camila-bg-light)',
-                                                            'text' => 'var(--cc-camila-text-dark)',
-                                                            'border' => 'var(--cc-camila-border)',
-                                                        ],
-                                                        'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
-                                                            'bg' => 'var(--cc-todo-today-bg-light)',
-                                                            'text' => 'var(--cc-todo-today-text-dark)',
-                                                            'border' => 'var(--cc-todo-today-border)',
-                                                        ],
-                                                        'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
-                                                            'bg' => 'var(--cc-designer-external-bg-light)',
-                                                            'text' => 'var(--cc-designer-external-text-dark)',
-                                                            'border' => 'var(--cc-designer-external-border)',
-                                                        ],
-                                                        default => null,
-                                                    };
-                                                    $fBadgeStyle = $fVars 
-                                                        ? "background-color: {$fVars['bg']}; color: {$fVars['text']}; border: 1px solid {$fVars['border']};"
-                                                        : ($fEnum ? $fEnum->getInlineBadgeStyle() : 'background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border: 1px solid var(--cc-camila-border);');
-                                                @endphp
-                                                @if($fName !== 'OVERDUE' && $fName !== 'ALMOST OVERDUE')
-                                                    <span class="px-1 py-0.2 rounded text-[8px] font-bold uppercase shrink-0" 
-                                                          style="{{ $fBadgeStyle }}" 
-                                                          title="Flag {{ $fLabel }}">{{ Str::limit($fLabel, 3, '') }}</span>
-                                                @endif
-                                            @endforeach
-                                        @endif
+                                        <template x-for="fName in getOrderFlags({{ $order->id }}, {{ \Illuminate\Support\Js::from($order->flags ?? []) }})" :key="fName">
+                                            <span 
+                                                x-show="fName !== 'OVERDUE' && fName !== 'ALMOST OVERDUE'"
+                                                class="px-1 py-0.2 rounded text-[8px] font-bold uppercase shrink-0" 
+                                                :style="getFlagStyle(fName)" 
+                                                :title="'Flag ' + getFlagLabel(fName)"
+                                                x-text="getFlagShort(fName)">
+                                            </span>
+                                        </template>
                                     </div>
                                     <x-lucide-chevron-down class="w-2.5 h-2.5 opacity-60 shrink-0" />
                                 </button>
@@ -1966,240 +2129,6 @@
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition cursor-pointer">
                     Sin revisión (Blanco / EST)
                 </button>
-            </div>
-        </template>
-
-
-
-        <!-- 4. Substatus & Global Flags Popover Content -->
-        <template x-if="activeMenu === 'substatus'">
-            <div class="flex flex-col h-full min-h-0 space-y-1.5">
-                <!-- Search Input -->
-                <div class="px-1 pt-0.5 shrink-0">
-                    <div class="relative flex items-center">
-                        <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
-                        <input 
-                            data-menu-search
-                            data-menu-item
-                            @mouseenter="updateActiveFromHover($el)"
-                            x-model="menuSearch"
-                            @input="onMenuSearchInput()"
-                            type="text" 
-                            placeholder="{{ __('Buscar subestatus o flag...') }}" 
-                            class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
-                        >
-                        <button 
-                            x-show="menuSearch" 
-                            @click="menuSearch = ''; $el.previousElementSibling.focus()" 
-                            type="button" 
-                            class="absolute right-2 text-stone-400 hover:text-stone-600 text-xs">✕</button>
-                    </div>
-                </div>
-
-                <div @wheel.stop class="space-y-1.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
-                    <!-- Section 1: Global Flags (First) -->
-                    <div 
-                        x-show="!menuSearch"
-                        class="px-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between">
-                        <span>{{ __('Banderas / Flags Globales') }}</span>
-                        <span class="text-[9px] text-stone-400 font-normal lowercase">({{ __('coexistentes') }})</span>
-                    </div>
-
-                    @php
-                        $allGlobals = $substatuses->filter(function ($item) {
-                            $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
-                            if (in_array($name, ['OVERDUE', 'ALMOST OVERDUE'], true)) {
-                                return false;
-                            }
-                            if ($item instanceof \App\Models\Substatus) {
-                                return (bool) $item->is_global;
-                            }
-                            $enum = \App\Enums\Substatus::tryFrom($name);
-                            return $enum ? $enum->isGlobal() : false;
-                        });
-
-                        $coreEnums = collect(\App\Enums\Substatus::cases())->filter(fn($e) => $e->isGlobal() && !in_array($e->value, ['OVERDUE', 'ALMOST OVERDUE'], true));
-                        foreach ($coreEnums as $coreEnum) {
-                            $exists = $allGlobals->contains(function ($item) use ($coreEnum) {
-                                $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
-                                return $name === $coreEnum->value;
-                            });
-                            if (!$exists) {
-                                $allGlobals->push($coreEnum);
-                            }
-                        }
-
-                        $preferredOrder = ['URGENTE' => 1, 'TICKET' => 2, 'POTENTIAL CUSTOMER' => 3, 'EXTERNO' => 4];
-                        $globalFlagsList = $allGlobals->sortBy(function ($item) use ($preferredOrder) {
-                            $name = $item instanceof \App\Models\Substatus ? $item->name : ($item instanceof \App\Enums\Substatus ? $item->value : (string) $item);
-                            $modelOrder = ($item instanceof \App\Models\Substatus && $item->sort_order) ? $item->sort_order : 999;
-                            return $preferredOrder[$name] ?? $modelOrder;
-                        })->values();
-                    @endphp
-                    @foreach($globalFlagsList as $flagItem)
-                        @php
-                            $flagValue = $flagItem instanceof \App\Models\Substatus ? $flagItem->name : ($flagItem instanceof \App\Enums\Substatus ? $flagItem->value : (string) $flagItem);
-                            $flagModel = ($flagItem instanceof \App\Models\Substatus) ? $flagItem : (($substatuses->first() instanceof \App\Models\Substatus) ? $substatuses->firstWhere('name', $flagValue) : null);
-                            $flagEnum = \App\Enums\Substatus::tryFrom($flagValue);
-                            $flagLabel = $flagEnum?->label() ?? ($flagModel?->name ?? $flagValue);
-
-                            // Use light pastel CSS color variables for global flags
-                            $flagVars = match($flagValue) {
-                                'URGENTE', \App\Enums\Substatus::URGENTE->value => [
-                                    'bg' => 'var(--cc-urgent-bg-light)',
-                                    'text' => 'var(--cc-urgent-text-dark)',
-                                    'border' => 'var(--cc-urgent-border)',
-                                    'solid' => 'var(--cc-urgent-solid)',
-                                ],
-                                'TICKET', \App\Enums\Substatus::TICKET->value => [
-                                    'bg' => 'var(--cc-camila-bg-light)',
-                                    'text' => 'var(--cc-camila-text-dark)',
-                                    'border' => 'var(--cc-camila-border)',
-                                    'solid' => 'var(--cc-camila-solid)',
-                                ],
-                                'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => [
-                                    'bg' => 'var(--cc-todo-today-bg-light)',
-                                    'text' => 'var(--cc-todo-today-text-dark)',
-                                    'border' => 'var(--cc-todo-today-border)',
-                                    'solid' => 'var(--cc-todo-today-solid)',
-                                ],
-                                'EXTERNO', \App\Enums\Substatus::EXTERNO->value => [
-                                    'bg' => 'var(--cc-designer-external-bg-light)',
-                                    'text' => 'var(--cc-designer-external-text-dark)',
-                                    'border' => 'var(--cc-designer-external-border)',
-                                    'solid' => 'var(--cc-designer-external-solid)',
-                                ],
-                                default => null,
-                            };
-
-                            if ($flagVars) {
-                                $flagBg = $flagVars['bg'];
-                                $flagText = $flagVars['text'];
-                                $flagBorder = $flagVars['border'];
-                                $flagSolid = $flagVars['solid'];
-                            } else {
-                                $hex = $flagModel?->color ?: ($flagModel?->bg_color ?: '#6B7280');
-                                $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
-                                $flagBg = $pal['bg_color'];
-                                $flagText = $pal['text_color'];
-                                $flagBorder = $pal['border_color'];
-                                $flagSolid = $pal['color'];
-                            }
-
-                            $activeStyle = "background-color: {$flagBg}; color: {$flagText}; border-color: {$flagBorder}; font-weight: 700;";
-                        @endphp
-
-                        <button 
-                            type="button"
-                            data-menu-item
-                            @mouseenter="updateActiveFromHover($el)"
-                            x-show="matchesMenuSearch('{{ addslashes($flagLabel) }}') || matchesMenuSearch('{{ addslashes($flagValue) }}')"
-                            @click="toggleGlobalFlag('{{ addslashes($flagValue) }}')"
-                            :style="targetFlags.includes('{{ addslashes($flagValue) }}') ? '{{ $activeStyle }}' : 'border-color: {{ $flagBorder }};'"
-                            :class="targetFlags.includes('{{ addslashes($flagValue) }}') 
-                                ? 'shadow-2xs' 
-                                : 'bg-white hover:bg-stone-50 text-stone-700 font-semibold'"
-                            class="w-full text-left px-2.5 py-1.5 rounded-md text-xs transition flex items-center justify-between border cursor-pointer">
-                            <div class="flex items-center gap-2 truncate">
-                                <span class="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs" 
-                                      style="background-color: {{ $flagSolid }};"></span>
-                                <span class="truncate">{{ $flagLabel }}</span>
-                            </div>
-                            <div class="shrink-0 ml-1.5 flex items-center">
-                                <template x-if="targetFlags.includes('{{ addslashes($flagValue) }}')">
-                                    <x-lucide-check class="w-3.5 h-3.5 stroke-[3]" />
-                                </template>
-                                <template x-if="!targetFlags.includes('{{ addslashes($flagValue) }}')">
-                                    <div class="w-3.5 h-3.5 rounded border border-stone-300"></div>
-                                </template>
-                            </div>
-                        </button>
-                    @endforeach
-
-                    <!-- Section 2: Process Classification -->
-                    <div 
-                        x-show="!menuSearch"
-                        class="px-2 pt-2 py-0.5 text-[10px] font-extrabold text-stone-400 uppercase tracking-wider border-t border-stone-100 mt-2">
-                        {{ __('Clasificación de Proceso (1 Selección)') }}
-                    </div>
-                    
-                    <button 
-                        type="button"
-                        data-menu-item
-                        @mouseenter="updateActiveFromHover($el)"
-                        x-show="matchesMenuSearch('sin subestatus') || matchesMenuSearch('vacio')"
-                        @click="setSubstatus(null, '—', '')"
-                        class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
-                        <span>-- {{ __('Sin Subestatus') }} --</span>
-                        <template x-if="!targetSubstatus">
-                            <x-lucide-check class="w-3.5 h-3.5 text-stone-600 stroke-[3]" />
-                        </template>
-                    </button>
-
-                    @foreach($groupedProcessSubstatuses as $groupKey => $group)
-                        @php
-                            $searchTerms = collect($group['items'])->flatMap(function ($subItem) {
-                                $val = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
-                                $enum = \App\Enums\Substatus::tryFrom($val);
-                                $lbl = $enum?->label() ?? $val;
-                                return [$val, $lbl];
-                            })->push($group['title'])->values();
-                        @endphp
-                        <div x-show="groupHasMatches({{ \Illuminate\Support\Js::from($searchTerms->all()) }})" class="pt-2 first:pt-1 space-y-1">
-                            <div class="flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-stone-400 border-t border-stone-100 first:border-0 pt-1">
-                                <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $group['dot'] }}"></span>
-                                <span class="truncate">{{ $group['title'] }}</span>
-                            </div>
-
-                            @foreach($group['items'] as $subItem)
-                                @php
-                                    $itemValue = $subItem instanceof \App\Models\Substatus ? $subItem->name : $subItem->value;
-                                    $itemEnum = \App\Enums\Substatus::tryFrom($itemValue);
-                                    if ($itemEnum && $itemEnum->isGlobal()) {
-                                        continue;
-                                    }
-                                    if ($subItem instanceof \App\Models\Substatus && $subItem->is_global) {
-                                        continue;
-                                    }
-                                    $itemLabel = $itemEnum?->label() ?? $itemValue;
-                                    
-                                    if ($subItem instanceof \App\Models\Substatus && $subItem->bg_color && $subItem->text_color) {
-                                        $itemStyle = "background-color: {$subItem->bg_color}; color: {$subItem->text_color}; border-color: {$subItem->border_color};";
-                                    } else {
-                                        $itemStyle = $itemEnum?->customBadgeStyle() ?? '';
-                                    }
-
-                                    $itemFallbackClass = match($itemValue) {
-                                        'BLOQUEADA' => 'bg-amber-500 text-amber-950 font-extrabold',
-                                        'CUSTOMER SERVICE REQUIRED' => 'bg-amber-400 text-amber-950 font-extrabold',
-                                        'CAMBIOS CAMILA' => 'bg-purple-600 text-white font-extrabold',
-                                        'CAMBIOS CLIENTE' => 'bg-sky-500 text-white font-extrabold',
-                                        'WAITING FOR CLIENT' => 'bg-sky-400 text-sky-950 font-extrabold',
-                                        'PAUSADO' => 'bg-stone-400 text-stone-950 font-bold',
-                                        'FALTA APROBACIÓN DE ESTIMADO' => 'bg-orange-500 text-white font-extrabold',
-                                        'PONER EN ALTA', 'ENVIADO EN ALTA' => 'bg-pink-500 text-white font-extrabold',
-                                        'AJUSTES DE PRODUCCIÓN' => 'bg-fuchsia-600 text-white font-extrabold',
-                                        default => 'bg-stone-100 text-stone-800 border-stone-200 font-semibold',
-                                    };
-                                @endphp
-                                
-                                <button 
-                                    type="button"
-                                    data-menu-item
-                                    @mouseenter="updateActiveFromHover($el)"
-                                    x-show="matchesMenuSearch('{{ addslashes($itemLabel) }}') || matchesMenuSearch('{{ addslashes($itemValue) }}') || matchesMenuSearch('{{ addslashes($group['title']) }}')"
-                                    @click="setSubstatus('{{ addslashes($itemValue) }}', '{{ addslashes($itemLabel) }}', '{{ addslashes($itemStyle) }}')"
-                                    @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
-                                    class="w-full text-left px-2.5 py-1 rounded-md text-xs font-bold transition flex items-center justify-between border cursor-pointer {{ empty($itemStyle) ? $itemFallbackClass : '' }} hover:opacity-90">
-                                    <span class="truncate">{{ $itemLabel }}</span>
-                                    <template x-if="targetSubstatus === '{{ addslashes($itemValue) }}'">
-                                        <x-lucide-check class="w-3.5 h-3.5 shrink-0 ml-1 stroke-[3]" />
-                                    </template>
-                                </button>
-                            @endforeach
-                        </div>
-                    @endforeach
-                </div>
             </div>
         </template>
     </div>

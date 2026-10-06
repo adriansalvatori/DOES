@@ -10,6 +10,20 @@ class NotificationCenter extends Component
 {
     public bool $open = false;
 
+    public array $knownNotificationIds = [];
+
+    public function mount(): void
+    {
+        $user = Auth::user();
+        if ($user) {
+            $this->knownNotificationIds = $user->notifications()
+                ->take(30)
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+        }
+    }
+
     public function markAsRead(string $id)
     {
         $user = Auth::user();
@@ -98,6 +112,47 @@ class NotificationCenter extends Component
         })->take(20);
 
         $unreadCount = $allNotifications->whereNull('read_at')->count();
+
+        // Detect new incoming unread notifications not in knownNotificationIds
+        $newIncoming = $allNotifications->filter(function ($n) {
+            return $n->unread() && ! in_array((string) $n->id, $this->knownNotificationIds, true);
+        });
+
+        if ($newIncoming->isNotEmpty()) {
+            foreach ($newIncoming->take(3) as $n) {
+                $label = $n->data['label'] ?? match ($n->data['event_type'] ?? '') {
+                    'new_order' => 'Nueva Orden',
+                    'order_overdue' => 'Atrasada',
+                    'status_changed' => 'Cambio de Estado',
+                    'order_blocked' => 'Bloqueada',
+                    'order_unblocked' => 'Desbloqueada',
+                    'order_approved_alta' => 'Aprobada',
+                    'new_attachments' => 'Nuevo Archivo',
+                    'new_comment' => 'Nuevo Comentario',
+                    'order_due_today' => 'Vence Hoy',
+                    'order_urgent' => 'Urgente',
+                    default => 'Notificación',
+                };
+
+                $company = $n->data['company_name'] ?? config('app.name', 'Kudos DOES');
+                $task = $n->data['task_name'] ?? ($n->data['detail_text'] ?? 'Tienes una nueva actualización');
+
+                $this->dispatch(
+                    'desktop-notification',
+                    id: (string) $n->id,
+                    title: "{$company} • {$label}",
+                    body: $task,
+                    orderId: $n->data['order_id'] ?? null,
+                    isUrgent: ! empty($n->data['is_urgent']) || in_array($n->data['event_type'] ?? '', ['order_overdue', 'order_urgent'], true),
+                );
+            }
+
+            $newIds = $newIncoming->pluck('id')->map(fn ($id) => (string) $id)->all();
+            $this->knownNotificationIds = array_slice(
+                array_values(array_unique(array_merge($this->knownNotificationIds, $newIds))),
+                -50
+            );
+        }
 
         return view('livewire.notifications.notification-center', [
             'notifications' => $sortedNotifications,

@@ -291,4 +291,76 @@ class NotificationCenterTest extends TestCase
             ->assertSee('Status')
             ->assertSee('EMPRESA OTRO • TAREA CESAR');
     }
+
+    public function test_initial_mount_does_not_dispatch_desktop_notification_for_existing_notifications(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $designer = Designer::create([
+            'name' => $designerUser->name,
+            'slug' => 'designer-mount-test',
+            'hex_color' => '#123123',
+            'user_id' => $designerUser->id,
+            'active' => true,
+        ]);
+
+        $this->actingAs($admin);
+
+        Order::create([
+            'company_name' => 'Pre-existing Corp',
+            'task_name' => 'Existing Task',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'designer_id' => $designer->id,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        // On initial mount, no desktop notification event should be dispatched for already existing notifications
+        Livewire::test(NotificationCenter::class)
+            ->assertNotDispatched('desktop-notification');
+    }
+
+    public function test_new_incoming_notification_dispatches_desktop_notification_event(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $designer = Designer::create([
+            'name' => $designerUser->name,
+            'slug' => 'designer-incoming-test',
+            'hex_color' => '#456456',
+            'user_id' => $designerUser->id,
+            'active' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        // Mount component first
+        $component = Livewire::test(NotificationCenter::class)
+            ->assertNotDispatched('desktop-notification');
+
+        // Now simulate a new order being created while the user has the app open
+        $order = Order::create([
+            'company_name' => 'Live Incoming Corp',
+            'task_name' => 'Banner Urgente',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'designer_id' => $designer->id,
+            'in_workspace' => true,
+        ]);
+
+        NotificationDispatcher::dispatch(
+            eventType: 'new_order',
+            label: 'New Order',
+            order: $order,
+            actor: $admin
+        );
+
+        // Component polls / re-renders
+        $component->call('$refresh')
+            ->assertDispatched('desktop-notification', orderId: $order->id);
+
+        // Next poll / re-render does not dispatch again for the same notification
+        $component->call('$refresh')
+            ->assertNotDispatched('desktop-notification');
+    }
 }

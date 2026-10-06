@@ -475,3 +475,154 @@ window.copyWoToClipboard = function(rawWoNumber, event = null) {
     });
 };
 
+// Kudos Design Ops - Browser & Audio Notification Manager
+window.KudosNotifier = {
+    audioCtx: null,
+    seenIds: new Set(),
+
+    getSoundEnabled() {
+        return localStorage.getItem('kudos_sound_enabled') !== 'false';
+    },
+
+    setSoundEnabled(enabled) {
+        localStorage.setItem('kudos_sound_enabled', enabled ? 'true' : 'false');
+        window.dispatchEvent(new CustomEvent('kudos-sound-preference-changed', { detail: { enabled } }));
+    },
+
+    getPermissionState() {
+        if (!('Notification' in window)) return 'unsupported';
+        return Notification.permission; // 'default', 'granted', 'denied'
+    },
+
+    async requestPermission() {
+        if (!('Notification' in window)) {
+            return 'unsupported';
+        }
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                this.playChime();
+                this.showSystemNotification({
+                    title: '🔔 Kudos DOES',
+                    body: '¡Notificaciones del sistema y sonido activados correctamente!',
+                });
+            }
+            window.dispatchEvent(new CustomEvent('kudos-notification-permission-changed', { detail: { permission } }));
+            return permission;
+        } catch (err) {
+            console.error('Error requesting notification permission:', err);
+            return 'denied';
+        }
+    },
+
+    playChime() {
+        if (!this.getSoundEnabled()) return;
+
+        try {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+
+            if (!this.audioCtx) {
+                this.audioCtx = new AudioContextClass();
+            }
+
+            if (this.audioCtx.state === 'suspended') {
+                this.audioCtx.resume();
+            }
+
+            const ctx = this.audioCtx;
+            const now = ctx.currentTime;
+
+            // Tone 1: D5 (587.33 Hz) - Crisp initial ping
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(587.33, now);
+            gain1.gain.setValueAtTime(0.12, now);
+            gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.35);
+
+            // Tone 2: A5 (880 Hz) - Pleasant harmonic finish, slightly delayed
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(880, now + 0.08);
+            gain2.gain.setValueAtTime(0.15, now + 0.08);
+            gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(now + 0.08);
+            osc2.stop(now + 0.55);
+        } catch (e) {
+            console.warn('Could not play notification chime:', e);
+        }
+    },
+
+    showSystemNotification({ id, title, body, orderId, isUrgent }) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') {
+            return;
+        }
+
+        try {
+            const options = {
+                body: body || '',
+                icon: '/favicon-192x192.png',
+                badge: '/favicon-32x32.png',
+                tag: id ? `kudos-${id}` : `kudos-${Date.now()}`,
+                renotify: true,
+                silent: true, // Audio handled by playChime for consistency
+            };
+
+            const notif = new Notification(title || 'Kudos DOES', options);
+
+            notif.onclick = () => {
+                window.focus();
+                if (orderId && window.Livewire) {
+                    window.Livewire.dispatch('open-order-detail', { orderId: orderId });
+                }
+                notif.close();
+            };
+        } catch (e) {
+            console.error('Error creating Notification:', e);
+        }
+    },
+
+    handleIncomingNotification(detail) {
+        if (!detail) return;
+        const id = detail.id ? String(detail.id) : null;
+
+        // Dedup: avoid duplicate alerts within same session / multi-tabs
+        if (id) {
+            if (this.seenIds.has(id)) return;
+            this.seenIds.add(id);
+
+            const lastNotified = localStorage.getItem('kudos_last_notified_id');
+            const lastNotifiedAt = Number(localStorage.getItem('kudos_last_notified_at') || 0);
+            if (lastNotified === id && (Date.now() - lastNotifiedAt < 10000)) {
+                return; // Another tab handled this notification within 10s
+            }
+            localStorage.setItem('kudos_last_notified_id', id);
+            localStorage.setItem('kudos_last_notified_at', String(Date.now()));
+        }
+
+        // 1. Play sound
+        this.playChime();
+
+        // 2. Display OS Notification if permitted
+        if ('Notification' in window && Notification.permission === 'granted') {
+            this.showSystemNotification(detail);
+        }
+    }
+};
+
+// Global event listener for Livewire dispatched 'desktop-notification'
+window.addEventListener('desktop-notification', (event) => {
+    const detail = event.detail?.[0] || event.detail;
+    if (window.KudosNotifier) {
+        window.KudosNotifier.handleIncomingNotification(detail);
+    }
+});
+
