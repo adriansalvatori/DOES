@@ -70,7 +70,7 @@
         <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-stone-100">
             <!-- Search Input -->
             <div class="relative w-full sm:w-80">
-                <x-lucide-search class="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+                <x-lucide-search class="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input 
                     type="text" 
                     wire:model.live.debounce.250ms="search"

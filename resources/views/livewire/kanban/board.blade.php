@@ -42,7 +42,7 @@
         <div class="pt-3 border-t border-[#f0f0ee] flex flex-wrap items-center gap-2 w-full">
             <!-- Search Input with Live Occurrences Dropdown -->
             <div class="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-sm" x-data="{ open: true }" x-dropdown-nav @click.outside="open = false">
-                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5 shrink-0 z-10" />
+                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none shrink-0 z-10" />
                 <input type="text" 
                        id="tour-kanban-search"
                        wire:model.live.debounce.200ms="search" 

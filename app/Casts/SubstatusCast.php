@@ -18,7 +18,9 @@ class SubstatusCast implements CastsAttributes
             return null;
         }
 
-        return Substatus::tryFrom($value) ?? new CustomSubstatus($value);
+        $upperValue = mb_strtoupper((string) $value);
+
+        return Substatus::tryFrom($upperValue) ?? Substatus::tryFrom((string) $value) ?? new CustomSubstatus($upperValue);
     }
 
     /**
@@ -31,9 +33,9 @@ class SubstatusCast implements CastsAttributes
         }
 
         if ($value instanceof Substatus || $value instanceof CustomSubstatus) {
-            return $value->value;
+            return mb_strtoupper($value->value);
         }
 
-        return (string) $value;
+        return mb_strtoupper((string) $value);
     }
 }

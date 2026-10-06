@@ -277,7 +277,7 @@
                                 
                                 <!-- Search Input with Clear Button -->
                                 <div class="relative">
-                                    <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2.5" />
+                                    <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                     <input 
                                         x-ref="searchInput"
                                         x-model="search"

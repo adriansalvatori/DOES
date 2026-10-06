@@ -12,7 +12,7 @@
         <div class="flex items-center gap-2 w-full">
             <!-- Searchbar -->
             <div class="relative flex-1">
-                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
+                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input 
                     id="tour-client-search"
                     type="text" 

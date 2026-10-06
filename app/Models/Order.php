@@ -232,6 +232,14 @@ class Order extends Model
         return InstallationType::getInlineBadgeStyle($this->installation_type);
     }
 
+    protected function installationType(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+            set: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+        );
+    }
+
     public function scopeNewFromTrello(Builder $query): Builder
     {
         return $query->where('is_new_from_trello', true);

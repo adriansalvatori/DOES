@@ -8,7 +8,7 @@
 
         <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
             <div class="relative w-full sm:w-60">
-                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
+                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Buscar tarea o empresa...') }}" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-8 pr-3 py-1 text-xs text-zinc-800 focus:outline-none w-full">
             </div>
 

@@ -45,7 +45,7 @@
     <main class="flex-1 my-5 space-y-4 min-h-0">
         {{-- Search Bar --}}
         <div class="relative">
-            <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" />
+            <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input 
                 type="text" 
                 wire:model.live.debounce.250ms="search" 

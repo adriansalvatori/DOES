@@ -218,13 +218,13 @@ class SyncOverviewExcelData extends Command
             // 5. Installation
             $instVal = $item['inst_val'] ? trim((string) $item['inst_val']) : '';
             if ($instColor === 'FF00FF00' && stripos($instVal, 'KUDOS') !== false) {
-                $updates['installation_type'] = 'Kudos (Entregado)';
+                $updates['installation_type'] = 'KUDOS (ENTREGADO)';
                 $stats['installation_assigned']++;
             } elseif (stripos($instVal, 'KUDOS') !== false) {
-                $updates['installation_type'] = 'Kudos';
+                $updates['installation_type'] = 'KUDOS';
                 $stats['installation_assigned']++;
             } elseif (stripos($instVal, 'ELIMINAR') !== false || $instColor === 'FFFF0000') {
-                $updates['installation_type'] = 'Debe';
+                $updates['installation_type'] = 'DEBE';
                 $stats['installation_assigned']++;
             }
 

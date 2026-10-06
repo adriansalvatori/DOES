@@ -10,7 +10,7 @@
 
         <div class="w-full md:w-80 shrink-0">
             <div class="relative">
-                <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input 
                     wire:model.live.debounce.200ms="search" 
                     type="text" 

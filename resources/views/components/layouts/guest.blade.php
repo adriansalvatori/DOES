@@ -10,7 +10,7 @@
     <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
     <meta name="app-name" content="{{ config('app.name') }}">
     <meta name="theme-color" content="#fbfbfa">
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}?v=3">
+    <x-favicon-inverter />
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

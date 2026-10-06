@@ -35,7 +35,7 @@ enum Substatus: string
 
     public function label(): string
     {
-        return match ($this) {
+        $label = match ($this) {
             self::URGENTE => __('Urgente'),
             self::BLOQUEADA => __('Bloqueada'),
             self::OVERDUE => __('Overdue'),
@@ -65,6 +65,8 @@ enum Substatus: string
             self::CLIENTE_NO_RESPONSIVE => __('Cliente No Responsive'),
             self::EXTERNO => __('Externo'),
         };
+
+        return mb_strtoupper($label);
     }
 
     public function customBadgeStyle(): ?string

@@ -157,7 +157,7 @@ class OverviewTest extends TestCase
 
         $fresh = $order->fresh();
         $this->assertEquals('CS', $fresh->review_status);
-        $this->assertEquals('Kudos', $fresh->installation_type);
+        $this->assertEquals('KUDOS', $fresh->installation_type);
         $this->assertTrue($fresh->hasFlag(Substatus::URGENTE));
         $this->assertTrue((bool) $fresh->overview_checked);
         $this->assertEquals('Revision de medidas requerida', $fresh->production_note);
@@ -317,8 +317,8 @@ class OverviewTest extends TestCase
             ->assertDontSee('🚩')
             ->assertSeeHtmlInOrder([
                 __('Banderas / Flags Globales'),
-                __('Urgente'),
-                __('Ticket'),
+                mb_strtoupper(__('Urgente')),
+                mb_strtoupper(__('Ticket')),
                 __('Clasificación de Proceso (1 Selección)'),
                 __('Sin Subestatus'),
             ]);

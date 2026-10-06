@@ -7,7 +7,7 @@
 
         <div class="flex items-center gap-3">
             <div class="relative w-60 sm:w-64">
-                <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" />
+                <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input 
                     wire:model.live.debounce.250ms="search" 
                     type="text" 

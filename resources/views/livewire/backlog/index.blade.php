@@ -28,7 +28,7 @@
         <div class="pt-3 border-t border-[#f0f0ee] flex flex-wrap items-center justify-between gap-2 w-full">
             <div class="flex flex-wrap items-center gap-2 flex-1 min-w-0">
                 <div class="relative flex-1 min-w-[200px] sm:min-w-[240px] max-w-sm">
-                    <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5 shrink-0" />
+                    <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none shrink-0" />
                     <input type="text" wire:model.live.debounce.300ms="search" placeholder="Buscar en backlog..." class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg pl-8 pr-3 py-1.5 h-8 text-xs text-zinc-800 focus:border-stone-400 focus:outline-none w-full">
                 </div>
 

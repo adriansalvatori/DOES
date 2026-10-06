@@ -13,10 +13,10 @@ class SyncOverviewExcelDataTest extends TestCase
 
     public function test_substatus_enum_contains_new_and_updated_cases(): void
     {
-        $this->assertEquals('Cancelada', Substatus::CANCELADA->label());
+        $this->assertEquals('CANCELADA', Substatus::CANCELADA->label());
         $this->assertEquals(CoreStatus::ARCHIVED, Substatus::CANCELADA->defaultCoreStatus());
 
-        $this->assertEquals('No realizada / Transferida', Substatus::NO_REALIZADA_TRANSFERIDA->label());
+        $this->assertEquals('NO REALIZADA / TRANSFERIDA', Substatus::NO_REALIZADA_TRANSFERIDA->label());
         $this->assertEquals(CoreStatus::ARCHIVED, Substatus::NO_REALIZADA_TRANSFERIDA->defaultCoreStatus());
 
         // Ticket has lavender styling

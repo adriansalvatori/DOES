@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CoreStatus;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -34,6 +35,14 @@ class Substatus extends Model
         'is_system' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+            set: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+        );
+    }
 
     public function scopeForCoreStatus(Builder $query, CoreStatus|string $coreStatus): Builder
     {
@@ -80,10 +89,10 @@ class Substatus extends Model
     {
         $enum = \App\Enums\Substatus::tryFrom($this->name);
         if ($enum) {
-            return $enum->label();
+            return mb_strtoupper($enum->label());
         }
 
-        return $this->name;
+        return mb_strtoupper($this->name);
     }
 
     public function badgeStyle(): string
@@ -200,7 +209,8 @@ class Substatus extends Model
             ];
         }
 
-        $sub = static::where('name', $name)->first();
+        $upperName = mb_strtoupper($name);
+        $sub = static::where('name', $upperName)->orWhere('name', $name)->first();
         if ($sub) {
             return [
                 'inline' => "background-color: {$sub->bg_color}; color: {$sub->text_color}; border-color: {$sub->border_color};",

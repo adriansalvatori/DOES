@@ -12,12 +12,12 @@ class CustomSubstatus implements Stringable
 
     public function __construct(string $value)
     {
-        $this->value = $value;
+        $this->value = mb_strtoupper($value);
     }
 
     public function label(): string
     {
-        return $this->value;
+        return mb_strtoupper($this->value);
     }
 
     public function customBadgeStyle(): ?string

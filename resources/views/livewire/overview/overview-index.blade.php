@@ -80,6 +80,25 @@
                     this.syncState();
                 }
             });
+            window.addEventListener('keydown', (e) => {
+                if (!this.activeMenu) return;
+
+                const isArrowDown = e.key === 'ArrowDown' || e.key === 'Down';
+                const isArrowUp = e.key === 'ArrowUp' || e.key === 'Up';
+                const isEnter = e.key === 'Enter';
+                const isEscape = e.key === 'Escape';
+
+                if (isArrowDown || isArrowUp || isEnter || isEscape) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+
+                    if (isArrowDown) this.navigateMenu(1);
+                    else if (isArrowUp) this.navigateMenu(-1);
+                    else if (isEnter) this.selectActiveMenuItem();
+                    else if (isEscape) this.handleMenuEscape();
+                }
+            }, true);
         },
         startPolling() {
             if (this.pollTimer) clearInterval(this.pollTimer);
@@ -213,6 +232,7 @@
         targetFlags: [],
         menuStyle: '',
         menuSearch: '',
+        menuActiveIndex: 0,
         activeTriggerEl: null,
         matchesMenuSearch(text) {
             if (!this.menuSearch || !this.menuSearch.trim()) return true;
@@ -226,6 +246,101 @@
             const clean = (str) => str.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
             const q = clean(this.menuSearch);
             return items.some(item => clean(item).includes(q));
+        },
+        getVisibleMenuItems() {
+            if (!this.$refs.popoverContainer) return [];
+            const buttons = Array.from(this.$refs.popoverContainer.querySelectorAll('[data-menu-item]'));
+            return buttons.filter(el => {
+                if (!el) return false;
+                return el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0;
+            });
+        },
+        highlightActiveMenuItem() {
+            const items = this.getVisibleMenuItems();
+            if (!items.length) return;
+            if (this.menuActiveIndex < 0 || this.menuActiveIndex >= items.length) {
+                this.menuActiveIndex = 0;
+            }
+            items.forEach((item, idx) => {
+                if (idx === this.menuActiveIndex) {
+                    item.classList.add('menu-item-active');
+                } else {
+                    item.classList.remove('menu-item-active');
+                }
+            });
+        },
+        navigateMenu(direction) {
+            const items = this.getVisibleMenuItems();
+            if (!items.length) return;
+            this.menuActiveIndex = (this.menuActiveIndex + direction + items.length) % items.length;
+            this.highlightActiveMenuItem();
+            const activeEl = items[this.menuActiveIndex];
+            if (activeEl) {
+                const container = activeEl.closest('.overflow-y-auto');
+                if (container) {
+                    const elTop = activeEl.offsetTop;
+                    const elBottom = elTop + activeEl.offsetHeight;
+                    const containerTop = container.scrollTop;
+                    const containerBottom = containerTop + container.clientHeight;
+
+                    if (elTop < containerTop) {
+                        container.scrollTop = elTop;
+                    } else if (elBottom > containerBottom) {
+                        container.scrollTop = elBottom - container.clientHeight;
+                    }
+                }
+            }
+        },
+        selectActiveMenuItem() {
+            const items = this.getVisibleMenuItems();
+            if (items.length && this.menuActiveIndex >= 0 && this.menuActiveIndex < items.length) {
+                const activeEl = items[this.menuActiveIndex];
+                if (activeEl) {
+                    activeEl.click();
+                }
+            }
+        },
+        handleMenuEscape() {
+            if (this.menuSearch && this.menuSearch.trim().length > 0) {
+                this.menuSearch = '';
+                this.menuActiveIndex = 0;
+                this.$nextTick(() => this.highlightActiveMenuItem());
+            } else {
+                this.closeMenu();
+            }
+        },
+        onMenuSearchInput() {
+            this.menuActiveIndex = 0;
+            this.$nextTick(() => this.highlightActiveMenuItem());
+        },
+        handleGlobalKeydown(e) {
+            if (!this.activeMenu) return;
+
+            if (e.key === 'ArrowDown' || e.key === 'Down') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.navigateMenu(1);
+            } else if (e.key === 'ArrowUp' || e.key === 'Up') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.navigateMenu(-1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.selectActiveMenuItem();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleMenuEscape();
+            }
+        },
+        updateActiveFromHover(el) {
+            const items = this.getVisibleMenuItems();
+            const idx = items.indexOf(el);
+            if (idx !== -1 && idx !== this.menuActiveIndex) {
+                this.menuActiveIndex = idx;
+                this.highlightActiveMenuItem();
+            }
         },
         updateMenuPosition() {
             if (!this.activeMenu || !this.activeTriggerEl) return;
@@ -260,6 +375,7 @@
             this.targetOrderId = orderId;
             this.activeTriggerEl = triggerEl;
             this.menuSearch = '';
+            this.menuActiveIndex = 0;
             const st = this.ordersState[orderId] || {};
             this.targetSubstatus = st.substatus !== undefined ? st.substatus : (extraData.substatus !== undefined ? extraData.substatus : null);
             this.targetInstallationType = st.installation_type !== undefined ? st.installation_type : (extraData.installationType !== undefined ? extraData.installationType : null);
@@ -271,7 +387,10 @@
                 const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
                 if (searchEl) {
                     searchEl.focus({ preventScroll: true });
+                } else if (this.$refs.popoverContainer) {
+                    this.$refs.popoverContainer.focus();
                 }
+                this.highlightActiveMenuItem();
             });
         },
         closeMenu() {
@@ -281,6 +400,7 @@
             this.targetInstallationType = null;
             this.targetFlags = [];
             this.menuSearch = '';
+            this.menuActiveIndex = 0;
             this.activeTriggerEl = null;
         },
         setDesigner(dId, dName, badgeStyle, inlineStyle) {
@@ -355,8 +475,9 @@
             const orderId = this.targetOrderId;
             this.closeMenu();
             if (orderId) {
-                this.ordersState[orderId] = Object.assign({}, this.ordersState[orderId] || {}, { installation_type: type });
-                $wire.updateInstallationType(orderId, type);
+                const upperType = type ? type.toUpperCase() : null;
+                this.ordersState[orderId] = Object.assign({}, this.ordersState[orderId] || {}, { installation_type: upperType });
+                $wire.updateInstallationType(orderId, upperType);
             }
         },
         setSubstatus(status, label, style) {
@@ -364,10 +485,12 @@
             this.closeMenu();
             if (orderId) {
                 if (!this.ordersState[orderId]) this.ordersState[orderId] = {};
-                this.ordersState[orderId].substatus = status;
-                if (label !== undefined) this.ordersState[orderId].substatus_label = label;
+                const upperStatus = status ? status.toUpperCase() : status;
+                const upperLabel = label ? label.toUpperCase() : label;
+                this.ordersState[orderId].substatus = upperStatus;
+                if (label !== undefined) this.ordersState[orderId].substatus_label = upperLabel;
                 if (style !== undefined) this.ordersState[orderId].substatus_style = style;
-                $wire.updateSubstatus(orderId, status);
+                $wire.updateSubstatus(orderId, upperStatus);
             }
         },
         toggleGlobalFlag(flag) {
@@ -385,146 +508,72 @@
             }
         }
     }"
-    @keydown.escape.window="closeMenu()"
+    @keydown.window="handleGlobalKeydown($event)"
     @scroll.passive="if (activeMenu) updateMenuPosition()"
     @scroll.window.passive="if (activeMenu) updateMenuPosition()"
     @resize.window.passive="if (activeMenu) updateMenuPosition()"
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
-    <!-- Top Summary Metrics & Filtering Cards Bar (3 Cards) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 w-full">
-            <!-- 1. Órdenes Activas (Workspace) -->
-            <div 
-                wire:click="setTab('workspace')"
-                class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'workspace' ? 'bg-emerald-50/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
-                title="{{ __('Clic para filtrar Órdenes Activas en Workspace') }}">
-                <div class="flex items-start justify-between gap-2">
-                    <div>
-                        <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'workspace' ? 'text-emerald-800' : 'text-stone-500 group-hover:text-stone-700' }}">
-                            {{ __('Órdenes Activas') }}
-                        </span>
-                        <div class="flex items-baseline gap-2 mt-0.5">
-                            <span class="text-2xl font-extrabold text-stone-900 leading-tight">
-                                {{ $totalWorkspaceCount }}
-                            </span>
-                            <span class="text-[11px] text-stone-400 font-medium lowercase">
-                                {{ __('en workspace') }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'workspace' ? 'bg-emerald-500 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' }}">
-                        <x-lucide-activity class="w-5 h-5" />
-                    </div>
+    <!-- Highlighted Overview Filters Section -->
+    <div class="bg-white rounded-xl border border-stone-200 p-3.5 sm:p-4 shadow-2xs space-y-3 w-full">
+        <div class="flex items-center justify-between gap-3 pb-2.5 border-b border-stone-100 flex-wrap">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg border border-cyan-200/80 flex items-center justify-center text-cyan-600 shadow-2xs shrink-0">
+                    <x-lucide-sparkles class="w-4 h-4" />
                 </div>
-                <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
-                    <span class="flex items-center gap-1 font-medium {{ $activeTab === 'workspace' ? 'text-emerald-700 font-semibold' : 'text-stone-500' }}">
-                        <x-lucide-zap class="w-3.5 h-3.5 {{ $activeTab === 'workspace' ? 'text-emerald-600' : 'text-stone-400' }}" />
-                        {{ __('Ver sólo Órdenes Activas') }}
-                    </span>
-                    @if(!empty($missingWoCount) && $missingWoCount > 0)
-                        <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="{{ __('Órdenes activas sin número WO') }}">
-                            <x-lucide-alert-circle class="w-3 h-3 text-amber-500" />
-                            {{ $missingWoCount }} {{ __('Sin WO') }}
-                        </span>
-                    @endif
+                <div>
+                    <h2 class="text-xs sm:text-sm font-extrabold text-stone-900 tracking-tight">
+                        {{ __('Highlighted Overview Filters') }}
+                    </h2>
                 </div>
             </div>
-
-            <!-- 2. En Producción -->
-            <div 
-                wire:click="setTab('production')"
-                class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'production' ? 'bg-pink-50/40 border-pink-500 ring-2 ring-pink-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
-                title="{{ __('Clic para filtrar Órdenes En Producción') }}">
-                <div class="flex items-start justify-between gap-2">
-                    <div>
-                        <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'production' ? 'text-pink-800' : 'text-stone-500 group-hover:text-stone-700' }}">
-                            {{ __('En Producción') }}
-                        </span>
-                        <div class="flex items-baseline gap-2 mt-0.5">
-                            <span class="text-2xl font-extrabold text-pink-600 leading-tight">
-                                {{ $inProductionCount }}
-                            </span>
-                            @if(!empty($inWorkspaceProductionCount) && $inWorkspaceProductionCount > 0)
-                                <span class="text-[11px] text-stone-400 font-medium">
-                                    ({{ $inWorkspaceProductionCount }} {{ __('en workspace') }})
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'production' ? 'bg-pink-600 text-white shadow-2xs' : 'bg-pink-50 text-pink-600 group-hover:bg-pink-100' }}">
-                        <x-lucide-layers class="w-5 h-5" />
-                    </div>
-                </div>
-                <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
-                    <span class="flex items-center gap-1 font-medium {{ $activeTab === 'production' ? 'text-pink-700 font-semibold' : 'text-stone-500' }}">
-                        <x-lucide-filter class="w-3.5 h-3.5 {{ $activeTab === 'production' ? 'text-pink-600' : 'text-stone-400' }}" />
-                        {{ __('Ver sólo Producción') }}
-                    </span>
-                    <span class="text-[10px] text-stone-400 font-medium">
-                        {{ __('Fabricación activa') }}
-                    </span>
-                </div>
-            </div>
-
-            <!-- 3. Órdenes Archivadas (con sus subestatus) -->
-            <div 
-                wire:click="setTab('archived', 'all')"
-                class="p-3.5 rounded-xl border transition-all duration-150 flex flex-col justify-between cursor-pointer select-none group {{ $activeTab === 'archived' ? 'bg-cyan-50/40 border-cyan-500 ring-2 ring-cyan-500/20 shadow-xs' : 'bg-white border-stone-200 hover:border-stone-300 hover:shadow-2xs' }}"
-                title="{{ __('Clic para filtrar Órdenes Archivadas') }}">
-                <div class="flex items-start justify-between gap-2">
-                    <div>
-                        <span class="text-[11px] font-bold uppercase tracking-wider block transition-colors {{ $activeTab === 'archived' ? 'text-cyan-800' : 'text-stone-500 group-hover:text-stone-700' }}">
-                            {{ __('Órdenes Archivadas') }}
-                        </span>
-                        <div class="flex items-baseline gap-2 mt-0.5">
-                            <span class="text-2xl font-extrabold text-cyan-800 leading-tight">
-                                {{ $totalArchivedCount }}
-                            </span>
-                            <span class="text-[11px] text-stone-400 font-medium lowercase">
-                                {{ __('Órdenes Finalizadas') }}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="w-9 h-9 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors {{ $activeTab === 'archived' ? 'bg-cyan-600 text-white shadow-2xs' : 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' }}">
-                        <x-lucide-archive class="w-5 h-5" />
-                    </div>
-                </div>
-                <!-- Subestatus Pills Bar -->
-                <div class="mt-2.5 pt-2 border-t border-stone-100 flex items-center gap-1.5 flex-wrap">
-                    @foreach($archivedSubstatusFilters as $filterKey => $filter)
-                        @php
-                            $isSelected = ($activeTab === 'archived' && $archivedSubstatus === $filterKey);
-                            $pillStyle = '';
-                            if ($filterKey === 'all') {
-                                $pillClass = $isSelected 
-                                    ? 'bg-cyan-700 text-white shadow-2xs border-cyan-800' 
-                                    : 'bg-stone-100 text-stone-600 hover:bg-stone-200 border-stone-200/80';
-                            } else {
-                                if ($isSelected) {
-                                    $solid = $filter['solid_bg'] ?? '#0E7490';
-                                    $pillClass = 'shadow-2xs font-black text-white';
-                                    $pillStyle = "background-color: {$solid}; border-color: {$solid}; color: #ffffff;";
-                                } else {
-                                    $bg = $filter['bg_color'] ?? '#F5F5F4';
-                                    $txt = $filter['text_color'] ?? '#57534E';
-                                    $bd = $filter['border_color'] ?? '#E7E5E4';
-                                    $pillClass = 'hover:opacity-85 font-extrabold';
-                                    $pillStyle = "background-color: {$bg}; color: {$txt}; border-color: {$bd};";
-                                }
-                            }
-                        @endphp
-                        <button 
-                            type="button"
-                            wire:click.stop="setArchivedSubstatus('{{ $filterKey }}')"
-                            @if(!empty($pillStyle)) style="{{ $pillStyle }}" @endif
-                            class="px-2 py-0.5 rounded text-[10.5px] transition cursor-pointer border {{ $pillClass }}"
-                            title="{{ $filter['label'] }}">
-                            {{ $filter['label'] }} ({{ $filter['count'] }})
-                        </button>
-                    @endforeach
-                </div>
+            <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-stone-100 text-stone-600 border border-stone-200">
+                    {{ $totalArchivedCount }} {{ __('Órdenes') }}
+                </span>
             </div>
         </div>
+
+        <!-- Filter Pills Bar -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+            @foreach($archivedSubstatusFilters as $filterKey => $filter)
+                @php
+                    $isSelected = ($filterKey === 'all')
+                        ? ($activeTab === 'all' || ($activeTab === 'archived' && $archivedSubstatus === 'all'))
+                        : ($activeTab === 'archived' && $archivedSubstatus === $filterKey);
+                    $pillStyle = '';
+                    if ($filterKey === 'all') {
+                        $pillClass = $isSelected 
+                            ? 'bg-cyan-700 text-white shadow-2xs border-cyan-800 font-extrabold' 
+                            : 'bg-stone-100 text-stone-700 hover:bg-stone-200 border-stone-200/80 font-semibold';
+                    } else {
+                        if ($isSelected) {
+                            $solid = $filter['solid_bg'] ?? '#0E7490';
+                            $pillClass = 'shadow-2xs font-black text-white';
+                            $pillStyle = "background-color: {$solid}; border-color: {$solid}; color: #ffffff;";
+                        } else {
+                            $bg = $filter['bg_color'] ?? '#F5F5F4';
+                            $txt = $filter['text_color'] ?? '#57534E';
+                            $bd = $filter['border_color'] ?? '#E7E5E4';
+                            $pillClass = 'hover:opacity-85 font-extrabold';
+                            $pillStyle = "background-color: {$bg}; color: {$txt}; border-color: {$bd};";
+                        }
+                    }
+                @endphp
+                <button 
+                    type="button"
+                    wire:click.stop="setArchivedSubstatus('{{ $filterKey }}')"
+                    @if(!empty($pillStyle)) style="{{ $pillStyle }}" @endif
+                    class="px-2.5 py-1 rounded-md text-xs transition cursor-pointer border flex items-center gap-1.5 {{ $pillClass }}"
+                    title="{{ $filter['label'] }}">
+                    <span>{{ $filter['label'] }}</span>
+                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold leading-tight bg-black/10 dark:bg-white/20">
+                        {{ $filter['count'] }}
+                    </span>
+                </button>
+            @endforeach
+        </div>
+    </div>
 
     <!-- Toolbar Filters Bar -->
     <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
@@ -572,32 +621,39 @@
                 </div>
             </div>
 
-            <!-- Global Search & Reset Buttons -->
-            <div class="flex items-center gap-2 flex-1 justify-end min-w-[240px]">
-                <div class="relative flex-1">
-                    <x-lucide-search class="w-4 h-4 text-stone-400 absolute left-2.5 top-2.5" />
-                    <input 
-                        type="text" 
-                        wire:model.live.debounce.300ms="search"
-                        placeholder="{{ __('Buscar en DOES (WO#, cliente, empresa, trabajo...)...') }}"
-                        class="w-full pl-8 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-stone-900 focus:bg-white transition"
-                    >
-                </div>
-
-                @if($search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange)
+            <!-- Reset Filters Button -->
+            @if($search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange)
+                <div class="flex items-center gap-2 shrink-0">
                     <button 
                         wire:click="resetFilters" 
-                        class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 cursor-pointer shrink-0">
+                        class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 cursor-pointer shrink-0">
                         <x-lucide-rotate-ccw class="w-3.5 h-3.5" />
                         {{ __('Limpiar') }}
                     </button>
-                @endif
-            </div>
+                </div>
+            @endif
         </div>
 
         <!-- Filters Row -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-            <!-- Filter WO -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 items-end">
+            <!-- 1. Búsqueda General -->
+            <div class="col-span-2 sm:col-span-1 md:col-span-1">
+                <label class="block text-[10px] font-extrabold uppercase tracking-wider text-stone-700 mb-1 flex items-center gap-1">
+                    <x-lucide-search class="w-3 h-3 text-stone-700" />
+                    <span>{{ __('Búsqueda General') }}</span>
+                </label>
+                <div class="relative">
+                    <x-lucide-search class="w-3.5 h-3.5 text-stone-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <input 
+                        type="text" 
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('WO#, cliente, trabajo...') }}"
+                        class="w-full pl-8 pr-2.5 py-1 bg-white border border-stone-300 rounded-md text-xs font-medium text-stone-900 placeholder-stone-400 shadow-2xs focus:ring-2 focus:ring-stone-900 focus:border-stone-900 transition"
+                    >
+                </div>
+            </div>
+
+            <!-- 2. Filter WO -->
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Filtro WO') }}</label>
                 <input 
@@ -608,7 +664,7 @@
                 >
             </div>
 
-            <!-- Filter Client -->
+            <!-- 3. Filter Client -->
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Cliente') }}</label>
                 <select 
@@ -621,7 +677,7 @@
                 </select>
             </div>
 
-            <!-- Filter Designer -->
+            <!-- 4. Filter Designer -->
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Diseñador') }}</label>
                 <select 
@@ -634,7 +690,7 @@
                 </select>
             </div>
 
-            <!-- Filter Review Status -->
+            <!-- 5. Filter Review Status -->
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Revisión Estimado') }}</label>
                 <select 
@@ -647,7 +703,7 @@
                 </select>
             </div>
 
-            <!-- Filter Installation -->
+            <!-- 6. Filter Installation -->
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Instalación') }}</label>
                 <select 
@@ -934,7 +990,7 @@
                             :style="'width: ' + (colWidths['prod_note'] || 12) + '%; top: var(--table-header-h, 49px);'"
                             class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="Nota Producción/Instalación">Nota Prod./Inst.</span>
+                                <span class="truncate inline-flex items-center gap-1" title="Nota Producción/Instalación"><x-lucide-sticky-note class="w-3 h-3 text-stone-400 shrink-0" /><span>Nota Prod./Inst.</span></span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'prod_note')"
@@ -1021,7 +1077,7 @@
                             :style="'width: ' + (colWidths['deliv_note'] || 7) + '%; top: var(--table-header-h, 49px);'"
                             class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="Nota de Entrega">Entrega</span>
+                                <span class="truncate inline-flex items-center gap-1" title="Nota de Entrega"><x-lucide-sticky-note class="w-3 h-3 text-stone-400 shrink-0" /><span>Entrega</span></span>
                             </div>
                             <div 
                                 @mousedown.stop.prevent="initResize($event, 'deliv_note')"
@@ -1568,6 +1624,11 @@
     <div 
         x-ref="popoverContainer"
         x-show="activeMenu !== null"
+        tabindex="-1"
+        @keydown.down.prevent.stop="navigateMenu(1)"
+        @keydown.up.prevent.stop="navigateMenu(-1)"
+        @keydown.enter.prevent.stop="selectActiveMenuItem()"
+        @keydown.escape.prevent.stop="handleMenuEscape()"
         x-transition:enter="transition ease-out duration-100"
         x-transition:enter-start="opacity-0 scale-95"
         x-transition:enter-end="opacity-100 scale-100"
@@ -1577,7 +1638,7 @@
         @click.outside="if (!$event.target.closest('[data-popover-trigger]')) closeMenu()"
         @wheel.stop
         :style="menuStyle"
-        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-2 z-[99999] flex flex-col overflow-hidden text-stone-900 overscroll-contain"
+        class="bg-white shadow-2xl border border-stone-200 rounded-xl p-2 z-[99999] flex flex-col overflow-hidden text-stone-900 overscroll-contain outline-none"
         style="display: none;">
 
         <!-- 1. Designer Popover Content -->
@@ -1594,10 +1655,10 @@
                         <input 
                             data-menu-search
                             x-model="menuSearch"
+                            @input="onMenuSearchInput()"
                             type="text" 
                             placeholder="{{ __('Buscar diseñador...') }}" 
                             class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
-                            @keydown.escape.stop="if (menuSearch) { menuSearch = ''; } else { closeMenu(); }"
                         >
                         <button 
                             x-show="menuSearch" 
@@ -1610,6 +1671,8 @@
                 <div @wheel.stop class="space-y-0.5 flex-1 min-h-0 overflow-y-auto overscroll-contain pr-0.5 custom-vertical-scrollbar">
                     <button 
                         type="button"
+                        data-menu-item
+                        @mouseenter="updateActiveFromHover($el)"
                         x-show="matchesMenuSearch('sin asignar')"
                         @click="setDesigner(null, '{{ __('Sin Asignar') }}', 'bg-stone-50 border-dashed border-stone-300 text-stone-400 hover:border-stone-400', '')"
                         class="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-stone-100 text-stone-500 cursor-pointer">
@@ -1625,6 +1688,8 @@
                         @endphp
                         <button 
                             type="button"
+                            data-menu-item
+                            @mouseenter="updateActiveFromHover($el)"
                             x-show="matchesMenuSearch('{{ addslashes($dName) }}')"
                             @click="setDesigner({{ $dId }}, '{{ addslashes($dName) }}', '{{ addslashes($dStyle) }}', '{{ addslashes($dInline) }}')"
                             class="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-stone-100 flex items-center justify-between font-semibold text-stone-800 cursor-pointer">
@@ -1646,12 +1711,16 @@
                 <div class="px-2 py-0.5 text-[10px] font-bold text-stone-400 uppercase">Estado de Revisión</div>
                 <button 
                     type="button"
+                    data-menu-item
+                    @mouseenter="updateActiveFromHover($el)"
                     @click="setReviewStatus('CS')"
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-pink-100 text-pink-900 font-semibold hover:bg-pink-200 transition cursor-pointer">
                     Revisado por CS (Rosado)
                 </button>
                 <button 
                     type="button"
+                    data-menu-item
+                    @mouseenter="updateActiveFromHover($el)"
                     @click="setReviewStatus('CAMILA')"
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold transition cursor-pointer"
                     style="background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border: 1px solid var(--cc-camila-border);">
@@ -1659,6 +1728,8 @@
                 </button>
                 <button 
                     type="button"
+                    data-menu-item
+                    @mouseenter="updateActiveFromHover($el)"
                     @click="setReviewStatus(null)"
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition cursor-pointer">
                     Sin revisión (Blanco / EST)
@@ -1688,10 +1759,10 @@
                         <input 
                             data-menu-search
                             x-model="menuSearch"
+                            @input="onMenuSearchInput()"
                             type="text" 
                             placeholder="{{ __('Buscar instalación...') }}" 
                             class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
-                            @keydown.escape.stop="if (menuSearch) { menuSearch = ''; } else { closeMenu(); }"
                         >
                         <button 
                             x-show="menuSearch" 
@@ -1705,6 +1776,8 @@
                     @foreach($installationTypes as $instType)
                         <button 
                             type="button"
+                            data-menu-item
+                            @mouseenter="updateActiveFromHover($el)"
                             x-show="matchesMenuSearch('{{ addslashes($instType->name) }}')"
                             @click="setInstallationType('{{ $instType->name }}')"
                             class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-bold border transition flex items-center justify-between cursor-pointer shadow-2xs hover:opacity-90"
@@ -1720,6 +1793,8 @@
                 <div class="pt-1 border-t border-stone-100 shrink-0">
                     <button 
                         type="button"
+                        data-menu-item
+                        @mouseenter="updateActiveFromHover($el)"
                         x-show="matchesMenuSearch('vacio') || matchesMenuSearch('sin informacion')"
                         @click="setInstallationType(null)"
                         class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs bg-stone-50 hover:bg-stone-100 text-stone-600 border border-stone-200 transition flex items-center justify-between cursor-pointer">
@@ -1742,10 +1817,10 @@
                         <input 
                             data-menu-search
                             x-model="menuSearch"
+                            @input="onMenuSearchInput()"
                             type="text" 
                             placeholder="{{ __('Buscar subestatus o flag...') }}" 
                             class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
-                            @keydown.escape.stop="if (menuSearch) { menuSearch = ''; } else { closeMenu(); }"
                         >
                         <button 
                             x-show="menuSearch" 
@@ -1850,6 +1925,8 @@
 
                         <button 
                             type="button"
+                            data-menu-item
+                            @mouseenter="updateActiveFromHover($el)"
                             x-show="matchesMenuSearch('{{ addslashes($flagLabel) }}') || matchesMenuSearch('{{ addslashes($flagValue) }}')"
                             @click="toggleGlobalFlag('{{ addslashes($flagValue) }}')"
                             :style="targetFlags.includes('{{ addslashes($flagValue) }}') ? '{{ $activeStyle }}' : 'border-color: {{ $flagBorder }};'"
@@ -1882,6 +1959,8 @@
                     
                     <button 
                         type="button"
+                        data-menu-item
+                        @mouseenter="updateActiveFromHover($el)"
                         x-show="matchesMenuSearch('sin subestatus') || matchesMenuSearch('vacio')"
                         @click="setSubstatus(null, '—', '')"
                         class="w-full text-left px-2.5 py-1 rounded-md text-xs bg-stone-50 text-stone-500 hover:bg-stone-100 border border-stone-200 transition font-medium flex items-center justify-between cursor-pointer">
@@ -1940,6 +2019,8 @@
                                 
                                 <button 
                                     type="button"
+                                    data-menu-item
+                                    @mouseenter="updateActiveFromHover($el)"
                                     x-show="matchesMenuSearch('{{ addslashes($itemLabel) }}') || matchesMenuSearch('{{ addslashes($itemValue) }}') || matchesMenuSearch('{{ addslashes($group['title']) }}')"
                                     @click="setSubstatus('{{ addslashes($itemValue) }}', '{{ addslashes($itemLabel) }}', '{{ addslashes($itemStyle) }}')"
                                     @if(!empty($itemStyle)) style="{{ $itemStyle }}" @endif
@@ -1957,3 +2038,10 @@
         </template>
     </div>
 </div>
+
+<style>
+    .menu-item-active {
+        outline: 2px solid #0284c7 !important;
+        outline-offset: -2px !important;
+    }
+</style>

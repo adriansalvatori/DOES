@@ -140,6 +140,7 @@ class Substatuses extends Component
     public function save(): void
     {
         $validated = $this->validate();
+        $validated['name'] = mb_strtoupper($validated['name']);
         $validated['color'] = $this->main_color;
         $validated['style_type'] = $this->style_type;
 

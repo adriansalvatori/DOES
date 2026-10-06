@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -29,6 +30,14 @@ class InstallationType extends Model
         'is_active' => 'boolean',
         'sort_order' => 'integer',
     ];
+
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+            set: fn (?string $value) => $value !== null ? mb_strtoupper($value) : null,
+        );
+    }
 
     public const CACHE_KEY = 'installation_types_all';
 
@@ -123,6 +132,9 @@ class InstallationType extends Model
 
             if (is_array($data)) {
                 $collection = collect($data)->map(function ($attrs) {
+                    if (isset($attrs['name']) && is_string($attrs['name'])) {
+                        $attrs['name'] = mb_strtoupper($attrs['name']);
+                    }
                     $model = new static;
                     $model->setRawAttributes($attrs, true);
                     $model->exists = true;

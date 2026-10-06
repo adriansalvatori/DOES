@@ -86,16 +86,16 @@ class OverviewIndex extends Component
             ->orderBy('sort_order')
             ->get();
 
-        $total = array_sum($rawCounts);
+        $totalAllOrders = Order::query()->count();
 
         $filters = [];
 
-        // 1. All (Total)
+        // 1. All (Total de TODAS las órdenes de la BD)
         $filters['all'] = [
             'key' => 'all',
-            'label' => __('All'),
-            'short_label' => __('All'),
-            'count' => $total,
+            'label' => mb_strtoupper(__('ALL ORDERS')),
+            'short_label' => mb_strtoupper(__('ALL ORDERS')),
+            'count' => $totalAllOrders,
             'bg_color' => '#F5F5F4',
             'text_color' => '#57534E',
             'border_color' => '#E7E5E4',
@@ -521,8 +521,13 @@ class OverviewIndex extends Component
 
     public function setArchivedSubstatus(string $substatus): void
     {
-        $this->activeTab = 'archived';
-        $this->archivedSubstatus = $substatus;
+        if ($substatus === 'all') {
+            $this->activeTab = 'all';
+            $this->archivedSubstatus = 'all';
+        } else {
+            $this->activeTab = 'archived';
+            $this->archivedSubstatus = $substatus;
+        }
         $this->loadedCount = self::CHUNK_SIZE;
         $this->resetPage();
     }
@@ -1124,22 +1129,24 @@ class OverviewIndex extends Component
             'workspace' => Order::query()->inWorkspace(),
             'production' => Order::query()->where('core_status', CoreStatus::EN_PRODUCCION),
             'archived' => (function () {
+                if ($this->archivedSubstatus === 'all') {
+                    return Order::query();
+                }
+
                 $query = Order::query()->archived();
-                if ($this->archivedSubstatus !== 'all') {
-                    if (in_array($this->archivedSubstatus, ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE', 'no_responsive'], true)) {
-                        $query->whereIn('substatus', ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE']);
-                    } elseif (in_array($this->archivedSubstatus, ['finalizada', Substatus::FINALIZADA->value], true)) {
-                        $query->where('substatus', Substatus::FINALIZADA->value);
-                    } elseif ($this->archivedSubstatus === 'cancelada') {
-                        $query->whereIn('substatus', [
-                            Substatus::CANCELADA->value,
-                            Substatus::CANCELADA_POR_CLIENTE->value,
-                            Substatus::CANCELADA_POR_CAMILA->value,
-                            Substatus::NO_REALIZADA_TRANSFERIDA->value,
-                        ]);
-                    } else {
-                        $query->where('substatus', $this->archivedSubstatus);
-                    }
+                if (in_array($this->archivedSubstatus, ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE', 'no_responsive'], true)) {
+                    $query->whereIn('substatus', ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE']);
+                } elseif (in_array($this->archivedSubstatus, ['finalizada', Substatus::FINALIZADA->value], true)) {
+                    $query->where('substatus', Substatus::FINALIZADA->value);
+                } elseif ($this->archivedSubstatus === 'cancelada') {
+                    $query->whereIn('substatus', [
+                        Substatus::CANCELADA->value,
+                        Substatus::CANCELADA_POR_CLIENTE->value,
+                        Substatus::CANCELADA_POR_CAMILA->value,
+                        Substatus::NO_REALIZADA_TRANSFERIDA->value,
+                    ]);
+                } else {
+                    $query->where('substatus', $this->archivedSubstatus);
                 }
 
                 return $query;
