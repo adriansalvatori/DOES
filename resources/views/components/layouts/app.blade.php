@@ -310,6 +310,14 @@
                             <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
                             <span class="truncate">{{ __('Usuarios y Roles') }}</span>
                         </a>
+                        <a 
+                            href="/settings/notifications" 
+                            wire:navigate
+                            title="{{ __('Configuración de Notificaciones') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2 transition {{ request()->is('settings/notifications*') ? 'bg-[#e2e2e0] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                            <x-lucide-bell-ring class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span class="truncate">{{ __('Notificaciones') }}</span>
+                        </a>
                     @endif
                     @if(auth()->user()?->isAdmin())
                         <a 
@@ -412,6 +420,14 @@
                             class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/users*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
                             <x-lucide-users class="w-3.5 h-3.5 text-purple-600 shrink-0" />
                             <span class="truncate">{{ __('Usuarios y Roles') }}</span>
+                        </a>
+                        <a 
+                            href="/settings/notifications" 
+                            wire:navigate
+                            title="{{ __('Configuración de Notificaciones') }}" 
+                            class="w-full px-2.5 py-1.5 rounded-lg font-medium flex items-center gap-2 transition {{ request()->is('settings/notifications*') ? 'bg-stone-100 text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-stone-50 hover:text-zinc-900' }}">
+                            <x-lucide-bell-ring class="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            <span class="truncate">{{ __('Notificaciones') }}</span>
                         </a>
                     @endif
                     @if(auth()->user()?->isAdmin())

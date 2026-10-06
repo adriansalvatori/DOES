@@ -15,6 +15,7 @@ use App\Models\RelatedTask;
 use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
+use App\Services\NotificationDispatcher;
 use App\Services\OrderTitleParserService;
 use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
@@ -370,6 +371,13 @@ class OrderDetailModal extends Component
                     ],
                 ]);
 
+                NotificationDispatcher::dispatch(
+                    eventType: 'new_attachments',
+                    title: __('Nuevos Adjuntos en Orden'),
+                    message: __('Se subió el archivo ":file" a la orden #:id', ['file' => $fileName, 'id' => $order->id]),
+                    order: $order
+                );
+
                 $this->loadTrelloDetails();
                 $this->dispatch('toast', message: "Archivo '{$fileName}' adjuntado a la tarjeta de Trello exitosamente.");
                 $this->dispatch('order-updated');
@@ -520,6 +528,13 @@ class OrderDetailModal extends Component
                     'trello_card_id' => $order->trello_card_id,
                 ],
             ]);
+
+            NotificationDispatcher::dispatch(
+                eventType: 'new_comment',
+                title: __('Nuevo Comentario en Orden'),
+                message: __('Se publicó un nuevo comentario en la orden #:id', ['id' => $order->id]),
+                order: $order
+            );
 
             $this->newTrelloComment = '';
             $this->loadTrelloComments();

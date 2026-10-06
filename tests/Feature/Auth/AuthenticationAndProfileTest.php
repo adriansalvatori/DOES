@@ -277,26 +277,6 @@ class AuthenticationAndProfileTest extends TestCase
         $this->assertEquals('planner', $user->getPreference('default_landing_page'));
     }
 
-    public function test_user_can_update_notification_preferences(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        Livewire::test(ProfileSettings::class)
-            ->call('setTab', 'notifications')
-            ->set('notify_order_assigned', true)
-            ->set('notify_order_blocked', false)
-            ->set('notify_sound_enabled', true)
-            ->call('updateNotificationSettings')
-            ->assertHasNoErrors();
-
-        $user->refresh();
-        $notifications = $user->getPreference('notifications');
-        $this->assertTrue($notifications['order_assigned']);
-        $this->assertFalse($notifications['order_blocked']);
-        $this->assertTrue($notifications['sound_enabled']);
-    }
-
     public function test_profile_page_renders_logout_button_and_sections(): void
     {
         $user = User::factory()->create(['role' => UserRole::DESIGNER]);
@@ -307,7 +287,6 @@ class AuthenticationAndProfileTest extends TestCase
         $response->assertSee(__('Cerrar Sesión'));
         $response->assertSee(__('Mi Perfil y Configuración'));
         $response->assertSee(__('General & Perfil'));
-        $response->assertSee(__('Notificaciones'));
         $response->assertDontSee(__('Ficha Operativa de Diseñador'));
     }
 
@@ -479,17 +458,6 @@ class AuthenticationAndProfileTest extends TestCase
             ->set('name', 'Usuario Modificado')
             ->set('email', 'modificado@kudos.com')
             ->call('updateProfile')
-            ->assertDispatched('form-saved');
-    }
-
-    public function test_profile_settings_dispatches_form_saved_on_notifications_update(): void
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        Livewire::test(ProfileSettings::class)
-            ->set('notify_order_assigned', false)
-            ->call('updateNotificationSettings')
             ->assertDispatched('form-saved');
     }
 

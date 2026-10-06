@@ -272,6 +272,7 @@
         navigateMenu(direction) {
             const items = this.getVisibleMenuItems();
             if (!items.length) return;
+
             this.menuActiveIndex = (this.menuActiveIndex + direction + items.length) % items.length;
             this.highlightActiveMenuItem();
             const activeEl = items[this.menuActiveIndex];
@@ -296,14 +297,31 @@
             if (items.length && this.menuActiveIndex >= 0 && this.menuActiveIndex < items.length) {
                 const activeEl = items[this.menuActiveIndex];
                 if (activeEl) {
-                    activeEl.click();
+                    const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
+                    if (searchEl && (activeEl === searchEl || activeEl.hasAttribute('data-menu-search') || activeEl.tagName === 'INPUT')) {
+                        searchEl.focus({ preventScroll: true });
+                    } else {
+                        activeEl.click();
+                    }
                 }
             }
         },
         handleMenuEscape() {
+            const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
+            if (searchEl && document.activeElement === searchEl) {
+                if (this.$refs.popoverContainer) {
+                    this.$refs.popoverContainer.focus({ preventScroll: true });
+                } else {
+                    searchEl.blur();
+                }
+                return;
+            }
             if (this.menuSearch && this.menuSearch.trim().length > 0) {
                 this.menuSearch = '';
                 this.menuActiveIndex = 0;
+                if (this.$refs.popoverContainer) {
+                    this.$refs.popoverContainer.focus({ preventScroll: true });
+                }
                 this.$nextTick(() => this.highlightActiveMenuItem());
             } else {
                 this.closeMenu();
@@ -332,6 +350,16 @@
                 e.preventDefault();
                 e.stopPropagation();
                 this.handleMenuEscape();
+            } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
+                if (searchEl && document.activeElement !== searchEl) {
+                    searchEl.focus({ preventScroll: true });
+                }
+            } else if (e.key === 'Backspace') {
+                const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
+                if (searchEl && document.activeElement !== searchEl) {
+                    searchEl.focus({ preventScroll: true });
+                }
             }
         },
         updateActiveFromHover(el) {
@@ -384,11 +412,8 @@
             this.updateMenuPosition();
 
             this.$nextTick(() => {
-                const searchEl = this.$refs.popoverContainer ? this.$refs.popoverContainer.querySelector('[data-menu-search]') : null;
-                if (searchEl) {
-                    searchEl.focus({ preventScroll: true });
-                } else if (this.$refs.popoverContainer) {
-                    this.$refs.popoverContainer.focus();
+                if (this.$refs.popoverContainer) {
+                    this.$refs.popoverContainer.focus({ preventScroll: true });
                 }
                 this.highlightActiveMenuItem();
             });
@@ -1654,6 +1679,8 @@
                         <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
                         <input 
                             data-menu-search
+                            data-menu-item
+                            @mouseenter="updateActiveFromHover($el)"
                             x-model="menuSearch"
                             @input="onMenuSearchInput()"
                             type="text" 
@@ -1758,6 +1785,8 @@
                         <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
                         <input 
                             data-menu-search
+                            data-menu-item
+                            @mouseenter="updateActiveFromHover($el)"
                             x-model="menuSearch"
                             @input="onMenuSearchInput()"
                             type="text" 
@@ -1816,6 +1845,8 @@
                         <x-lucide-search class="w-3.5 h-3.5 text-stone-400 absolute left-2 pointer-events-none" />
                         <input 
                             data-menu-search
+                            data-menu-item
+                            @mouseenter="updateActiveFromHover($el)"
                             x-model="menuSearch"
                             @input="onMenuSearchInput()"
                             type="text" 

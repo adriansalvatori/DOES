@@ -2,11 +2,13 @@
 
 namespace App\Observers;
 
+use App\Enums\RelatedTaskType;
 use App\Enums\SubtaskCategory;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Services\ActionRequiredResolverService;
 use App\Services\AutomationEngine;
+use App\Services\NotificationDispatcher;
 use Illuminate\Support\Facades\Log;
 
 class RelatedTaskObserver
@@ -54,6 +56,22 @@ class RelatedTaskObserver
 
             if ($task->isDone()) {
                 $this->logCompletionEvent($task);
+
+                if ($task->type === RelatedTaskType::BIENVENIDA) {
+                    NotificationDispatcher::dispatch(
+                        eventType: 'welcome_email_sent',
+                        title: __('Correo de Bienvenida Enviado'),
+                        message: __('Se envió el correo de bienvenida al cliente para la orden #:id', ['id' => $task->order_id]),
+                        order: $task->order
+                    );
+                } elseif ($task->type === RelatedTaskType::CORREO_ATRASO) {
+                    NotificationDispatcher::dispatch(
+                        eventType: 'overdue_email_sent',
+                        title: __('Correo de Atraso Enviado'),
+                        message: __('Se envió el correo de notificación de atraso para la orden #:id', ['id' => $task->order_id]),
+                        order: $task->order
+                    );
+                }
 
                 try {
                     app(ActionRequiredResolverService::class)->handleRelatedTaskCompleted($task);

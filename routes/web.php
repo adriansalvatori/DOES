@@ -19,6 +19,7 @@ use App\Livewire\Settings\ColorCoding;
 use App\Livewire\Settings\Documentation;
 use App\Livewire\Settings\InstallationTypes;
 use App\Livewire\Settings\LanguageSettings;
+use App\Livewire\Settings\NotificationSettings;
 use App\Livewire\Settings\ProfileSettings;
 use App\Livewire\Settings\Substatuses;
 use App\Livewire\Settings\SubtaskPresets;
@@ -97,6 +98,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/backups', Backups::class)->name('settings.backups');
     Route::get('/settings/profile', ProfileSettings::class)->name('settings.profile');
     Route::get('/settings/users', UserManagement::class)->name('settings.users');
+    Route::get('/settings/notifications', NotificationSettings::class)->name('settings.notifications');
     Route::get('/trash', TrashBin::class)->name('trash');
 
     Route::get('/trello-attachment-proxy', function (Request $request) {

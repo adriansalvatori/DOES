@@ -52,12 +52,20 @@
         <!-- Notification Items List -->
         <div class="max-h-80 overflow-y-auto divide-y divide-stone-100 text-xs">
             @forelse($notifications as $n)
+                @php
+                    $isUrgent = !empty($n->data['is_urgent']) || ($n->data['event_type'] ?? '') === 'order_overdue';
+                    $title = $n->data['title'] ?? null;
+                    $message = $n->data['message'] ?? ($title ?? __('Nueva notificación'));
+                    $actorName = $n->data['actor_name'] ?? null;
+                @endphp
                 <div 
                     wire:click="markAsRead('{{ $n->id }}')" 
-                    class="p-3 transition cursor-pointer flex items-start gap-2.5 {{ $n->unread() ? 'bg-amber-50/40 hover:bg-amber-50/80 font-medium' : 'hover:bg-stone-50 text-zinc-600' }}">
+                    class="p-3 transition cursor-pointer flex items-start gap-2.5 {{ $isUrgent ? 'bg-red-50/60 hover:bg-red-50 border-l-4 border-l-red-500 font-medium' : ($n->unread() ? 'bg-amber-50/40 hover:bg-amber-50/80 font-medium' : 'hover:bg-stone-50 text-zinc-600') }}">
                     
                     <div class="shrink-0 mt-0.5">
-                        @if($n->unread())
+                        @if($isUrgent)
+                            <x-lucide-alert-triangle class="w-4 h-4 text-red-600 animate-pulse" />
+                        @elseif($n->unread())
                             <span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
                         @else
                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-zinc-400" />
@@ -65,17 +73,36 @@
                     </div>
 
                     <div class="flex-1 min-w-0">
+                        @if($isUrgent)
+                            <div class="flex items-center gap-1 mb-0.5">
+                                <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-red-600 text-white uppercase tracking-wider">
+                                    {{ __('URGENTE') }}
+                                </span>
+                            </div>
+                        @endif
+
+                        @if($title && $title !== $message)
+                            <p class="text-xs font-bold text-zinc-900 leading-snug">
+                                {{ $title }}
+                            </p>
+                        @endif
+
                         <p class="text-xs text-zinc-800 leading-snug">
-                            {{ $n->data['message'] ?? ($n->data['title'] ?? __('Nueva notificación')) }}
+                            {{ $message }}
                         </p>
+
                         @if(isset($n->data['task_name']))
                             <p class="text-[11px] text-zinc-500 truncate font-mono mt-0.5">
                                 {{ $n->data['task_name'] }}
                             </p>
                         @endif
-                        <span class="text-[10px] text-zinc-400 block mt-1">
-                            {{ $n->created_at->diffForHumans() }}
-                        </span>
+
+                        <div class="flex items-center justify-between text-[10px] text-zinc-400 mt-1">
+                            <span>{{ $n->created_at->diffForHumans() }}</span>
+                            @if($actorName)
+                                <span class="font-medium text-zinc-500">{{ __('por') }} {{ $actorName }}</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
             @empty

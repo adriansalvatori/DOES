@@ -33,17 +33,6 @@ class ProfileSettings extends Component
 
     public $avatar_file = null;
 
-    // Notification Preferences
-    public bool $notify_order_assigned = true;
-
-    public bool $notify_order_blocked = true;
-
-    public bool $notify_review_feedback = true;
-
-    public bool $notify_overdue = true;
-
-    public bool $notify_sound_enabled = false;
-
     // Environment Preferences
     public string $locale = 'es';
 
@@ -72,7 +61,7 @@ class ProfileSettings extends Component
     public function mount(): void
     {
         $requestedTab = request()->query('tab');
-        if ($requestedTab && in_array($requestedTab, ['general', 'notifications', 'preferences', 'security'])) {
+        if ($requestedTab && in_array($requestedTab, ['general', 'preferences', 'security'])) {
             $this->activeTab = $requestedTab;
         }
 
@@ -90,13 +79,6 @@ class ProfileSettings extends Component
             $this->locale = session('locale', $prefs['locale'] ?? config('app.locale', 'es'));
             $this->date_format = $prefs['date_format'] ?? 'd/m/Y';
             $this->default_landing_page = $prefs['default_landing_page'] ?? 'dashboard';
-
-            $notifications = $prefs['notifications'] ?? [];
-            $this->notify_order_assigned = (bool) ($notifications['order_assigned'] ?? true);
-            $this->notify_order_blocked = (bool) ($notifications['order_blocked'] ?? true);
-            $this->notify_review_feedback = (bool) ($notifications['review_feedback'] ?? true);
-            $this->notify_overdue = (bool) ($notifications['overdue'] ?? true);
-            $this->notify_sound_enabled = (bool) ($notifications['sound_enabled'] ?? false);
         }
     }
 
@@ -154,7 +136,7 @@ class ProfileSettings extends Component
 
     public function setTab(string $tab): void
     {
-        if (in_array($tab, ['general', 'notifications', 'preferences', 'security'])) {
+        if (in_array($tab, ['general', 'preferences', 'security'])) {
             $this->activeTab = $tab;
         }
     }
@@ -227,23 +209,6 @@ class ProfileSettings extends Component
         $this->dispatch('form-saved');
 
         session()->flash('success_profile', __('Perfil actualizado correctamente.'));
-    }
-
-    public function updateNotificationSettings(): void
-    {
-        $user = Auth::user();
-
-        $user->setPreference('notifications', [
-            'order_assigned' => $this->notify_order_assigned,
-            'order_blocked' => $this->notify_order_blocked,
-            'review_feedback' => $this->notify_review_feedback,
-            'overdue' => $this->notify_overdue,
-            'sound_enabled' => $this->notify_sound_enabled,
-        ]);
-
-        $this->dispatch('form-saved');
-
-        session()->flash('success_notifications', __('Preferencias de notificaciones guardadas con éxito.'));
     }
 
     public function setLocale(string $locale): void

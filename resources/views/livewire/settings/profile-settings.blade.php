@@ -95,13 +95,6 @@
             <span>{{ __('General & Perfil') }}</span>
         </button>
 
-        <button 
-            type="button"
-            @click="switchTab('notifications')" 
-            class="px-3.5 py-2.5 rounded-t-xl transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'notifications' ? 'border-stone-900 text-stone-900 font-semibold bg-white' : 'border-transparent hover:text-zinc-900 hover:bg-stone-50' }}">
-            <x-lucide-bell class="w-4 h-4 {{ $activeTab === 'notifications' ? 'text-stone-900' : 'text-zinc-400' }}" />
-            <span>{{ __('Notificaciones') }}</span>
-        </button>
 
         <button 
             type="button"
@@ -428,95 +421,6 @@
         </div>
     @endif
 
-    <!-- ========================================== -->
-    <!-- TAB 2: NOTIFICATIONS                       -->
-    <!-- ========================================== -->
-    @if($activeTab === 'notifications')
-        <div class="space-y-6">
-            @if(session('success_notifications'))
-                <div class="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-medium flex items-center gap-2">
-                    <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{{ session('success_notifications') }}</span>
-                </div>
-            @endif
-
-            <div class="bg-white border border-[#e9e9e7] rounded-2xl p-6 shadow-2xs space-y-6">
-                <div>
-                    <h3 class="font-bold text-sm text-zinc-900">{{ __('Centro de Alertas y Notificaciones') }}</h3>
-                    <p class="text-xs text-zinc-500 mt-0.5">{{ __('Configura qué eventos en tus órdenes disparan avisos en la campana del Topbar.') }}</p>
-                </div>
-
-                <form wire:submit="updateNotificationSettings" class="space-y-4 max-w-2xl">
-                    <div class="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
-                        
-                        <div class="p-4 flex items-center justify-between gap-4 hover:bg-stone-50/50 transition">
-                            <div>
-                                <p class="text-xs font-semibold text-zinc-900">{{ __('Nueva orden o tarea asignada') }}</p>
-                                <p class="text-[11px] text-zinc-500">{{ __('Recibir notificación cuando te asignan una orden o subtarea.') }}</p>
-                            </div>
-                            <input type="checkbox" wire:model="notify_order_assigned" class="w-4 h-4 text-stone-900 rounded border-stone-300 focus:ring-stone-900 cursor-pointer" />
-                        </div>
-
-                        <div class="p-4 flex items-center justify-between gap-4 hover:bg-stone-50/50 transition">
-                            <div>
-                                <p class="text-xs font-semibold text-zinc-900">{{ __('Órdenes bloqueadas o sin medidas') }}</p>
-                                <p class="text-[11px] text-zinc-500">{{ __('Avisar cuando una orden de tu flujo entra en estado de bloqueo o se desbloquea.') }}</p>
-                            </div>
-                            <input type="checkbox" wire:model="notify_order_blocked" class="w-4 h-4 text-stone-900 rounded border-stone-300 focus:ring-stone-900 cursor-pointer" />
-                        </div>
-
-                        <div class="p-4 flex items-center justify-between gap-4 hover:bg-stone-50/50 transition">
-                            <div>
-                                <p class="text-xs font-semibold text-zinc-900">{{ __('Feedback de revisión (Camila / Cliente)') }}</p>
-                                <p class="text-[11px] text-zinc-500">{{ __('Avisar cuando se solicitan cambios o revisiones en tus trabajos enviados.') }}</p>
-                            </div>
-                            <input type="checkbox" wire:model="notify_review_feedback" class="w-4 h-4 text-stone-900 rounded border-stone-300 focus:ring-stone-900 cursor-pointer" />
-                        </div>
-
-                        <div class="p-4 flex items-center justify-between gap-4 hover:bg-stone-50/50 transition">
-                            <div>
-                                <p class="text-xs font-semibold text-zinc-900">{{ __('Alerta de vencimiento crítico (OVERDUE)') }}</p>
-                                <p class="text-[11px] text-zinc-500">{{ __('Avisar inmediatamente si una orden supera la fecha pactada de entrega.') }}</p>
-                            </div>
-                            <input type="checkbox" wire:model="notify_overdue" class="w-4 h-4 text-stone-900 rounded border-stone-300 focus:ring-stone-900 cursor-pointer" />
-                        </div>
-
-                        <div class="p-4 flex items-center justify-between gap-4 hover:bg-stone-50/50 transition bg-stone-50/30">
-                            <div>
-                                <p class="text-xs font-semibold text-zinc-900">{{ __('Sonido de alerta (Chime)') }}</p>
-                                <p class="text-[11px] text-zinc-500">{{ __('Reproducir un sonido discreto en el navegador ante eventos de alta prioridad.') }}</p>
-                            </div>
-                            <input type="checkbox" wire:model="notify_sound_enabled" class="w-4 h-4 text-stone-900 rounded border-stone-300 focus:ring-stone-900 cursor-pointer" />
-                        </div>
-
-                    </div>
-
-                    <div class="pt-2">
-                        <!-- Disabled by default when no changes -->
-                        <template x-if="!isDirty">
-                            <button 
-                                type="button" 
-                                disabled 
-                                class="inline-flex items-center gap-2 px-4 py-2 bg-stone-100 text-stone-400 border border-stone-200/80 text-xs font-semibold rounded-xl cursor-not-allowed select-none opacity-60 shadow-none">
-                                <x-lucide-save class="w-4 h-4 text-stone-400" />
-                                <span>{{ __('Guardar Preferencias de Alertas') }}</span>
-                            </button>
-                        </template>
-
-                        <!-- Appears in green when user makes changes -->
-                        <template x-if="isDirty">
-                            <button 
-                                type="submit" 
-                                class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-md shadow-emerald-600/25 ring-2 ring-emerald-500/20 transition-all duration-200 cursor-pointer animate-in fade-in zoom-in-95">
-                                <x-lucide-check class="w-4 h-4 text-white" />
-                                <span>{{ __('Guardar Preferencias de Alertas') }}</span>
-                            </button>
-                        </template>
-                    </div>
-                </form>
-            </div>
-        </div>
-    @endif
 
     <!-- ========================================== -->
     <!-- TAB 3: ENVIRONMENT & PREFERENCES          -->
