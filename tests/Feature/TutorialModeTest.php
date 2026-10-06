@@ -10,15 +10,15 @@ class TutorialModeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_dashboard_renders_demo_tour_trigger_and_elements(): void
+    public function test_dashboard_does_not_render_demo_tour_trigger(): void
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get('/');
 
         $response->assertStatus(200);
-        $response->assertSee('Modo Demo', false);
-        $response->assertSee('tour-demo-btn', false);
+        $response->assertDontSee('Modo Demo', false);
+        $response->assertDontSee('tour-demo-btn', false);
         $response->assertSee('tour-dashboard-stats', false);
         $response->assertSee('tour-designer-colors', false);
     }

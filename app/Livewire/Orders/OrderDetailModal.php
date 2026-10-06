@@ -373,9 +373,9 @@ class OrderDetailModal extends Component
 
                 NotificationDispatcher::dispatch(
                     eventType: 'new_attachments',
-                    title: __('Nuevos Adjuntos en Orden'),
-                    message: __('Se subió el archivo ":file" a la orden #:id', ['file' => $fileName, 'id' => $order->id]),
-                    order: $order
+                    label: 'New File',
+                    order: $order,
+                    detailText: $fileName
                 );
 
                 $this->loadTrelloDetails();
@@ -531,8 +531,7 @@ class OrderDetailModal extends Component
 
             NotificationDispatcher::dispatch(
                 eventType: 'new_comment',
-                title: __('Nuevo Comentario en Orden'),
-                message: __('Se publicó un nuevo comentario en la orden #:id', ['id' => $order->id]),
+                label: 'New Comment',
                 order: $order
             );
 

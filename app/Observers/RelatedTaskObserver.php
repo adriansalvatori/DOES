@@ -60,16 +60,16 @@ class RelatedTaskObserver
                 if ($task->type === RelatedTaskType::BIENVENIDA) {
                     NotificationDispatcher::dispatch(
                         eventType: 'welcome_email_sent',
-                        title: __('Correo de Bienvenida Enviado'),
-                        message: __('Se envió el correo de bienvenida al cliente para la orden #:id', ['id' => $task->order_id]),
-                        order: $task->order
+                        label: 'Email Sent',
+                        order: $task->order,
+                        detailText: 'Correo de bienvenida'
                     );
                 } elseif ($task->type === RelatedTaskType::CORREO_ATRASO) {
                     NotificationDispatcher::dispatch(
                         eventType: 'overdue_email_sent',
-                        title: __('Correo de Atraso Enviado'),
-                        message: __('Se envió el correo de notificación de atraso para la orden #:id', ['id' => $task->order_id]),
-                        order: $task->order
+                        label: 'Email Sent',
+                        order: $task->order,
+                        detailText: 'Correo de atraso'
                     );
                 }
 

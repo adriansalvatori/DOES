@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\CoreStatus;
+use App\Enums\Substatus;
 use App\Enums\UserRole;
 use App\Livewire\Notifications\NotificationCenter;
 use App\Livewire\Settings\NotificationSettings;
@@ -91,19 +92,18 @@ class NotificationCenterTest extends TestCase
         // Dispatch notification for order1
         NotificationDispatcher::dispatch(
             eventType: 'status_changed',
-            title: 'Cambio de Estatus Especial',
-            message: 'Estatus cambiado',
+            label: 'Status',
             order: $order1,
             actor: $admin
         );
 
         $this->actingAs($designerUser1);
         Livewire::test(NotificationCenter::class)
-            ->assertSee('Cambio de Estatus Especial');
+            ->assertSee('Status');
 
         $this->actingAs($designerUser2);
         Livewire::test(NotificationCenter::class)
-            ->assertDontSee('Cambio de Estatus Especial');
+            ->assertDontSee('Status');
     }
 
     public function test_admin_can_toggle_notification_settings(): void
@@ -146,8 +146,7 @@ class NotificationCenterTest extends TestCase
         // Normal notification
         NotificationDispatcher::dispatch(
             eventType: 'new_comment',
-            title: 'Nuevo Comentario',
-            message: 'Comentario normal',
+            label: 'New Comment',
             order: $order,
             actor: $admin
         );
@@ -155,8 +154,7 @@ class NotificationCenterTest extends TestCase
         // Urgent notification
         NotificationDispatcher::dispatch(
             eventType: 'order_overdue',
-            title: 'Orden Atrasada',
-            message: 'Alerta urgente de atraso',
+            label: 'Overdue',
             order: $order,
             actor: $admin,
             isUrgent: true
@@ -173,5 +171,124 @@ class NotificationCenterTest extends TestCase
         $first = $notifications->first();
         $this->assertEquals('order_overdue', $first->data['event_type']);
         $this->assertTrue($first->data['is_urgent']);
+    }
+
+    public function test_new_order_notification_renders_bold_green_title_and_reduced_opacity_when_read(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $designer = Designer::create([
+            'name' => $designerUser->name,
+            'slug' => 'designer-test-compact',
+            'hex_color' => '#123456',
+            'user_id' => $designerUser->id,
+            'active' => true,
+        ]);
+
+        $this->actingAs($admin);
+
+        $order = Order::create([
+            'company_name' => 'ACME CORP',
+            'task_name' => 'FLYER DESIGN',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'designer_id' => $designer->id,
+            'in_workspace' => true,
+        ]);
+
+        $this->actingAs($designerUser);
+
+        // Initially unread: contains "New Order", headline, and full opacity (opacity-100)
+        Livewire::test(NotificationCenter::class)
+            ->assertSee('New Order')
+            ->assertSee('ACME CORP')
+            ->assertSee('FLYER DESIGN')
+            ->assertSeeHtml('opacity-100');
+
+        // Mark as read (opened)
+        $notification = $designerUser->notifications()->first();
+        $notification->markAsRead();
+
+        // Now that it has been opened/read, opacity should be reduced (opacity-40)
+        Livewire::test(NotificationCenter::class)
+            ->assertSeeHtml('opacity-40');
+    }
+
+    public function test_order_flagged_urgent_dispatches_notification(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+        $designerUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $designer = Designer::create([
+            'name' => $designerUser->name,
+            'slug' => 'designer-urgent-flag',
+            'hex_color' => '#654321',
+            'user_id' => $designerUser->id,
+            'active' => true,
+        ]);
+
+        $this->actingAs($admin);
+
+        $order = Order::create([
+            'company_name' => 'Empresa Urgente Test',
+            'task_name' => 'Tarea Urgente',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => Substatus::BLOQUEADA,
+            'designer_id' => $designer->id,
+            'in_workspace' => true,
+        ]);
+
+        // Change substatus to URGENTE
+        $order->update(['substatus' => Substatus::URGENTE]);
+
+        $this->actingAs($designerUser);
+
+        Livewire::test(NotificationCenter::class)
+            ->assertSee('Urgent');
+    }
+
+    public function test_lead_designer_sees_all_notifications_and_compact_tag_for_unassigned_cards(): void
+    {
+        $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+
+        $leadUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        Designer::create([
+            'name' => $leadUser->name,
+            'slug' => 'lead-designer-test',
+            'hex_color' => '#FF00FF',
+            'user_id' => $leadUser->id,
+            'active' => true,
+            'is_lead' => true,
+        ]);
+
+        $otherUser = User::factory()->create(['role' => UserRole::DESIGNER]);
+        $otherDesigner = Designer::create([
+            'name' => 'César',
+            'slug' => 'cesar-test',
+            'hex_color' => '#00FFFF',
+            'user_id' => $otherUser->id,
+            'active' => true,
+            'is_lead' => false,
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'EMPRESA OTRO',
+            'task_name' => 'TAREA CESAR',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'designer_id' => $otherDesigner->id,
+            'in_workspace' => true,
+        ]);
+
+        NotificationDispatcher::dispatch(
+            eventType: 'status_changed',
+            label: 'Status',
+            order: $order,
+            actor: $admin
+        );
+
+        // Lead designer should see the notification with designer tag and compact format
+        $this->actingAs($leadUser);
+        Livewire::test(NotificationCenter::class)
+            ->assertSee('César')
+            ->assertSee('Status')
+            ->assertSee('EMPRESA OTRO • TAREA CESAR');
     }
 }

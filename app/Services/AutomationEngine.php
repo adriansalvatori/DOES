@@ -584,18 +584,12 @@ class AutomationEngine
             ]);
 
             $this->handleStatusChanged($order, $previousStatus, CoreStatus::ENVIADO_AL_CLIENTE, 'AutomationEngine');
-        }
-
-        // Check for orders due today
+        }        // Check for orders due today
         $dueTodayOrders = Order::inWorkspace()->get()->filter(fn ($o) => $o->isDueToday());
         foreach ($dueTodayOrders as $order) {
             NotificationDispatcher::dispatch(
                 eventType: 'order_due_today',
-                title: __('Orden Se Vence HOY'),
-                message: __('La orden #:id - :task tiene fecha de entrega para el día de hoy', [
-                    'id' => $order->id,
-                    'task' => $order->task_name,
-                ]),
+                label: 'Due Today',
                 order: $order
             );
         }
@@ -605,11 +599,7 @@ class AutomationEngine
         foreach ($overdueOrders as $order) {
             NotificationDispatcher::dispatch(
                 eventType: 'order_overdue',
-                title: __('Orden Atrasada (OVERDUE)'),
-                message: __('La orden #:id - :task ha superado la fecha límite de entrega', [
-                    'id' => $order->id,
-                    'task' => $order->task_name,
-                ]),
+                label: 'Overdue',
                 order: $order,
                 isUrgent: true
             );

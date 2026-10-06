@@ -47,15 +47,19 @@ class NotificationCenter extends Component
             ]);
         }
 
+        $isLeadOrManager = $user->isAdmin()
+            || $user->isCoordinator()
+            || ($user->isDesigner() && $user->designer?->is_lead);
+
         $designerOrderIds = [];
-        if ($user->isDesigner() && $user->designer) {
+        if ($user->isDesigner() && $user->designer && ! $isLeadOrManager) {
             $designerOrderIds = Order::where('designer_id', $user->designer->id)->pluck('id')->toArray();
         }
 
         // Fetch notifications
         $allNotifications = $user->notifications()
             ->get()
-            ->filter(function ($n) use ($user, $designerOrderIds) {
+            ->filter(function ($n) use ($user, $isLeadOrManager, $designerOrderIds) {
                 $data = $n->data ?? [];
 
                 // Exclude if user is the actor
@@ -63,8 +67,8 @@ class NotificationCenter extends Component
                     return false;
                 }
 
-                // If designer, only show notifications for assigned orders
-                if ($user->isDesigner()) {
+                // If standard designer (not Lead or Manager), only show notifications for assigned orders
+                if (! $isLeadOrManager && $user->isDesigner()) {
                     $orderId = $data['order_id'] ?? null;
                     if ($orderId && ! in_array((int) $orderId, $designerOrderIds, true)) {
                         return false;
@@ -74,10 +78,17 @@ class NotificationCenter extends Component
                 return true;
             });
 
-        // Sort: Urgent / Overdue first, then created_at DESC
+        // Sort: Unread first, then Urgent / Overdue, then created_at DESC
         $sortedNotifications = $allNotifications->sort(function ($a, $b) {
-            $aUrgent = ! empty($a->data['is_urgent']) || ($a->data['event_type'] ?? '') === 'order_overdue';
-            $bUrgent = ! empty($b->data['is_urgent']) || ($b->data['event_type'] ?? '') === 'order_overdue';
+            $aUnread = $a->unread();
+            $bUnread = $b->unread();
+
+            if ($aUnread !== $bUnread) {
+                return $aUnread ? -1 : 1;
+            }
+
+            $aUrgent = ! empty($a->data['is_urgent']) || in_array($a->data['event_type'] ?? '', ['order_overdue', 'order_urgent'], true);
+            $bUrgent = ! empty($b->data['is_urgent']) || in_array($b->data['event_type'] ?? '', ['order_overdue', 'order_urgent'], true);
 
             if ($aUrgent !== $bUrgent) {
                 return $aUrgent ? -1 : 1;

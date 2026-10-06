@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Auth;
 class NotificationDispatcher
 {
     /**
-     * Dispatch a notification for a specific event type.
+     * Dispatch a structured notification for a specific event type.
      */
     public static function dispatch(
         string $eventType,
-        string $title,
-        string $message,
+        string $label,
         ?Order $order = null,
+        ?string $detailText = null,
         ?User $actor = null,
         bool $isUrgent = false
     ): void {
@@ -33,6 +33,7 @@ class NotificationDispatcher
             'new_attachments' => true,
             'new_comment' => true,
             'order_due_today' => true,
+            'order_urgent' => true,
             'overdue_email_sent' => true,
             'welcome_email_sent' => true,
         ];
@@ -48,17 +49,21 @@ class NotificationDispatcher
         $actorId = $actor?->id;
         $actorName = $actor?->name;
 
-        // Force order_overdue to be urgent
-        if ($eventType === 'order_overdue') {
+        // Force order_overdue and order_urgent to be urgent
+        if ($eventType === 'order_overdue' || $eventType === 'order_urgent') {
             $isUrgent = true;
         }
 
         // 2. Resolve recipients:
         // - Managers (Admins and Coordinators)
+        // - Lead Designers (is_lead = true)
         // - Designer assigned to the order (if applicable)
         $query = User::where('active', true)
             ->where(function ($q) use ($order) {
-                $q->whereIn('role', [UserRole::ADMIN->value, UserRole::COORDINATOR->value]);
+                $q->whereIn('role', [UserRole::ADMIN->value, UserRole::COORDINATOR->value])
+                    ->orWhereHas('designer', function ($dq) {
+                        $dq->where('is_lead', true);
+                    });
 
                 if ($order && $order->designer_id) {
                     $q->orWhereHas('designer', function ($dq) use ($order) {
@@ -74,19 +79,26 @@ class NotificationDispatcher
 
         $recipients = $query->get();
 
+        $companyName = $order?->company_name ?? __('General');
+        $taskName = $order?->task_name ?? __('Orden');
+        $designerId = $order?->designer_id;
+        $designerName = $order?->designer?->name;
+
         $notification = new SystemNotification(
             eventType: $eventType,
-            title: $title,
-            message: $message,
+            label: $label,
+            companyName: $companyName,
+            taskName: $taskName,
             orderId: $order?->id,
-            taskName: $order?->task_name,
+            detailText: $detailText,
             actorId: $actorId,
             actorName: $actorName,
-            isUrgent: $isUrgent
+            isUrgent: $isUrgent,
+            designerId: $designerId,
+            designerName: $designerName
         );
 
         foreach ($recipients as $recipient) {
-            // Prevent duplicates if same notification sent to same user recently
             $recipient->notify($notification);
         }
     }

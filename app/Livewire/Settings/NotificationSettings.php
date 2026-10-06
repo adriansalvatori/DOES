@@ -26,6 +26,7 @@ class NotificationSettings extends Component
             'new_attachments' => true,
             'new_comment' => true,
             'order_due_today' => true,
+            'order_urgent' => true,
             'overdue_email_sent' => true,
             'welcome_email_sent' => true,
         ];

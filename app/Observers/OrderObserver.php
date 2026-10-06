@@ -2,6 +2,7 @@
 
 namespace App\Observers;
 
+use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Models\Order;
 use App\Services\ActionRequiredResolverService;
@@ -19,14 +20,18 @@ class OrderObserver
     {
         NotificationDispatcher::dispatch(
             eventType: 'new_order',
-            title: __('Nueva Orden Creada'),
-            message: __('Se registró la orden #:id: :task (:company)', [
-                'id' => $order->id,
-                'task' => $order->task_name ?? __('Sin Nombre'),
-                'company' => $order->company_name ?? __('Cliente General'),
-            ]),
+            label: 'New Order',
             order: $order
         );
+
+        if ($order->isUrgente()) {
+            NotificationDispatcher::dispatch(
+                eventType: 'order_urgent',
+                label: 'Urgent',
+                order: $order,
+                isUrgent: true
+            );
+        }
     }
 
     /**
@@ -48,14 +53,16 @@ class OrderObserver
     {
         // 1. Notification triggers
         if ($order->wasChanged('core_status')) {
+            $prevCore = $order->getOriginal('core_status');
+            $prevLabel = $prevCore instanceof CoreStatus ? $prevCore->label() : (string) $prevCore;
+            $newLabel = $order->core_status?->label() ?? (string) $order->core_status;
+            $detail = $prevLabel ? "{$prevLabel} ➔ {$newLabel}" : $newLabel;
+
             NotificationDispatcher::dispatch(
                 eventType: 'status_changed',
-                title: __('Cambio de Estatus'),
-                message: __('La orden #:id cambió a :status', [
-                    'id' => $order->id,
-                    'status' => $order->core_status?->label() ?? $order->core_status,
-                ]),
-                order: $order
+                label: 'Status',
+                order: $order,
+                detailText: $detail
             );
         }
 
@@ -69,19 +76,15 @@ class OrderObserver
             if (in_array($newSubValue, $blockedSubstatuses, true)) {
                 NotificationDispatcher::dispatch(
                     eventType: 'order_blocked',
-                    title: __('Orden Bloqueada'),
-                    message: __('La orden #:id entró en estado de bloqueo (:substatus)', [
-                        'id' => $order->id,
-                        'substatus' => $order->substatus?->label() ?? $newSubValue,
-                    ]),
+                    label: 'Blocked',
                     order: $order,
+                    detailText: $order->substatus?->label() ?? $newSubValue,
                     isUrgent: true
                 );
             } elseif (in_array($originalSubString, $blockedSubstatuses, true) && ! in_array($newSubValue, $blockedSubstatuses, true)) {
                 NotificationDispatcher::dispatch(
                     eventType: 'order_unblocked',
-                    title: __('Orden Desbloqueada'),
-                    message: __('La orden #:id ha sido desbloqueada', ['id' => $order->id]),
+                    label: 'Unblocked',
                     order: $order
                 );
             }
@@ -89,9 +92,18 @@ class OrderObserver
             if (in_array($newSubValue, [Substatus::PONER_EN_ALTA->value, Substatus::ENVIADO_EN_ALTA->value], true)) {
                 NotificationDispatcher::dispatch(
                     eventType: 'order_approved_alta',
-                    title: __('Orden Aprobada - Pendiente ALTA'),
-                    message: __('La orden #:id ha sido aprobada y pasa a pendiente ALTA', ['id' => $order->id]),
-                    order: $order
+                    label: 'Approved',
+                    order: $order,
+                    detailText: 'Pendiente ALTA'
+                );
+            }
+
+            if ($newSubValue === Substatus::URGENTE->value) {
+                NotificationDispatcher::dispatch(
+                    eventType: 'order_urgent',
+                    label: 'Urgent',
+                    order: $order,
+                    isUrgent: true
                 );
             }
         }
