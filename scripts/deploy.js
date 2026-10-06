@@ -364,15 +364,15 @@ console.log('\n⚙️  Ejecutando tareas post-despliegue en Hostinger...');
 try {
     // A. Migraciones de base de datos
     if (!skipMigrate) {
-        runRemoteCommand(`${REMOTE_PHP} artisan migrate --force`, 'Ejecutando migraciones de base de datos');
+        runRemoteCommand(`${REMOTE_PHP} artisan migrate --force --no-interaction`, 'Ejecutando migraciones de base de datos');
     }
 
     // B. Enlace simbólico de storage
-    runRemoteCommand(`${REMOTE_PHP} artisan storage:link || true`, 'Verificando enlace simbólico storage:link');
+    runRemoteCommand(`${REMOTE_PHP} artisan storage:link --no-interaction || true`, 'Verificando enlace simbólico storage:link');
 
     // C. Limpiar y optimizar cachés de Laravel
-    runRemoteCommand(`${REMOTE_PHP} artisan optimize:clear`, 'Limpiando cachés de Laravel');
-    runRemoteCommand(`${REMOTE_PHP} artisan optimize`, 'Compilando optimizaciones de Laravel (rutas, config)');
+    runRemoteCommand(`${REMOTE_PHP} artisan optimize:clear --no-interaction`, 'Limpiando cachés de Laravel');
+    runRemoteCommand(`${REMOTE_PHP} artisan optimize --no-interaction`, 'Compilando optimizaciones de Laravel (rutas, config)');
 
     console.log('\n======================================================');
     console.log('🎉 ¡Despliegue finalizado con éxito!');
