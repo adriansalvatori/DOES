@@ -12,11 +12,13 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Models\Substatus as SubstatusModel;
 use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
 use App\Services\NotificationDispatcher;
 use App\Services\OrderTitleParserService;
+use App\Services\SlaEngine;
 use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
@@ -66,6 +68,8 @@ class OrderDetailModal extends Component
     public bool $showArchiveModal = false;
 
     public string $archiveSubstatus = 'FINALIZADA !';
+
+    public bool $archiveConfirmed = false;
 
     // Edit Mode state
     public $isEditing = false;
@@ -893,16 +897,32 @@ class OrderDetailModal extends Component
         }
     }
 
+    #[On('open-archive-order-modal')]
+    public function openArchiveForOrder(int $orderId): void
+    {
+        $this->orderId = $orderId;
+        $this->showModal = true;
+        $this->openArchiveModal();
+    }
+
     public function openArchiveModal(): void
     {
-        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->archiveSubstatus = SubstatusModel::getDefaultArchivedSubstatus();
         $this->showArchiveModal = true;
     }
 
     public function closeArchiveModal(): void
     {
         $this->showArchiveModal = false;
-        $this->archiveSubstatus = 'FINALIZADA !';
+        $this->archiveSubstatus = SubstatusModel::getDefaultArchivedSubstatus();
+
+        if ($this->orderId) {
+            $order = Order::find($this->orderId);
+            if ($order) {
+                $this->editCoreStatus = $order->core_status?->value ?? '';
+                $this->editSubstatus = $order->substatus?->value ?? ($order->substatus ?? '');
+            }
+        }
     }
 
     public function confirmArchive(): void
@@ -919,9 +939,11 @@ class OrderDetailModal extends Component
         $this->showArchiveModal = false;
 
         if ($this->isEditing) {
+            $this->archiveConfirmed = true;
             $this->editCoreStatus = CoreStatus::ARCHIVED->value;
             $this->editSubstatus = $subEnum instanceof Substatus ? $subEnum->value : (string) $subEnum;
             $this->saveOrder();
+            $this->archiveConfirmed = false;
 
             return;
         }
@@ -1307,6 +1329,12 @@ class OrderDetailModal extends Component
 
         if ($newCoreStatus === CoreStatus::ON_HOLD && $previousStatus !== CoreStatus::ON_HOLD && empty($this->onHoldReason)) {
             $this->openOnHoldModal();
+
+            return;
+        }
+
+        if ($newCoreStatus === CoreStatus::ARCHIVED && $previousStatus !== CoreStatus::ARCHIVED && ! $this->archiveConfirmed) {
+            $this->openArchiveModal();
 
             return;
         }
@@ -2085,6 +2113,7 @@ class OrderDetailModal extends Component
             'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
             'coreStatuses' => CoreStatus::cases(),
             'substatuses' => $validSubstatuses,
+            'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
             'existingCompanies' => Order::inWorkspace()
                 ->whereNotNull('company_name')
                 ->where('company_name', '!=', '')

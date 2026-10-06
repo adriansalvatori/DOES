@@ -821,4 +821,25 @@ class OrderDetailModalTest extends TestCase
         $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $fresh->substatus);
         $this->assertEquals('Aprobado por cliente vía WhatsApp con el OK final.', $fresh->approval_note);
     }
+
+    public function test_save_order_updates_due_date_via_sla_engine(): void
+    {
+        $order = Order::create([
+            'company_name' => 'EMPRESA DUE DATE TEST',
+            'task_name' => 'TASK DUE DATE',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => now()->addDays(2)->toDateString(),
+            'in_workspace' => true,
+        ]);
+
+        $newDueDate = now()->addDays(5)->toDateString();
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id, true)
+            ->set('editDueDate', $newDueDate)
+            ->call('saveOrder')
+            ->assertDispatched('order-updated');
+
+        $this->assertEquals($newDueDate, $order->fresh()->current_due_date->toDateString());
+    }
 }

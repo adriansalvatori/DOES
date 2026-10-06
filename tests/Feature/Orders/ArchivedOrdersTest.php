@@ -5,8 +5,10 @@ namespace Tests\Feature\Orders;
 use App\Enums\CoreStatus;
 use App\Livewire\Kanban\Board;
 use App\Livewire\Orders\ArchivedOrders;
+use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\Substatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -119,5 +121,70 @@ class ArchivedOrdersTest extends TestCase
         $restored = $prodOrder->fresh();
         $this->assertEquals(CoreStatus::EN_PRODUCCION, $restored->core_status);
         $this->assertNull($restored->archived_at);
+    }
+
+    public function test_moving_order_to_archived_with_selected_substatus(): void
+    {
+        Substatus::create([
+            'name' => 'DEBE',
+            'core_status' => CoreStatus::ARCHIVED->value,
+            'is_default' => false,
+            'is_global' => false,
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'Pending Debt Client',
+            'task_name' => 'Vehicle Wrap',
+            'designer_id' => $this->designer->id,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(Board::class)
+            ->call('moveOrder', $order->id, 'ARCHIVED')
+            ->assertSet('showArchiveModal', true)
+            ->set('archiveSubstatus', 'DEBE')
+            ->call('confirmArchive');
+
+        $fresh = $order->fresh();
+        $this->assertEquals(CoreStatus::ARCHIVED, $fresh->core_status);
+        $subVal = $fresh->substatus instanceof \App\Enums\Substatus ? $fresh->substatus->value : (string) $fresh->substatus;
+        $this->assertEquals('DEBE', $subVal);
+        $this->assertNotNull($fresh->archived_at);
+    }
+
+    public function test_order_detail_modal_archive_flow_and_cancel_reversion(): void
+    {
+        $order = Order::create([
+            'company_name' => 'Detail Modal Client',
+            'task_name' => 'Signage',
+            'designer_id' => $this->designer->id,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => \App\Enums\Substatus::CAMBIOS_CLIENTE,
+            'in_workspace' => true,
+        ]);
+
+        // 1. Changing to ARCHIVED opens archive modal
+        $component = Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('changeCoreStatus', 'ARCHIVED')
+            ->assertSet('showArchiveModal', true);
+
+        // 2. Canceling closes modal and keeps original status
+        $component->call('closeArchiveModal')
+            ->assertSet('showArchiveModal', false);
+
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->fresh()->core_status);
+
+        // 3. Confirming archives with selected substatus
+        $component->call('changeCoreStatus', 'ARCHIVED')
+            ->set('archiveSubstatus', 'CLIENTE NO RESPONSIVE')
+            ->call('confirmArchive');
+
+        $fresh = $order->fresh();
+        $this->assertEquals(CoreStatus::ARCHIVED, $fresh->core_status);
+        $subVal = $fresh->substatus instanceof \App\Enums\Substatus ? $fresh->substatus->value : (string) $fresh->substatus;
+        $this->assertEquals('CLIENTE NO RESPONSIVE', $subVal);
+        $this->assertNotNull($fresh->archived_at);
     }
 }
