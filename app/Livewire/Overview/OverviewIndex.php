@@ -119,11 +119,18 @@ class OverviewIndex extends Component
         // 2. Subestatus configurados para ARCHIVED en la base de datos
         foreach ($models as $m) {
             $cnt = (int) ($rawCounts[$m->name] ?? 0);
-            $enum = Substatus::tryFrom($m->name);
-            $label = $enum?->label() ?? mb_convert_case($m->name, MB_CASE_TITLE, 'UTF-8');
+            if ($m->name === 'FINALIZADA !' && isset($rawCounts['FINALIZADA'])) {
+                $cnt += (int) $rawCounts['FINALIZADA'];
+            } elseif ($m->name === 'FINALIZADA' && isset($rawCounts['FINALIZADA !'])) {
+                $cnt += (int) $rawCounts['FINALIZADA !'];
+            }
+            if ($m->name === 'CLIENTE NO RESPONDIO' && isset($rawCounts['CLIENTE NO RESPONSIVE'])) {
+                $cnt += (int) $rawCounts['CLIENTE NO RESPONSIVE'];
+            }
 
-            $hex = $m->color ?: ($m->bg_color ?: '#6B7280');
-            $pal = \App\Models\Substatus::derivePaletteFromColor($hex, 'light');
+            $enum = Substatus::tryFrom($m->name);
+            $label = mb_strtoupper($enum?->label() ?? $m->name);
+            $pal = \App\Models\Substatus::resolvePalette($m->name);
 
             $filters[$m->name] = [
                 'key' => $m->name,
@@ -133,32 +140,68 @@ class OverviewIndex extends Component
                 'bg_color' => $pal['bg_color'],
                 'text_color' => $pal['text_color'],
                 'border_color' => $pal['border_color'],
-                'solid_bg' => $pal['color'],
-                'solid_text' => '#FFFFFF',
+                'solid_bg' => $pal['solid_bg'],
+                'solid_text' => $pal['solid_text'],
+                'style_type' => $pal['style_type'],
                 'icon' => 'tag',
             ];
         }
 
         // 3. Subestatus adicionales encontrados en órdenes archivadas de DB
         foreach ($rawCounts as $subName => $cnt) {
-            if ($subName && ! isset($filters[$subName])) {
-                $enum = Substatus::tryFrom($subName);
-                $label = $enum?->label() ?? mb_convert_case($subName, MB_CASE_TITLE, 'UTF-8');
-                $pal = \App\Models\Substatus::derivePaletteFromColor('#10B981', 'light');
-
-                $filters[$subName] = [
-                    'key' => $subName,
-                    'label' => $label,
-                    'short_label' => $label,
-                    'count' => (int) $cnt,
-                    'bg_color' => $pal['bg_color'],
-                    'text_color' => $pal['text_color'],
-                    'border_color' => $pal['border_color'],
-                    'solid_bg' => $pal['color'],
-                    'solid_text' => '#FFFFFF',
-                    'icon' => 'check-circle-2',
-                ];
+            if ($subName === null || $subName === '') {
+                continue;
             }
+
+            if (isset($filters[$subName])) {
+                continue;
+            }
+            if ($subName === 'FINALIZADA' && isset($filters['FINALIZADA !'])) {
+                continue;
+            }
+            if ($subName === 'FINALIZADA !' && isset($filters['FINALIZADA'])) {
+                continue;
+            }
+            if ($subName === 'CLIENTE NO RESPONSIVE' && isset($filters['CLIENTE NO RESPONDIO'])) {
+                continue;
+            }
+
+            $enum = Substatus::tryFrom($subName);
+            $label = mb_strtoupper($enum?->label() ?? $subName);
+            $pal = \App\Models\Substatus::resolvePalette($subName);
+
+            $filters[$subName] = [
+                'key' => $subName,
+                'label' => $label,
+                'short_label' => $label,
+                'count' => (int) $cnt,
+                'bg_color' => $pal['bg_color'],
+                'text_color' => $pal['text_color'],
+                'border_color' => $pal['border_color'],
+                'solid_bg' => $pal['solid_bg'],
+                'solid_text' => $pal['solid_text'],
+                'style_type' => $pal['style_type'],
+                'icon' => 'check-circle-2',
+            ];
+        }
+
+        // 4. Órdenes archivadas sin subestatus -> "OTROS"
+        $nullCount = (int) ($rawCounts[''] ?? 0) + (int) ($rawCounts[null] ?? 0);
+        if ($nullCount > 0 && ! isset($filters['otros'])) {
+            $pal = \App\Models\Substatus::resolvePalette(null);
+            $filters['otros'] = [
+                'key' => 'otros',
+                'label' => mb_strtoupper(__('Otros')),
+                'short_label' => mb_strtoupper(__('Otros')),
+                'count' => $nullCount,
+                'bg_color' => $pal['bg_color'],
+                'text_color' => $pal['text_color'],
+                'border_color' => $pal['border_color'],
+                'solid_bg' => $pal['solid_bg'],
+                'solid_text' => $pal['solid_text'],
+                'style_type' => $pal['style_type'],
+                'icon' => 'help-circle',
+            ];
         }
 
         $all = $filters['all'];
@@ -999,6 +1042,7 @@ class OverviewIndex extends Component
         if ($substatus instanceof Substatus && $substatus->isGlobal()) {
             $order->toggleFlag($substatus);
             $order->save();
+            $order->applySubstatusStatusRules();
             $label = $substatus->label();
             $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', 'Bandera actualizada: '.$label, $newSubVal, $prevSubVal);
         } else {
@@ -1017,6 +1061,8 @@ class OverviewIndex extends Component
 
             if ($isArchivedSub && $previousStatus !== CoreStatus::ARCHIVED) {
                 app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, CoreStatus::ARCHIVED);
+            } else {
+                $order->fresh()->applySubstatusStatusRules();
             }
 
             $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
@@ -1043,6 +1089,7 @@ class OverviewIndex extends Component
 
         $order->toggleFlag($flagName);
         $order->save();
+        $order->applySubstatusStatusRules();
 
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
@@ -1268,8 +1315,8 @@ class OverviewIndex extends Component
                 $query = Order::query()->archived();
                 if (in_array($this->archivedSubstatus, ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE', 'no_responsive'], true)) {
                     $query->whereIn('substatus', ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE']);
-                } elseif (in_array($this->archivedSubstatus, ['finalizada', Substatus::FINALIZADA->value], true)) {
-                    $query->where('substatus', Substatus::FINALIZADA->value);
+                } elseif (in_array($this->archivedSubstatus, ['finalizada', Substatus::FINALIZADA->value, 'FINALIZADA'], true)) {
+                    $query->whereIn('substatus', [Substatus::FINALIZADA->value, 'FINALIZADA']);
                 } elseif ($this->archivedSubstatus === 'cancelada') {
                     $query->whereIn('substatus', [
                         Substatus::CANCELADA->value,
@@ -1277,6 +1324,8 @@ class OverviewIndex extends Component
                         Substatus::CANCELADA_POR_CAMILA->value,
                         Substatus::NO_REALIZADA_TRANSFERIDA->value,
                     ]);
+                } elseif ($this->archivedSubstatus === 'otros') {
+                    $query->where(fn ($q) => $q->whereNull('substatus')->orWhere('substatus', ''));
                 } else {
                     $query->where('substatus', $this->archivedSubstatus);
                 }
@@ -1322,10 +1371,12 @@ class OverviewIndex extends Component
             'editingField' => $this->editingField,
             'editingValue' => $this->editingValue,
             'archivedSubstatus' => $this->archivedSubstatus,
-            'archivedSubstatusFilters' => $this->archivedSubstatusFilters,
             'groupedProcessSubstatuses' => $this->groupedProcessSubstatuses,
             'appliedFilters' => $this->appliedFilters,
             'ordersState' => $this->buildOrdersState($orders),
-        ], $this->metrics))->layout('components.layouts.app', ['title' => 'Overview Operativo']);
+        ], $this->metrics))->layout('components.layouts.app', [
+            'title' => 'Overview Operativo',
+            'noPadding' => true,
+        ]);
     }
 }

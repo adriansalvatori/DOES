@@ -312,33 +312,146 @@ class Substatus extends Model
         ];
     }
 
-    public static function getStyleFor(?string $name): array
+    /**
+     * Resolve the full color palette (bg, text, border, solid) for any substatus name,
+     * prioritizing user-defined settings in the DB, then enum/seeder fallbacks.
+     *
+     * @return array{color: string, style_type: string, bg_color: string, text_color: string, border_color: string, solid_bg: string, solid_text: string, inline: string}
+     */
+    public static function resolvePalette(?string $name): array
     {
         if (! $name) {
             return [
-                'inline' => 'background-color: #f3f4f6; color: #374151; border-color: #e5e7eb;',
-                'bg' => '#f3f4f6',
-                'text' => '#374151',
-                'border' => '#e5e7eb',
+                'color' => '#6B7280',
+                'style_type' => 'light',
+                'bg_color' => '#F5F5F4',
+                'text_color' => '#57534E',
+                'border_color' => '#E7E5E4',
+                'solid_bg' => '#78716C',
+                'solid_text' => '#FFFFFF',
+                'inline' => 'background-color: #F5F5F4; color: #57534E; border-color: #E7E5E4;',
             ];
         }
 
-        $upperName = mb_strtoupper($name);
-        $sub = static::where('name', $upperName)->orWhere('name', $name)->first();
-        if ($sub) {
+        static $cache = null;
+        if ($cache === null) {
+            try {
+                $cache = static::all()->keyBy(fn ($s) => mb_strtoupper(trim((string) $s->name)));
+            } catch (\Throwable $e) {
+                $cache = collect();
+            }
+        }
+
+        $upper = mb_strtoupper(trim($name));
+
+        // 1. Exact match in DB
+        $sub = $cache->get($upper);
+
+        // 2. Name variation in DB
+        if (! $sub) {
+            if ($upper === 'FINALIZADA' || $upper === 'FINALIZADA !') {
+                $sub = $cache->get('FINALIZADA !') ?? $cache->get('FINALIZADA');
+            } elseif ($upper === 'CLIENTE NO RESPONDIO' || $upper === 'CLIENTE NO RESPONSIVE') {
+                $sub = $cache->get('CLIENTE NO RESPONDIO') ?? $cache->get('CLIENTE NO RESPONSIVE');
+            } elseif (str_starts_with($upper, 'ORDEN LISTA')) {
+                $sub = $cache->get('ORDEN LISTA - ENTREGADA') ?? $cache->get('ORDEN LISTA !');
+            }
+        }
+
+        if ($sub && $sub->bg_color && $sub->text_color) {
+            $solidBg = $sub->color ?: ($sub->style_type === 'solid' ? $sub->bg_color : '#0E7490');
+            $solidText = ($sub->style_type === 'solid' && $sub->text_color) ? $sub->text_color : '#FFFFFF';
+            $borderColor = $sub->border_color ?: $sub->bg_color;
+
             return [
-                'inline' => "background-color: {$sub->bg_color}; color: {$sub->text_color}; border-color: {$sub->border_color};",
-                'bg' => $sub->bg_color,
-                'text' => $sub->text_color,
-                'border' => $sub->border_color,
+                'color' => $sub->color ?: $sub->bg_color,
+                'style_type' => $sub->style_type ?: 'light',
+                'bg_color' => $sub->bg_color,
+                'text_color' => $sub->text_color,
+                'border_color' => $borderColor,
+                'solid_bg' => $solidBg,
+                'solid_text' => $solidText,
+                'inline' => "background-color: {$sub->bg_color}; color: {$sub->text_color}; border-color: {$borderColor};",
             ];
         }
+
+        // 3. Known system defaults (match Seeder & Enum standards)
+        $cleanKey = rtrim($upper, ' !');
+        if (in_array($cleanKey, ['CANCELADA', 'CANCELADA POR CLIENTE', 'CANCELADA POR CAMILA'], true)) {
+            $pal = static::derivePaletteFromColor('#EF4444', 'light');
+
+            return array_merge($pal, [
+                'solid_bg' => '#EF4444',
+                'solid_text' => '#FFFFFF',
+                'inline' => "background-color: {$pal['bg_color']}; color: {$pal['text_color']}; border-color: {$pal['border_color']};",
+            ]);
+        }
+
+        if (in_array($cleanKey, ['FINALIZADA', 'ORDEN LISTA', 'ORDEN LISTA - ENTREGADA'], true)) {
+            $pal = static::derivePaletteFromColor('#10B981', 'light');
+
+            return array_merge($pal, [
+                'solid_bg' => '#10B981',
+                'solid_text' => '#FFFFFF',
+                'inline' => "background-color: {$pal['bg_color']}; color: {$pal['text_color']}; border-color: {$pal['border_color']};",
+            ]);
+        }
+
+        if (in_array($cleanKey, ['CLIENTE NO RESPONDIO', 'CLIENTE NO RESPONSIVE'], true)) {
+            return [
+                'color' => '#F59E0B',
+                'style_type' => 'light',
+                'bg_color' => '#FEF3C7',
+                'text_color' => '#78350F',
+                'border_color' => '#FDE68A',
+                'solid_bg' => '#F59E0B',
+                'solid_text' => '#FFFFFF',
+                'inline' => 'background-color: #FEF3C7; color: #78350F; border-color: #FDE68A;',
+            ];
+        }
+
+        if (in_array($cleanKey, ['NO REALIZADA / TRANSFERIDA', 'NO REALIZADA', 'PAUSADO', 'NO RESPUESTA'], true)) {
+            return [
+                'color' => '#78716C',
+                'style_type' => 'light',
+                'bg_color' => '#F5F5F4',
+                'text_color' => '#57534E',
+                'border_color' => '#E7E5E4',
+                'solid_bg' => '#78716C',
+                'solid_text' => '#FFFFFF',
+                'inline' => 'background-color: #F5F5F4; color: #57534E; border-color: #E7E5E4;',
+            ];
+        }
+
+        if (in_array($cleanKey, ['ENVIADO EN ALTA', 'AJUSTES DE PRODUCCIÓN'], true)) {
+            $pal = static::derivePaletteFromColor('#FFAA00', 'light');
+
+            return array_merge($pal, [
+                'solid_bg' => '#FFAA00',
+                'solid_text' => '#FFFFFF',
+                'inline' => "background-color: {$pal['bg_color']}; color: {$pal['text_color']}; border-color: {$pal['border_color']};",
+            ]);
+        }
+
+        // 4. Default fallback
+        $pal = static::derivePaletteFromColor('#6B7280', 'light');
+
+        return array_merge($pal, [
+            'solid_bg' => '#6B7280',
+            'solid_text' => '#FFFFFF',
+            'inline' => "background-color: {$pal['bg_color']}; color: {$pal['text_color']}; border-color: {$pal['border_color']};",
+        ]);
+    }
+
+    public static function getStyleFor(?string $name): array
+    {
+        $pal = static::resolvePalette($name);
 
         return [
-            'inline' => 'background-color: #f3f4f6; color: #374151; border-color: #e5e7eb;',
-            'bg' => '#f3f4f6',
-            'text' => '#374151',
-            'border' => '#e5e7eb',
+            'inline' => $pal['inline'],
+            'bg' => $pal['bg_color'],
+            'text' => $pal['text_color'],
+            'border' => $pal['border_color'],
         ];
     }
 }

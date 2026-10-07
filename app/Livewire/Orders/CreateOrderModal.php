@@ -9,10 +9,12 @@ use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
+use App\Models\RelatedTask;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
 use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
+use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -46,6 +48,8 @@ class CreateOrderModal extends Component
 
     public $substatus = '';
 
+    public array $flags = [];
+
     public $dueDate = '';
 
     public bool $showOnHoldModal = false;
@@ -61,6 +65,7 @@ class CreateOrderModal extends Component
         'designerIds.*' => 'exists:designers,id',
         'coreStatus' => 'required|string',
         'substatus' => 'nullable|string',
+        'flags' => 'nullable|array',
         'dueDate' => 'nullable|date',
     ];
 
@@ -80,8 +85,9 @@ class CreateOrderModal extends Component
         $this->responsiblePerson = '';
         $this->designerId = null;
         $this->designerIds = [];
-        $this->coreStatus = $initialStatus ?: CoreStatus::ENTRANTE->value;
         $this->substatus = '';
+        $this->flags = [];
+        $this->coreStatus = $this->determineCoreStatus()->value;
         $this->dueDate = now()->addWeekdays(2)->toDateString();
 
         $this->showModal = true;
@@ -110,11 +116,58 @@ class CreateOrderModal extends Component
         if (empty($this->designerIds) && $original->designer_id) {
             $this->designerIds = [$original->designer_id];
         }
-        $this->coreStatus = $original->core_status ? $original->core_status->value : CoreStatus::ENTRANTE->value;
         $this->substatus = $original->substatus ? $original->substatus->value : '';
+        $this->flags = is_array($original->flags) ? $original->flags : [];
+        $this->coreStatus = $this->determineCoreStatus()->value;
         $this->dueDate = $original->current_due_date ? $original->current_due_date->toDateString() : now()->addWeekdays(2)->toDateString();
 
         $this->showModal = true;
+    }
+
+    public function determineCoreStatus(): CoreStatus
+    {
+        // Regla 3: Si la orden tiene el subestatus "falta algo" (o "bloqueada"), entra en bloqueada (ENTRANTE) hasta que se quite
+        if ($this->hasSubstatusOrFlag('FALTA ALGO') || $this->hasSubstatusOrFlag('BLOQUEADA')) {
+            return CoreStatus::ENTRANTE;
+        }
+
+        // Regla 2: Si la orden tiene el subestatus urgente debe entrar directamente en working today
+        if ($this->hasSubstatusOrFlag('URGENTE')) {
+            return CoreStatus::TO_DO_TODAY;
+        }
+
+        // Regla 1: La orden siempre debe aparecer en el corestatus de orden recibida del diseñador seleccionado
+        if (! empty($this->designerIds)) {
+            $firstId = reset($this->designerIds);
+            $designer = Designer::find($firstId);
+            if ($designer) {
+                return $designer->getQueueStatus();
+            }
+        }
+
+        $lead = Designer::getLeadDesigner();
+        if ($lead) {
+            return $lead->getQueueStatus();
+        }
+
+        return CoreStatus::EURALIZ_ORDERS_RECEIVED;
+    }
+
+    public function hasSubstatusOrFlag(string $name): bool
+    {
+        $clean = mb_strtoupper(trim($name), 'UTF-8');
+
+        if (! empty($this->substatus) && mb_strtoupper(trim($this->substatus), 'UTF-8') === $clean) {
+            return true;
+        }
+
+        foreach ($this->flags as $flag) {
+            if (mb_strtoupper(trim((string) $flag), 'UTF-8') === $clean) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function toggleDesigner($id)
@@ -124,7 +177,17 @@ class CreateOrderModal extends Component
             $this->designerIds = array_values(array_diff($this->designerIds, [$id]));
         } else {
             $this->designerIds[] = $id;
+
+            $designer = Designer::find($id);
+            if ($designer && $designer->is_external) {
+                $lead = Designer::getLeadDesigner();
+                if ($lead && ! in_array($lead->id, $this->designerIds)) {
+                    $this->designerIds[] = $lead->id;
+                }
+            }
         }
+
+        $this->coreStatus = $this->determineCoreStatus()->value;
     }
 
     public function closeModal()
@@ -135,6 +198,7 @@ class CreateOrderModal extends Component
         $this->isDuplicating = false;
         $this->originalOrderId = null;
         $this->designerIds = [];
+        $this->flags = [];
     }
 
     public function generateWoNumber(?WorkOrderNumberGenerator $generator = null): void
@@ -145,6 +209,53 @@ class CreateOrderModal extends Component
             'company_name' => mb_strtoupper(trim($this->companyName ?? ''), 'UTF-8'),
             'task_name' => mb_strtoupper(trim($this->taskName ?? ''), 'UTF-8'),
         ]);
+    }
+
+    public function selectSubstatus(?string $value = null): void
+    {
+        if (empty($value)) {
+            $this->substatus = '';
+            $this->flags = [];
+            $this->coreStatus = $this->determineCoreStatus()->value;
+
+            return;
+        }
+
+        $subModel = \App\Models\Substatus::where('name', $value)->first();
+        $isGlobal = $subModel ? (bool) $subModel->is_global : (Substatus::tryFrom($value)?->isGlobal() ?? false);
+
+        if ($isGlobal) {
+            if (in_array($value, $this->flags, true)) {
+                $this->flags = array_values(array_filter($this->flags, fn ($f) => $f !== $value));
+            } else {
+                $this->flags[] = $value;
+            }
+        } else {
+            if ($this->substatus === $value) {
+                $this->substatus = '';
+            } else {
+                $this->substatus = $value;
+            }
+
+            $this->updatedSubstatus($this->substatus);
+        }
+
+        $this->coreStatus = $this->determineCoreStatus()->value;
+    }
+
+    public function setDueDatePreset(string $preset): void
+    {
+        $target = match ($preset) {
+            'today' => now()->toDateString(),
+            'tomorrow' => now()->addDay()->toDateString(),
+            default => '',
+        };
+
+        if ($this->dueDate === $target) {
+            $this->dueDate = '';
+        } else {
+            $this->dueDate = $target;
+        }
     }
 
     public function updatedSubstatus($value)
@@ -201,20 +312,8 @@ class CreateOrderModal extends Component
 
         $this->validate();
 
-        if ($this->substatus === Substatus::ENVIADO_EN_ALTA->value || $this->substatus === 'ENVIADO EN ALTA') {
-            $this->coreStatus = CoreStatus::EN_PRODUCCION->value;
-        } elseif ($this->coreStatus === CoreStatus::EN_PRODUCCION->value || $this->coreStatus === 'EN PRODUCCIÓN') {
-            if (empty($this->substatus)) {
-                $this->substatus = Substatus::ENVIADO_EN_ALTA->value;
-            }
-        }
-
-        $statusEnum = CoreStatus::tryFrom($this->coreStatus) ?: CoreStatus::ENTRANTE;
-        if ($statusEnum === CoreStatus::ON_HOLD && empty($this->onHoldReason)) {
-            $this->openOnHoldModal();
-
-            return;
-        }
+        $statusEnum = $this->determineCoreStatus();
+        $this->coreStatus = $statusEnum->value;
 
         $substatusEnum = ! empty($this->substatus) ? Substatus::tryFrom($this->substatus) : null;
         $cleanWo = trim(preg_replace('/^WO\s*/i', '', $this->woNumber ?? ''));
@@ -244,6 +343,7 @@ class CreateOrderModal extends Component
             'designer_id' => ! empty($this->designerIds) ? reset($this->designerIds) : null,
             'core_status' => $statusEnum,
             'substatus' => $substatusEnum,
+            'flags' => ! empty($this->flags) ? array_values($this->flags) : null,
             'current_due_date' => ! empty($this->dueDate) ? $this->dueDate : now()->addWeekdays(2)->toDateString(),
             'in_workspace' => true,
         ]);
@@ -300,6 +400,9 @@ class CreateOrderModal extends Component
         if (! $this->showModal) {
             return view('livewire.orders.create-order-modal', [
                 'designers' => collect(),
+                'mostAvailableDesigner' => null,
+                'mostAvailableCount' => 0,
+                'designerWorkloads' => [],
                 'coreStatuses' => [],
                 'substatuses' => [],
                 'existingCompanies' => collect(),
@@ -318,10 +421,87 @@ class CreateOrderModal extends Component
         $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
         $clientContacts = $client ? $client->contacts->pluck('name')->filter()->toArray() : [];
 
+        $this->coreStatus = $this->determineCoreStatus()->value;
         $validSubstatuses = app(StatusTransitionService::class)->getValidSubstatuses($this->coreStatus);
+
+        $hiddenSubstatuses = [
+            'OVERDUE',
+            'ALMOST OVERDUE',
+            'PROCESO DE PERMISO',
+            'BLOQUEADA',
+        ];
+
+        $validSubstatuses = $validSubstatuses->filter(function ($sub) use ($hiddenSubstatuses) {
+            $name = $sub instanceof \App\Models\Substatus ? $sub->name : ($sub->value ?? (string) $sub);
+            $clean = mb_strtoupper(trim($name), 'UTF-8');
+
+            return ! in_array($clean, $hiddenSubstatuses, true);
+        });
+
+        $startOfWeek = now()->startOfWeek(Carbon::MONDAY);
+        $endOfWeek = $startOfWeek->copy()->addDays(4)->endOfDay();
+        $internalDesigners = Designer::where('active', true)->internal()->get();
+
+        $subtasks = RelatedTask::with(['order.designers', 'order.designer'])
+            ->where(function ($q) {
+                $q->whereNull('order_id')
+                    ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
+            })
+            ->where(function ($q) {
+                $q->whereNotNull('scheduled_date')
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('scheduled_date')->whereNotNull('due_date');
+                    });
+            })
+            ->get();
+
+        foreach ($subtasks as $st) {
+            if (! $st->scheduled_date && $st->due_date) {
+                $st->scheduled_date = $st->due_date;
+            }
+        }
+
+        $designerWorkloads = [];
+        foreach ($internalDesigners as $des) {
+            $count = $subtasks->filter(function ($st) use ($des, $startOfWeek, $endOfWeek) {
+                $isAssigned = false;
+                if ($st->assignee_id) {
+                    $isAssigned = (int) $st->assignee_id === (int) $des->id;
+                } elseif ($st->order) {
+                    $isAssigned = (int) $st->order->designer_id === (int) $des->id || $st->order->designers->contains('id', $des->id);
+                }
+                if (! $isAssigned) {
+                    return false;
+                }
+
+                $date = $st->scheduled_date;
+                if (! $date) {
+                    return false;
+                }
+
+                if ($date->between($startOfWeek, $endOfWeek)) {
+                    return true;
+                }
+                if ($date->lt($startOfWeek) && $st->status !== 'done') {
+                    return true;
+                }
+
+                return false;
+            })->count();
+
+            $designerWorkloads[$des->id] = $count;
+        }
+
+        asort($designerWorkloads);
+        $mostAvailableDesignerId = array_key_first($designerWorkloads);
+        $mostAvailableDesigner = $mostAvailableDesignerId ? $internalDesigners->firstWhere('id', $mostAvailableDesignerId) : null;
+        $mostAvailableCount = $mostAvailableDesignerId ? ($designerWorkloads[$mostAvailableDesignerId] ?? 0) : 0;
 
         return view('livewire.orders.create-order-modal', [
             'designers' => Designer::where('active', true)->get(),
+            'mostAvailableDesigner' => $mostAvailableDesigner,
+            'mostAvailableCount' => $mostAvailableCount,
+            'designerWorkloads' => $designerWorkloads,
             'coreStatuses' => CoreStatus::cases(),
             'substatuses' => $validSubstatuses,
             'existingCompanies' => Order::inWorkspace()

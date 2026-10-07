@@ -761,7 +761,7 @@
         </header>
 
         <!-- Main Slot -->
-        <main class="app-main-content flex-1 w-full px-6 py-4 flex flex-col min-h-0 overflow-y-auto custom-vertical-scrollbar">
+        <main class="app-main-content flex-1 w-full {{ !empty($noPadding) ? 'p-0' : 'px-6 py-4' }} flex flex-col min-h-0 overflow-y-auto custom-vertical-scrollbar">
             {{ $slot }}
         </main>
     </div>

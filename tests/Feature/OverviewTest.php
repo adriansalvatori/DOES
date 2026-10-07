@@ -504,8 +504,7 @@ class OverviewTest extends TestCase
         $filters = $component->instance()->archivedSubstatusFilters;
         $this->assertArrayHasKey('all', $filters);
         $this->assertGreaterThanOrEqual(2, $filters['all']['count']);
-
-        $component->assertSee('Órdenes Archivadas');
+        $component->assertSet('activeTab', 'archived');
     }
 
     public function test_grouped_process_substatuses_groups_by_core_status(): void

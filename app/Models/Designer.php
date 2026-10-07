@@ -57,7 +57,7 @@ class Designer extends Model
         return $this->hasMany(RelatedTask::class, 'assignee_id');
     }
 
-    public static function getLeadDesigner(): Designer
+    public static function getLeadDesigner(): ?Designer
     {
         return static::where('active', true)->where('is_lead', true)->first()
             ?? static::where('active', true)->where(function ($q) {

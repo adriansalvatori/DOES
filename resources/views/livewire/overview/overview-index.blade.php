@@ -90,19 +90,14 @@
     }
 
     $substatusStyleMap = [];
-    foreach ($substatuses as $sItem) {
-        $sName = $sItem instanceof \App\Models\Substatus ? $sItem->name : ($sItem instanceof \App\Enums\Substatus ? $sItem->value : (string) $sItem);
-        $sEnum = \App\Enums\Substatus::tryFrom($sName);
-        if ($sItem instanceof \App\Models\Substatus && $sItem->bg_color && $sItem->text_color) {
-            $borderColor = $sItem->border_color ?: $sItem->bg_color;
-            $substatusStyleMap[$sName] = "background-color: {$sItem->bg_color}; color: {$sItem->text_color}; border-color: {$borderColor};";
-        } elseif ($sEnum) {
-            $substatusStyleMap[$sName] = $sEnum->getInlineBadgeStyle();
-        }
+    foreach (\App\Models\Substatus::all() as $sItem) {
+        $borderColor = $sItem->border_color ?: $sItem->bg_color;
+        $substatusStyleMap[$sItem->name] = "background-color: {$sItem->bg_color}; color: {$sItem->text_color}; border-color: {$borderColor};";
     }
     foreach (\App\Enums\Substatus::cases() as $case) {
         if (!isset($substatusStyleMap[$case->value])) {
-            $substatusStyleMap[$case->value] = $case->getInlineBadgeStyle();
+            $pal = \App\Models\Substatus::resolvePalette($case->value);
+            $substatusStyleMap[$case->value] = $pal['inline'];
         }
     }
 
@@ -128,6 +123,32 @@
 
 <div 
     x-data="{
+        activeDateEdit: null,
+        openDateInput(type, orderId, inputEl) {
+            this.activeDateEdit = type + '_' + orderId;
+            this.$nextTick(() => {
+                if (inputEl) {
+                    inputEl.focus();
+                    if (inputEl.showPicker) {
+                        try { inputEl.showPicker(); } catch (e) {}
+                    }
+                }
+            });
+        },
+        closeDateInput() {
+            if (this.activeDateEdit) {
+                const inputEl = document.querySelector('[data-date-input=\'' + this.activeDateEdit + '\']');
+                if (inputEl) {
+                    if (!inputEl.dataset.initial) {
+                        inputEl.value = '';
+                    } else {
+                        inputEl.value = inputEl.dataset.initial;
+                    }
+                    inputEl.blur();
+                }
+                this.activeDateEdit = null;
+            }
+        },
         ordersState: {{ \Illuminate\Support\Js::from($ordersState ?? []) }},
         archivedSubstatusNames: {{ \Illuminate\Support\Js::from(\App\Models\Substatus::getArchivedNames()) }},
         isArchivedSubstatus(name) {
@@ -139,77 +160,18 @@
         isSyncing: false,
         lastSyncTime: '',
         pollTimer: null,
-        columns: [
-            'proc_date',
-            'due_date',
-            'wo',
-            'client',
-            'name',
-            'designer',
-            'prod_note',
-            'invoice',
-            'email_date',
-            'installation',
-            'check',
-            'deliv_note',
-            'substatus'
-        ],
-        defaultColWidths: {
-            proc_date: 6,
-            due_date: 6,
-            wo: 6,
-            client: 12,
-            name: 14,
-            designer: 7.5,
-            prod_note: 12,
-            invoice: 7,
-            email_date: 6,
-            installation: 6,
-            check: 3.5,
-            deliv_note: 7,
-            substatus: 7
-        },
-        colWidths: (() => {
-            const defaults = {
-                proc_date: 6,
-                due_date: 6,
-                wo: 6,
-                client: 12,
-                name: 14,
-                designer: 7.5,
-                prod_note: 12,
-                invoice: 7,
-                email_date: 6,
-                installation: 6,
-                check: 3.5,
-                deliv_note: 7,
-                substatus: 7
-            };
-            try {
-                localStorage.removeItem('overview_col_widths');
-                const savedStr = localStorage.getItem('overview_col_widths_pct');
-                if (!savedStr) return Object.assign({}, defaults);
-                const saved = JSON.parse(savedStr);
-                let total = 0;
-                for (let k in defaults) {
-                    if (typeof saved[k] !== 'number' || saved[k] <= 0 || saved[k] > 50) {
-                        return Object.assign({}, defaults);
-                    }
-                    total += saved[k];
-                }
-                if (Math.abs(total - 100) > 2) {
-                    return Object.assign({}, defaults);
-                }
-                return Object.assign({}, defaults, saved);
-            } catch (err) {
-                return Object.assign({}, defaults);
-            }
-        })(),
-        resizingDivider: null,
         init() {
             window.__overviewWire = $wire;
             this.lastSyncTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             this.startPolling();
+            document.addEventListener('pointerdown', (e) => {
+                if (this.activeDateEdit) {
+                    const container = e.target.closest('[data-date-container=\'' + this.activeDateEdit + '\']');
+                    if (!container) {
+                        this.closeDateInput();
+                    }
+                }
+            });
             document.addEventListener('visibilitychange', () => {
                 const isModalOpen = Boolean(window.Alpine && Alpine.store && (
                     (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
@@ -220,6 +182,10 @@
                 }
             });
             window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.activeDateEdit) {
+                    this.closeDateInput();
+                    return;
+                }
                 if (!this.activeMenu) return;
 
                 const isArrowDown = e.key === 'ArrowDown' || e.key === 'Down';
@@ -297,84 +263,20 @@
             }
             return 'hover:bg-stone-50/80';
         },
-        initResize(e, leftCol, rightCol = null) {
-            const leftIdx = this.columns.indexOf(leftCol);
-            if (leftIdx === -1) return;
-            const rightKey = rightCol || this.columns[leftIdx + 1];
-            if (!rightKey) return;
-
-            const tableEl = this.$refs.ordersTable;
-            const tableWidth = tableEl ? tableEl.getBoundingClientRect().width : (window.innerWidth - 300);
-            if (!tableWidth || tableWidth <= 0) return;
-
-            const startLeftWidth = Number(this.colWidths[leftCol] ?? this.defaultColWidths[leftCol] ?? 6);
-            const startRightWidth = Number(this.colWidths[rightKey] ?? this.defaultColWidths[rightKey] ?? 6);
-            const pairTotal = Math.round((startLeftWidth + startRightWidth) * 100) / 100;
-            const startX = e.pageX;
-            const minColWidth = 2.0;
-
-            if (pairTotal <= minColWidth * 2) return;
-
-            this.resizingDivider = leftCol;
-            document.body.style.userSelect = 'none';
-            document.body.style.cursor = 'col-resize';
-
-            const onMove = (mv) => {
-                if (mv.buttons === 0) {
-                    onUp();
-                    return;
-                }
-                const deltaPx = mv.pageX - startX;
-                const deltaPct = (deltaPx / tableWidth) * 100;
-
-                let newLeft = startLeftWidth + deltaPct;
-                if (newLeft < minColWidth) {
-                    newLeft = minColWidth;
-                } else if (newLeft > pairTotal - minColWidth) {
-                    newLeft = pairTotal - minColWidth;
-                }
-
-                newLeft = Math.round(newLeft * 100) / 100;
-                let newRight = Math.round((pairTotal - newLeft) * 100) / 100;
-
-                this.colWidths[leftCol] = newLeft;
-                this.colWidths[rightKey] = newRight;
-            };
-
-            const onUp = () => {
-                document.body.style.userSelect = '';
-                document.body.style.cursor = '';
-                this.resizingDivider = null;
-                localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
-                window.removeEventListener('mousemove', onMove);
-                window.removeEventListener('mouseup', onUp);
-            };
-
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('mouseup', onUp);
-        },
-        resetDivider(leftCol, rightCol = null) {
-            const leftIdx = this.columns.indexOf(leftCol);
-            if (leftIdx === -1) return;
-            const rightKey = rightCol || this.columns[leftIdx + 1];
-            if (!rightKey) return;
-
-            const defLeft = this.defaultColWidths[leftCol] ?? 6;
-            const defRight = this.defaultColWidths[rightKey] ?? 6;
-            const currentTotal = (this.colWidths[leftCol] || defLeft) + (this.colWidths[rightKey] || defRight);
-            const defTotal = defLeft + defRight;
-            const ratio = defLeft / defTotal;
-
-            const newLeft = Math.round(currentTotal * ratio * 100) / 100;
-            const newRight = Math.round((currentTotal - newLeft) * 100) / 100;
-
-            this.colWidths[leftCol] = newLeft;
-            this.colWidths[rightKey] = newRight;
-            localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
-        },
-        resetColWidths() {
-            this.colWidths = Object.assign({}, this.defaultColWidths);
-            localStorage.setItem('overview_col_widths_pct', JSON.stringify(this.colWidths));
+        getStickyWoClass(orderId, defaultClass) {
+            const st = this.ordersState[orderId];
+            if (!st) return defaultClass;
+            const sub = st.substatus ? String(st.substatus).toUpperCase().trim() : '';
+            const isArchived = (st.core_status === 'ARCHIVED') 
+                || Boolean(st.is_archived) 
+                || this.isArchivedSubstatus(sub);
+            if (isArchived) {
+                return 'bg-cyan-100 group-hover:bg-cyan-200 text-cyan-950 font-semibold';
+            }
+            if (st.core_status === 'EN PRODUCCIÓN') {
+                return 'bg-orange-200 group-hover:bg-orange-300 text-orange-950 font-semibold';
+            }
+            return 'bg-white group-hover:bg-stone-50/80 text-stone-900';
         },
         activeMenu: null,
         targetOrderId: null,
@@ -852,71 +754,12 @@
             ordersState[$event.detail.orderId].is_archived = true;
         }
     "
-    class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
+    class="h-full w-full max-w-full flex flex-col min-h-0 overflow-hidden">
 
-    <!-- Highlighted Overview Filters Section -->
-    <div class="bg-white rounded-xl border border-stone-200 p-3.5 sm:p-4 shadow-2xs space-y-3 w-full">
-        <div class="flex items-center justify-between gap-3 pb-2.5 border-b border-stone-100 flex-wrap">
-            <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg border border-cyan-200/80 flex items-center justify-center text-cyan-600 shadow-2xs shrink-0">
-                    <x-lucide-sparkles class="w-4 h-4" />
-                </div>
-                <div>
-                    <h2 class="text-xs sm:text-sm font-extrabold text-stone-900 tracking-tight">
-                        {{ __('Highlighted Overview Filters') }}
-                    </h2>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-stone-100 text-stone-600 border border-stone-200">
-                    {{ $totalArchivedCount }} {{ __('Órdenes') }}
-                </span>
-            </div>
-        </div>
-
-        <!-- Filter Pills Bar -->
-        <div class="flex items-center gap-1.5 flex-wrap">
-            @foreach($archivedSubstatusFilters as $filterKey => $filter)
-                @php
-                    $isSelected = ($filterKey === 'all')
-                        ? ($activeTab === 'all' || ($activeTab === 'archived' && $archivedSubstatus === 'all'))
-                        : ($activeTab === 'archived' && $archivedSubstatus === $filterKey);
-                    $pillStyle = '';
-                    if ($filterKey === 'all') {
-                        $pillClass = $isSelected 
-                            ? 'bg-cyan-700 text-white shadow-2xs border-cyan-800 font-extrabold' 
-                            : 'bg-stone-100 text-stone-700 hover:bg-stone-200 border-stone-200/80 font-semibold';
-                    } else {
-                        if ($isSelected) {
-                            $solid = $filter['solid_bg'] ?? '#0E7490';
-                            $pillClass = 'shadow-2xs font-black text-white';
-                            $pillStyle = "background-color: {$solid}; border-color: {$solid}; color: #ffffff;";
-                        } else {
-                            $bg = $filter['bg_color'] ?? '#F5F5F4';
-                            $txt = $filter['text_color'] ?? '#57534E';
-                            $bd = $filter['border_color'] ?? '#E7E5E4';
-                            $pillClass = 'hover:opacity-85 font-extrabold';
-                            $pillStyle = "background-color: {$bg}; color: {$txt}; border-color: {$bd};";
-                        }
-                    }
-                @endphp
-                <button 
-                    type="button"
-                    wire:click.stop="setArchivedSubstatus('{{ $filterKey }}')"
-                    @if(!empty($pillStyle)) style="{{ $pillStyle }}" @endif
-                    class="px-2.5 py-1 rounded-md text-xs transition cursor-pointer border flex items-center gap-1.5 {{ $pillClass }}"
-                    title="{{ $filter['label'] }}">
-                    <span>{{ $filter['label'] }}</span>
-                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold leading-tight bg-black/10 dark:bg-white/20">
-                        {{ $filter['count'] }}
-                    </span>
-                </button>
-            @endforeach
-        </div>
-    </div>
-
-    <!-- Toolbar Filters Bar -->
-    <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
+    <!-- Top Filters & Controls Container -->
+    <div class="px-4 sm:px-6 pt-4 pb-3 space-y-3 shrink-0">
+        <!-- Toolbar Filters Bar -->
+        <div class="bg-white rounded-xl border border-stone-200 p-3.5 shadow-2xs space-y-3 w-full">
         <div class="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-stone-100">
             <div class="flex items-center gap-3 flex-wrap">
                 <div class="min-w-0">
@@ -961,9 +804,23 @@
                 </div>
             </div>
 
-            <!-- Reset Filters Button -->
-            @if($search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange)
-                <div class="flex items-center gap-2 shrink-0">
+            <!-- Reset Filters Button & Active Badges -->
+            @if(!empty($appliedFilters) || $search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange)
+                <div class="flex items-center gap-1.5 flex-wrap shrink-0">
+                    @foreach($appliedFilters as $filter)
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-2xs">
+                            <span class="text-emerald-700/80 font-semibold">{{ $filter['label'] }}:</span>
+                            <span class="font-extrabold text-emerald-950 max-w-[140px] truncate" title="{{ $filter['value'] }}">{{ $filter['value'] }}</span>
+                            <button 
+                                type="button" 
+                                wire:click="clearFilter('{{ $filter['key'] }}')" 
+                                class="text-emerald-600 hover:text-emerald-950 hover:bg-emerald-200/60 rounded p-0.5 transition cursor-pointer"
+                                title="{{ __('Quitar filtro') }}">
+                                <x-lucide-x class="w-2.5 h-2.5" />
+                            </button>
+                        </span>
+                    @endforeach
+
                     <button 
                         wire:click="resetFilters" 
                         class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition flex items-center gap-1.5 cursor-pointer shrink-0">
@@ -974,89 +831,139 @@
             @endif
         </div>
 
-        <!-- Filters Row -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 items-end">
+        <!-- Filters Row (Labels placed inside fields when empty, highlighted styling and clear action when active) -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 items-center">
             <!-- 1. Búsqueda General -->
-            <div class="col-span-2 sm:col-span-1 md:col-span-1">
-                <label class="block text-[10px] font-extrabold uppercase tracking-wider text-stone-700 mb-1 flex items-center gap-1">
-                    <x-lucide-search class="w-3 h-3 text-stone-700" />
-                    <span>{{ __('Búsqueda General') }}</span>
-                </label>
-                <div class="relative">
-                    <x-lucide-search class="w-3.5 h-3.5 text-stone-500 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input 
-                        type="text" 
-                        wire:model.live.debounce.300ms="search"
-                        placeholder="{{ __('WO#, cliente, trabajo...') }}"
-                        class="w-full pl-8 pr-2.5 py-1 bg-white border border-stone-300 rounded-md text-xs font-medium text-stone-900 placeholder-stone-400 shadow-2xs focus:ring-2 focus:ring-stone-900 focus:border-stone-900 transition"
-                    >
-                </div>
+            <div class="col-span-2 sm:col-span-1 md:col-span-1 relative">
+                <x-lucide-search class="w-3.5 h-3.5 {{ !empty(trim($search)) ? 'text-emerald-700' : 'text-stone-400' }} absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
+                <input 
+                    type="text" 
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="{{ __('Búsqueda general...') }}"
+                    class="w-full pl-8 pr-7 py-1.5 rounded-md text-xs transition {{ !empty(trim($search)) ? 'bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs placeholder-emerald-700/60' : 'bg-stone-50 border border-stone-200 font-medium text-stone-900 placeholder-stone-400 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }}"
+                >
+                @if(!empty(trim($search)))
+                    <button 
+                        type="button" 
+                        wire:click="clearFilter('search')" 
+                        @click.stop.prevent
+                        class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
+                        title="{{ __('Limpiar búsqueda') }}">
+                        <x-lucide-x class="w-3 h-3" />
+                    </button>
+                @endif
             </div>
 
-            <!-- 2. Filter WO -->
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Filtro WO') }}</label>
+            <!-- 2. Filtro WO -->
+            <div class="relative">
                 <input 
                     type="text" 
                     wire:model.live.debounce.300ms="filterWo"
-                    placeholder="ej. WO 1234 o Sin WO"
-                    class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white"
+                    placeholder="{{ __('Filtro WO (ej. 1234)') }}"
+                    class="w-full pl-2.5 pr-7 py-1.5 rounded-md text-xs transition {{ !empty(trim($filterWo)) ? 'bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs placeholder-emerald-700/60' : 'bg-stone-50 border border-stone-200 font-medium text-stone-900 placeholder-stone-400 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }}"
                 >
+                @if(!empty(trim($filterWo)))
+                    <button 
+                        type="button" 
+                        wire:click="clearFilter('filterWo')" 
+                        @click.stop.prevent
+                        class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
+                        title="{{ __('Limpiar WO') }}">
+                        <x-lucide-x class="w-3 h-3" />
+                    </button>
+                @endif
             </div>
 
-            <!-- 3. Filter Client -->
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Cliente') }}</label>
+            <!-- 3. Cliente -->
+            <div class="relative">
                 <select 
                     wire:model.live="filterClient" 
-                    class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
-                    <option value="">{{ __('Todos los clientes') }}</option>
+                    class="w-full pl-2.5 {{ !empty(trim($filterClient)) ? 'pr-7 bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs' : 'pr-6 bg-stone-50 border border-stone-200 font-medium text-stone-900 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }} py-1.5 rounded-md text-xs transition cursor-pointer">
+                    <option value="" class="font-normal text-stone-700 bg-white">{{ __('Cliente (Todos)') }}</option>
                     @foreach($clients as $c)
-                        <option value="{{ is_object($c) ? $c->id : $c }}">{{ is_object($c) ? $c->name : $c }}</option>
+                        <option value="{{ is_object($c) ? $c->id : $c }}" class="font-normal text-stone-900 bg-white">{{ is_object($c) ? $c->name : $c }}</option>
                     @endforeach
                 </select>
+                @if(!empty(trim($filterClient)))
+                    <button 
+                        type="button" 
+                        wire:click="clearFilter('filterClient')" 
+                        @click.stop.prevent
+                        class="absolute right-6 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
+                        title="{{ __('Limpiar cliente') }}">
+                        <x-lucide-x class="w-3 h-3" />
+                    </button>
+                @endif
             </div>
 
-            <!-- 4. Filter Designer -->
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Diseñador') }}</label>
+            <!-- 4. Diseñador -->
+            <div class="relative">
                 <select 
                     wire:model.live="filterDesigner" 
-                    class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
-                    <option value="">{{ __('Todos') }}</option>
+                    class="w-full pl-2.5 {{ !empty(trim($filterDesigner)) ? 'pr-7 bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs' : 'pr-6 bg-stone-50 border border-stone-200 font-medium text-stone-900 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }} py-1.5 rounded-md text-xs transition cursor-pointer">
+                    <option value="" class="font-normal text-stone-700 bg-white">{{ __('Diseñador (Todos)') }}</option>
                     @foreach($filterDesigners as $d)
-                        <option value="{{ is_object($d) ? $d->id : $d }}">{{ is_object($d) ? $d->name : $d }}</option>
+                        <option value="{{ is_object($d) ? $d->id : $d }}" class="font-normal text-stone-900 bg-white">{{ is_object($d) ? $d->name : $d }}</option>
                     @endforeach
                 </select>
+                @if(!empty(trim($filterDesigner)))
+                    <button 
+                        type="button" 
+                        wire:click="clearFilter('filterDesigner')" 
+                        @click.stop.prevent
+                        class="absolute right-6 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
+                        title="{{ __('Limpiar diseñador') }}">
+                        <x-lucide-x class="w-3 h-3" />
+                    </button>
+                @endif
             </div>
 
-            <!-- 5. Filter Review Status -->
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Revisión Estimado') }}</label>
+            <!-- 5. Revisión Estimado -->
+            <div class="relative">
                 <select 
                     wire:model.live="filterReviewStatus" 
-                    class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
-                    <option value="">{{ __('Todas') }}</option>
-                    <option value="CS">{{ __('Revisado por CS') }}</option>
-                    <option value="CAMILA">{{ __('Revisado por Camila') }}</option>
-                    <option value="NONE">{{ __('Sin revisión') }}</option>
+                    class="w-full pl-2.5 {{ !empty(trim($filterReviewStatus)) ? 'pr-7 bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs' : 'pr-6 bg-stone-50 border border-stone-200 font-medium text-stone-900 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }} py-1.5 rounded-md text-xs transition cursor-pointer">
+                    <option value="" class="font-normal text-stone-700 bg-white">{{ __('Revisión Estimado (Todas)') }}</option>
+                    <option value="CS" class="font-normal text-stone-900 bg-white">{{ __('Revisado por CS') }}</option>
+                    <option value="CAMILA" class="font-normal text-stone-900 bg-white">{{ __('Revisado por Camila') }}</option>
+                    <option value="NONE" class="font-normal text-stone-900 bg-white">{{ __('Sin revisión') }}</option>
                 </select>
+                @if(!empty(trim($filterReviewStatus)))
+                    <button 
+                        type="button" 
+                        wire:click="clearFilter('filterReviewStatus')" 
+                        @click.stop.prevent
+                        class="absolute right-6 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
+                        title="{{ __('Limpiar revisión') }}">
+                        <x-lucide-x class="w-3 h-3" />
+                    </button>
+                @endif
             </div>
 
-            <!-- 6. Filter Installation -->
-            <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">{{ __('Instalación') }}</label>
+            <!-- 6. Instalación -->
+            <div class="relative">
                 <select 
                     wire:model.live="filterInstallation" 
-                    class="w-full px-2 py-1 bg-stone-50 border border-stone-200 rounded-md text-xs focus:ring-1 focus:ring-stone-900 focus:bg-white">
-                    <option value="">{{ __('Todas') }}</option>
+                    class="w-full pl-2.5 {{ !empty(trim($filterInstallation)) ? 'pr-7 bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs' : 'pr-6 bg-stone-50 border border-stone-200 font-medium text-stone-900 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }} py-1.5 rounded-md text-xs transition cursor-pointer">
+                    <option value="" class="font-normal text-stone-700 bg-white">{{ __('Instalación (Todas)') }}</option>
                     @foreach($installationTypes as $instType)
-                        <option value="{{ $instType->name }}">{{ $instType->name }}</option>
+                        <option value="{{ $instType->name }}" class="font-normal text-stone-900 bg-white">{{ $instType->name }}</option>
                     @endforeach
-                    <option value="NONE">{{ __('Vacío (Sin información)') }}</option>
+                    <option value="NONE" class="font-normal text-stone-900 bg-white">{{ __('Vacío (Sin información)') }}</option>
                 </select>
+                @if(!empty(trim($filterInstallation)))
+                    <button 
+                        type="button" 
+                        wire:click="clearFilter('filterInstallation')" 
+                        @click.stop.prevent
+                        class="absolute right-6 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
+                        title="{{ __('Limpiar instalación') }}">
+                        <x-lucide-x class="w-3 h-3" />
+                    </button>
+                @endif
             </div>
         </div>
+    </div>
     </div>
 
     @php
@@ -1074,365 +981,148 @@
     <!-- Single Unified Orders Data Grid (11 Columns Layout) -->
     <div 
         x-data="{ 
-            headerHeight: 49,
-            init() {
-                const updateHeight = () => {
-                    if (this.$refs.headerBar) {
-                        this.headerHeight = this.$refs.headerBar.offsetHeight;
-                    }
-                };
-                updateHeight();
-                this.$nextTick(updateHeight);
-                if (window.ResizeObserver && this.$refs.headerBar) {
-                    new ResizeObserver(updateHeight).observe(this.$refs.headerBar);
+            scrollTableHorizontally(delta) {
+                if (this.$refs.tableScrollWrapper) {
+                    this.$refs.tableScrollWrapper.scrollBy({ left: delta, behavior: 'smooth' });
+                }
+            },
+            scrollTableTo(pos) {
+                if (this.$refs.tableScrollWrapper) {
+                    this.$refs.tableScrollWrapper.scrollTo({ left: pos, behavior: 'smooth' });
                 }
             }
         }"
-        :style="'--table-header-h: ' + headerHeight + 'px;'"
-        class="bg-white rounded-xl border border-stone-200 shadow-2xs w-full relative">
-        <!-- Table Header Bar -->
+        class="bg-white border-y border-stone-200 w-full relative flex-1 min-h-0 flex flex-col">
         <div 
-            x-ref="headerBar"
-            class="sticky top-0 z-30 w-full px-4 py-3 bg-[#f7f7f5] border-b border-stone-200 flex flex-wrap items-center justify-between gap-2.5 rounded-t-xl">
-            <div class="flex items-center gap-2.5 flex-wrap min-w-0">
-                @if($activeTab === 'workspace')
-                    <x-lucide-zap class="w-5 h-5 text-emerald-600 shrink-0" />
-                @elseif($activeTab === 'production')
-                    <x-lucide-layers class="w-5 h-5 text-pink-600 shrink-0" />
-                @elseif($activeTab === 'backlog')
-                    <x-lucide-inbox class="w-5 h-5 text-amber-600 shrink-0" />
-                @elseif($activeTab === 'archived')
-                    <x-lucide-archive class="w-5 h-5 text-cyan-600 shrink-0" />
-                @else
-                    <x-lucide-layout-grid class="w-5 h-5 text-stone-500 shrink-0" />
-                @endif
-
-                <h3 class="font-bold text-sm text-stone-900 tracking-tight shrink-0">
-                    @if($activeTab === 'workspace')
-                        {{ __('Todas las Órdenes Activas') }}
-                    @elseif($activeTab === 'production')
-                        {{ __('Órdenes en Producción') }}
-                    @elseif($activeTab === 'backlog')
-                        {{ __('Órdenes en Backlog') }}
-                    @elseif($activeTab === 'archived')
-                        {{ __('Órdenes Archivadas') }}
-                        @if(!empty($archivedSubstatus) && $archivedSubstatus !== 'all')
-                            <span class="text-cyan-700 font-semibold">• {{ ucfirst(str_replace('_', ' ', $archivedSubstatus)) }}</span>
-                        @endif
-                    @else
-                        {{ __('Todas las Órdenes') }}
-                    @endif
-                </h3>
-
-                @if(!empty($appliedFilters))
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <span class="text-stone-300 font-light select-none">|</span>
-                        @foreach($appliedFilters as $filter)
-                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-white text-stone-700 border border-stone-200 shadow-2xs">
-                                <span class="text-stone-400 font-normal">{{ $filter['label'] }}:</span>
-                                <span class="font-bold text-stone-900 max-w-[180px] truncate" title="{{ $filter['value'] }}">{{ $filter['value'] }}</span>
-                                <button 
-                                    type="button" 
-                                    wire:click="clearFilter('{{ $filter['key'] }}')" 
-                                    class="text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded p-0.5 transition cursor-pointer"
-                                    title="{{ __('Quitar filtro') }}">
-                                    <x-lucide-x class="w-2.5 h-2.5" />
-                                </button>
-                            </span>
-                        @endforeach
-
-                        @if(count($appliedFilters) > 1)
-                            <button 
-                                type="button" 
-                                wire:click="resetFilters" 
-                                class="text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:underline cursor-pointer ml-1 select-none">
-                                {{ __('Limpiar todos') }}
-                            </button>
-                        @endif
-                    </div>
-                @endif
-
-                <span class="hidden px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-stone-200 text-stone-800">
-                    {{ method_exists($orders, 'total') ? $orders->total() : count($orders) }}
-                </span>
-            </div>
-
-            <div class="text-xs text-stone-500 font-medium hidden sm:flex items-center">
-                <div class="inline-flex items-center gap-1.5 flex-wrap">
-                    @if($activeTab !== 'all')
-                        <button 
-                            type="button"
-                            wire:click="setTab('all')"
-                            class="inline-flex items-center gap-1 font-semibold text-stone-600 hover:text-stone-900 hover:bg-stone-200/70 px-2 py-0.5 rounded-md transition cursor-pointer text-[11px]"
-                            title="{{ __('Ver todas las órdenes') }}">
-                            <x-lucide-layout-grid class="w-3 h-3 text-stone-500" />
-                            <span>{{ __('Todas') }}</span>
-                        </button>
-                        <span class="text-stone-300">•</span>
-                    @endif
-                    <button 
-                        type="button"
-                        wire:click="setTab('workspace')"
-                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'workspace' ? 'bg-emerald-100 text-emerald-900 ring-1 ring-emerald-500/30 shadow-2xs' : 'text-emerald-700 hover:text-emerald-900 hover:bg-emerald-50' }}"
-                        title="{{ __('Ver Órdenes Activas') }}">
-                        <x-lucide-zap class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>{{ $totalWorkspaceCount }} {{ __('Activas') }}</span>
-                    </button>
-                    <span class="text-stone-300">•</span>
-                    <button 
-                        type="button"
-                        wire:click="setTab('production')"
-                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'production' ? 'bg-pink-100 text-pink-900 ring-1 ring-pink-500/30 shadow-2xs' : 'text-pink-700 hover:text-pink-900 hover:bg-pink-50' }}"
-                        title="{{ __('Ver Órdenes en Producción') }}">
-                        <x-lucide-layers class="w-3.5 h-3.5 text-pink-600 shrink-0" />
-                        <span>{{ $inProductionCount }} {{ __('Producción') }}</span>
-                    </button>
-                    <span class="text-stone-300">•</span>
-                    <button 
-                        type="button"
-                        wire:click="setTab('backlog')"
-                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'backlog' ? 'bg-amber-100 text-amber-900 ring-1 ring-amber-500/30 shadow-2xs' : 'text-amber-700 hover:text-amber-900 hover:bg-amber-50' }}"
-                        title="{{ __('Ver Órdenes en Backlog') }}">
-                        <x-lucide-inbox class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span>{{ $totalBacklogCount }} {{ __('Backlog') }}</span>
-                    </button>
-                    <span class="text-stone-300">•</span>
-                    <button 
-                        type="button"
-                        wire:click="setTab('archived', 'all')"
-                        class="inline-flex items-center gap-1 font-semibold transition cursor-pointer px-1.5 py-0.5 rounded-md {{ $activeTab === 'archived' ? 'bg-cyan-100 text-cyan-900 ring-1 ring-cyan-500/30 shadow-2xs' : 'text-cyan-700 hover:text-cyan-900 hover:bg-cyan-50' }}"
-                        title="{{ __('Ver Órdenes Archivadas') }}">
-                        <x-lucide-archive class="w-3.5 h-3.5 text-cyan-600 shrink-0" />
-                        <span>{{ $totalArchivedCount }} {{ __('Archivadas') }}</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="w-full">
-            <table x-ref="ordersTable" class="w-full table-fixed text-left text-xs border-collapse">
-                <thead class="sticky z-20 bg-stone-50 shadow-2xs" style="top: var(--table-header-h, 49px);">
+            x-ref="tableScrollWrapper" 
+            class="w-full flex-1 min-h-0 overflow-auto custom-horizontal-scrollbar custom-vertical-scrollbar">
+            <table x-ref="ordersTable" class="w-full min-w-[2055px] table-fixed text-left text-xs border-collapse">
+                <thead class="sticky top-0 z-20 bg-stone-50 shadow-2xs">
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
-                        <!-- 1. Fecha Procesado en Producción -->
+                        <!-- 1. WO # (Sticky Left) -->
                         <th 
-                            :style="'width: ' + (colWidths['proc_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
-                            {{-- TEMPORAL: wire:click="sortByColumn('production_processed_at')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
-                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="Procesado en Producción">Proc. Prod.</span>
-                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'proc_date')"
-                                @dblclick.stop.prevent="resetDivider('proc_date')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'proc_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
-                            </div>
-                        </th>
-
-                        <!-- 2. Order Due Date -->
-                        <th 
-                            :style="'width: ' + (colWidths['due_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
-                            {{-- TEMPORAL: wire:click="sortByColumn('delivery_due_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
-                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="Due Date (Fecha Límite de Entrega)">Due Date</span>
-                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'due_date')"
-                                @dblclick.stop.prevent="resetDivider('due_date')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'due_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
-                            </div>
-                        </th>
-
-                        <!-- 3. WO # -->
-                        <th 
-                            :style="'width: ' + (colWidths['wo'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
+                            style="width: 90px;"
+                            class="sticky top-0 left-0 z-30 bg-stone-50 border-b border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] py-2.5 pl-3 sm:pl-4 pr-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('wo_number')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="WO #">WO #</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'wo')"
-                                @dblclick.stop.prevent="resetDivider('wo')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'wo' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
+                        </th>
+
+                        <!-- 2. Fecha Procesado en Producción -->
+                        <th 
+                            style="width: 85px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none"
+                            {{-- TEMPORAL: wire:click="sortByColumn('production_processed_at')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Procesado en Producción">Proc. Prod.</span>
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
+                            </div>
+                        </th>
+
+                        <!-- 3. Order Due Date -->
+                        <th 
+                            style="width: 85px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none"
+                            {{-- TEMPORAL: wire:click="sortByColumn('delivery_due_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="Due Date (Fecha Límite de Entrega)">Due Date</span>
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
 
                         <!-- 4. Client -->
                         <th 
-                            :style="'width: ' + (colWidths['client'] || 12) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col"
+                            style="width: 220px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1.5 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('company_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Cliente">Cliente</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'client')"
-                                @dblclick.stop.prevent="resetDivider('client')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'client' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
-                            </div>
                         </th>
 
                         <!-- 5. Order Name -->
                         <th 
-                            :style="'width: ' + (colWidths['name'] || 14) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col"
+                            style="width: 340px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1.5 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('task_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nombre de Orden">Nombre de Orden</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'name')"
-                                @dblclick.stop.prevent="resetDivider('name')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'name' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
-                            </div>
                         </th>
 
                         <!-- 6. Designer -->
                         <th 
-                            :style="'width: ' + (colWidths['designer'] || 7.5) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
+                            style="width: 130px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Diseñador">Diseñador</span>
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'designer')"
-                                @dblclick.stop.prevent="resetDivider('designer')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'designer' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 7. Nota Producción / Instalación -->
                         <th 
-                            :style="'width: ' + (colWidths['prod_note'] || 12) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
+                            style="width: 400px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1.5 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate inline-flex items-center gap-1" title="Nota Producción/Instalación"><x-lucide-sticky-note class="w-3 h-3 text-stone-400 shrink-0" /><span>Nota Prod./Inst.</span></span>
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'prod_note')"
-                                @dblclick.stop.prevent="resetDivider('prod_note')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'prod_note' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 8. Estimado / Invoice -->
                         <th 
-                            :style="'width: ' + (colWidths['invoice'] || 7) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
+                            style="width: 130px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Estimado / Invoice">Est. / Inv.</span>
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'invoice')"
-                                @dblclick.stop.prevent="resetDivider('invoice')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'invoice' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 8.5. Fecha Email -->
                         <th 
-                            :style="'width: ' + (colWidths['email_date'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col"
+                            style="width: 85px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('email_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Fecha Email">Email</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'email_date')"
-                                @dblclick.stop.prevent="resetDivider('email_date')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'email_date' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
-                            </div>
                         </th>
 
                         <!-- 9. Instalación -->
                         <th 
-                            :style="'width: ' + (colWidths['installation'] || 6) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1 select-none group/col">
+                            style="width: 130px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Instalación">Instalación</span>
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'installation')"
-                                @dblclick.stop.prevent="resetDivider('installation')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'installation' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 10. CHECK MARK -->
                         <th 
-                            :style="'width: ' + (colWidths['check'] || 3.5) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-0.5 text-center select-none group/col">
+                            style="width: 50px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-0.5 text-center select-none">
                             <div class="flex items-center justify-center gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <x-lucide-check class="w-3.5 h-3.5 text-stone-400" />
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'check')"
-                                @dblclick.stop.prevent="resetDivider('check')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'check' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 11. Nota de Entrega -->
                         <th 
-                            :style="'width: ' + (colWidths['deliv_note'] || 7) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col">
+                            style="width: 240px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1.5 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate inline-flex items-center gap-1" title="Nota de Entrega"><x-lucide-sticky-note class="w-3 h-3 text-stone-400 shrink-0" /><span>Entrega</span></span>
-                            </div>
-                            <div 
-                                @mousedown.stop.prevent="initResize($event, 'deliv_note')"
-                                @dblclick.stop.prevent="resetDivider('deliv_note')"
-                                @click.stop.prevent
-                                :class="resizingDivider === 'deliv_note' ? 'bg-emerald-500 opacity-100' : 'hover:bg-emerald-500/60 group-hover/col:bg-stone-300'"
-                                class="absolute right-0 top-0 bottom-0 w-3 cursor-col-resize transition z-30"
-                                title="Arrastrar para redimensionar">
                             </div>
                         </th>
 
                         <!-- 12. Subestatus -->
                         <th 
-                            :style="'width: ' + (colWidths['substatus'] || 7) + '%; top: var(--table-header-h, 49px);'"
-                            class="sticky z-20 bg-stone-50 border-b border-stone-200 shadow-2xs relative py-2.5 px-1.5 select-none group/col"
+                            style="width: 170px;"
+                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 pl-1.5 pr-4 sm:pr-6 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('substatus')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Subestatus">Subestatus</span>
@@ -1465,151 +1155,21 @@
                                 $isProd => 'bg-orange-200/90 hover:bg-orange-300/90 text-orange-950 font-semibold',
                                 default => 'hover:bg-stone-50/80',
                             };
+
+                            $stickyWoStyle = match(true) {
+                                $isArchived => 'bg-cyan-100 group-hover:bg-cyan-200 text-cyan-950 font-semibold',
+                                $isProd => 'bg-orange-200 group-hover:bg-orange-300 text-orange-950 font-semibold',
+                                default => 'bg-white group-hover:bg-stone-50/80 text-stone-900',
+                            };
                         @endphp
                         <tr 
                             data-order-id="{{ $order->id }}"
                             :class="getRowClass({{ $order->id }}, '{{ $rowStyle }}')"
-                            class="transition-colors duration-75 group relative {{ $rowStyle }}">
-                            <!-- 1. Fecha Procesado en Producción -->
-                            @php
-                                $procDateVal = $order->production_processed_at ? $order->production_processed_at->format('Y-m-d') : '';
-                                $procDateDisplay = $order->production_processed_at ? $order->production_processed_at->format('d/m/Y') : '—';
-                                $hasProcDate = !empty($procDateVal);
-                            @endphp
-                            <td class="py-1 px-1.5 truncate">
-                                <div 
-                                    x-data="{ editing: false }" 
-                                    @click.away="if (!$refs.procInput.dataset.initial) { $refs.procInput.value = ''; editing = false; }"
-                                    class="w-full flex items-center min-w-0">
-                                    @if(!$hasProcDate)
-                                        <button 
-                                            type="button" 
-                                            x-show="!editing"
-                                            @click="editing = true; $nextTick(() => { if ($refs.procInput.showPicker) { try { $refs.procInput.showPicker(); } catch(e){} } $refs.procInput.focus(); })" 
-                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm transition-colors cursor-pointer"
-                                            title="Sin fecha - Clic para asignar fecha de procesado">
-                                            —
-                                        </button>
-                                    @endif
-                                    <input 
-                                        x-ref="procInput"
-                                        @if(!$hasProcDate) x-show="editing" x-cloak style="display: none;" @endif
-                                        type="date"
-                                        data-initial="{{ $procDateVal }}"
-                                        value="{{ $procDateVal }}"
-                                        @input.stop
-                                        @keydown.escape.stop.prevent="if (!$el.dataset.initial) { $el.value = ''; editing = false; } $el.blur();"
-                                        @blur="
-                                            if (!$el.dataset.initial) {
-                                                $el.value = '';
-                                                editing = false;
-                                            } else if (!$el.value) {
-                                                $el.value = $el.dataset.initial;
-                                                editing = false;
-                                            }
-                                        "
-                                        @change.stop="
-                                            if ($el.value !== $el.dataset.initial) {
-                                                $el.dataset.initial = $el.value;
-                                                $wire.quickUpdateField({{ $order->id }}, 'production_processed_at', $el.value);
-                                            }
-                                            if (!$el.value) editing = false;
-                                        "
-                                        class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
-                                        title="{{ $procDateDisplay }} (Procesado en Producción - Clic para editar)"
-                                    >
-                                </div>
-                            </td>
-
-                            <!-- 2. Order Due Date (Delivery Deadline) -->
-                            @php
-                                $dueDateVal = $order->delivery_due_date ? $order->delivery_due_date->format('Y-m-d') : '';
-                                $dueDateDisplay = $order->delivery_due_date ? $order->delivery_due_date->format('d/m/Y') : '—';
-                                $isDueDateFilled = !empty($dueDateVal);
-                            @endphp
-                            <td class="py-1 px-1.5 truncate">
-                                <div 
-                                    x-data="{
-                                        editing: false,
-                                        hasDueDate: {{ $isDueDateFilled ? 'true' : 'false' }},
-                                    }" 
-                                    @click.away="
-                                        if (!hasDueDate) {
-                                            $refs.dueInput.value = '';
-                                            editing = false;
-                                        } else {
-                                            $refs.dueInput.value = $refs.dueInput.dataset.initial || '';
-                                            editing = false;
-                                        }
-                                    "
-                                    class="w-full flex items-center min-w-0">
-                                    <button 
-                                        type="button" 
-                                        x-show="!hasDueDate && !editing"
-                                        @if($isDueDateFilled) style="display: none;" @endif
-                                        @click="editing = true; $nextTick(() => { if ($refs.dueInput.showPicker) { try { $refs.dueInput.showPicker(); } catch(e){} } $refs.dueInput.focus(); })" 
-                                        class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1.5 py-0.5 rounded-sm transition-colors cursor-pointer"
-                                        title="Sin Due Date - Clic para asignar fecha de entrega">
-                                        —
-                                    </button>
-                                    <input 
-                                        x-ref="dueInput"
-                                        x-show="hasDueDate || editing"
-                                        x-cloak
-                                        @if(!$isDueDateFilled) style="display: none;" @endif
-                                        type="date"
-                                        data-initial="{{ $dueDateVal }}"
-                                        value="{{ $dueDateVal }}"
-                                        @input.stop
-                                        @keydown.escape.stop.prevent="
-                                            if (!hasDueDate) {
-                                                $el.value = '';
-                                                editing = false;
-                                            } else {
-                                                $el.value = $el.dataset.initial || '';
-                                                editing = false;
-                                            }
-                                            $el.blur();
-                                        "
-                                        @blur="
-                                            if (!hasDueDate) {
-                                                $el.value = '';
-                                                editing = false;
-                                            } else {
-                                                $el.value = $el.dataset.initial || '';
-                                                editing = false;
-                                            }
-                                        "
-                                        @change.stop="
-                                            const val = $el.value;
-                                            if (val) {
-                                                hasDueDate = true;
-                                                $el.dataset.initial = val;
-                                                if (ordersState[{{ $order->id }}]) {
-                                                    ordersState[{{ $order->id }}].delivery_due_date = val;
-                                                }
-                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', val);
-                                                editing = false;
-                                            } else {
-                                                hasDueDate = false;
-                                                $el.dataset.initial = '';
-                                                $el.value = '';
-                                                if (ordersState[{{ $order->id }}]) {
-                                                    ordersState[{{ $order->id }}].delivery_due_date = null;
-                                                }
-                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', '');
-                                                editing = false;
-                                            }
-                                        "
-                                        class="w-full text-[10px] font-mono px-1.5 py-0.5 rounded-sm border-0 cursor-pointer transition-colors {{ $isDueDateFilled ? 'due-date-urgent bg-red-600 text-white font-bold' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
-                                        :class="hasDueDate ? 'due-date-urgent bg-red-600 text-white font-bold' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0'"
-                                        title="{{ $dueDateDisplay }} (Due Date / Fecha Límite de Entrega - Clic para editar)"
-                                    >
-                                </div>
-                            </td>
-
-                            <!-- 3. WO # (Click opens modal if exists + Backlog pill if in_workspace is false) -->
-                            <td class="py-1 px-1.5 truncate">
+                            class="group relative {{ $rowStyle }}">
+                            <!-- 1. WO # (Sticky Left) -->
+                            <td 
+                                :class="getStickyWoClass({{ $order->id }}, '{{ $stickyWoStyle }}')"
+                                class="sticky left-0 z-10 {{ $stickyWoStyle }} border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] py-1 pl-3 sm:pl-4 pr-1.5 truncate transition-colors">
                                 <div class="flex items-center gap-1 overflow-hidden truncate">
                                     @if(! $order->in_workspace)
                                         <button 
@@ -1639,8 +1199,9 @@
                                         >
                                     @else
                                         <button 
+                                            type="button" 
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                            class="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left block"
+                                            class="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-fit max-w-full block"
                                             title="{{ $order->wo_number }} - Ver Detalle">
                                             {{ $order->wo_number }}
                                         </button>
@@ -1648,11 +1209,104 @@
                                 </div>
                             </td>
 
+                            <!-- 2. Fecha Procesado en Producción -->
+                            @php
+                                $procDateVal = $order->production_processed_at ? $order->production_processed_at->format('Y-m-d') : '';
+                                $procDateDisplay = $order->production_processed_at ? $order->production_processed_at->format('d/m/Y') : '—';
+                                $hasProcDate = !empty($procDateVal);
+                            @endphp
+                            <td class="py-1 px-1 truncate">
+                                <div class="w-full flex items-center min-w-0" data-date-container="proc_{{ $order->id }}">
+                                    @if(!$hasProcDate)
+                                        <button 
+                                            type="button" 
+                                            x-show="activeDateEdit !== 'proc_{{ $order->id }}'"
+                                            @click.stop="openDateInput('proc', {{ $order->id }}, $el.nextElementSibling)" 
+                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm cursor-pointer"
+                                            title="Sin fecha - Clic para asignar fecha de procesado">
+                                            —
+                                        </button>
+                                    @endif
+                                    <input 
+                                        @if(!$hasProcDate) x-show="activeDateEdit === 'proc_{{ $order->id }}'" x-cloak style="display: none;" @endif
+                                        type="date"
+                                        data-date-input="proc_{{ $order->id }}"
+                                        data-initial="{{ $procDateVal }}"
+                                        value="{{ $procDateVal }}"
+                                        @input.stop
+                                        @keydown.escape.stop.prevent="closeDateInput()"
+                                        @blur="closeDateInput()"
+                                        @change.stop="
+                                            if ($el.value !== $el.dataset.initial) {
+                                                $el.dataset.initial = $el.value;
+                                                $wire.quickUpdateField({{ $order->id }}, 'production_processed_at', $el.value);
+                                            }
+                                            closeDateInput();
+                                        "
+                                        class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 cursor-pointer"
+                                        title="{{ $procDateDisplay }} (Procesado en Producción - Clic para editar)"
+                                    >
+                                </div>
+                            </td>
+
+                            <!-- 3. Order Due Date (Delivery Deadline) -->
+                            @php
+                                $dueDateVal = $order->delivery_due_date ? $order->delivery_due_date->format('Y-m-d') : '';
+                                $dueDateDisplay = $order->delivery_due_date ? $order->delivery_due_date->format('d/m/Y') : '—';
+                                $isDueDateFilled = !empty($dueDateVal);
+                            @endphp
+                            <td class="py-1 px-1.5 truncate">
+                                <div class="w-full flex items-center min-w-0" data-date-container="due_{{ $order->id }}">
+                                    @if(!$isDueDateFilled)
+                                        <button 
+                                            type="button" 
+                                            x-show="activeDateEdit !== 'due_{{ $order->id }}'"
+                                            @click.stop="openDateInput('due', {{ $order->id }}, $el.nextElementSibling)" 
+                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1.5 py-0.5 rounded-sm cursor-pointer"
+                                            title="Sin Due Date - Clic para asignar fecha de entrega">
+                                            —
+                                        </button>
+                                    @endif
+                                    <input 
+                                        @if(!$isDueDateFilled) x-show="activeDateEdit === 'due_{{ $order->id }}'" x-cloak style="display: none;" @endif
+                                        type="date"
+                                        data-date-input="due_{{ $order->id }}"
+                                        data-initial="{{ $dueDateVal }}"
+                                        value="{{ $dueDateVal }}"
+                                        @input.stop
+                                        @keydown.escape.stop.prevent="closeDateInput()"
+                                        @blur="closeDateInput()"
+                                        @change.stop="
+                                            const val = $el.value;
+                                            if (val) {
+                                                $el.dataset.initial = val;
+                                                if (ordersState[{{ $order->id }}]) {
+                                                    ordersState[{{ $order->id }}].delivery_due_date = val;
+                                                }
+                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', val);
+                                            } else {
+                                                $el.dataset.initial = '';
+                                                $el.value = '';
+                                                if (ordersState[{{ $order->id }}]) {
+                                                    ordersState[{{ $order->id }}].delivery_due_date = null;
+                                                }
+                                                $wire.quickUpdateField({{ $order->id }}, 'delivery_due_date', '');
+                                            }
+                                            closeDateInput();
+                                        "
+                                        class="w-full text-[10px] font-mono px-1.5 py-0.5 rounded-sm border-0 cursor-pointer {{ $isDueDateFilled ? 'due-date-urgent bg-red-600 text-white font-bold' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0' }}"
+                                        :class="(ordersState[{{ $order->id }}]?.delivery_due_date || '{{ $dueDateVal }}') ? 'due-date-urgent bg-red-600 text-white font-bold' : 'bg-transparent hover:bg-stone-100/60 focus:bg-white text-stone-700 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0'"
+                                        title="{{ $dueDateDisplay }} (Due Date / Fecha Límite de Entrega - Clic para editar)"
+                                    >
+                                </div>
+                            </td>
+
                             <!-- 4. Cliente (Click opens modal) -->
                             <td class="py-1 px-1.5 truncate">
                                 <button 
+                                    type="button"
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                    class="font-semibold text-stone-800 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-full block uppercase"
+                                    class="font-semibold text-stone-800 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-fit max-w-full block uppercase"
                                     title="{{ $order->company_name ?: ($order->client?->name ?? '—') }}">
                                     {{ $order->company_name ?: ($order->client?->name ?? '—') }}
                                 </button>
@@ -1661,8 +1315,9 @@
                             <!-- 5. Order Name (Click opens modal) -->
                             <td class="py-1 px-1.5 truncate">
                                 <button 
+                                    type="button"
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                    class="text-stone-700 font-medium hover:text-stone-900 hover:underline truncate cursor-pointer text-left w-full block uppercase"
+                                    class="text-stone-700 font-medium hover:text-stone-900 hover:underline truncate cursor-pointer text-left w-fit max-w-full block uppercase"
                                     title="{{ $order->clean_task_name }}">
                                     {{ $order->clean_task_name }}
                                 </button>
@@ -1672,7 +1327,7 @@
                             <td 
                                 :class="ordersState[{{ $order->id }}]?.designer_badge_style || '{{ $order->getDesignerBadgeStyle() }}'"
                                 :style="ordersState[{{ $order->id }}]?.designer_badge_inline_style || '{{ $order->getDesignerBadgeInlineStyle() }}'"
-                                class="py-1 px-1.5 truncate transition text-[10px] font-semibold text-center {{ $order->getDesignerBadgeStyle() }}"
+                                class="py-1 px-1.5 truncate text-[10px] font-semibold text-center {{ $order->getDesignerBadgeStyle() }}"
                                 style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                 <button 
                                     type="button"
@@ -1701,7 +1356,7 @@
                                             $wire.quickUpdateField({{ $order->id }}, 'production_note', val);
                                         }
                                     "
-                                    class="w-full bg-transparent hover:bg-stone-100/70 focus:bg-white text-[11px] text-stone-700 italic px-1.5 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate placeholder-stone-400 focus:text-stone-900 focus:not-italic"
+                                    class="w-full bg-transparent hover:bg-stone-100/70 focus:bg-white text-[11px] text-stone-700 italic px-1.5 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 truncate placeholder-stone-400 focus:text-stone-900 focus:not-italic"
                                     title="{{ $order->production_note ?: 'Clic para editar nota de producción' }}"
                                 >
                             </td>
@@ -1738,7 +1393,7 @@
                             <td 
                                 :class="getReviewCellClass(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
                                 :style="getReviewCellStyle(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
-                                class="py-1 px-1 truncate transition"
+                                class="py-1 px-1 truncate"
                             >
                                 <div class="flex items-center justify-between gap-0.5 w-full py-0.5 truncate">
                                     <input 
@@ -1785,33 +1440,32 @@
                                 $hasEmailDate = !empty($emailDateVal);
                             @endphp
                             <td class="py-1 px-1.5 truncate">
-                                <div x-data="{ editing: false }" class="w-full flex items-center min-w-0">
+                                <div class="w-full flex items-center min-w-0">
                                     @if(!$hasEmailDate)
                                         <button 
                                             type="button" 
-                                            x-show="!editing"
-                                            @click="editing = true; $nextTick(() => { if ($refs.emailInput.showPicker) { try { $refs.emailInput.showPicker(); } catch(e){} } $refs.emailInput.focus(); })" 
-                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm transition-colors cursor-pointer"
+                                            x-show="activeDateEdit !== 'email_{{ $order->id }}'"
+                                            @click="openDateInput('email', {{ $order->id }}, $el.nextElementSibling)" 
+                                            class="w-full text-left text-stone-400 hover:text-stone-700 text-[10px] font-mono px-1 py-0.5 rounded-sm cursor-pointer"
                                             title="Sin fecha de email - Clic para asignar">
                                             —
                                         </button>
                                     @endif
                                     <input 
-                                        x-ref="emailInput"
-                                        @if(!$hasEmailDate) x-show="editing" x-cloak @endif
+                                        @if(!$hasEmailDate) x-show="activeDateEdit === 'email_{{ $order->id }}'" x-cloak style="display: none;" @endif
                                         type="date"
                                         data-initial="{{ $emailDateVal }}"
                                         value="{{ $emailDateVal }}"
                                         @input.stop
-                                        @blur="if (!$el.value) editing = false;"
+                                        @blur="if (!$el.value) closeDateInput();"
                                         @change.stop="
                                             if ($el.value !== $el.dataset.initial) {
                                                 $el.dataset.initial = $el.value;
                                                 $wire.quickUpdateField({{ $order->id }}, 'email_date', $el.value);
                                             }
-                                            if (!$el.value) editing = false;
+                                            closeDateInput();
                                         "
-                                        class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors cursor-pointer"
+                                        class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-[10px] text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 cursor-pointer"
                                         title="{{ $emailDateDisplay }} (Clic para editar)"
                                     >
                                 </div>
@@ -1823,7 +1477,7 @@
                                 $hasInstTypes = !empty($orderInstTypes);
                                 $instSummaryTitle = $hasInstTypes ? implode(', ', $orderInstTypes) : __('Sin información');
                             @endphp
-                            <td class="py-1 px-1 transition text-[10px] bg-transparent hover:bg-stone-50/80">
+                            <td class="py-1 px-1 text-[10px] bg-transparent hover:bg-stone-50/80">
                                 <button 
                                     type="button"
                                     @click.stop="Alpine.store('installationModal').open({ orderId: {{ $order->id }}, wo: '{{ addslashes($order->wo_number ?? '') }}', company: '{{ addslashes($order->company_name ?? '') }}', types: getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}) })"
@@ -1953,7 +1607,7 @@
                             <td 
                                 :style="getOrderSubstatusStyle({{ $order->id }}, '{{ addslashes($subInlineStyle) }}')"
                                 @if(!empty($subInlineStyle)) style="{{ $subInlineStyle }}" @endif
-                                class="py-1 px-1.5 truncate transition {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
+                                class="py-1 pl-1.5 pr-4 sm:pr-6 truncate {{ empty($subInlineStyle) ? $subFallbackClass : '' }}">
                                 <button 
                                     type="button"
                                     @click.stop="Alpine.store('substatusModal').open({ 
@@ -1997,23 +1651,31 @@
                     @endforelse
                 </tbody>
             </table>
-        </div>
 
-        <!-- Progressive Background Chunk Loader -->
-        @if(!empty($hasMore))
-            <div 
-                wire:key="overview-chunk-loader-{{ $loadedCount }}"
-                x-data
-                x-init="$nextTick(() => $wire.loadNextChunk())"
-                class="py-2.5 px-4 bg-emerald-50/70 border-t border-emerald-100 flex items-center justify-center gap-2 text-xs font-semibold text-emerald-800">
-                <x-lucide-loader-2 class="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
-                <span>{{ __('Cargando órdenes adicionales en segundo plano...') }} ({{ count($orders) }} / {{ $totalFilteredCount }})</span>
-            </div>
-        @endif
+            <!-- Infinite Scroll on Demand Loader -->
+            @if(!empty($hasMore))
+                <div 
+                    wire:key="overview-chunk-loader-{{ $loadedCount }}"
+                    x-data="{ loading: false }"
+                    x-intersect.threshold.20="if (!loading) { loading = true; $wire.loadNextChunk(); }"
+                    class="py-3 px-4 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs font-medium text-stone-600">
+                    <div class="flex items-center gap-2">
+                        <x-lucide-loader-2 class="w-4 h-4 animate-spin text-emerald-600 shrink-0" />
+                        <span>{{ __('Cargando más órdenes al hacer scroll...') }} ({{ count($orders) }} / {{ $totalFilteredCount }})</span>
+                    </div>
+                    <button 
+                        type="button" 
+                        wire:click="loadNextChunk" 
+                        class="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer sm:ml-3">
+                        {{ __('Cargar siguientes órdenes ahora') }}
+                    </button>
+                </div>
+            @endif
+        </div>
 
         <!-- Pagination Links Bar or All Loaded Status -->
         @if(method_exists($orders, 'hasPages') && $orders->hasPages())
-            <div class="px-4 py-3 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3 rounded-b-xl">
+            <div class="px-4 sm:px-6 py-3 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div class="text-xs text-stone-500 font-medium">
                     {{ __('Mostrando') }} <span class="font-bold text-stone-900">{{ $orders->firstItem() }}</span> {{ __('a') }} <span class="font-bold text-stone-900">{{ $orders->lastItem() }}</span> {{ __('de') }} <span class="font-bold text-stone-900">{{ $orders->total() }}</span> {{ __('órdenes') }}
                 </div>
@@ -2022,7 +1684,7 @@
                 </div>
             </div>
         @else
-            <div class="px-4 py-2.5 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3 rounded-b-xl">
+            <div class="px-4 sm:px-6 py-2.5 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div class="text-xs text-stone-600 font-medium flex items-center gap-2">
                     <span>{{ __('Mostrando') }} <strong class="text-stone-900 font-bold">{{ count($orders) }}</strong> {{ __('de') }} <strong class="text-stone-900 font-bold">{{ $totalFilteredCount }}</strong> {{ __('órdenes') }}</span>
                     <span class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
@@ -2031,7 +1693,7 @@
                 </div>
                 <div class="text-[11px] text-stone-400">
                     @if(!empty($hasMore))
-                        <span class="text-emerald-700 font-medium animate-pulse">{{ __('Cargando siguientes lotes en segundo plano...') }}</span>
+                        <span class="text-stone-500 font-medium">{{ __('Scroll hacia abajo para cargar más órdenes') }}</span>
                     @else
                         <span>{{ __('Todas las órdenes cargadas en la vista') }}</span>
                     @endif

@@ -44,6 +44,7 @@
                             resp: ($wire.responsiblePerson || '').toString().trim(),
                             location: ($wire.locationName || '').toString().trim(),
                             substatus: ($wire.substatus || '').toString().trim(),
+                            flags: Array.from($wire.flags || []).map(String).sort(),
                             due: ($wire.dueDate || '').toString().trim(),
                             createOnTrello: Boolean($wire.createOnTrello),
                             designers: Array.from($wire.designerIds || []).map(String).sort()
@@ -59,6 +60,7 @@
                             resp: ($wire.responsiblePerson || '').toString().trim(),
                             location: ($wire.locationName || '').toString().trim(),
                             substatus: ($wire.substatus || '').toString().trim(),
+                            flags: Array.from($wire.flags || []).map(String).sort(),
                             due: ($wire.dueDate || '').toString().trim(),
                             createOnTrello: Boolean($wire.createOnTrello),
                             designers: Array.from($wire.designerIds || []).map(String).sort()
@@ -129,28 +131,26 @@
                     <!-- Row 1: WO Number, Trello ID & Responsible Person -->
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                         <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="font-medium text-zinc-700 flex items-center gap-1">
-                                    <x-lucide-hash class="w-3 h-3 text-zinc-400" />
-                                    <span>WO (Opcional)</span>
-                                </label>
-                                <button 
-                                    type="button" 
-                                    wire:click="generateWoNumber" 
-                                    wire:loading.attr="disabled"
-                                    class="text-[11px] font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer transition select-none disabled:opacity-50"
-                                    title="Crear siguiente número de WO automáticamente">
-                                    <x-lucide-sparkles class="w-3 h-3 text-amber-500" wire:loading.remove wire:target="generateWoNumber" />
-                                    <x-lucide-loader-2 class="w-3 h-3 animate-spin text-zinc-400" wire:loading wire:target="generateWoNumber" />
-                                    <span>Crear WO</span>
-                                </button>
-                            </div>
+                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
+                                <x-lucide-hash class="w-3 h-3 text-zinc-400" />
+                                <span>WO (Opcional)</span>
+                            </label>
                             <div class="flex rounded-md shadow-2xs">
                                 <span class="inline-flex items-center px-2 rounded-l-md border border-r-0 border-[#e9e9e7] bg-stone-100 text-zinc-600 font-mono font-bold text-xs select-none">
                                     WO
                                 </span>
                                 <input type="text" wire:model="woNumber" placeholder="16350" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-r-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono font-semibold">
                             </div>
+                            <button 
+                                type="button" 
+                                wire:click="generateWoNumber" 
+                                wire:loading.attr="disabled"
+                                class="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 font-semibold text-xs transition-all duration-150 cursor-pointer hover:shadow-xs active:scale-[0.98] disabled:opacity-50 select-none group"
+                                title="Crear siguiente número de WO automáticamente">
+                                <x-lucide-sparkles class="w-3.5 h-3.5 text-amber-500 shrink-0 transition-transform duration-200 group-hover:scale-125 group-hover:rotate-12" wire:loading.remove wire:target="generateWoNumber" />
+                                <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" wire:loading wire:target="generateWoNumber" />
+                                <span>Crear WO Automática</span>
+                            </button>
                         </div>
 
                         <div class="relative" 
@@ -476,59 +476,83 @@
                         @error('taskName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
-                    <!-- Row 4: Column / Status & Designer -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <div class="relative" 
-                             x-data="{ 
-                                 open: false,
-                                 selectStatus(val) {
-                                     $wire.set('coreStatus', val);
-                                     this.open = false;
-                                 }
-                             }"
-                             x-dropdown-nav>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-layers class="w-3 h-3 text-zinc-400" />
-                                <span>Lista / Estado Kanban</span>
-                            </label>
-                            <div class="relative">
-                                <button 
-                                    type="button" 
-                                    @click="open = !open" 
-                                    @click.outside="open = false"
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] hover:border-stone-400 rounded-md px-3 py-1.5 text-zinc-800 focus:outline-none text-left flex items-center justify-between font-medium">
-                                    <span>{{ \App\Enums\CoreStatus::tryFrom($coreStatus)?->label() ?? 'Seleccionar estado...' }}</span>
-                                    <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
-                                </button>
+                    <!-- Row 4: Substatus & Designer -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
+                        <!-- Left Column: Condición / Subestado Pills -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="block font-medium text-zinc-700 flex items-center gap-1">
+                                    <x-lucide-tag class="w-3 h-3 text-zinc-400" />
+                                    <span>Condición / Subestado <span class="text-zinc-400 font-normal">(Opcional)</span></span>
+                                </label>
+                                @if($substatus || !empty($flags))
+                                    <button 
+                                        type="button" 
+                                        wire:click="selectSubstatus('')" 
+                                        class="text-[10px] text-zinc-400 hover:text-red-500 cursor-pointer font-medium transition"
+                                        title="Quitar subestados y banderas">
+                                        Limpiar
+                                    </button>
+                                @endif
                             </div>
+                            <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                @forelse($substatuses as $sub)
+                                    @php
+                                        $subVal = $sub instanceof \App\Models\Substatus ? $sub->name : ($sub->value ?? (string) $sub);
+                                        $isGlobal = $sub instanceof \App\Models\Substatus ? (bool) $sub->is_global : ($sub instanceof \App\Enums\Substatus ? $sub->isGlobal() : false);
+                                        $isSelected = $isGlobal ? in_array($subVal, $flags ?? [], true) : ($substatus === $subVal);
 
-                            <div 
-                                x-show="open" 
-                                x-cloak
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 scale-95"
-                                x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs"
-                                style="display: none;">
-                                @foreach($coreStatuses as $status)
+                                        $subModel = $sub instanceof \App\Models\Substatus ? $sub : \App\Models\Substatus::where('name', $subVal)->first();
+                                        $bgColor = $subModel?->bg_color ?? '#f4f4f5';
+                                        $textColor = $subModel?->text_color ?? '#27272a';
+                                        $borderColor = $subModel?->border_color ?: $bgColor;
+
+                                        $pillStyle = "background-color: {$bgColor}; color: {$textColor}; border-color: {$borderColor};";
+                                    @endphp
                                     <button 
                                         type="button"
-                                        @click="selectStatus('{{ $status->value }}')" 
-                                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                                        <span>{{ $status->label() }}</span>
-                                        @if($coreStatus === $status->value)
-                                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
+                                        wire:click="selectSubstatus('{{ addslashes($subVal) }}')"
+                                        class="px-2.5 py-1 rounded-md text-[11px] border transition-all flex items-center gap-1 cursor-pointer select-none {{ $isSelected ? 'font-bold shadow-xs scale-[1.02] ring-2 ring-stone-900/20' : 'font-medium opacity-60 hover:opacity-95 hover:scale-[1.01]' }}"
+                                        style="{{ $pillStyle }}"
+                                        title="{{ $subVal }}"
+                                    >
+                                        <span>{{ $subVal }}</span>
+                                        @if($isSelected)
+                                            <x-lucide-check class="w-3 h-3 text-current stroke-[2.5]" />
                                         @endif
                                     </button>
-                                @endforeach
+                                @empty
+                                    <span class="text-zinc-400 italic text-[11px]">No hay subestados disponibles para este estado</span>
+                                @endforelse
                             </div>
                         </div>
 
+                        <!-- Right Column: Diseñadores Asignados -->
                         <div>
                             <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
                                 <x-lucide-user class="w-3 h-3 text-zinc-400" />
                                 <span>Diseñadores Asignados</span>
                             </label>
+
+                            @if($mostAvailableDesigner)
+                                <button 
+                                    type="button"
+                                    wire:click="toggleDesigner({{ $mostAvailableDesigner->id }})"
+                                    class="mb-1.5 w-full flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50/80 hover:bg-emerald-100/90 border border-emerald-200/60 text-[11px] text-emerald-900 transition cursor-pointer select-none group text-left"
+                                    title="Clic para seleccionar a {{ $mostAvailableDesigner->name }}"
+                                >
+                                    <span class="relative flex h-2 w-2 shrink-0">
+                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                    </span>
+                                    <span class="text-emerald-700/80 text-[10.5px]">Más disponible esta semana:</span>
+                                    <span class="font-semibold text-emerald-950 flex items-center gap-1 truncate group-hover:underline">
+                                        <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $mostAvailableDesigner->dot_color_class }}" style="{{ $mostAvailableDesigner->dot_inline_style }}"></span>
+                                        <span>{{ $mostAvailableDesigner->name }}</span>
+                                    </span>
+                                </button>
+                            @endif
+
                             <div class="flex flex-wrap items-center gap-1.5 p-2 bg-[#fbfbfa] border border-[#e9e9e7] rounded-md min-h-[38px]">
                                 @foreach($designers as $designer)
                                     @php $isAssigned = in_array((int)$designer->id, array_map('intval', $designerIds)); @endphp
@@ -550,80 +574,64 @@
                         </div>
                     </div>
 
-                    <!-- Row 5: Substatus & Due Date -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                        <!-- Substatus (Custom Searchable Combobox with Color Badges) -->
-                        <div class="relative" 
-                             x-data="{ 
-                                 open: false,
-                                 selectSub(val) {
-                                     $wire.set('substatus', val);
-                                     this.open = false;
-                                 }
-                             }"
-                             x-dropdown-nav>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-tag class="w-3 h-3 text-zinc-400" />
-                                <span>Condición / Subestado (Opcional)</span>
+                    <!-- Row 5: Fecha Límite (SLA) Full Width -->
+                    <div class="p-3 bg-stone-50/80 border border-[#e9e9e7] rounded-lg space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <label class="font-medium text-zinc-700 flex items-center gap-1.5">
+                                <x-lucide-calendar class="w-3.5 h-3.5 text-indigo-600" />
+                                <span class="font-semibold text-zinc-800">Fecha Límite (SLA)</span>
                             </label>
-                            <div class="relative">
-                                <button 
-                                    type="button" 
-                                    @click="open = !open" 
-                                    @click.outside="open = false"
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] hover:border-stone-400 rounded-md px-3 py-1.5 text-zinc-800 focus:outline-none text-left flex items-center justify-between font-medium">
-                                    @if($substatus)
-                                        @php $subEnum = \App\Enums\Substatus::tryFrom($substatus); @endphp
-                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $subEnum ? $subEnum->badgeStyle() : 'bg-stone-100 text-stone-700 border-stone-200' }}" style="{{ $subEnum ? $subEnum->getInlineBadgeStyle() : '' }}">
-                                            {{ $substatus }}
-                                        </span>
-                                    @else
-                                        <span class="text-zinc-500 italic">Ninguno</span>
-                                    @endif
-                                    <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400" />
-                                </button>
-                            </div>
-
-                            <div 
-                                x-show="open" 
-                                x-cloak
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 scale-95"
-                                x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-64 overflow-y-auto divide-y divide-stone-100 text-xs"
-                                style="display: none;">
-                                <button 
-                                    type="button"
-                                    @click="selectSub('')" 
-                                    class="w-full text-left p-2.5 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
-                                    <span>Ninguno</span>
-                                    @if(!$substatus)
-                                        <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                                    @endif
-                                </button>
-                                @foreach($substatuses as $sub)
+                            @if($dueDate)
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[11px] text-zinc-500">
+                                        Entrega: <strong class="text-zinc-800 font-semibold capitalize">{{ \Carbon\Carbon::parse($dueDate)->locale('es')->isoFormat('dddd, D [de] MMMM') }}</strong>
+                                    </span>
                                     <button 
-                                        type="button"
-                                        @click="selectSub('{{ $sub->value }}')" 
-                                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer transition flex items-center justify-between">
-                                        <span class="px-2 py-0.5 rounded text-[11px] font-medium border {{ $sub->badgeStyle() }}" style="{{ $sub->getInlineBadgeStyle() }}">
-                                            {{ $sub->value }}
-                                        </span>
-                                        @if($substatus === $sub->value)
-                                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                                        @endif
+                                        type="button" 
+                                        wire:click="$set('dueDate', '')" 
+                                        class="text-[10px] text-zinc-400 hover:text-red-500 transition cursor-pointer font-medium"
+                                        title="Borrar fecha">
+                                        Quitar
                                     </button>
-                                @endforeach
-                            </div>
+                                </div>
+                            @else
+                                <span class="text-[11px] text-zinc-400 italic">Sin fecha asignada</span>
+                            @endif
                         </div>
 
-                        <div>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-calendar class="w-3 h-3 text-zinc-400" />
-                                <span>Fecha Límite (SLA)</span>
-                            </label>
-                            <input type="date" wire:model="dueDate" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono">
+                        <div class="grid grid-cols-3 gap-2.5 items-center">
+                            @php
+                                $todayDate = now()->toDateString();
+                                $tomorrowDate = now()->addDay()->toDateString();
+                                $isToday = ($dueDate === $todayDate);
+                                $isTomorrow = ($dueDate === $tomorrowDate);
+                            @endphp
+
+                            <!-- Hoy -->
+                            <button 
+                                type="button" 
+                                wire:click="setDueDatePreset('today')"
+                                class="w-full py-1.5 px-3 rounded-md text-xs transition cursor-pointer border text-center select-none {{ $isToday ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold' : 'bg-white text-zinc-700 border-[#e9e9e7] hover:bg-stone-100 hover:border-stone-300 font-medium' }}">
+                                Hoy
+                            </button>
+
+                            <!-- Mañana -->
+                            <button 
+                                type="button" 
+                                wire:click="setDueDatePreset('tomorrow')"
+                                class="w-full py-1.5 px-3 rounded-md text-xs transition cursor-pointer border text-center select-none {{ $isTomorrow ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold' : 'bg-white text-zinc-700 border-[#e9e9e7] hover:bg-stone-100 hover:border-stone-300 font-medium' }}">
+                                Mañana
+                            </button>
+
+                            <!-- Exact Date Picker Input -->
+                            <div class="relative w-full">
+                                <input 
+                                    type="date" 
+                                    wire:model.live="dueDate" 
+                                    class="w-full bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono text-xs font-semibold shadow-2xs cursor-pointer">
+                            </div>
                         </div>
+                        @error('dueDate') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Footer Buttons -->

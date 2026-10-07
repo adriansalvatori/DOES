@@ -713,6 +713,34 @@ class Order extends Model
             || (is_string($this->substatus) ? $this->substatus === 'URGENTE' : $this->substatus?->value === 'URGENTE');
     }
 
+    public function hasFaltaAlgo(): bool
+    {
+        return $this->hasFlag('FALTA ALGO')
+            || (is_string($this->substatus) ? mb_strtoupper(trim($this->substatus)) === 'FALTA ALGO' : mb_strtoupper(trim($this->substatus?->value ?? '')) === 'FALTA ALGO');
+    }
+
+    public function applySubstatusStatusRules(): void
+    {
+        $hasFaltaAlgo = $this->hasFaltaAlgo();
+        $isUrgente = $this->isUrgente();
+
+        if ($hasFaltaAlgo) {
+            if ($this->core_status !== CoreStatus::ENTRANTE) {
+                $prev = $this->core_status;
+                $this->update(['core_status' => CoreStatus::ENTRANTE]);
+                app(AutomationEngine::class)->handleStatusChanged($this->fresh(), $prev, CoreStatus::ENTRANTE);
+            }
+        } elseif ($this->core_status === CoreStatus::ENTRANTE) {
+            $target = $isUrgente ? CoreStatus::TO_DO_TODAY : $this->getDesignerOrdersReceivedStatus();
+            $this->update(['core_status' => $target]);
+            app(AutomationEngine::class)->handleStatusChanged($this->fresh(), CoreStatus::ENTRANTE, $target);
+        } elseif ($isUrgente && CoreStatus::isPendingDesign($this->core_status)) {
+            $prev = $this->core_status;
+            $this->update(['core_status' => CoreStatus::TO_DO_TODAY]);
+            app(AutomationEngine::class)->handleStatusChanged($this->fresh(), $prev, CoreStatus::TO_DO_TODAY);
+        }
+    }
+
     public function getSubstatusInlineStyleAttribute(): string
     {
         if ($this->substatus instanceof Substatus) {
