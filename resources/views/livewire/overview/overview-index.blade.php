@@ -184,12 +184,12 @@
             window.addEventListener('keydown', (e) => {
                 if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'f' || e.key === 'F' || e.code === 'KeyF')) {
                     const isModalOpen = Boolean(
-                        document.querySelector('[data-modal="order-detail"]') ||
+                        document.querySelector('[data-modal=order-detail]') ||
                         (window.Alpine && Alpine.store && (
                             (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
                             (Alpine.store('substatusModal') && Alpine.store('substatusModal').isOpen)
                         )) ||
-                        document.querySelector('[role="dialog"]:not([aria-hidden="true"])')
+                        document.querySelector('[role=dialog]:not([aria-hidden=true])')
                     );
                     if (!isModalOpen) {
                         e.preventDefault();
@@ -456,12 +456,12 @@
         handleGlobalKeydown(e) {
             if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'f' || e.key === 'F' || e.code === 'KeyF')) {
                 const isModalOpen = Boolean(
-                    document.querySelector('[data-modal="order-detail"]') ||
+                    document.querySelector('[data-modal=order-detail]') ||
                     (window.Alpine && Alpine.store && (
                         (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
                         (Alpine.store('substatusModal') && Alpine.store('substatusModal').isOpen)
                     )) ||
-                    document.querySelector('[role="dialog"]:not([aria-hidden="true"])')
+                    document.querySelector('[role=dialog]:not([aria-hidden=true])')
                 );
                 if (!isModalOpen) {
                     e.preventDefault();
