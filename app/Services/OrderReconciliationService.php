@@ -2125,21 +2125,31 @@ class OrderReconciliationService
 
             if ($order) {
                 // Order already exists in DB with this Trello card or WO: update silently without duplicating!
+                $cleanComp = $parsedData['clean_company'] ?: ($parsedData['company_name'] ?: ($cardDetails['name'] ?? ''));
+                $cleanTask = $parsedData['clean_task'] ?: ($parsedData['task_name'] ?: '');
+                $mergedTask = ! empty($cleanTask) ? $this->mergeTaskNames($order->task_name ?? '', $cleanTask) : ($order->task_name ?? '');
+
                 $updateData = [
                     'trello_card_id' => $cleanCardId,
                     'in_workspace' => false,
                 ];
 
+                if (! empty($cleanComp)) {
+                    $updateData['company_name'] = $cleanComp;
+                }
+                if (! empty($mergedTask)) {
+                    $updateData['task_name'] = $mergedTask;
+                }
                 if ($woNumber && empty($order->wo_number)) {
                     $updateData['wo_number'] = $woNumber;
                 }
                 if (! empty($parsedData['resolved_client_id']) && empty($order->client_id)) {
                     $updateData['client_id'] = $parsedData['resolved_client_id'];
                 }
-                if (! empty($parsedData['extracted_contact']) && empty($order->responsible_person)) {
+                if (! empty($parsedData['extracted_contact'])) {
                     $updateData['responsible_person'] = $parsedData['extracted_contact'];
                 }
-                if (! empty($parsedData['extracted_location']) && empty($order->location_name)) {
+                if (! empty($parsedData['extracted_location'])) {
                     $updateData['location_name'] = $parsedData['extracted_location'];
                 }
                 if (! empty($parsedData['production_note'])) {
@@ -2164,9 +2174,22 @@ class OrderReconciliationService
                     $updateData['installation_type'] = $parsedData['installation_type'];
                 }
 
+                // Compute and save standardized title for both local DB and Trello
+                $titleData = array_merge($order->toArray(), $updateData);
+                $standardTitle = OrderTitleParserService::buildTitle($titleData);
+                $updateData['trello_title'] = $standardTitle;
+
                 Order::withoutEvents(function () use ($order, $updateData) {
                     DB::table('orders')->where('id', $order->id)->update($updateData);
                 });
+
+                // Update card title on Trello so future Trello syncs don't re-introduce typos/conflicts
+                try {
+                    $trelloService = app(TrelloSyncService::class);
+                    $trelloService->updateCardTitleOnly($cleanCardId, $standardTitle);
+                } catch (\Throwable $e) {
+                    Log::warning("Could not sync title to Trello for card {$cleanCardId}: ".$e->getMessage());
+                }
             } else {
                 // Create new Order with in_workspace = false (Backlog inbox)
                 $isNew = true;
@@ -2197,10 +2220,21 @@ class OrderReconciliationService
                     'updated_at' => now(),
                 ];
 
+                $standardTitle = OrderTitleParserService::buildTitle($createData);
+                $createData['trello_title'] = $standardTitle;
+
                 Order::withoutEvents(function () use (&$order, $createData) {
                     $id = DB::table('orders')->insertGetId($createData);
                     $order = Order::find($id);
                 });
+
+                // Update card title on Trello so title matches standardized clean name
+                try {
+                    $trelloService = app(TrelloSyncService::class);
+                    $trelloService->updateCardTitleOnly($cleanCardId, $standardTitle);
+                } catch (\Throwable $e) {
+                    Log::warning("Could not sync title to Trello for card {$cleanCardId}: ".$e->getMessage());
+                }
             }
         };
 

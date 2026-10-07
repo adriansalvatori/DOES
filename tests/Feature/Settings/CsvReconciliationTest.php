@@ -493,6 +493,12 @@ class CsvReconciliationTest extends TestCase
         $existingOrder->refresh();
         $this->assertEquals('WO 77777', $existingOrder->wo_number); // Repaired WO
         $this->assertEquals('card_trello_777', $existingOrder->trello_card_id);
+        $this->assertNotNull($existingOrder->trello_title);
+
+        // Verify title update was sent to Trello
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'cards/card_trello_777') && $request->method() === 'PUT';
+        });
     }
 
     public function test_link_all_found_trello_cards_batch_execution(): void

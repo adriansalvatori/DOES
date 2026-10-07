@@ -665,6 +665,46 @@ class TrelloSyncService
     }
 
     /**
+     * Updates only the title/name of a Trello card without modifying its list, members, or due date.
+     */
+    public function updateCardTitleOnly(string $cardId, string $newTitle, ?string $apiKey = null, ?string $apiToken = null): bool
+    {
+        if ($this->isPaused()) {
+            Log::info("Trello title update skipped for card {$cardId}: Trello sync is paused.");
+
+            return false;
+        }
+
+        $cleanCardId = trim($cardId);
+        if (empty($cleanCardId)) {
+            return false;
+        }
+
+        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+
+        if (empty($apiToken)) {
+            Log::info("Trello title update skipped for card {$cleanCardId}: No API token set.");
+
+            return false;
+        }
+
+        try {
+            $response = Http::put("{$this->baseUrl}/cards/{$cleanCardId}", [
+                'key' => $apiKey,
+                'token' => $apiToken,
+                'name' => trim($newTitle),
+            ]);
+
+            return $response->successful();
+        } catch (\Throwable $e) {
+            Log::warning("Failed to update Trello card title {$cleanCardId}: ".$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
      * Create a new card on Trello for an existing workspace Order and link its trello_card_id.
      */
     public function createCardOnTrello(Order $order, ?string $apiKey = null, ?string $apiToken = null, ?string $boardId = null): array
