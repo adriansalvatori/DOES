@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\CoreStatusCast;
 use App\Casts\SubstatusCast;
 use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
@@ -83,8 +84,8 @@ class Order extends Model
 
     protected $casts = [
         'trello_created_at' => 'datetime',
-        'core_status' => CoreStatus::class,
-        'origin_core_status' => CoreStatus::class,
+        'core_status' => CoreStatusCast::class,
+        'origin_core_status' => CoreStatusCast::class,
         'origin_substatus' => SubstatusCast::class,
         'substatus' => SubstatusCast::class,
         'flags' => 'array',

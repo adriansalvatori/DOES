@@ -2,7 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Casts\CoreStatusCast;
 use App\Enums\CoreStatus;
+use App\Models\Order;
 use Tests\TestCase;
 
 class CoreStatusTest extends TestCase
@@ -84,5 +86,23 @@ class CoreStatusTest extends TestCase
             'Default Short',
             CoreStatus::shortLabelFor('NON_EXISTENT', 'Default Short')
         );
+    }
+
+    public function test_order_model_handles_lowercase_core_status_via_cast(): void
+    {
+        $cast = new CoreStatusCast;
+        $dummy = new Order;
+
+        // When DB contains lowercase 'entrante', it must cast to CoreStatus::ENTRANTE
+        $result = $cast->get($dummy, 'core_status', 'entrante', []);
+        $this->assertSame(CoreStatus::ENTRANTE, $result);
+
+        // When DB contains 'ENTRANTE'
+        $resultUpper = $cast->get($dummy, 'core_status', 'ENTRANTE', []);
+        $this->assertSame(CoreStatus::ENTRANTE, $resultUpper);
+
+        // When setting, it must normalize to uppercase string
+        $this->assertEquals('ENTRANTE', $cast->set($dummy, 'core_status', CoreStatus::ENTRANTE, []));
+        $this->assertEquals('ENTRANTE', $cast->set($dummy, 'core_status', 'entrante', []));
     }
 }

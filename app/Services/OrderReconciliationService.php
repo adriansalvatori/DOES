@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CoreStatus;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
@@ -2198,7 +2199,7 @@ class OrderReconciliationService
                     'task_name' => $parsedData['clean_task'] ?: ($parsedData['task_name'] ?: $cardName),
                     'wo_number' => $woNumber,
                     'in_workspace' => false, // strictly in backlog inbox
-                    'core_status' => 'entrante',
+                    'core_status' => CoreStatus::ENTRANTE->value,
                     'substatus' => $parsedData['substatus'] ?? null,
                     'designer_id' => $parsedData['designer_id'] ?? null,
                     'production_processed_at' => $parsedData['production_processed_at'] ?? null,
