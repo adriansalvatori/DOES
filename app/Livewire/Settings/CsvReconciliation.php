@@ -48,6 +48,11 @@ class CsvReconciliation extends Component
 
     public array $selectedPartial = [];
 
+    // WO Conflict Reassignment State
+    public array $reassignWoInputs = [];
+
+    public array $activeReassignRows = [];
+
     // Trello Input & Verification State for Unmatched Rows
     public array $trelloInput = [];
 
@@ -217,6 +222,7 @@ class CsvReconciliation extends Component
 
         if ($result['success']) {
             $this->successMessage = $result['message'];
+            $this->dispatch('toast', message: $result['message']);
             $this->meta = $service->getAnalysisMeta();
 
             if (in_array($this->batchActionType, ['all_full', 'selected_full'], true)) {
@@ -227,6 +233,7 @@ class CsvReconciliation extends Component
             }
         } else {
             $this->errorMessage = $result['message'] ?? 'Ocurrió un error al procesar el lote.';
+            $this->dispatch('toast', message: $this->errorMessage);
         }
     }
 
@@ -238,11 +245,14 @@ class CsvReconciliation extends Component
         $result = $service->applySinglePartialAndSyncCache($rowId);
 
         if ($result['success']) {
-            $this->successMessage = 'Orden aprobada y actualizada correctamente.';
+            $msg = 'Orden aprobada y actualizada correctamente.';
+            $this->successMessage = $msg;
+            $this->dispatch('toast', message: $msg);
             $this->meta = $service->getAnalysisMeta();
             $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
         } else {
             $this->errorMessage = $result['message'] ?? 'Error al actualizar la orden.';
+            $this->dispatch('toast', message: $this->errorMessage);
         }
     }
 
@@ -252,7 +262,42 @@ class CsvReconciliation extends Component
         if ($service->discardPartialAndSyncCache($rowId)) {
             $this->meta = $service->getAnalysisMeta();
             $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
-            $this->successMessage = 'Coincidencia descartada. El registro ha sido movido a la sección "Sin Coincidencia" para vincularlo vía Trello.';
+            $msg = 'Coincidencia descartada y movida a Sin Coincidencia para vincular vía Trello.';
+            $this->successMessage = $msg;
+            $this->dispatch('toast', message: $msg);
+        }
+    }
+
+    public function toggleReassignWo(string $rowId): void
+    {
+        $this->resetMessages();
+        if (isset($this->activeReassignRows[$rowId])) {
+            unset($this->activeReassignRows[$rowId]);
+        } else {
+            $this->activeReassignRows[$rowId] = true;
+            if (! isset($this->reassignWoInputs[$rowId])) {
+                $this->reassignWoInputs[$rowId] = '';
+            }
+        }
+    }
+
+    public function executeReassignWo(string $rowId): void
+    {
+        $this->resetMessages();
+        $newWo = $this->reassignWoInputs[$rowId] ?? null;
+
+        $service = app(OrderReconciliationService::class);
+        $result = $service->resolveWoConflictAndCreateNewOrder($rowId, $newWo);
+
+        if ($result['success']) {
+            $this->successMessage = $result['message'];
+            $this->dispatch('toast', message: $result['message']);
+            $this->meta = $service->getAnalysisMeta();
+            unset($this->activeReassignRows[$rowId], $this->reassignWoInputs[$rowId]);
+            $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
+        } else {
+            $this->errorMessage = $result['message'];
+            $this->dispatch('toast', message: $result['message']);
         }
     }
 
@@ -263,10 +308,13 @@ class CsvReconciliation extends Component
         $client = $service->quickCreateClientFromRow($rowId);
 
         if ($client) {
-            $this->successMessage = "Cliente \"{$client->name}\" registrado exitosamente en el catálogo oficial de Kudos.";
+            $msg = "Cliente \"{$client->name}\" registrado exitosamente en el catálogo oficial de Kudos.";
+            $this->successMessage = $msg;
+            $this->dispatch('toast', message: $msg);
             $this->meta = $service->getAnalysisMeta();
         } else {
             $this->errorMessage = 'No se pudo crear el cliente para esta orden.';
+            $this->dispatch('toast', message: $this->errorMessage);
         }
     }
 
@@ -395,11 +443,13 @@ class CsvReconciliation extends Component
 
         if ($res['success']) {
             $this->successMessage = $res['message'];
+            $this->dispatch('toast', message: $res['message']);
             $this->meta = $service->getAnalysisMeta();
             $this->trelloCardPreview = [];
             $this->unmatchedFilter = 'all';
         } else {
             $this->errorMessage = $res['message'] ?? 'Error al vincular tarjetas de Trello.';
+            $this->dispatch('toast', message: $this->errorMessage);
         }
     }
 
@@ -410,6 +460,7 @@ class CsvReconciliation extends Component
         $preview = $this->trelloCardPreview[$rowId] ?? null;
         if (! $preview || empty($preview['id'])) {
             $this->errorMessage = 'Por favor verifica la tarjeta de Trello antes de vincular.';
+            $this->dispatch('toast', message: $this->errorMessage);
 
             return;
         }
@@ -419,10 +470,12 @@ class CsvReconciliation extends Component
 
         if ($result['success']) {
             $this->successMessage = $result['message'];
+            $this->dispatch('toast', message: $result['message']);
             $this->meta = $service->getAnalysisMeta();
             unset($this->trelloInput[$rowId], $this->trelloCardPreview[$rowId]);
         } else {
             $this->errorMessage = $result['message'] ?? 'Error al vincular con Trello.';
+            $this->dispatch('toast', message: $this->errorMessage);
         }
     }
 

@@ -782,4 +782,147 @@ class CsvReconciliationTest extends TestCase
         $this->assertCount(1, $rowsWithoutMatch);
         $this->assertEquals('row_2', $rowsWithoutMatch[0]['row_id']);
     }
+
+    public function test_admin_can_resolve_wo_conflict_by_reassigning_db_wo_and_creating_csv_order(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // DB order has WO 13500 for RESTAURANTE EL SOL
+        $dbOrder = Order::create([
+            'wo_number' => 'WO 13500',
+            'company_name' => 'RESTAURANTE EL SOL',
+            'task_name' => 'MENU IMPRESO',
+        ]);
+
+        $csvHeader = ".production_processed_at,delivery_due_date,wo_number,company_name: fuer,task_name,designer_id,production_note,estimate_invoice_number,email_date,installation_type\t,Installation,overview_checked,delivery_note,substatus\n";
+        $csvRow = "2024-02-01,,13500,SUPERMERCADO DIAZ,LETRERO ACRILICO,euraliz,Nota nueva,REVISED - CS,2024/02/01,PICASSO,KUDOS,TRUE,,ORDEN LISTA\n";
+        $csvContent = $csvHeader.$csvRow;
+        $uploadedFile = UploadedFile::fake()->createWithContent('orders_wo_conflict.csv', $csvContent);
+
+        $component = Livewire::actingAs($admin)
+            ->test(CsvReconciliation::class)
+            ->set('csvFile', $uploadedFile)
+            ->assertSet('activeTab', 'partial_match');
+
+        // Toggle reassign form for row_1
+        $component->call('toggleReassignWo', 'row_1')
+            ->assertSet('activeReassignRows.row_1', true);
+
+        // Assign new WO 13599 to the existing DB order
+        $component->set('reassignWoInputs.row_1', '13599')
+            ->call('executeReassignWo', 'row_1')
+            ->assertDispatched('toast');
+
+        // Check DB order was reassigned to 13599
+        $dbOrder->refresh();
+        $this->assertEquals('WO 13599', $dbOrder->wo_number);
+        $this->assertEquals('RESTAURANTE EL SOL', $dbOrder->company_name);
+
+        // Check new order was created in DB with WO 13500 for SUPERMERCADO DIAZ
+        $newOrder = Order::where('wo_number', 'WO 13500')->first();
+        $this->assertNotNull($newOrder);
+        $this->assertEquals('SUPERMERCADO DIAZ', $newOrder->company_name);
+        $this->assertEquals('LETRERO ACRILICO', $newOrder->task_name);
+
+        // Conflict is resolved from partial_match
+        $meta = $component->get('meta');
+        $this->assertEquals(0, $meta['partial_match_count']);
+    }
+
+    public function test_admin_can_resolve_wo_conflict_by_leaving_db_order_without_wo(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $dbOrder = Order::create([
+            'wo_number' => 'WO 13500',
+            'company_name' => 'RESTAURANTE EL SOL',
+            'task_name' => 'MENU IMPRESO',
+        ]);
+
+        $csvHeader = ".production_processed_at,delivery_due_date,wo_number,company_name: fuer,task_name,designer_id,production_note,estimate_invoice_number,email_date,installation_type\t,Installation,overview_checked,delivery_note,substatus\n";
+        $csvRow = "2024-02-01,,13500,SUPERMERCADO DIAZ,LETRERO ACRILICO,euraliz,Nota nueva,REVISED - CS,2024/02/01,PICASSO,KUDOS,TRUE,,ORDEN LISTA\n";
+        $uploadedFile = UploadedFile::fake()->createWithContent('orders_wo_conflict_empty.csv', $csvHeader.$csvRow);
+
+        $component = Livewire::actingAs($admin)
+            ->test(CsvReconciliation::class)
+            ->set('csvFile', $uploadedFile);
+
+        // Submit empty input -> leaves DB order without WO
+        $component->set('reassignWoInputs.row_1', '')
+            ->call('executeReassignWo', 'row_1')
+            ->assertDispatched('toast');
+
+        $dbOrder->refresh();
+        $this->assertNull($dbOrder->wo_number);
+
+        // New order gets WO 13500
+        $this->assertDatabaseHas('orders', [
+            'wo_number' => 'WO 13500',
+            'company_name' => 'SUPERMERCADO DIAZ',
+        ]);
+    }
+
+    public function test_cannot_reassign_db_wo_to_an_already_taken_number(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Order 1 has WO 13500 (conflict)
+        Order::create([
+            'wo_number' => 'WO 13500',
+            'company_name' => 'RESTAURANTE EL SOL',
+            'task_name' => 'MENU IMPRESO',
+        ]);
+
+        // Order 2 already has WO 13599
+        Order::create([
+            'wo_number' => 'WO 13599',
+            'company_name' => 'OTRA EMPRESA',
+            'task_name' => 'OTRA TAREA',
+        ]);
+
+        $csvHeader = ".production_processed_at,delivery_due_date,wo_number,company_name: fuer,task_name,designer_id,production_note,estimate_invoice_number,email_date,installation_type\t,Installation,overview_checked,delivery_note,substatus\n";
+        $csvRow = "2024-02-01,,13500,SUPERMERCADO DIAZ,LETRERO ACRILICO,euraliz,Nota nueva,REVISED - CS,2024/02/01,PICASSO,KUDOS,TRUE,,ORDEN LISTA\n";
+        $uploadedFile = UploadedFile::fake()->createWithContent('orders_conflict_taken.csv', $csvHeader.$csvRow);
+
+        $component = Livewire::actingAs($admin)
+            ->test(CsvReconciliation::class)
+            ->set('csvFile', $uploadedFile);
+
+        // Try to reassign to 13599 (which is already taken)
+        $component->set('reassignWoInputs.row_1', '13599')
+            ->call('executeReassignWo', 'row_1')
+            ->assertSee('ya está asignado a otra orden');
+
+        // Partial match count must remain 1 (not resolved)
+        $meta = $component->get('meta');
+        $this->assertEquals(1, $meta['partial_match_count']);
+    }
+
+    public function test_orders_sharing_same_estimate_do_not_falsely_match_without_wo(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        // Existing DB order with estimate 10999
+        Order::create([
+            'wo_number' => 'WO 15001',
+            'company_name' => 'ACME CORP',
+            'task_name' => 'LETRERO EXTERIOR',
+            'estimate_invoice_number' => '10999',
+        ]);
+
+        // CSV row WITHOUT WO that shares the same estimate 10999, but is a different order
+        $csvHeader = ".production_processed_at,delivery_due_date,wo_number,company_name: fuer,task_name,designer_id,production_note,estimate_invoice_number,email_date,installation_type\t,Installation,overview_checked,delivery_note,substatus\n";
+        $csvRow = "2024-02-01,, ,ACME CORP,BANNER ROLLUP,euraliz,Nota,REVISED - 10999,2024/02/01,PICASSO,KUDOS,TRUE,,ORDEN LISTA\n";
+        $uploadedFile = UploadedFile::fake()->createWithContent('orders_estimate_no_match.csv', $csvHeader.$csvRow);
+
+        $component = Livewire::actingAs($admin)
+            ->test(CsvReconciliation::class)
+            ->set('csvFile', $uploadedFile);
+
+        $meta = $component->get('meta');
+        // Because estimate matching was disabled, it must NOT match into partial matches
+        $this->assertEquals(0, $meta['partial_match_count']);
+        // It lands cleanly in unmatched (for Trello linking)
+        $this->assertEquals(1, $meta['unmatched_count']);
+    }
 }

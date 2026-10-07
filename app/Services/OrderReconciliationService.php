@@ -267,26 +267,8 @@ class OrderReconciliationService
             $bestReason = '';
             $bestScore = 0.0;
 
-            // Anchor 2A: Match by Estimate/Invoice Number + Client
-            $csvEst = $parsedRow['estimate_invoice_number'];
-            if (! empty($csvEst)) {
-                foreach ($dbOrders as $candidateOrder) {
-                    if (! empty($candidateOrder->estimate_invoice_number) && $candidateOrder->estimate_invoice_number === $csvEst) {
-                        $compScore = $this->calculateStringSimilarity($cleanCompany, $candidateOrder->company_name);
-                        if ($compScore >= 0.3 || ($resolvedClient && $candidateOrder->client_id === $resolvedClient->id)) {
-                            // Check product category compatibility
-                            if ($this->areTaskCategoriesCompatible($cleanTask, $candidateOrder->task_name)) {
-                                $bestCandidate = $candidateOrder;
-                                $bestScore = 95.0;
-                                $bestReason = "Misma Factura/Estimado (#{$csvEst}) y cliente coincidente ({$candidateOrder->company_name})";
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Anchor 2B: Match by Client + Nearby Date Window (+- 14 days) + Mandatory Task Guard (>= 40%)
+            // Anchor 2: Match by Client + Nearby Date Window (+- 14 days) + Mandatory Task Guard (>= 40%)
+            // Note: Matching by Estimate/Invoice is omitted because multiple orders can legitimately share the same estimate/invoice.
             if (! $bestCandidate && $resolvedClient) {
                 $targetDate = $parsedRow['production_processed_at'] ?? ($parsedRow['email_date'] ?? $parsedRow['delivery_due_date']);
                 if ($targetDate) {
@@ -2667,5 +2649,133 @@ class OrderReconciliationService
         }
 
         return $res;
+    }
+
+    /**
+     * Resolves a WO conflict by updating the existing DB order's WO (or leaving it null),
+     * and creating a new order for the CSV row with the CSV's legitimate WO number.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function resolveWoConflictAndCreateNewOrder(string $rowId, ?string $newWoForDbOrder): array
+    {
+        $cached = $this->getCachedAnalysis();
+        if (! $cached) {
+            return ['success' => false, 'message' => 'No hay análisis activo.'];
+        }
+
+        $target = null;
+        foreach ($cached['partial_matches'] ?? [] as $item) {
+            if ($item['row_id'] === $rowId) {
+                $target = $item;
+                break;
+            }
+        }
+
+        if (! $target) {
+            return ['success' => false, 'message' => 'Registro no encontrado en coincidencias parciales.'];
+        }
+
+        $orderId = $target['order_id'] ?? null;
+        $parsed = $target['parsed_data'] ?? null;
+
+        if (! $orderId || ! $parsed) {
+            return ['success' => false, 'message' => 'Datos incompletos para resolver el conflicto.'];
+        }
+
+        $existingOrder = Order::find($orderId);
+        if (! $existingOrder) {
+            return ['success' => false, 'message' => 'La orden en base de datos ya no existe.'];
+        }
+
+        // Validate new WO for DB order if specified
+        $cleanNewDbWo = trim((string) $newWoForDbOrder);
+        $assignedDbWo = null;
+
+        if ($cleanNewDbWo !== '') {
+            $normNewDbWo = $this->normalizeWo($cleanNewDbWo);
+            if ($normNewDbWo !== '') {
+                // Check if another order already uses this WO
+                $conflictExists = Order::where('id', '!=', $orderId)
+                    ->where(function ($q) use ($normNewDbWo) {
+                        $q->where('wo_number', $normNewDbWo)
+                            ->orWhere('wo_number', 'WO '.$normNewDbWo);
+                    })
+                    ->exists();
+
+                if ($conflictExists) {
+                    return [
+                        'success' => false,
+                        'message' => "El número WO {$normNewDbWo} ya está asignado a otra orden en la base de datos.",
+                    ];
+                }
+
+                $assignedDbWo = 'WO '.$normNewDbWo;
+            }
+        }
+
+        // CSV WO to assign to the new order
+        $csvWoRaw = $parsed['normalized_wo'] ?? ($parsed['raw_wo'] ?? '');
+        $csvWoFormatted = ! empty($csvWoRaw) ? ('WO '.$this->normalizeWo($csvWoRaw)) : null;
+
+        try {
+            DB::transaction(function () use ($existingOrder, $assignedDbWo, $parsed, $csvWoFormatted) {
+                // 1. Update the existing DB order with its new WO (or null if blank)
+                Order::withoutEvents(function () use ($existingOrder, $assignedDbWo) {
+                    $existingOrder->wo_number = $assignedDbWo;
+                    $existingOrder->saveQuietly();
+                });
+
+                // 2. Create the new order from the CSV with the CSV WO
+                $createData = [
+                    'wo_number' => $csvWoFormatted,
+                    'company_name' => $parsed['clean_company'] ?: ($parsed['company_name'] ?: 'Empresa'),
+                    'client_id' => $parsed['resolved_client_id'] ?? null,
+                    'responsible_person' => $parsed['extracted_contact'] ?? null,
+                    'location_name' => $parsed['extracted_location'] ?? null,
+                    'task_name' => $parsed['clean_task'] ?: ($parsed['task_name'] ?: 'Orden desde CSV'),
+                    'in_workspace' => false,
+                    'core_status' => CoreStatus::ENTRANTE->value,
+                    'substatus' => $parsed['substatus'] ?? null,
+                    'designer_id' => $parsed['designer_id'] ?? null,
+                    'production_processed_at' => $parsed['production_processed_at'] ?? null,
+                    'delivery_due_date' => $parsed['delivery_due_date'] ?? null,
+                    'email_date' => $parsed['email_date'] ?? null,
+                    'production_note' => $parsed['production_note'] ?? null,
+                    'delivery_note' => $parsed['delivery_note'] ?? null,
+                    'estimate_invoice_number' => $parsed['estimate_invoice_number'] ?? null,
+                    'review_status' => $parsed['review_status'] ?? null,
+                    'installation_type' => $parsed['installation_type'] ?? null,
+                    'installation_types' => ! empty($parsed['installation_types']) ? json_encode($parsed['installation_types']) : null,
+                    'overview_checked' => (bool) ($parsed['overview_checked'] ?? false),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+
+                Order::withoutEvents(function () use ($createData) {
+                    DB::table('orders')->insertGetId($createData);
+                });
+            });
+
+            // 3. Update cache
+            $cached['partial_matches'] = array_values(array_filter(
+                $cached['partial_matches'] ?? [],
+                fn ($i) => $i['row_id'] !== $rowId
+            ));
+            $cached['meta']['partial_match_count'] = count($cached['partial_matches']);
+            $this->storeAnalysisCache($cached);
+
+            $dbWoMsg = $assignedDbWo ? "actualizada con {$assignedDbWo}" : 'dejada Sin WO';
+
+            return [
+                'success' => true,
+                'message' => "Conflicto resuelto: {$csvWoFormatted} asignada a {$parsed['company_name']} y orden anterior en BD {$dbWoMsg}.",
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Error al resolver el conflicto: '.$e->getMessage(),
+            ];
+        }
     }
 }
