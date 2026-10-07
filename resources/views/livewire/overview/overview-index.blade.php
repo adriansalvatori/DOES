@@ -182,6 +182,23 @@
                 }
             });
             window.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'f' || e.key === 'F' || e.code === 'KeyF')) {
+                    const isModalOpen = Boolean(
+                        document.querySelector('[data-modal="order-detail"]') ||
+                        (window.Alpine && Alpine.store && (
+                            (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
+                            (Alpine.store('substatusModal') && Alpine.store('substatusModal').isOpen)
+                        )) ||
+                        document.querySelector('[role="dialog"]:not([aria-hidden="true"])')
+                    );
+                    if (!isModalOpen) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        this.focusSearch();
+                        return;
+                    }
+                }
                 if (e.key === 'Escape' && this.activeDateEdit) {
                     this.closeDateInput();
                     return;
@@ -423,7 +440,37 @@
             this.menuActiveIndex = 0;
             this.$nextTick(() => this.highlightActiveMenuItem());
         },
+        focusSearch() {
+            if (this.activeDateEdit) {
+                this.closeDateInput();
+            }
+            if (this.activeMenu) {
+                this.closeMenu();
+            }
+            const input = this.$refs.overviewSearchInput || document.getElementById('overview-search-input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        },
         handleGlobalKeydown(e) {
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'f' || e.key === 'F' || e.code === 'KeyF')) {
+                const isModalOpen = Boolean(
+                    document.querySelector('[data-modal="order-detail"]') ||
+                    (window.Alpine && Alpine.store && (
+                        (Alpine.store('installationModal') && Alpine.store('installationModal').isOpen) ||
+                        (Alpine.store('substatusModal') && Alpine.store('substatusModal').isOpen)
+                    )) ||
+                    document.querySelector('[role="dialog"]:not([aria-hidden="true"])')
+                );
+                if (!isModalOpen) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.focusSearch();
+                    return;
+                }
+            }
+
             if (!this.activeMenu) return;
             if (this.activeMenu === 'installation' && e.target && e.target.closest('[data-tag-input]')) {
                 return;
@@ -899,16 +946,20 @@
             <div class="col-span-2 sm:col-span-1 md:col-span-1 relative">
                 <x-lucide-search class="w-3.5 h-3.5 {{ !empty(trim($search)) ? 'text-emerald-700' : 'text-stone-400' }} absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" />
                 <input 
+                    x-ref="overviewSearchInput"
+                    id="overview-search-input"
                     type="text" 
                     wire:model.live.debounce.300ms="search"
+                    @keydown.escape="$el.blur()"
                     placeholder="{{ __('Búsqueda general...') }}"
+                    title="{{ __('Buscar en el overview (Ctrl+F / ⌘F)') }}"
                     class="w-full pl-8 pr-7 py-1.5 rounded-md text-xs transition {{ !empty(trim($search)) ? 'bg-emerald-50/80 border border-emerald-400 text-emerald-950 font-bold ring-1 ring-emerald-400/40 shadow-xs placeholder-emerald-700/60' : 'bg-stone-50 border border-stone-200 font-medium text-stone-900 placeholder-stone-400 shadow-2xs focus:ring-1 focus:ring-stone-900 focus:bg-white' }}"
                 >
                 @if(!empty(trim($search)))
                     <button 
                         type="button" 
                         wire:click="clearFilter('search')" 
-                        @click.stop.prevent
+                        @click.stop.prevent="$refs.overviewSearchInput?.focus()"
                         class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-emerald-600 hover:text-emerald-900 hover:bg-emerald-200/50 rounded cursor-pointer z-10 transition"
                         title="{{ __('Limpiar búsqueda') }}">
                         <x-lucide-x class="w-3 h-3" />
@@ -1058,7 +1109,7 @@
         <div 
             x-ref="tableScrollWrapper" 
             class="w-full flex-1 min-h-0 overflow-auto custom-horizontal-scrollbar custom-vertical-scrollbar">
-            <table x-ref="ordersTable" class="w-full min-w-[2165px] table-fixed text-left text-xs border-collapse">
+            <table x-ref="ordersTable" class="w-full min-w-[2205px] table-fixed text-left text-xs border-collapse">
                 <thead class="sticky top-0 z-20 bg-stone-50 shadow-2xs">
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
                         <!-- 1. Fecha Procesado en Producción (Sticky Left: 0px) -->
@@ -1156,7 +1207,7 @@
 
                         <!-- 9. Instalación -->
                         <th 
-                            style="width: 130px;"
+                            style="width: 170px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Instalación">Instalación</span>
