@@ -2120,7 +2120,7 @@ class OrderReconciliationService
 
         $isNew = false;
 
-        $saveOperation = function () use (&$order, &$isNew, $cleanCardId, $parsedData, $cardDetails) {
+        $saveOperation = function () use (&$order, &$isNew, $cleanCardId, $parsedData, $cardDetails, $isBatch) {
             $woNumber = ! empty($parsedData['normalized_wo']) ? ('WO '.$parsedData['normalized_wo']) : null;
 
             if ($order) {
@@ -2183,12 +2183,14 @@ class OrderReconciliationService
                     DB::table('orders')->where('id', $order->id)->update($updateData);
                 });
 
-                // Update card title on Trello so future Trello syncs don't re-introduce typos/conflicts
-                try {
-                    $trelloService = app(TrelloSyncService::class);
-                    $trelloService->updateCardTitleOnly($cleanCardId, $standardTitle);
-                } catch (\Throwable $e) {
-                    Log::warning("Could not sync title to Trello for card {$cleanCardId}: ".$e->getMessage());
+                // Update card title on Trello when linking individually (skips during large batch to prevent API rate limits/timeouts)
+                if (! $isBatch) {
+                    try {
+                        $trelloService = app(TrelloSyncService::class);
+                        $trelloService->updateCardTitleOnly($cleanCardId, $standardTitle);
+                    } catch (\Throwable $e) {
+                        Log::warning("Could not sync title to Trello for card {$cleanCardId}: ".$e->getMessage());
+                    }
                 }
             } else {
                 // Create new Order with in_workspace = false (Backlog inbox)
@@ -2228,12 +2230,14 @@ class OrderReconciliationService
                     $order = Order::find($id);
                 });
 
-                // Update card title on Trello so title matches standardized clean name
-                try {
-                    $trelloService = app(TrelloSyncService::class);
-                    $trelloService->updateCardTitleOnly($cleanCardId, $standardTitle);
-                } catch (\Throwable $e) {
-                    Log::warning("Could not sync title to Trello for card {$cleanCardId}: ".$e->getMessage());
+                // Update card title on Trello when linking individually (skips during large batch to prevent API rate limits/timeouts)
+                if (! $isBatch) {
+                    try {
+                        $trelloService = app(TrelloSyncService::class);
+                        $trelloService->updateCardTitleOnly($cleanCardId, $standardTitle);
+                    } catch (\Throwable $e) {
+                        Log::warning("Could not sync title to Trello for card {$cleanCardId}: ".$e->getMessage());
+                    }
                 }
             }
         };

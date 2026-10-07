@@ -129,6 +129,12 @@
 <div 
     x-data="{
         ordersState: {{ \Illuminate\Support\Js::from($ordersState ?? []) }},
+        archivedSubstatusNames: {{ \Illuminate\Support\Js::from(\App\Models\Substatus::getArchivedNames()) }},
+        isArchivedSubstatus(name) {
+            if (!name) return false;
+            const clean = String(name).toUpperCase().trim();
+            return this.archivedSubstatusNames.some(s => String(s).toUpperCase().trim() === clean);
+        },
         lastServerTimestamp: {{ now()->timestamp }},
         isSyncing: false,
         lastSyncTime: '',
@@ -278,9 +284,17 @@
         },
         getRowClass(orderId, defaultClass) {
             const st = this.ordersState[orderId];
-            if (!st || !st.core_status) return defaultClass;
-            if (st.core_status === 'ARCHIVED') return 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold';
-            if (st.core_status === 'EN PRODUCCIÓN') return 'bg-orange-200/90 hover:bg-orange-300/90 text-orange-950 font-semibold';
+            if (!st) return defaultClass;
+            const sub = st.substatus ? String(st.substatus).toUpperCase().trim() : '';
+            const isArchived = (st.core_status === 'ARCHIVED') 
+                || Boolean(st.is_archived) 
+                || this.isArchivedSubstatus(sub);
+            if (isArchived) {
+                return 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold';
+            }
+            if (st.core_status === 'EN PRODUCCIÓN') {
+                return 'bg-orange-200/90 hover:bg-orange-300/90 text-orange-950 font-semibold';
+            }
             return 'hover:bg-stone-50/80';
         },
         initResize(e, leftCol, rightCol = null) {
@@ -795,11 +809,15 @@
             this.closeMenu();
             if (orderId) {
                 if (!this.ordersState[orderId]) this.ordersState[orderId] = {};
-                const upperStatus = status ? status.toUpperCase() : status;
-                const upperLabel = label ? label.toUpperCase() : label;
+                const upperStatus = status ? status.toUpperCase().trim() : status;
+                const upperLabel = label ? label.toUpperCase().trim() : label;
                 this.ordersState[orderId].substatus = upperStatus;
                 if (label !== undefined) this.ordersState[orderId].substatus_label = upperLabel;
                 if (style !== undefined) this.ordersState[orderId].substatus_style = style;
+                if (this.isArchivedSubstatus(upperStatus)) {
+                    this.ordersState[orderId].core_status = 'ARCHIVED';
+                    this.ordersState[orderId].is_archived = true;
+                }
                 $wire.updateSubstatus(orderId, upperStatus);
             }
         },
@@ -829,6 +847,10 @@
         if ($event.detail.substatusLabel !== undefined) ordersState[$event.detail.orderId].substatus_label = $event.detail.substatusLabel;
         if ($event.detail.substatusStyle !== undefined) ordersState[$event.detail.orderId].substatus_style = $event.detail.substatusStyle;
         if ($event.detail.flags !== undefined) ordersState[$event.detail.orderId].flags = [...$event.detail.flags];
+        if (isArchivedSubstatus($event.detail.substatus) || $event.detail.isArchived) {
+            ordersState[$event.detail.orderId].core_status = 'ARCHIVED';
+            ordersState[$event.detail.orderId].is_archived = true;
+        }
     "
     class="h-full w-full max-w-full overflow-y-auto space-y-4 pb-32 px-1">
 
@@ -1422,16 +1444,21 @@
                 <tbody class="divide-y divide-stone-100 font-medium text-[11px]">
                     @forelse($orders as $order)
                         @php
-                            $isProd = ($order->core_status === \App\Enums\CoreStatus::EN_PRODUCCION) 
-                                || ($order->core_status?->value === 'EN PRODUCCIÓN') 
-                                || ($order->core_status === 'EN PRODUCCIÓN');
+                            $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
+                            $isArchivedSub = \App\Models\Substatus::isArchivedSubstatus($subVal);
 
-                            $isArchived = ($order->core_status === \App\Enums\CoreStatus::ARCHIVED) 
+                            $isArchived = $order->isArchived() 
+                                || ($order->core_status === \App\Enums\CoreStatus::ARCHIVED) 
                                 || ($order->core_status?->value === 'ARCHIVED') 
                                 || ($order->core_status === 'ARCHIVED')
-                                || !empty($order->archived_at);
+                                || !empty($order->archived_at)
+                                || $isArchivedSub;
 
-                            $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
+                            $isProd = ! $isArchived && (
+                                ($order->core_status === \App\Enums\CoreStatus::EN_PRODUCCION) 
+                                || ($order->core_status?->value === 'EN PRODUCCIÓN') 
+                                || ($order->core_status === 'EN PRODUCCIÓN')
+                            );
 
                             $rowStyle = match(true) {
                                 $isArchived => 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold',
@@ -2793,6 +2820,7 @@
                 flagsMap: {{ \Illuminate\Support\Js::from($globalFlagsData) }},
                 processList: {{ \Illuminate\Support\Js::from($processFlatList) }},
                 substatusesMap: {{ \Illuminate\Support\Js::from($substatusStyleMap) }},
+                archivedNames: {{ \Illuminate\Support\Js::from(\App\Models\Substatus::getArchivedNames()) }},
 
                 clean(str) {
                     return (str || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -2888,13 +2916,16 @@
                     this.substatusLabel = upperLabel;
                     this.substatusStyle = finalStyle;
 
+                    const isArch = (this.archivedNames || []).some(n => String(n).toUpperCase().trim() === upperStatus);
+
                     window.dispatchEvent(new CustomEvent('order-substatus-changed', {
                         detail: {
                             orderId: this.orderId,
                             substatus: upperStatus,
                             substatusLabel: upperLabel,
                             substatusStyle: finalStyle,
-                            flags: this.flags
+                            flags: this.flags,
+                            isArchived: isArch
                         }
                     }));
 

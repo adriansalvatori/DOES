@@ -368,11 +368,17 @@ class OverviewIndex extends Component
                 $subInlineStyle = $subEnum->getInlineBadgeStyle();
             }
 
+            $isArchivedOrder = $order->isArchived() || \App\Models\Substatus::isArchivedSubstatus($subVal);
+            $effectiveCoreStatus = $isArchivedOrder
+                ? CoreStatus::ARCHIVED->value
+                : ($order->core_status?->value ?? (is_string($order->core_status) ? $order->core_status : null));
+
             $state[$order->id] = [
                 'id' => $order->id,
                 'substatus' => $subVal,
                 'substatus_label' => $subLabel,
                 'substatus_style' => $subInlineStyle,
+                'is_archived' => $isArchivedOrder,
                 'flags' => $order->flags ?? [],
                 'designer_id' => $order->designer_id ?? $order->primary_designer?->id,
                 'designer_name' => $order->designer_name,
@@ -381,7 +387,7 @@ class OverviewIndex extends Component
                 'review_status' => $order->review_status,
                 'installation_type' => $order->installation_type,
                 'installation_types' => $order->installation_types_list,
-                'core_status' => $order->core_status?->value ?? (is_string($order->core_status) ? $order->core_status : null),
+                'core_status' => $effectiveCoreStatus,
                 'in_workspace' => (bool) $order->in_workspace,
                 'wo_number' => $order->wo_number,
                 'production_note' => $order->production_note,
@@ -996,7 +1002,23 @@ class OverviewIndex extends Component
             $label = $substatus->label();
             $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', 'Bandera actualizada: '.$label, $newSubVal, $prevSubVal);
         } else {
-            $order->update(['substatus' => $substatus]);
+            $isArchivedSub = \App\Models\Substatus::isArchivedSubstatus($substatus);
+            $previousStatus = $order->core_status;
+
+            $updates = ['substatus' => $substatus];
+            if ($isArchivedSub) {
+                $updates['core_status'] = CoreStatus::ARCHIVED;
+                if (! $order->archived_at) {
+                    $updates['archived_at'] = now();
+                }
+            }
+
+            $order->update($updates);
+
+            if ($isArchivedSub && $previousStatus !== CoreStatus::ARCHIVED) {
+                app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, CoreStatus::ARCHIVED);
+            }
+
             $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
             $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label, $newSubVal, $prevSubVal);
             app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());

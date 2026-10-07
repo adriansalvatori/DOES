@@ -158,6 +158,8 @@ class StatusTransitionService
             $targetCoreStatus = $dbSub->core_status;
         } elseif ($subEnum && ($enumDefaultCore = $subEnum->defaultCoreStatus())) {
             $targetCoreStatus = $enumDefaultCore;
+        } elseif (SubstatusModel::isArchivedSubstatus($subName)) {
+            $targetCoreStatus = CoreStatus::ARCHIVED;
         }
 
         if (! $targetCoreStatus) {
@@ -177,6 +179,8 @@ class StatusTransitionService
             } elseif ($targetCoreStatus !== CoreStatus::ARCHIVED && $order->archived_at) {
                 $order->archived_at = null;
             }
+        } elseif ($targetCoreStatus === CoreStatus::ARCHIVED && ! $order->archived_at) {
+            $order->archived_at = now();
         }
     }
 }

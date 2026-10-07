@@ -137,7 +137,13 @@ class Order extends Model
 
     public function scopeArchived(Builder $query): Builder
     {
-        return $query->where('core_status', CoreStatus::ARCHIVED);
+        $archivedNames = Substatus::getArchivedNames();
+
+        return $query->where(function ($q) use ($archivedNames) {
+            $q->where('core_status', CoreStatus::ARCHIVED)
+                ->orWhereNotNull('archived_at')
+                ->orWhereIn('substatus', $archivedNames);
+        });
     }
 
     public function scopeSearch(Builder $query, ?string $search): Builder
@@ -465,7 +471,9 @@ class Order extends Model
 
     public function isArchived(): bool
     {
-        return $this->core_status === CoreStatus::ARCHIVED;
+        return $this->core_status === CoreStatus::ARCHIVED
+            || ! empty($this->archived_at)
+            || Substatus::isArchivedSubstatus($this->substatus);
     }
 
     public function isSlaExempt(): bool

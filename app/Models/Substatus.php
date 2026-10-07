@@ -74,6 +74,70 @@ class Substatus extends Model
     }
 
     /**
+     * Cached list of uppercase names for all archived substatuses.
+     */
+    protected static ?array $cachedArchivedNames = null;
+
+    /**
+     * Get all uppercase names of substatuses that belong to ARCHIVED.
+     *
+     * @return array<int, string>
+     */
+    public static function getArchivedNames(): array
+    {
+        if (static::$cachedArchivedNames !== null) {
+            return static::$cachedArchivedNames;
+        }
+
+        try {
+            $dbNames = static::archived()
+                ->pluck('name')
+                ->map(fn ($n) => mb_strtoupper(trim((string) $n)))
+                ->all();
+        } catch (\Throwable $e) {
+            $dbNames = [];
+        }
+
+        $enumNames = array_map(
+            fn ($case) => mb_strtoupper(trim($case->value)),
+            CoreStatus::ARCHIVED->validSubstatuses()
+        );
+
+        $commonVariants = [
+            'ORDEN LISTA',
+            'ORDEN LISTA !',
+            'ORDEN LISTA - ENTREGADA',
+            'FINALIZADA',
+            'FINALIZADA !',
+        ];
+
+        return static::$cachedArchivedNames = array_values(array_unique(array_merge($dbNames, $enumNames, $commonVariants)));
+    }
+
+    /**
+     * Check if a given substatus (string, Enum, or Model) represents an archived substatus.
+     */
+    public static function isArchivedSubstatus(mixed $substatus): bool
+    {
+        if (empty($substatus)) {
+            return false;
+        }
+
+        if ($substatus instanceof self) {
+            return $substatus->core_status === CoreStatus::ARCHIVED
+                || in_array(mb_strtoupper(trim((string) $substatus->name)), static::getArchivedNames(), true);
+        }
+
+        if ($substatus instanceof \App\Enums\Substatus) {
+            return in_array(mb_strtoupper(trim($substatus->value)), static::getArchivedNames(), true);
+        }
+
+        $clean = mb_strtoupper(trim((string) $substatus));
+
+        return in_array($clean, static::getArchivedNames(), true);
+    }
+
+    /**
      * Get all substatuses belonging to ARCHIVED status, ordered by manual sort_order.
      *
      * @return Collection<int, self>

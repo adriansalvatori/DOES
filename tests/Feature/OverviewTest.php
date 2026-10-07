@@ -585,4 +585,47 @@ class OverviewTest extends TestCase
         $test->dispatch('order-updated')
             ->assertSee('WO 99999');
     }
+
+    public function test_orders_with_archived_substatus_are_treated_as_archived_and_render_cyan_row(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 16128',
+            'company_name' => 'CARMOR',
+            'task_name' => 'HUNTSVILLE FLYERS EN INGLES - CAPS/T-SHIRTS',
+            'core_status' => CoreStatus::ENVIADO_A_CAMILA,
+            'substatus' => 'ORDEN LISTA - ENTREGADA',
+        ]);
+
+        $this->assertTrue($order->isArchived());
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->assertSee('WO 16128')
+            ->assertSee('bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold', false);
+    }
+
+    public function test_updating_substatus_to_archived_substatus_archives_order_and_sets_archived_at(): void
+    {
+        $order = Order::create([
+            'wo_number' => 'WO 16130',
+            'company_name' => 'VIVA',
+            'task_name' => 'MENU LOCACION FRONT TEMPLATE',
+            'core_status' => CoreStatus::EN_PRODUCCION,
+            'substatus' => 'ENVIADO EN ALTA',
+            'archived_at' => null,
+        ]);
+
+        $this->assertFalse($order->isArchived());
+
+        Livewire::actingAs($this->user)
+            ->test(OverviewIndex::class)
+            ->call('updateSubstatus', $order->id, 'ORDEN LISTA - ENTREGADA');
+
+        $order->refresh();
+
+        $this->assertEquals(CoreStatus::ARCHIVED, $order->core_status);
+        $this->assertEquals('ORDEN LISTA - ENTREGADA', (string) ($order->substatus?->value ?? $order->substatus));
+        $this->assertNotNull($order->archived_at);
+        $this->assertTrue($order->isArchived());
+    }
 }

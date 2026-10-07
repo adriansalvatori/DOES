@@ -156,4 +156,17 @@ enum Substatus: string
             default => null,
         };
     }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function getArchivedNames(): array
+    {
+        return \App\Models\Substatus::getArchivedNames();
+    }
+
+    public static function isArchivedSubstatus(mixed $substatus): bool
+    {
+        return \App\Models\Substatus::isArchivedSubstatus($substatus);
+    }
 }
