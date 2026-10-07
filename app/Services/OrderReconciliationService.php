@@ -2399,13 +2399,26 @@ class OrderReconciliationService
     /**
      * Retrieve rows for a specific tab as a continuous list with search and optional limit.
      *
-     * @return array{items: array, total: int, displayed: int, hasMore: bool, totalPages: int}
+     * @return array{items: array, total: int, displayed: int, hasMore: bool, totalPages: int, unmatchedCounts: array}
      */
-    public function getTabRows(string $tab, string $search = '', int|string $perPage = 50, int $page = 1): array
-    {
+    public function getTabRows(
+        string $tab,
+        string $search = '',
+        int|string $perPage = 50,
+        int $page = 1,
+        string $unmatchedFilter = 'all',
+        array $trelloCardPreviews = []
+    ): array {
         $cached = $this->getCachedAnalysis();
         if (! $cached) {
-            return ['items' => [], 'total' => 0, 'displayed' => 0, 'hasMore' => false, 'totalPages' => 1];
+            return [
+                'items' => [],
+                'total' => 0,
+                'displayed' => 0,
+                'hasMore' => false,
+                'totalPages' => 1,
+                'unmatchedCounts' => ['total' => 0, 'with_match' => 0, 'without_match' => 0],
+            ];
         }
 
         $source = match ($tab) {
@@ -2414,6 +2427,33 @@ class OrderReconciliationService
             'unmatched' => $cached['unmatched'] ?? [],
             default => [],
         };
+
+        $unmatchedCounts = [
+            'total' => count($cached['unmatched'] ?? []),
+            'with_match' => 0,
+            'without_match' => 0,
+        ];
+
+        if ($tab === 'unmatched') {
+            foreach ($source as $item) {
+                $hasMatch = ! empty($item['suggested_trello_card']) || ! empty($trelloCardPreviews[$item['row_id']]);
+                if ($hasMatch) {
+                    $unmatchedCounts['with_match']++;
+                } else {
+                    $unmatchedCounts['without_match']++;
+                }
+            }
+
+            if ($unmatchedFilter === 'with_match') {
+                $source = array_values(array_filter($source, function ($item) use ($trelloCardPreviews) {
+                    return ! empty($item['suggested_trello_card']) || ! empty($trelloCardPreviews[$item['row_id']]);
+                }));
+            } elseif ($unmatchedFilter === 'without_match') {
+                $source = array_values(array_filter($source, function ($item) use ($trelloCardPreviews) {
+                    return empty($item['suggested_trello_card']) && empty($trelloCardPreviews[$item['row_id']]);
+                }));
+            }
+        }
 
         if (! empty($search)) {
             $term = strtolower(trim($search));
@@ -2435,6 +2475,7 @@ class OrderReconciliationService
                 'displayed' => $total,
                 'hasMore' => false,
                 'totalPages' => 1,
+                'unmatchedCounts' => $unmatchedCounts,
             ];
         }
 
@@ -2447,6 +2488,7 @@ class OrderReconciliationService
             'displayed' => count($items),
             'hasMore' => $limitInt < $total,
             'totalPages' => (int) max(1, ceil($total / $limitInt)),
+            'unmatchedCounts' => $unmatchedCounts,
         ];
     }
 

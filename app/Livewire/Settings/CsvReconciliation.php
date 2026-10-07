@@ -25,6 +25,10 @@ class CsvReconciliation extends Component
     #[Url(as: 'tab')]
     public string $activeTab = 'full_match'; // 'full_match', 'partial_match', 'unmatched', 'history'
 
+    // Unmatched / Trello Filter
+    #[Url(as: 'trello_filter')]
+    public string $unmatchedFilter = 'all'; // 'all', 'with_match', 'without_match'
+
     // Filtering & Search
     public string $search = '';
 
@@ -158,6 +162,14 @@ class CsvReconciliation extends Component
     {
         $this->activeTab = $tab;
         $this->search = '';
+        if ($this->perPage === 'all' || (int) $this->perPage > 250) {
+            $this->perPage = 50;
+        }
+    }
+
+    public function setUnmatchedFilter(string $filter): void
+    {
+        $this->unmatchedFilter = in_array($filter, ['all', 'with_match', 'without_match'], true) ? $filter : 'all';
         if ($this->perPage === 'all' || (int) $this->perPage > 250) {
             $this->perPage = 50;
         }
@@ -361,6 +373,10 @@ class CsvReconciliation extends Component
                         $this->trelloInput[$item['row_id']] = $item['suggested_trello_card']['url'] ?? '';
                     }
                 }
+
+                if (($res['found_count'] ?? 0) > 0) {
+                    $this->unmatchedFilter = 'with_match';
+                }
             } else {
                 $this->errorMessage = $res['message'] ?? 'Error durante la búsqueda en Trello.';
             }
@@ -381,6 +397,7 @@ class CsvReconciliation extends Component
             $this->successMessage = $res['message'];
             $this->meta = $service->getAnalysisMeta();
             $this->trelloCardPreview = [];
+            $this->unmatchedFilter = 'all';
         } else {
             $this->errorMessage = $res['message'] ?? 'Error al vincular tarjetas de Trello.';
         }
@@ -466,7 +483,14 @@ class CsvReconciliation extends Component
     public function render(): View
     {
         $service = app(OrderReconciliationService::class);
-        $tabData = $service->getTabRows($this->activeTab, $this->search, $this->perPage);
+        $tabData = $service->getTabRows(
+            $this->activeTab,
+            $this->search,
+            $this->perPage,
+            1,
+            $this->unmatchedFilter,
+            $this->trelloCardPreview
+        );
 
         return view('livewire.settings.csv-reconciliation', [
             'paginatedRows' => $tabData['items'],
@@ -476,6 +500,7 @@ class CsvReconciliation extends Component
             'filteredCount' => $tabData['total'],
             'totalPages' => $tabData['totalPages'],
             'migrationHistory' => $this->migrationHistory,
+            'unmatchedCounts' => $tabData['unmatchedCounts'] ?? ['total' => 0, 'with_match' => 0, 'without_match' => 0],
         ]);
     }
 }

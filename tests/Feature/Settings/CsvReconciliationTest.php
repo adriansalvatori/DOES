@@ -718,4 +718,68 @@ class CsvReconciliationTest extends TestCase
             ->test(CsvReconciliation::class);
         $this->assertEquals('unmatched', $componentWithUrl->get('activeTab'));
     }
+
+    public function test_can_filter_unmatched_orders_by_trello_card_match(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $testDir = storage_path('framework/testing/reconciliation');
+        File::ensureDirectoryExists($testDir);
+        $mockAnalysis = [
+            'meta' => [
+                'file_name' => 'test.csv',
+                'total_rows' => 2,
+                'full_match_count' => 0,
+                'partial_match_count' => 0,
+                'unmatched_count' => 2,
+                'anomalies_count' => 0,
+                'analyzed_at' => now()->toIso8601String(),
+            ],
+            'full_matches' => [],
+            'partial_matches' => [],
+            'unmatched' => [
+                [
+                    'row_id' => 'row_1',
+                    'raw_wo' => '1001',
+                    'csv_company' => 'COMPANY MATCH',
+                    'csv_task' => 'BANNER',
+                    'parsed_data' => ['raw_wo' => '1001'],
+                    'suggested_trello_card' => [
+                        'id' => 'card_123',
+                        'name' => 'WO 1001 - BANNER',
+                        'url' => 'https://trello.com/c/card_123',
+                    ],
+                ],
+                [
+                    'row_id' => 'row_2',
+                    'raw_wo' => '1002',
+                    'csv_company' => 'COMPANY NO MATCH',
+                    'csv_task' => 'STICKERS',
+                    'parsed_data' => ['raw_wo' => '1002'],
+                    'suggested_trello_card' => null,
+                ],
+            ],
+            'anomalies' => [],
+        ];
+        File::put($testDir.'/last_analysis.json', json_encode($mockAnalysis));
+
+        $component = Livewire::actingAs($admin)
+            ->withQueryParams(['tab' => 'unmatched'])
+            ->test(CsvReconciliation::class);
+
+        // All filter: 2 rows
+        $this->assertCount(2, $component->viewData('paginatedRows'));
+
+        // Filter: with_match -> only row_1
+        $component->call('setUnmatchedFilter', 'with_match');
+        $rowsWithMatch = $component->viewData('paginatedRows');
+        $this->assertCount(1, $rowsWithMatch);
+        $this->assertEquals('row_1', $rowsWithMatch[0]['row_id']);
+
+        // Filter: without_match -> only row_2
+        $component->call('setUnmatchedFilter', 'without_match');
+        $rowsWithoutMatch = $component->viewData('paginatedRows');
+        $this->assertCount(1, $rowsWithoutMatch);
+        $this->assertEquals('row_2', $rowsWithoutMatch[0]['row_id']);
+    }
 }

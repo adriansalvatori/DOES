@@ -649,10 +649,73 @@
                     </div>
                 </div>
 
+                <!-- Filter Pills for Unmatched / Trello Matches -->
+                <div class="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#e9e9e7] p-2.5 rounded-2xl shadow-2xs">
+                    <div class="flex items-center gap-1.5 bg-stone-100 p-1 rounded-xl text-xs">
+                        <button 
+                            type="button" 
+                            wire:click="setUnmatchedFilter('all')" 
+                            class="px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $unmatchedFilter === 'all' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900' }}">
+                            <x-lucide-list class="w-3.5 h-3.5 text-zinc-500" />
+                            <span>{{ __('Todas') }}</span>
+                            <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $unmatchedFilter === 'all' ? 'bg-stone-200 text-zinc-800 font-bold' : 'bg-stone-200/60 text-zinc-500' }}">
+                                {{ $unmatchedCounts['total'] ?? $meta['unmatched_count'] ?? 0 }}
+                            </span>
+                        </button>
+
+                        <button 
+                            type="button" 
+                            wire:click="setUnmatchedFilter('with_match')" 
+                            class="px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $unmatchedFilter === 'with_match' ? 'bg-white text-emerald-800 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900' }}">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>{{ __('Con Tarjeta en Trello') }}</span>
+                            <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $unmatchedFilter === 'with_match' ? 'bg-emerald-100 text-emerald-800 font-bold' : 'bg-emerald-50 text-emerald-700' }}">
+                                {{ $unmatchedCounts['with_match'] ?? 0 }}
+                            </span>
+                        </button>
+
+                        <button 
+                            type="button" 
+                            wire:click="setUnmatchedFilter('without_match')" 
+                            class="px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $unmatchedFilter === 'without_match' ? 'bg-white text-slate-800 shadow-2xs' : 'text-zinc-600 hover:text-zinc-900' }}">
+                            <span class="w-2 h-2 rounded-full bg-slate-300"></span>
+                            <span>{{ __('Sin Tarjeta') }}</span>
+                            <span class="px-1.5 py-0.2 text-[10px] rounded-full {{ $unmatchedFilter === 'without_match' ? 'bg-slate-200 text-slate-800 font-bold' : 'bg-stone-200/60 text-zinc-500' }}">
+                                {{ $unmatchedCounts['without_match'] ?? 0 }}
+                            </span>
+                        </button>
+                    </div>
+
+                    <div class="text-[11px] text-zinc-500 font-medium px-2">
+                        {{ __('Mostrando :count de :total en esta vista', ['count' => count($paginatedRows), 'total' => $totalCount]) }}
+                    </div>
+                </div>
+
                 @if(empty($paginatedRows))
-                    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-12 text-center text-zinc-400 text-xs">
-                        <x-lucide-check-circle-2 class="w-8 h-8 mx-auto text-emerald-500 mb-2 opacity-60" />
-                        {{ __('No hay órdenes sin coincidencia pendientes.') }}
+                    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-12 text-center text-zinc-500 text-xs space-y-3">
+                        @if($unmatchedFilter === 'with_match')
+                            <div class="w-12 h-12 mx-auto rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                                <x-lucide-search class="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-zinc-900 text-sm">{{ __('No hay órdenes con tarjeta de Trello encontrada') }}</h4>
+                                <p class="text-zinc-500 mt-1 max-w-md mx-auto text-xs">
+                                    {{ __('Ejecuta "Auto-buscar WOs en Trello" arriba para localizar tarjetas automáticamente por número de WO, o pega los enlaces manualmente.') }}
+                                </p>
+                            </div>
+                            <div class="pt-2">
+                                <button 
+                                    type="button" 
+                                    wire:click="setUnmatchedFilter('all')" 
+                                    class="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-zinc-700 font-semibold rounded-xl text-xs transition cursor-pointer inline-flex items-center gap-1.5">
+                                    <x-lucide-list class="w-3.5 h-3.5" />
+                                    <span>{{ __('Ver todas las órdenes') }}</span>
+                                </button>
+                            </div>
+                        @else
+                            <x-lucide-check-circle-2 class="w-8 h-8 mx-auto text-emerald-500 mb-2 opacity-60" />
+                            <p>{{ __('No hay órdenes sin coincidencia pendientes en esta vista.') }}</p>
+                        @endif
                     </div>
                 @else
                     <div class="grid grid-cols-1 gap-4">
