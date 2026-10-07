@@ -34,7 +34,7 @@ class AutomationEngine
 
             RelatedTask::create([
                 'order_id' => $order->id,
-                'title' => 'Enviar correo de bienvenida',
+                'title' => 'Enviar correo bienvenida/orden nueva',
                 'type' => RelatedTaskType::BIENVENIDA,
                 'status' => 'todo',
                 'assignee_id' => $order->getPrimaryDesignerId(),
@@ -612,6 +612,10 @@ class AutomationEngine
      */
     public function checkAndCreateOverdueTask(Order $order): void
     {
+        if ($order->isArchived() || ! $order->in_workspace || $order->isSlaExempt()) {
+            return;
+        }
+
         $allowedStatuses = array_merge(CoreStatus::designerQueueStatuses(), [CoreStatus::TO_DO_TODAY]);
 
         if (! in_array($order->core_status, $allowedStatuses, true)) {

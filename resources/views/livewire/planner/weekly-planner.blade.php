@@ -695,6 +695,9 @@
                                                 return true;
                                             }
                                             if ($isFirstDayOfWeek && $st->scheduled_date && $st->scheduled_date->lt(Carbon\Carbon::parse($day['date_string'])) && $st->status !== 'done') {
+                                                if ($st->order && $st->order->isArchived() && $st->isSystemTask()) {
+                                                    return false;
+                                                }
                                                 return true;
                                             }
                                             return false;
@@ -1026,6 +1029,9 @@
                                                 return true;
                                             }
                                             if ($isFirstDayOfWeek && $st->scheduled_date && $st->scheduled_date->lt(Carbon\Carbon::parse($day['date_string'])) && $st->status !== 'done') {
+                                                if ($st->order && $st->order->isArchived() && $st->isSystemTask()) {
+                                                    return false;
+                                                }
                                                 return true;
                                             }
                                             return false;

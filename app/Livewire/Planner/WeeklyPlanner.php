@@ -267,7 +267,18 @@ class WeeklyPlanner extends Component
         $subtasks = RelatedTask::with(['order.clientLocation', 'order.designer', 'order.designers'])
             ->where(function ($q) {
                 $q->whereNull('order_id')
-                    ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
+                    ->orWhereHas('order', fn ($oq) => $oq->inWorkspace())
+                    ->orWhere(function ($sq) {
+                        $sq->whereHas('order', fn ($oq) => $oq->where('core_status', CoreStatus::ARCHIVED)->orWhereNotNull('archived_at'))
+                            ->whereNull('trigger_type')
+                            ->where(function ($tq) {
+                                $tq->whereNull('type')
+                                    ->orWhereNotIn('type', [
+                                        RelatedTaskType::CORREO_ATRASO->value,
+                                        RelatedTaskType::BIENVENIDA->value,
+                                    ]);
+                            });
+                    });
             })
             ->where(function ($q) {
                 $q->whereNotNull('scheduled_date')
@@ -306,6 +317,10 @@ class WeeklyPlanner extends Component
                     return true;
                 }
                 if ($isFirstDayOfWeek && $st->scheduled_date && $st->scheduled_date->lt($scheduledDate) && $st->status !== 'done') {
+                    if ($st->order && $st->order->isArchived() && $st->isSystemTask()) {
+                        return false;
+                    }
+
                     return true;
                 }
 
@@ -748,7 +763,18 @@ class WeeklyPlanner extends Component
         $subtasks = RelatedTask::with(['order.clientLocation', 'order.designer', 'order.designers'])
             ->where(function ($q) {
                 $q->whereNull('order_id')
-                    ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
+                    ->orWhereHas('order', fn ($oq) => $oq->inWorkspace())
+                    ->orWhere(function ($sq) {
+                        $sq->whereHas('order', fn ($oq) => $oq->where('core_status', CoreStatus::ARCHIVED)->orWhereNotNull('archived_at'))
+                            ->whereNull('trigger_type')
+                            ->where(function ($tq) {
+                                $tq->whereNull('type')
+                                    ->orWhereNotIn('type', [
+                                        RelatedTaskType::CORREO_ATRASO->value,
+                                        RelatedTaskType::BIENVENIDA->value,
+                                    ]);
+                            });
+                    });
             })
             ->where(function ($q) {
                 $q->whereNotNull('scheduled_date')

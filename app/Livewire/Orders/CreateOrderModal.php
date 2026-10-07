@@ -4,6 +4,7 @@ namespace App\Livewire\Orders;
 
 use App\Contracts\WorkOrderNumberGenerator;
 use App\Enums\CoreStatus;
+use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
 use App\Models\Client;
 use App\Models\Designer;
@@ -445,7 +446,18 @@ class CreateOrderModal extends Component
         $subtasks = RelatedTask::with(['order.designers', 'order.designer'])
             ->where(function ($q) {
                 $q->whereNull('order_id')
-                    ->orWhereHas('order', fn ($oq) => $oq->where('in_workspace', true)->orWhere('core_status', CoreStatus::ARCHIVED));
+                    ->orWhereHas('order', fn ($oq) => $oq->inWorkspace())
+                    ->orWhere(function ($sq) {
+                        $sq->whereHas('order', fn ($oq) => $oq->where('core_status', CoreStatus::ARCHIVED)->orWhereNotNull('archived_at'))
+                            ->whereNull('trigger_type')
+                            ->where(function ($tq) {
+                                $tq->whereNull('type')
+                                    ->orWhereNotIn('type', [
+                                        RelatedTaskType::CORREO_ATRASO->value,
+                                        RelatedTaskType::BIENVENIDA->value,
+                                    ]);
+                            });
+                    });
             })
             ->where(function ($q) {
                 $q->whereNotNull('scheduled_date')

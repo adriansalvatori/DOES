@@ -50,7 +50,9 @@ class OverviewIndex extends Component
             COUNT(CASE WHEN in_workspace = 1 AND (wo_number IS NULL OR wo_number = '' OR wo_number LIKE 'WO 00%') THEN 1 END) as missingWoCount,
             COUNT(CASE WHEN core_status = 'EN PRODUCCIÓN' THEN 1 END) as inProductionCount,
             COUNT(CASE WHEN in_workspace = 1 AND core_status = 'EN PRODUCCIÓN' THEN 1 END) as inWorkspaceProductionCount,
-            COUNT(CASE WHEN in_workspace = 1 AND done_today = 1 THEN 1 END) as doneTodayCount
+            COUNT(CASE WHEN in_workspace = 1 AND done_today = 1 THEN 1 END) as doneTodayCount,
+            COUNT(CASE WHEN core_status != 'ARCHIVED' AND (substatus = 'URGENTE' OR flags LIKE '%\"URGENTE\"%') THEN 1 END) as urgentCount,
+            COUNT(CASE WHEN core_status != 'ARCHIVED' AND delivery_due_date IS NOT NULL AND delivery_due_date != '' THEN 1 END) as withDueDateCount
         ")->first();
 
         return [
@@ -64,6 +66,8 @@ class OverviewIndex extends Component
             'inProductionCount' => (int) ($result->inProductionCount ?? 0),
             'inWorkspaceProductionCount' => (int) ($result->inWorkspaceProductionCount ?? 0),
             'doneTodayCount' => (int) ($result->doneTodayCount ?? 0),
+            'urgentCount' => (int) ($result->urgentCount ?? 0),
+            'withDueDateCount' => (int) ($result->withDueDateCount ?? 0),
         ];
     }
 
@@ -459,6 +463,10 @@ class OverviewIndex extends Component
 
     public string $filterDateRange = '';
 
+    public bool $filterUrgent = false;
+
+    public bool $filterWithDueDate = false;
+
     // Sorting
     public string $sortBy = 'wo_number';
 
@@ -504,6 +512,8 @@ class OverviewIndex extends Component
         'filterReviewStatus' => ['except' => ''],
         'filterInstallation' => ['except' => ''],
         'filterDateRange' => ['except' => ''],
+        'filterUrgent' => ['except' => false],
+        'filterWithDueDate' => ['except' => false],
         'sortBy' => ['except' => 'wo_number'],
         'sortDirection' => ['except' => 'desc'],
     ];
@@ -619,6 +629,8 @@ class OverviewIndex extends Component
             'filterReviewStatus',
             'filterInstallation',
             'filterDateRange',
+            'filterUrgent',
+            'filterWithDueDate',
             'archivedSubstatus',
             'sortBy',
             'sortDirection',
@@ -634,7 +646,26 @@ class OverviewIndex extends Component
             $this->{$key} = '';
             $this->loadedCount = self::CHUNK_SIZE;
             $this->resetPage();
+        } elseif (in_array($key, ['filterUrgent', 'urgent'], true)) {
+            $this->filterUrgent = false;
+            $this->loadedCount = self::CHUNK_SIZE;
+            $this->resetPage();
+        } elseif (in_array($key, ['filterWithDueDate', 'withDueDate'], true)) {
+            $this->filterWithDueDate = false;
+            $this->loadedCount = self::CHUNK_SIZE;
+            $this->resetPage();
         }
+    }
+
+    public function toggleFilter(string $key): void
+    {
+        if ($key === 'urgent' || $key === 'filterUrgent') {
+            $this->filterUrgent = ! $this->filterUrgent;
+        } elseif ($key === 'withDueDate' || $key === 'filterWithDueDate') {
+            $this->filterWithDueDate = ! $this->filterWithDueDate;
+        }
+        $this->loadedCount = self::CHUNK_SIZE;
+        $this->resetPage();
     }
 
     /**
@@ -717,6 +748,22 @@ class OverviewIndex extends Component
                 'key' => 'filterDateRange',
                 'label' => __('Fecha'),
                 'value' => $dateLabel,
+            ];
+        }
+
+        if ($this->filterUrgent) {
+            $filters[] = [
+                'key' => 'filterUrgent',
+                'label' => __('Prioridad'),
+                'value' => __('Urgente'),
+            ];
+        }
+
+        if ($this->filterWithDueDate) {
+            $filters[] = [
+                'key' => 'filterWithDueDate',
+                'label' => __('Entrega'),
+                'value' => __('Con Due Date'),
             ];
         }
 
@@ -1264,6 +1311,20 @@ class OverviewIndex extends Component
                 'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
                 default => null,
             };
+        }
+
+        if ($this->filterUrgent) {
+            $query->where(function ($q) {
+                $q->where('substatus', Substatus::URGENTE->value)
+                    ->orWhere('substatus', 'URGENTE')
+                    ->orWhereJsonContains('flags', Substatus::URGENTE->value)
+                    ->orWhereJsonContains('flags', 'URGENTE');
+            });
+        }
+
+        if ($this->filterWithDueDate) {
+            $query->whereNotNull('delivery_due_date')
+                ->where('delivery_due_date', '!=', '');
         }
 
         // TEMPORAL: Siempre ordenado por número de orden (WO #), de la más reciente (mayor número de WO) a la más antigua.

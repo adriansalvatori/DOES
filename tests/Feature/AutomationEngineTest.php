@@ -42,7 +42,7 @@ class AutomationEngineTest extends TestCase
 
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
-            'title' => 'Enviar correo de bienvenida',
+            'title' => 'Enviar correo bienvenida/orden nueva',
         ]);
 
         $this->assertNotNull($order->fresh()->current_due_date);

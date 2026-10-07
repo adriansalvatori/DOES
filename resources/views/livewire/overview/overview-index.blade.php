@@ -186,6 +186,10 @@
                     this.closeDateInput();
                     return;
                 }
+                if (e.key === 'Escape' && !this.activeMenu && this.selectedRowId) {
+                    this.selectedRowId = null;
+                    return;
+                }
                 if (!this.activeMenu) return;
 
                 const isArrowDown = e.key === 'ArrowDown' || e.key === 'Down';
@@ -248,13 +252,33 @@
             $wire.refreshOverview();
             setTimeout(() => { this.isSyncing = false; }, 400);
         },
+        selectedRowId: null,
+        selectRow(orderId) {
+            this.selectedRowId = (this.selectedRowId === orderId ? null : orderId);
+        },
+        isNoRealizadaSubstatus(name) {
+            if (!name) return false;
+            const clean = String(name).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+            return clean.includes('NO REALIZADA');
+        },
         getRowClass(orderId, defaultClass) {
+            const isSelected = this.selectedRowId === orderId;
             const st = this.ordersState[orderId];
+            const sub = st && st.substatus ? String(st.substatus).toUpperCase().trim() : '';
+            const isNoRealizada = this.isNoRealizadaSubstatus(sub) || (defaultClass.includes('text-stone-600') && !defaultClass.includes('bg-cyan'));
+            const isArchived = !isNoRealizada && (st ? ((st.core_status === 'ARCHIVED') || Boolean(st.is_archived) || this.isArchivedSubstatus(sub)) : (defaultClass.includes('bg-cyan')));
+            const isProd = !isNoRealizada && (st ? (st.core_status === 'EN PRODUCCIÓN') : (defaultClass.includes('bg-orange')));
+
+            if (isSelected) {
+                if (isArchived) return 'bg-cyan-200/95 text-cyan-950 font-semibold ring-2 ring-inset ring-cyan-500/70 shadow-xs hover:bg-cyan-200';
+                if (isProd) return 'bg-amber-200/95 text-amber-950 font-semibold ring-2 ring-inset ring-amber-500/70 shadow-xs hover:bg-amber-200';
+                return 'bg-sky-100/90 text-sky-950 font-medium ring-2 ring-inset ring-sky-400/70 shadow-xs hover:bg-sky-100';
+            }
+
             if (!st) return defaultClass;
-            const sub = st.substatus ? String(st.substatus).toUpperCase().trim() : '';
-            const isArchived = (st.core_status === 'ARCHIVED') 
-                || Boolean(st.is_archived) 
-                || this.isArchivedSubstatus(sub);
+            if (isNoRealizada) {
+                return 'bg-stone-50/60 hover:bg-stone-100/70 text-stone-600';
+            }
             if (isArchived) {
                 return 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold';
             }
@@ -263,13 +287,24 @@
             }
             return 'hover:bg-stone-50/80';
         },
-        getStickyWoClass(orderId, defaultClass) {
+        getStickyCellClass(orderId, defaultClass) {
+            const isSelected = this.selectedRowId === orderId;
             const st = this.ordersState[orderId];
+            const sub = st && st.substatus ? String(st.substatus).toUpperCase().trim() : '';
+            const isNoRealizada = this.isNoRealizadaSubstatus(sub) || (defaultClass.includes('text-stone-700') && defaultClass.includes('bg-stone-50'));
+            const isArchived = !isNoRealizada && (st ? ((st.core_status === 'ARCHIVED') || Boolean(st.is_archived) || this.isArchivedSubstatus(sub)) : (defaultClass.includes('bg-cyan')));
+            const isProd = !isNoRealizada && (st ? (st.core_status === 'EN PRODUCCIÓN') : (defaultClass.includes('bg-orange')));
+
+            if (isSelected) {
+                if (isArchived) return 'bg-cyan-200 text-cyan-950 font-semibold group-hover:bg-cyan-200';
+                if (isProd) return 'bg-amber-200 text-amber-950 font-semibold group-hover:bg-amber-200';
+                return 'bg-sky-100 text-sky-950 font-semibold group-hover:bg-sky-100';
+            }
+
             if (!st) return defaultClass;
-            const sub = st.substatus ? String(st.substatus).toUpperCase().trim() : '';
-            const isArchived = (st.core_status === 'ARCHIVED') 
-                || Boolean(st.is_archived) 
-                || this.isArchivedSubstatus(sub);
+            if (isNoRealizada) {
+                return 'bg-stone-50 group-hover:bg-stone-100/70 text-stone-700';
+            }
             if (isArchived) {
                 return 'bg-cyan-100 group-hover:bg-cyan-200 text-cyan-950 font-semibold';
             }
@@ -277,6 +312,9 @@
                 return 'bg-orange-200 group-hover:bg-orange-300 text-orange-950 font-semibold';
             }
             return 'bg-white group-hover:bg-stone-50/80 text-stone-900';
+        },
+        getStickyWoClass(orderId, defaultClass) {
+            return this.getStickyCellClass(orderId, defaultClass);
         },
         activeMenu: null,
         targetOrderId: null,
@@ -802,10 +840,34 @@
                         <span class="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-100 text-amber-800 font-extrabold">{{ $totalBacklogCount }}</span>
                     </button>
                 </div>
+
+                <!-- Quick Filters: Urgente / Con Due Date -->
+                <div class="inline-flex items-center gap-1 bg-stone-100 p-1 rounded-xl border border-stone-200 flex-wrap">
+                    <button 
+                        type="button"
+                        wire:click="toggleFilter('urgent')"
+                        class="uppercase px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $filterUrgent ? 'bg-rose-600 text-white shadow-2xs' : 'text-stone-600 hover:text-stone-900' }}">
+                        <span class="w-1.5 h-1.5 rounded-full {{ $filterUrgent ? 'bg-white' : 'bg-rose-500' }}"></span>
+                        <span>{{ __('Urgente') }}</span>
+                        @if(($urgentCount ?? 0) > 0)
+                            <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $filterUrgent ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800' }} font-extrabold">{{ $urgentCount }}</span>
+                        @endif
+                    </button>
+                    <button 
+                        type="button"
+                        wire:click="toggleFilter('withDueDate')"
+                        class="uppercase px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 {{ $filterWithDueDate ? 'bg-stone-900 text-white shadow-2xs' : 'text-stone-600 hover:text-stone-900' }}">
+                        <x-lucide-calendar class="w-3.5 h-3.5 {{ $filterWithDueDate ? 'text-white' : 'text-stone-500' }}" />
+                        <span>{{ __('Con Due Date') }}</span>
+                        @if(($withDueDateCount ?? 0) > 0)
+                            <span class="px-1.5 py-0.2 rounded-full text-[10px] {{ $filterWithDueDate ? 'bg-white/20 text-white' : 'bg-stone-200 text-stone-800' }} font-extrabold">{{ $withDueDateCount }}</span>
+                        @endif
+                    </button>
+                </div>
             </div>
 
             <!-- Reset Filters Button & Active Badges -->
-            @if(!empty($appliedFilters) || $search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange)
+            @if(!empty($appliedFilters) || $search || $filterWo || $filterClient || $filterDesigner || $filterReviewStatus || $filterInstallation || $filterDateRange || $filterUrgent || $filterWithDueDate)
                 <div class="flex items-center gap-1.5 flex-wrap shrink-0">
                     @foreach($appliedFilters as $filter)
                         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-50 text-emerald-900 border border-emerald-300 shadow-2xs">
@@ -996,24 +1058,13 @@
         <div 
             x-ref="tableScrollWrapper" 
             class="w-full flex-1 min-h-0 overflow-auto custom-horizontal-scrollbar custom-vertical-scrollbar">
-            <table x-ref="ordersTable" class="w-full min-w-[2055px] table-fixed text-left text-xs border-collapse">
+            <table x-ref="ordersTable" class="w-full min-w-[2165px] table-fixed text-left text-xs border-collapse">
                 <thead class="sticky top-0 z-20 bg-stone-50 shadow-2xs">
                     <tr class="bg-stone-50 border-b border-stone-200 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
-                        <!-- 1. WO # (Sticky Left) -->
+                        <!-- 1. Fecha Procesado en Producción (Sticky Left: 0px) -->
                         <th 
-                            style="width: 90px;"
-                            class="sticky top-0 left-0 z-30 bg-stone-50 border-b border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] py-2.5 pl-3 sm:pl-4 pr-1 select-none"
-                            {{-- TEMPORAL: wire:click="sortByColumn('wo_number')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
-                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="WO #">WO #</span>
-                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
-                            </div>
-                        </th>
-
-                        <!-- 2. Fecha Procesado en Producción -->
-                        <th 
-                            style="width: 85px;"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none"
+                            style="width: 85px; left: 0px;"
+                            class="sticky top-0 left-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('production_processed_at')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Procesado en Producción">Proc. Prod.</span>
@@ -1021,10 +1072,10 @@
                             </div>
                         </th>
 
-                        <!-- 3. Order Due Date -->
+                        <!-- 2. Order Due Date (Sticky Left: 85px) -->
                         <th 
-                            style="width: 85px;"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none"
+                            style="width: 85px; left: 85px;"
+                            class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('delivery_due_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Due Date (Fecha Límite de Entrega)">Due Date</span>
@@ -1032,10 +1083,21 @@
                             </div>
                         </th>
 
-                        <!-- 4. Client -->
+                        <!-- 3. WO # (Sticky Left: 170px) -->
                         <th 
-                            style="width: 220px;"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1.5 select-none"
+                            style="width: 85px; left: 170px;"
+                            class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 pl-3 sm:pl-4 pr-1 select-none"
+                            {{-- TEMPORAL: wire:click="sortByColumn('wo_number')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
+                            <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
+                                <span class="truncate" title="WO #">WO #</span>
+                                {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
+                            </div>
+                        </th>
+
+                        <!-- 4. Client (Sticky Left: 255px) -->
+                        <th 
+                            style="width: 200px; left: 255px;"
+                            class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1.5 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('company_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Cliente">Cliente</span>
@@ -1043,10 +1105,10 @@
                             </div>
                         </th>
 
-                        <!-- 5. Order Name -->
+                        <!-- 5. Order Name (Sticky Left: 455px) -->
                         <th 
-                            style="width: 340px;"
-                            class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1.5 select-none"
+                            style="width: 400px; left: 455px;"
+                            class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] py-2.5 px-2 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('task_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Nombre de Orden">Nombre de Orden</span>
@@ -1054,9 +1116,9 @@
                             </div>
                         </th>
 
-                        <!-- 6. Designer -->
+                        <!-- 6. Designer (Slimmer: 85px) -->
                         <th 
-                            style="width: 130px;"
+                            style="width: 85px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 shadow-2xs py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
                                 <span class="truncate" title="Diseñador">Diseñador</span>
@@ -1135,87 +1197,56 @@
                     @forelse($orders as $order)
                         @php
                             $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
+                            $subClean = mb_strtoupper(trim((string) $subVal));
+                            $isNoRealizada = str_contains($subClean, 'NO REALIZADA');
+
                             $isArchivedSub = \App\Models\Substatus::isArchivedSubstatus($subVal);
 
-                            $isArchived = $order->isArchived() 
+                            $isArchived = ! $isNoRealizada && (
+                                $order->isArchived() 
                                 || ($order->core_status === \App\Enums\CoreStatus::ARCHIVED) 
                                 || ($order->core_status?->value === 'ARCHIVED') 
                                 || ($order->core_status === 'ARCHIVED')
                                 || !empty($order->archived_at)
-                                || $isArchivedSub;
+                                || $isArchivedSub
+                            );
 
-                            $isProd = ! $isArchived && (
+                            $isProd = ! $isArchived && ! $isNoRealizada && (
                                 ($order->core_status === \App\Enums\CoreStatus::EN_PRODUCCION) 
                                 || ($order->core_status?->value === 'EN PRODUCCIÓN') 
                                 || ($order->core_status === 'EN PRODUCCIÓN')
                             );
 
                             $rowStyle = match(true) {
+                                $isNoRealizada => 'bg-stone-50/60 hover:bg-stone-100/70 text-stone-600',
                                 $isArchived => 'bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold',
                                 $isProd => 'bg-orange-200/90 hover:bg-orange-300/90 text-orange-950 font-semibold',
                                 default => 'hover:bg-stone-50/80',
                             };
 
-                            $stickyWoStyle = match(true) {
+                            $stickyCellBg = match(true) {
+                                $isNoRealizada => 'bg-stone-50 group-hover:bg-stone-100/70 text-stone-700',
                                 $isArchived => 'bg-cyan-100 group-hover:bg-cyan-200 text-cyan-950 font-semibold',
                                 $isProd => 'bg-orange-200 group-hover:bg-orange-300 text-orange-950 font-semibold',
                                 default => 'bg-white group-hover:bg-stone-50/80 text-stone-900',
                             };
+                            $stickyWoStyle = $stickyCellBg;
                         @endphp
                         <tr 
                             data-order-id="{{ $order->id }}"
+                            @click="if (!$event.target.closest('button, a, input, select, textarea, [data-popover-trigger]')) selectRow({{ $order->id }})"
                             :class="getRowClass({{ $order->id }}, '{{ $rowStyle }}')"
-                            class="group relative {{ $rowStyle }}">
-                            <!-- 1. WO # (Sticky Left) -->
-                            <td 
-                                :class="getStickyWoClass({{ $order->id }}, '{{ $stickyWoStyle }}')"
-                                class="sticky left-0 z-10 {{ $stickyWoStyle }} border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)] py-1 pl-3 sm:pl-4 pr-1.5 truncate transition-colors">
-                                <div class="flex items-center gap-1 overflow-hidden truncate">
-                                    @if(! $order->in_workspace)
-                                        <button 
-                                            wire:click="moveToWorkspace({{ $order->id }})"
-                                            class="inline-flex items-center gap-0.5 px-1 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition cursor-pointer shrink-0"
-                                            title="En Backlog - Clic para mover al Workspace">
-                                            <x-lucide-inbox class="w-3 h-3 text-amber-800" />
-                                        </button>
-                                    @endif
-
-                                    @if($order->hasNoWo())
-                                        <input 
-                                            type="text" 
-                                            value=""
-                                            placeholder="+ WO"
-                                            @input.stop
-                                            @keydown.enter.stop.prevent="$el.blur()"
-                                            @keydown.escape.stop.prevent="$el.value = ''; $el.blur()"
-                                            @blur="
-                                                const val = $el.value.trim();
-                                                if (val) {
-                                                    $wire.quickUpdateField({{ $order->id }}, 'wo_number', val);
-                                                }
-                                            "
-                                            class="w-full bg-rose-50 hover:bg-rose-100/80 focus:bg-white text-rose-800 focus:text-stone-900 placeholder-rose-400 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm border-0 border-b border-rose-300 focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate"
-                                            title="Sin WO - Clic para agregar número de WO"
-                                        >
-                                    @else
-                                        <button 
-                                            type="button" 
-                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
-                                            class="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-fit max-w-full block"
-                                            title="{{ $order->wo_number }} - Ver Detalle">
-                                            {{ $order->wo_number }}
-                                        </button>
-                                    @endif
-                                </div>
-                            </td>
-
-                            <!-- 2. Fecha Procesado en Producción -->
+                            class="group relative cursor-pointer {{ $rowStyle }}">
+                            <!-- 1. Fecha Procesado en Producción (Sticky Left: 0px) -->
                             @php
                                 $procDateVal = $order->production_processed_at ? $order->production_processed_at->format('Y-m-d') : '';
                                 $procDateDisplay = $order->production_processed_at ? $order->production_processed_at->format('d/m/Y') : '—';
                                 $hasProcDate = !empty($procDateVal);
                             @endphp
-                            <td class="py-1 px-1 truncate">
+                            <td 
+                                style="width: 85px; left: 0px;"
+                                :class="getStickyCellClass({{ $order->id }}, '{{ $stickyCellBg }}')"
+                                class="sticky left-0 z-10 {{ $stickyCellBg }} border-r border-stone-200 py-1 px-1 truncate transition-colors">
                                 <div class="w-full flex items-center min-w-0" data-date-container="proc_{{ $order->id }}">
                                     @if(!$hasProcDate)
                                         <button 
@@ -1249,13 +1280,16 @@
                                 </div>
                             </td>
 
-                            <!-- 3. Order Due Date (Delivery Deadline) -->
+                            <!-- 2. Order Due Date (Sticky Left: 85px) -->
                             @php
                                 $dueDateVal = $order->delivery_due_date ? $order->delivery_due_date->format('Y-m-d') : '';
                                 $dueDateDisplay = $order->delivery_due_date ? $order->delivery_due_date->format('d/m/Y') : '—';
                                 $isDueDateFilled = !empty($dueDateVal);
                             @endphp
-                            <td class="py-1 px-1.5 truncate">
+                            <td 
+                                style="width: 85px; left: 85px;"
+                                :class="getStickyCellClass({{ $order->id }}, '{{ $stickyCellBg }}')"
+                                class="sticky z-10 {{ $stickyCellBg }} border-r border-stone-200 py-1 px-1.5 truncate transition-colors">
                                 <div class="w-full flex items-center min-w-0" data-date-container="due_{{ $order->id }}">
                                     @if(!$isDueDateFilled)
                                         <button 
@@ -1301,10 +1335,48 @@
                                 </div>
                             </td>
 
-                            <!-- 4. Cliente (Click opens modal) -->
-                            <td class="py-1 px-1.5 truncate">
+                            <!-- 3. WO # (Sticky Left: 170px) -->
+                            <td 
+                                style="width: 85px; left: 170px;"
+                                :class="getStickyCellClass({{ $order->id }}, '{{ $stickyCellBg }}')"
+                                class="sticky z-10 {{ $stickyCellBg }} border-r border-stone-200 py-1 pl-3 sm:pl-4 pr-1 truncate transition-colors">
+                                <div class="flex items-center gap-1 overflow-hidden truncate">
+                                    @if($order->hasNoWo())
+                                        <input 
+                                            type="text" 
+                                            value=""
+                                            placeholder="+ WO"
+                                            @input.stop
+                                            @keydown.enter.stop.prevent="$el.blur()"
+                                            @keydown.escape.stop.prevent="$el.value = ''; $el.blur()"
+                                            @blur="
+                                                const val = $el.value.trim();
+                                                if (val) {
+                                                    $wire.quickUpdateField({{ $order->id }}, 'wo_number', val);
+                                                }
+                                            "
+                                            class="w-full bg-rose-50 hover:bg-rose-100/80 focus:bg-white text-rose-800 focus:text-stone-900 placeholder-rose-400 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm border-0 border-b border-rose-300 focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate"
+                                            title="Sin WO - Clic para agregar número de WO"
+                                        >
+                                    @else
+                                        <button 
+                                            type="button" 
+                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
+                                            class="font-mono font-bold text-stone-900 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-fit max-w-full block"
+                                            title="{{ $order->wo_number }} - Ver Detalle">
+                                            {{ $order->wo_number }}
+                                        </button>
+                                    @endif
+                                </div>
+                            </td>
+
+                            <!-- 4. Cliente (Sticky Left: 255px) -->
+                            <td 
+                                style="width: 200px; left: 255px;"
+                                :class="getStickyCellClass({{ $order->id }}, '{{ $stickyCellBg }}')"
+                                class="sticky z-10 {{ $stickyCellBg }} border-r border-stone-200 py-1 px-1.5 truncate transition-colors">
                                 <button 
-                                    type="button"
+                                    type="button" 
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                     class="font-semibold text-stone-800 hover:text-emerald-700 hover:underline truncate cursor-pointer text-left w-fit max-w-full block uppercase"
                                     title="{{ $order->company_name ?: ($order->client?->name ?? '—') }}">
@@ -1312,10 +1384,13 @@
                                 </button>
                             </td>
 
-                            <!-- 5. Order Name (Click opens modal) -->
-                            <td class="py-1 px-1.5 truncate">
+                            <!-- 5. Order Name (Sticky Left: 455px) -->
+                            <td 
+                                style="width: 400px; left: 455px;"
+                                :class="getStickyCellClass({{ $order->id }}, '{{ $stickyCellBg }}')"
+                                class="sticky z-10 {{ $stickyCellBg }} border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] py-1 px-2 truncate transition-colors">
                                 <button 
-                                    type="button"
+                                    type="button" 
                                     wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
                                     class="text-stone-700 font-medium hover:text-stone-900 hover:underline truncate cursor-pointer text-left w-fit max-w-full block uppercase"
                                     title="{{ $order->clean_task_name }}">
@@ -1323,15 +1398,15 @@
                                 </button>
                             </td>
 
-                            <!-- 6. Designer (Full Color Cell) -->
+                            <!-- 6. Designer (Full Color Cell, Slimmer) -->
                             <td 
                                 :class="ordersState[{{ $order->id }}]?.designer_badge_style || '{{ $order->getDesignerBadgeStyle() }}'"
                                 :style="ordersState[{{ $order->id }}]?.designer_badge_inline_style || '{{ $order->getDesignerBadgeInlineStyle() }}'"
-                                class="py-1 px-1.5 truncate text-[10px] font-semibold text-center {{ $order->getDesignerBadgeStyle() }}"
+                                class="py-1 px-1 truncate text-[10px] font-semibold text-center {{ $order->getDesignerBadgeStyle() }}"
                                 style="{{ $order->getDesignerBadgeInlineStyle() }}">
                                 <button 
-                                    type="button"
-                                    data-popover-trigger="designer"
+                                    type="button" 
+                                    data-popover-trigger="designer" 
                                     @click.stop="openMenu('designer', {{ $order->id }}, $el)"
                                     :title="ordersState[{{ $order->id }}]?.designer_name || '{{ addslashes($order->designer_name) }}'"
                                     class="w-full text-center cursor-pointer border-none bg-transparent py-0.5 truncate block"
@@ -1600,6 +1675,7 @@
                                     'ESPERANDO PERMISO', \App\Enums\Substatus::ESPERANDO_PERMISO->value => 'bg-yellow-500 text-yellow-950 font-bold',
                                     'NO RESPUESTA', \App\Enums\Substatus::NO_RESPUESTA->value => 'bg-stone-500 text-white font-semibold',
                                     'POTENTIAL CUSTOMER', \App\Enums\Substatus::POTENTIAL_CUSTOMER->value => 'bg-emerald-600 text-white font-extrabold',
+                                    'NO REALIZADA / TRANSFERIDA', \App\Enums\Substatus::NO_REALIZADA_TRANSFERIDA->value => 'bg-stone-200 text-stone-700 font-medium border border-stone-300',
                                     null, '' => 'bg-transparent text-stone-400 font-normal',
                                     default => 'bg-amber-400 text-amber-950 font-bold',
                                 };

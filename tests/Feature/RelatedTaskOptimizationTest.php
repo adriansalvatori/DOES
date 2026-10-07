@@ -26,7 +26,7 @@ class RelatedTaskOptimizationTest extends TestCase
 
         $welcomeTask = RelatedTask::create([
             'order_id' => $order->id,
-            'title' => 'Enviar correo de bienvenida',
+            'title' => 'Enviar correo bienvenida/orden nueva',
             'type' => RelatedTaskType::BIENVENIDA,
             'status' => 'todo',
             'due_date' => now()->toDateString(),

@@ -544,11 +544,11 @@ class SubtaskWeeklyPlannerTest extends TestCase
         Livewire::test(WeeklyPlanner::class)
             ->set('selectedWeekStart', '2026-09-28')
             ->assertSet('showSystemTasks', true)
-            ->assertSee('Enviar correo de bienvenida')
+            ->assertSee('Enviar correo bienvenida/orden nueva')
             ->assertSee('Enviar correo de atraso preventivo')
             ->call('toggleShowSystemTasks')
             ->assertSet('showSystemTasks', false)
-            ->assertDontSee('Enviar correo de bienvenida')
+            ->assertDontSee('Enviar correo bienvenida/orden nueva')
             ->assertDontSee('Enviar correo de atraso preventivo');
     }
 
@@ -916,7 +916,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         $existingTask1 = RelatedTask::create([
             'order_id' => $completedOrder->id,
-            'title' => 'Enviar correo de bienvenida',
+            'title' => 'Enviar correo bienvenida/orden nueva',
             'type' => RelatedTaskType::SUBTASK,
             'status' => 'done',
             'scheduled_date' => $dateStr,
@@ -1036,5 +1036,99 @@ class SubtaskWeeklyPlannerTest extends TestCase
                     && str_contains($item['text'], 'PORKYS');
             })
             ->assertSee('filterWorkspaceOrders');
+    }
+
+    public function test_archived_order_automated_tasks_are_not_shown_in_weekly_planner(): void
+    {
+        $designer = Designer::create(['name' => 'Euraliz', 'active' => true]);
+
+        $archivedOrder = Order::create([
+            'company_name' => 'OPTIMUM ARCHIVED',
+            'task_name' => 'Print Work',
+            'core_status' => CoreStatus::ARCHIVED,
+            'archived_at' => now(),
+            'in_workspace' => false,
+            'designer_id' => $designer->id,
+        ]);
+
+        $automatedTask = RelatedTask::create([
+            'order_id' => $archivedOrder->id,
+            'title' => 'Enviar correo de atraso preventivo',
+            'type' => RelatedTaskType::CORREO_ATRASO,
+            'trigger_type' => 'AUTOMATIC_OVERDUE_DETECTION',
+            'scheduled_date' => now()->toDateString(),
+            'assignee_id' => $designer->id,
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertDontSee('OPTIMUM ARCHIVED')
+            ->assertDontSee('Enviar correo de atraso preventivo');
+    }
+
+    public function test_archived_order_past_user_subtasks_rollover_to_monday(): void
+    {
+        $designer = Designer::create(['name' => 'Euraliz', 'active' => true]);
+
+        $archivedOrder = Order::create([
+            'company_name' => 'DIPSA ARCHIVED',
+            'task_name' => 'Shirts Embroidery',
+            'core_status' => CoreStatus::ARCHIVED,
+            'archived_at' => now(),
+            'in_workspace' => false,
+            'designer_id' => $designer->id,
+        ]);
+
+        // A past user work task from last week must roll over to Monday
+        $pastSubtask = RelatedTask::create([
+            'order_id' => $archivedOrder->id,
+            'title' => 'Subtarea Manual de Orden Archivada',
+            'type' => RelatedTaskType::SUBTASK,
+            'is_work_task' => true,
+            'scheduled_date' => now()->subWeeks(1)->startOfWeek(Carbon::MONDAY)->toDateString(),
+            'assignee_id' => $designer->id,
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSee('Subtarea Manual de Orden Archivada');
+    }
+
+    public function test_order_archived_does_not_delete_automated_tasks_from_database(): void
+    {
+        $designer = Designer::create(['name' => 'Euraliz', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'ACTIVE TO ARCHIVE',
+            'task_name' => 'Window Decals',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $automatedTask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Enviar correo de atraso preventivo',
+            'type' => RelatedTaskType::CORREO_ATRASO,
+            'trigger_type' => 'AUTOMATIC_OVERDUE_DETECTION',
+            'scheduled_date' => now()->toDateString(),
+            'assignee_id' => $designer->id,
+            'status' => 'todo',
+        ]);
+
+        $this->assertDatabaseHas('related_tasks', ['id' => $automatedTask->id]);
+
+        // Transition order to archived
+        $order->update([
+            'core_status' => CoreStatus::ARCHIVED,
+            'in_workspace' => false,
+            'archived_at' => now(),
+        ]);
+
+        // The task is preserved in the database (not deleted), but the app ignores it
+        $this->assertDatabaseHas('related_tasks', ['id' => $automatedTask->id]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertDontSee('Enviar correo de atraso preventivo');
     }
 }
