@@ -89,6 +89,9 @@ function runRemoteCommand(command, description, capture = false) {
         '-o', 'StrictHostKeyChecking=accept-new',
         '-o', 'UserKnownHostsFile=/dev/null',
         '-o', 'LogLevel=ERROR',
+        '-o', 'ServerAliveInterval=15',
+        '-o', 'ServerAliveCountMax=6',
+        '-o', 'TCPKeepAlive=yes',
         '-p', SSH_PORT,
         `${SSH_USER}@${SSH_HOST}`,
         `cd ${REMOTE_PATH} && ${command}`
@@ -330,7 +333,7 @@ const protectArgs = [
     '--filter=P kudosdoes-deploy.zip'
 ];
 
-const sshCommandStr = `ssh -p ${SSH_PORT} -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR`;
+const sshCommandStr = `ssh -p ${SSH_PORT} -o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR -o ServerAliveInterval=15 -o ServerAliveCountMax=6 -o TCPKeepAlive=yes`;
 const rsyncArgs = [
     '-avz',
     '--delete-after',
