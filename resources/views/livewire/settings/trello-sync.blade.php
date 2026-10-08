@@ -56,29 +56,41 @@
             <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Sincronización en Vivo con Trello') }}</h1>
         </div>
 
-        <div class="flex items-center gap-2.5">
+        <div class="flex items-center gap-2.5 flex-wrap">
             <!-- Clear Demo Data Button -->
-            <button id="tour-trello-clear-btn" wire:click="clearDemoData" wire:confirm="{{ __('¿Estás seguro de eliminar todas las órdenes y tareas?') }}" class="px-3 py-1.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-medium text-xs transition flex items-center gap-1.5">
+            <button id="tour-trello-clear-btn" wire:click="clearDemoData" wire:confirm="{{ __('¿Estás seguro de eliminar todas las órdenes y tareas?') }}" class="px-3 py-1.5 rounded-md bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-medium text-xs transition flex items-center gap-1.5 cursor-pointer">
                 <x-lucide-trash-2 class="w-3.5 h-3.5 text-rose-600" />
                 <span>{{ __('Limpiar Datos') }}</span>
             </button>
 
-            <!-- Sync Button with Loading Animation -->
+            <!-- Sync Only New Cards Button -->
+            <button 
+                id="tour-trello-sync-new-btn"
+                wire:click="runTrelloSyncOnlyNew" 
+                wire:loading.attr="disabled"
+                class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer shadow-2xs font-semibold">
+                <x-lucide-sparkles wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-emerald-200" />
+                <x-lucide-refresh-cw wire:loading wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 animate-spin" />
+                <span wire:loading.remove wire:target="runTrelloSyncOnlyNew">{{ __('Traer Solo Tarjetas Nuevas') }}</span>
+                <span wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando nuevas...') }}</span>
+            </button>
+
+            <!-- Full Sync Button with Loading Animation -->
             <button 
                 id="tour-trello-sync-btn"
                 wire:click="runTrelloSync" 
                 wire:loading.attr="disabled"
-                :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20 font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-2xs font-medium'"
-                class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2">
+                :class="isDirty() ? 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm shadow-amber-600/20 font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-2xs font-medium'"
+                class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2 cursor-pointer">
                 <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="runTrelloSync" class="w-3.5 h-3.5" />
-                <span wire:loading.remove wire:target="runTrelloSync">{{ __('Sincronizar Desde Trello') }}</span>
+                <span wire:loading.remove wire:target="runTrelloSync">{{ __('Sincronización Completa') }}</span>
                 <span wire:loading wire:target="runTrelloSync">{{ __('Sincronizando con Trello...') }}</span>
             </button>
         </div>
     </div>
 
     <!-- Animated Fullscreen Loading Overlay during Trello Sync -->
-    <div wire:loading.flex wire:target="runTrelloSync" class="fixed inset-0 z-[500] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+    <div wire:loading.flex wire:target="runTrelloSync, runTrelloSyncOnlyNew" class="fixed inset-0 z-[500] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl p-6 max-w-sm w-full text-center space-y-4 animate-in fade-in zoom-in duration-150">
             <div class="relative w-16 h-16 mx-auto flex items-center justify-center">
                 <div class="absolute inset-0 rounded-full border-4 border-stone-100 animate-ping opacity-75"></div>
@@ -87,8 +99,14 @@
                 </div>
             </div>
             <div>
-                <h3 class="font-bold text-sm text-zinc-900 tracking-tight">{{ __('Sincronizando con Trello...') }}</h3>
-                <p class="text-xs text-zinc-500 mt-1 leading-relaxed">{{ __('Conectando a la API REST de Trello, analizando listas y actualizando tarjetas en tiempo real.') }}</p>
+                <h3 class="font-bold text-sm text-zinc-900 tracking-tight">
+                    <span wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando Tarjetas Nuevas...') }}</span>
+                    <span wire:loading wire:target="runTrelloSync">{{ __('Sincronizando con Trello...') }}</span>
+                </h3>
+                <p class="text-xs text-zinc-500 mt-1 leading-relaxed">
+                    <span wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Consultando Trello e importando únicamente tarjetas no registradas.') }}</span>
+                    <span wire:loading wire:target="runTrelloSync">{{ __('Conectando a la API REST de Trello, analizando listas y actualizando tarjetas en tiempo real.') }}</span>
+                </p>
             </div>
         </div>
     </div>
@@ -103,10 +121,20 @@
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2.5">
                         <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold shadow-2xs">
-                            <x-lucide-check-circle-2 class="w-5 h-5 text-emerald-600" />
+                            @if(($syncReport['type'] ?? 'full') === 'new_only')
+                                <x-lucide-sparkles class="w-5 h-5 text-emerald-600" />
+                            @else
+                                <x-lucide-check-circle-2 class="w-5 h-5 text-emerald-600" />
+                            @endif
                         </div>
                         <div>
-                            <h3 class="font-bold text-sm text-zinc-900 tracking-tight">{{ __('Resumen de Sincronización Trello') }}</h3>
+                            <h3 class="font-bold text-sm text-zinc-900 tracking-tight">
+                                @if(($syncReport['type'] ?? 'full') === 'new_only')
+                                    {{ __('Búsqueda de Tarjetas Nuevas') }}
+                                @else
+                                    {{ __('Resumen de Sincronización Trello') }}
+                                @endif
+                            </h3>
                             <p class="text-[11px] text-zinc-400 font-mono">{{ $syncReport['timestamp'] }}</p>
                         </div>
                     </div>
@@ -115,238 +143,341 @@
                     </button>
                 </div>
 
-                <!-- Metrics Grid Report -->
-                <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
-                    <button 
-                        wire:click="setFilter('created')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'created' ? 'bg-emerald-100/70 border-emerald-400 ring-2 ring-emerald-400/30' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">{{ __('Nuevas') }}</span>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
-                        </div>
-                    </button>
-
-                    <button 
-                        wire:click="setFilter('pushed_to_trello')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'pushed_to_trello' ? 'bg-purple-100/70 border-purple-400 ring-2 ring-purple-400/30' : 'bg-purple-50/70 border-purple-200 hover:bg-purple-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-purple-800 tracking-wider block truncate">{{ __('Enviadas') }}</span>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-purple-900 font-mono">{{ $syncReport['pushed'] ?? 0 }}</span>
-                        </div>
-                    </button>
-
-                    <button 
-                        wire:click="setFilter('moved')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'moved' ? 'bg-sky-100/70 border-sky-400 ring-2 ring-sky-400/30' : 'bg-sky-50/70 border-sky-200 hover:bg-sky-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-sky-800 tracking-wider block truncate">{{ __('Movidas') }}</span>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-sky-900 font-mono">{{ $syncReport['moved'] }}</span>
-                        </div>
-                    </button>
-
-                    <button 
-                        wire:click="setFilter('updated')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'updated' ? 'bg-amber-100/70 border-amber-400 ring-2 ring-amber-400/30' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block truncate">{{ __('Actualizadas') }}</span>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-amber-900 font-mono">{{ $syncReport['updated'] }}</span>
-                        </div>
-                    </button>
-
-                    <button 
-                        wire:click="setFilter('conflict')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'conflict' ? 'bg-rose-100/70 border-rose-400 ring-2 ring-rose-400/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-rose-800 tracking-wider block truncate">{{ __('Conflictos') }}</span>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-rose-900 font-mono">{{ $syncReport['conflicts'] ?? 0 }}</span>
-                        </div>
-                    </button>
-
-                    <button 
-                        wire:click="setFilter('deleted')"
-                        class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'deleted' ? 'bg-stone-200/70 border-stone-400 ring-2 ring-stone-400/30' : 'bg-stone-100/70 border-stone-300 hover:bg-stone-200/50' }}">
-                        <span class="text-[9px] uppercase font-bold text-stone-800 tracking-wider block truncate">{{ __('Faltantes') }}</span>
-                        <div class="flex items-baseline gap-1 mt-0.5">
-                            <span class="text-lg font-bold text-stone-900 font-mono">{{ $syncReport['deleted'] }}</span>
-                        </div>
-                    </button>
-                </div>
-
-                @if(($syncReport['conflicts'] ?? 0) > 0)
-                    <div class="bg-amber-50/90 border border-amber-300/90 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
-                        <div class="flex items-center gap-2">
-                            <x-lucide-alert-triangle class="w-4 h-4 text-amber-700 shrink-0" />
-                            <span class="text-xs font-bold text-amber-950">{{ __('Conflictos Detectados:') }} {{ $syncReport['conflicts'] }} {{ __('orden(es)') }}</span>
+                @if(($syncReport['type'] ?? 'full') === 'new_only')
+                    <!-- New Only Metrics Grid (3 Clean Columns) -->
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        <div class="p-3 rounded-xl border bg-emerald-50/80 border-emerald-200 text-left">
+                            <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">
+                                {{ __('Nuevas Importadas') }}
+                            </span>
+                            <div class="flex items-baseline gap-1 mt-1">
+                                <span class="text-2xl font-black text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
+                                <span class="text-[11px] font-medium text-emerald-700">{{ __('órdenes') }}</span>
+                            </div>
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <button 
-                                wire:click="resolveAllWorkspace" 
-                                class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
-                                <x-lucide-arrow-up-right class="w-3.5 h-3.5" />
-                                <span>{{ __('Use Details from Workspace for All') }}</span>
-                            </button>
-
-                            <button 
-                                wire:click="resolveAllTrello" 
-                                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
-                                <x-lucide-arrow-down-left class="w-3.5 h-3.5" />
-                                <span>{{ __('Use Details from Trello for All') }}</span>
-                            </button>
+                        <div class="p-3 rounded-xl border bg-stone-50 border-stone-200 text-left">
+                            <span class="text-[9px] uppercase font-bold text-stone-600 tracking-wider block truncate">
+                                {{ __('Ya Registradas') }}
+                            </span>
+                            <div class="flex items-baseline gap-1 mt-1">
+                                <span class="text-2xl font-black text-stone-800 font-mono">{{ $syncReport['unchanged'] }}</span>
+                                <span class="text-[11px] font-medium text-stone-500">{{ __('omitidas') }}</span>
+                            </div>
                         </div>
-                    </div>
-                @endif
 
-                <div class="bg-stone-50 border border-stone-200 rounded-xl p-3 flex items-center justify-between text-xs font-medium text-zinc-700">
-                    <span class="flex items-center gap-1.5">
-                        <x-lucide-layers class="w-4 h-4 text-zinc-500" /> {{ __('Total Procesadas en Tablero:') }}
-                    </span>
-                    <span class="font-bold font-mono text-zinc-900">{{ $syncReport['total'] }} {{ __('tarjetas') }}</span>
-                </div>
-
-                <!-- Complete Scrollable List of Changed Cards -->
-                <div class="space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
-                            <x-lucide-list-checks class="w-4 h-4 text-stone-600" /> 
-                            {{ __('Lista de Tarjetas Que Cambiaron') }} ({{ count($syncReport['changes']) }})
-                        </span>
-
-                        <!-- Filter Category Tabs -->
-                        <div class="flex items-center gap-1 text-[11px]">
-                            <button 
-                                wire:click="setFilter('all')" 
-                                class="px-2 py-0.5 rounded-md font-medium transition cursor-pointer {{ $activeFilter === 'all' ? 'bg-zinc-900 text-white font-semibold' : 'text-zinc-600 hover:bg-stone-100' }}">
-                                {{ __('Todas') }} ({{ count($syncReport['changes']) }})
-                            </button>
+                        <div class="p-3 rounded-xl border bg-stone-50 border-stone-200 text-left col-span-2 sm:col-span-1">
+                            <span class="text-[9px] uppercase font-bold text-stone-600 tracking-wider block truncate">
+                                {{ __('Total en Tablero') }}
+                            </span>
+                            <div class="flex items-baseline gap-1 mt-1">
+                                <span class="text-2xl font-black text-stone-800 font-mono">{{ $syncReport['total'] }}</span>
+                                <span class="text-[11px] font-medium text-stone-500">{{ __('tarjetas') }}</span>
+                            </div>
                         </div>
                     </div>
 
-                    @php
-                        $filteredChanges = collect($syncReport['changes'])->filter(function ($chg) use ($activeFilter) {
-                            if ($activeFilter === 'all') return true;
-                            return $chg['action'] === $activeFilter;
-                        });
-                    @endphp
-
-                    @if($filteredChanges->isEmpty())
-                        <div class="p-6 text-center text-zinc-400 bg-stone-50 rounded-xl border border-stone-200 text-xs">
-                            <p>{{ __('No hay tarjetas registradas en esta categoría de cambios.') }}</p>
+                    @if($syncReport['added'] === 0)
+                        <!-- Friendly empty state when all cards are already registered -->
+                        <div class="p-6 text-center bg-stone-50/80 rounded-xl border border-stone-200 space-y-2.5">
+                            <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 mx-auto flex items-center justify-center shadow-2xs">
+                                <x-lucide-check-circle-2 class="w-5 h-5 text-emerald-600" />
+                            </div>
+                            <div>
+                                <p class="font-bold text-xs text-zinc-900">{{ __('¡No hay tarjetas nuevas por importar!') }}</p>
+                                <p class="text-[11px] text-zinc-500 mt-1 leading-relaxed max-w-sm mx-auto">
+                                    {{ __('Todas las :total tarjetas activas del tablero ya están registradas en DOES. No se modificó ninguna orden existente.', ['total' => $syncReport['total']]) }}
+                                </p>
+                            </div>
                         </div>
                     @else
-                        <div class="space-y-2 max-h-64 overflow-y-auto pr-1 scrollbar-thin text-xs">
-                            @foreach($filteredChanges as $chg)
-                                <div 
-                                    @if(isset($chg['order_id']) && $chg['action'] === 'conflict')
-                                        wire:click="openConflictModal({{ $chg['order_id'] }})"
-                                    @elseif(isset($chg['order_id']))
-                                        wire:click="$dispatch('open-order-detail', { orderId: {{ $chg['order_id'] }} })"
-                                    @endif
-                                    class="p-3 bg-[#fbfbfa] hover:bg-stone-100/90 rounded-xl border border-stone-200 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
-                                    title="{{ $chg['action'] === 'conflict' ? __('Haz clic para resolver conflicto') : __('Haz clic para ver el detalle de esta orden') }}">
-                                    <div class="min-w-0 flex-1 space-y-1">
-                                        <div class="space-y-0.5">
-                                            <span class="font-bold text-zinc-900 group-hover:text-stone-900 flex items-center gap-1.5 truncate text-xs">
-                                                <span>{{ $chg['company'] }}</span>
-                                                <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 opacity-0 group-hover:opacity-100 transition shrink-0" />
+                        <!-- List of newly imported cards -->
+                        <div class="space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
+                                    <x-lucide-list-checks class="w-4 h-4 text-emerald-600" /> 
+                                    {{ __('Tarjetas Nuevas Importadas') }} ({{ count($syncReport['changes']) }})
+                                </span>
+                                <span class="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                    {{ __('En Buzón Backlog') }}
+                                </span>
+                            </div>
+
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1 scrollbar-thin text-xs">
+                                @foreach($syncReport['changes'] as $chg)
+                                    <div 
+                                        @if(isset($chg['order_id']))
+                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $chg['order_id'] }} })"
+                                        @endif
+                                        class="p-3 bg-[#fbfbfa] hover:bg-emerald-50/40 rounded-xl border border-stone-200 hover:border-emerald-300 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
+                                        title="{{ __('Haz clic para ver el detalle de esta orden') }}">
+                                        <div class="min-w-0 flex-1 space-y-1">
+                                            <div class="space-y-0.5">
+                                                <span class="font-bold text-zinc-900 group-hover:text-emerald-950 flex items-center gap-1.5 truncate text-xs">
+                                                    <span>{{ $chg['company'] }}</span>
+                                                    <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition shrink-0" />
+                                                </span>
+                                                @if(!empty($chg['task']))
+                                                    <span class="text-[11px] text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="shrink-0 flex items-center gap-2">
+                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                                <x-lucide-plus class="w-3 h-3 text-emerald-600" />
+                                                <span>{{ __('Nueva') }}</span>
                                             </span>
-                                            @if($chg['task'])
-                                                <span class="text-[11px] text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="pt-2 border-t border-stone-100 flex items-center justify-between gap-3">
+                        <span class="text-[11px] text-zinc-400">
+                            {{ __('Órdenes existentes protegidas (sin cambios ni conflictos).') }}
+                        </span>
+                        <button 
+                            wire:click="closeReportModal" 
+                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl shadow-2xs transition cursor-pointer">
+                            {{ __('Entendido / Cerrar') }}
+                        </button>
+                    </div>
+                @else
+                    <!-- Full Sync Layout (6 Metrics Grid) -->
+                    <div class="grid grid-cols-2 sm:grid-cols-6 gap-2">
+                        <button 
+                            wire:click="setFilter('created')"
+                            class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'created' ? 'bg-emerald-100/70 border-emerald-400 ring-2 ring-emerald-400/30' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/50' }}">
+                            <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">{{ __('Nuevas') }}</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span class="text-lg font-bold text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
+                            </div>
+                        </button>
+
+                        <button 
+                            wire:click="setFilter('pushed_to_trello')"
+                            class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'pushed_to_trello' ? 'bg-purple-100/70 border-purple-400 ring-2 ring-purple-400/30' : 'bg-purple-50/70 border-purple-200 hover:bg-purple-100/50' }}">
+                            <span class="text-[9px] uppercase font-bold text-purple-800 tracking-wider block truncate">{{ __('Enviadas') }}</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span class="text-lg font-bold text-purple-900 font-mono">{{ $syncReport['pushed'] ?? 0 }}</span>
+                            </div>
+                        </button>
+
+                        <button 
+                            wire:click="setFilter('moved')"
+                            class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'moved' ? 'bg-sky-100/70 border-sky-400 ring-2 ring-sky-400/30' : 'bg-sky-50/70 border-sky-200 hover:bg-sky-100/50' }}">
+                            <span class="text-[9px] uppercase font-bold text-sky-800 tracking-wider block truncate">{{ __('Movidas') }}</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span class="text-lg font-bold text-sky-900 font-mono">{{ $syncReport['moved'] }}</span>
+                            </div>
+                        </button>
+
+                        <button 
+                            wire:click="setFilter('updated')"
+                            class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'updated' ? 'bg-amber-100/70 border-amber-400 ring-2 ring-amber-400/30' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/50' }}">
+                            <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block truncate">{{ __('Actualizadas') }}</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span class="text-lg font-bold text-amber-900 font-mono">{{ $syncReport['updated'] }}</span>
+                            </div>
+                        </button>
+
+                        <button 
+                            wire:click="setFilter('conflict')"
+                            class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'conflict' ? 'bg-rose-100/70 border-rose-400 ring-2 ring-rose-400/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/50' }}">
+                            <span class="text-[9px] uppercase font-bold text-rose-800 tracking-wider block truncate">{{ __('Conflictos') }}</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span class="text-lg font-bold text-rose-900 font-mono">{{ $syncReport['conflicts'] ?? 0 }}</span>
+                            </div>
+                        </button>
+
+                        <button 
+                            wire:click="setFilter('deleted')"
+                            class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'deleted' ? 'bg-stone-200/70 border-stone-400 ring-2 ring-stone-400/30' : 'bg-stone-100/70 border-stone-300 hover:bg-stone-200/50' }}">
+                            <span class="text-[9px] uppercase font-bold text-stone-800 tracking-wider block truncate">{{ __('Faltantes') }}</span>
+                            <div class="flex items-baseline gap-1 mt-0.5">
+                                <span class="text-lg font-bold text-stone-900 font-mono">{{ $syncReport['deleted'] }}</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    @if(($syncReport['conflicts'] ?? 0) > 0)
+                        <div class="bg-amber-50/90 border border-amber-300/90 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
+                            <div class="flex items-center gap-2">
+                                <x-lucide-alert-triangle class="w-4 h-4 text-amber-700 shrink-0" />
+                                <span class="text-xs font-bold text-amber-950">{{ __('Conflictos Detectados:') }} {{ $syncReport['conflicts'] }} {{ __('orden(es)') }}</span>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <button 
+                                    wire:click="resolveAllWorkspace" 
+                                    class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                    <x-lucide-arrow-up-right class="w-3.5 h-3.5" />
+                                    <span>{{ __('Use Details from Workspace for All') }}</span>
+                                </button>
+
+                                <button 
+                                    wire:click="resolveAllTrello" 
+                                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                    <x-lucide-arrow-down-left class="w-3.5 h-3.5" />
+                                    <span>{{ __('Use Details from Trello for All') }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="bg-stone-50 border border-stone-200 rounded-xl p-3 flex items-center justify-between text-xs font-medium text-zinc-700">
+                        <span class="flex items-center gap-1.5">
+                            <x-lucide-layers class="w-4 h-4 text-zinc-500" /> {{ __('Total Procesadas en Tablero:') }}
+                        </span>
+                        <span class="font-bold font-mono text-zinc-900">{{ $syncReport['total'] }} {{ __('tarjetas') }}</span>
+                    </div>
+
+                    <!-- Complete Scrollable List of Changed Cards -->
+                    <div class="space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <x-lucide-list-checks class="w-4 h-4 text-stone-600" /> 
+                                {{ __('Lista de Tarjetas Que Cambiaron') }} ({{ count($syncReport['changes']) }})
+                            </span>
+
+                            <!-- Filter Category Tabs -->
+                            <div class="flex items-center gap-1 text-[11px]">
+                                <button 
+                                    wire:click="setFilter('all')" 
+                                    class="px-2 py-0.5 rounded-md font-medium transition cursor-pointer {{ $activeFilter === 'all' ? 'bg-zinc-900 text-white font-semibold' : 'text-zinc-600 hover:bg-stone-100' }}">
+                                    {{ __('Todas') }} ({{ count($syncReport['changes']) }})
+                                </button>
+                            </div>
+                        </div>
+
+                        @php
+                            $filteredChanges = collect($syncReport['changes'])->filter(function ($chg) use ($activeFilter) {
+                                if ($activeFilter === 'all') return true;
+                                return $chg['action'] === $activeFilter;
+                            });
+                        @endphp
+
+                        @if($filteredChanges->isEmpty())
+                            <div class="p-6 text-center text-zinc-400 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+                                <p>{{ __('No hay tarjetas registradas en esta categoría de cambios.') }}</p>
+                            </div>
+                        @else
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1 scrollbar-thin text-xs">
+                                @foreach($filteredChanges as $chg)
+                                    <div 
+                                        @if(isset($chg['order_id']) && $chg['action'] === 'conflict')
+                                            wire:click="openConflictModal({{ $chg['order_id'] }})"
+                                        @elseif(isset($chg['order_id']))
+                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $chg['order_id'] }} })"
+                                        @endif
+                                        class="p-3 bg-[#fbfbfa] hover:bg-stone-100/90 rounded-xl border border-stone-200 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
+                                        title="{{ $chg['action'] === 'conflict' ? __('Haz clic para resolver conflicto') : __('Haz clic para ver el detalle de esta orden') }}">
+                                        <div class="min-w-0 flex-1 space-y-1">
+                                            <div class="space-y-0.5">
+                                                <span class="font-bold text-zinc-900 group-hover:text-stone-900 flex items-center gap-1.5 truncate text-xs">
+                                                    <span>{{ $chg['company'] }}</span>
+                                                    <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 opacity-0 group-hover:opacity-100 transition shrink-0" />
+                                                </span>
+                                                @if($chg['task'])
+                                                    <span class="text-[11px] text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
+                                                @endif
+                                            </div>
+
+                                            <!-- Color-Coded Field Diff Highlights for Conflicts -->
+                                            @if($chg['action'] === 'conflict' && !empty($chg['diff_fields']))
+                                                <div class="flex flex-wrap gap-1.5 pt-1">
+                                                    @foreach($chg['diff_fields'] as $field)
+                                                        @if($field === 'company_name')
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                                Workspace: {{ $chg['workspace_data']['company_name'] ?? '' }}
+                                                            </span>
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                                Trello: {{ $chg['trello_data']['company_name'] ?? '' }}
+                                                            </span>
+                                                        @elseif($field === 'task_name')
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                                                Workspace: {{ $chg['workspace_data']['task_name'] ?? '' }}
+                                                            </span>
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
+                                                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                                Trello: {{ $chg['trello_data']['task_name'] ?? '' }}
+                                                            </span>
+                                                        @elseif($field === 'wo_number')
+                                                            <x-wo-badge :number="$chg['workspace_data']['wo_number'] ?? ''" variant="amber" prefix="Workspace WO: " />
+                                                            <x-wo-badge :number="$chg['trello_data']['wo_number'] ?? ''" variant="outline" prefix="Trello WO: " />
+                                                        @endif
+                                                    @endforeach
+                                                </div>
+                                            @elseif(!empty($chg['details']))
+                                                <div class="flex flex-wrap gap-1 pt-0.5">
+                                                    @foreach($chg['details'] as $detail)
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium {{ $chg['action'] === 'conflict' ? 'bg-rose-100 text-rose-900 border border-rose-300' : 'bg-amber-50 text-amber-900 border border-amber-200/80' }} shadow-2xs">
+                                                            <x-lucide-sparkles class="w-3 h-3 {{ $chg['action'] === 'conflict' ? 'text-rose-600' : 'text-amber-600' }} shrink-0" />
+                                                            <span>{{ $detail }}</span>
+                                                        </span>
+                                                    @endforeach
+                                                </div>
                                             @endif
                                         </div>
 
-                                        <!-- Color-Coded Field Diff Highlights for Conflicts -->
-                                        @if($chg['action'] === 'conflict' && !empty($chg['diff_fields']))
-                                            <div class="flex flex-wrap gap-1.5 pt-1">
-                                                @foreach($chg['diff_fields'] as $field)
-                                                    @if($field === 'company_name')
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                            Workspace: {{ $chg['workspace_data']['company_name'] ?? '' }}
-                                                        </span>
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                            Trello: {{ $chg['trello_data']['company_name'] ?? '' }}
-                                                        </span>
-                                                    @elseif($field === 'task_name')
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                                            Workspace: {{ $chg['workspace_data']['task_name'] ?? '' }}
-                                                        </span>
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
-                                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                                            Trello: {{ $chg['trello_data']['task_name'] ?? '' }}
-                                                        </span>
-                                                    @elseif($field === 'wo_number')
-                                                        <x-wo-badge :number="$chg['workspace_data']['wo_number'] ?? ''" variant="amber" prefix="Workspace WO: " />
-                                                        <x-wo-badge :number="$chg['trello_data']['wo_number'] ?? ''" variant="outline" prefix="Trello WO: " />
+                                        <div class="shrink-0 text-right">
+                                            @if($chg['action'] === 'created')
+                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                    + {{ __('Nueva Orden') }}
+                                                </span>
+                                            @elseif($chg['action'] === 'pushed_to_trello')
+                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
+                                                    <x-lucide-arrow-up-right class="w-3.5 h-3.5 text-purple-600 inline shrink-0" />
+                                                    @if(! empty($chg['pushed_title']))
+                                                        <span class="truncate max-w-[220px]" title="{{ $chg['pushed_title'] }}">{{ __('Enviado a Trello:') }} {{ $chg['pushed_title'] }}</span>
+                                                    @elseif(! empty($chg['previous_status']) && ! empty($chg['new_status']) && $chg['previous_status'] !== $chg['new_status'])
+                                                        <span>{{ __('Enviado a Trello:') }} {{ $chg['previous_status'] }} ➔ {{ $chg['new_status'] }}</span>
+                                                    @else
+                                                        <span>{{ __('Enviado a Trello') }}</span>
                                                     @endif
-                                                @endforeach
-                                            </div>
-                                        @elseif(!empty($chg['details']))
-                                            <div class="flex flex-wrap gap-1 pt-0.5">
-                                                @foreach($chg['details'] as $detail)
-                                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium {{ $chg['action'] === 'conflict' ? 'bg-rose-100 text-rose-900 border border-rose-300' : 'bg-amber-50 text-amber-900 border border-amber-200/80' }} shadow-2xs">
-                                                        <x-lucide-sparkles class="w-3 h-3 {{ $chg['action'] === 'conflict' ? 'text-rose-600' : 'text-amber-600' }} shrink-0" />
-                                                        <span>{{ $detail }}</span>
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        @endif
+                                                </span>
+                                            @elseif($chg['action'] === 'moved')
+                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 flex items-center gap-1">
+                                                    <span>{{ $chg['previous_status'] ?? '' }}</span>
+                                                    <x-lucide-arrow-right class="w-3.5 h-3.5 text-sky-600 inline shrink-0" />
+                                                    <span>{{ $chg['new_status'] ?? '' }}</span>
+                                                </span>
+                                            @elseif($chg['action'] === 'updated')
+                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                    {{ __('Actualizada') }}
+                                                </span>
+                                            @elseif($chg['action'] === 'conflict')
+                                                <button 
+                                                    wire:click.stop="openConflictModal({{ $chg['order_id'] }})"
+                                                    class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 border border-rose-700 flex items-center gap-1 shadow-2xs cursor-pointer">
+                                                    <x-lucide-alert-triangle class="w-3 h-3 text-white inline shrink-0" />
+                                                    <span>{{ __('Resolver Conflicto') }}</span>
+                                                </button>
+                                            @elseif($chg['action'] === 'deleted')
+                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-stone-200 text-stone-800 border border-stone-300">
+                                                    {{ __('Falta en Trello') }}
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
 
-                                    <div class="shrink-0 text-right">
-                                        @if($chg['action'] === 'created')
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                                + {{ __('Nueva Orden') }}
-                                            </span>
-                                        @elseif($chg['action'] === 'pushed_to_trello')
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
-                                                <x-lucide-arrow-up-right class="w-3 h-3 text-purple-600 inline shrink-0" />
-                                                @if(! empty($chg['pushed_title']))
-                                                    <span class="truncate max-w-[220px]" title="{{ $chg['pushed_title'] }}">{{ __('Enviado a Trello:') }} {{ $chg['pushed_title'] }}</span>
-                                                @elseif(! empty($chg['previous_status']) && ! empty($chg['new_status']) && $chg['previous_status'] !== $chg['new_status'])
-                                                    <span>{{ __('Enviado a Trello:') }} {{ $chg['previous_status'] }} ➔ {{ $chg['new_status'] }}</span>
-                                                @else
-                                                    <span>{{ __('Enviado a Trello') }}</span>
-                                                @endif
-                                            </span>
-                                        @elseif($chg['action'] === 'moved')
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 flex items-center gap-1">
-                                                <span>{{ $chg['previous_status'] ?? '' }}</span>
-                                                <x-lucide-arrow-right class="w-3 h-3 text-sky-600 inline shrink-0" />
-                                                <span>{{ $chg['new_status'] ?? '' }}</span>
-                                            </span>
-                                        @elseif($chg['action'] === 'updated')
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                                                {{ __('Actualizada') }}
-                                            </span>
-                                        @elseif($chg['action'] === 'conflict')
-                                            <button 
-                                                wire:click.stop="openConflictModal({{ $chg['order_id'] }})"
-                                                class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 border border-rose-700 flex items-center gap-1 shadow-2xs cursor-pointer">
-                                                <x-lucide-alert-triangle class="w-3 h-3 text-white inline shrink-0" />
-                                                <span>{{ __('Resolver Conflicto') }}</span>
-                                            </button>
-                                        @elseif($chg['action'] === 'deleted')
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-stone-200 text-stone-800 border border-stone-300">
-                                                {{ __('Falta en Trello') }}
-                                            </span>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </div>
-
-                <div class="pt-2 border-t border-stone-100 flex justify-end">
-                    <button 
-                        wire:click="closeReportModal" 
-                        class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl shadow-2xs transition cursor-pointer">
-                        {{ __('Entendido / Cerrar') }}
-                    </button>
-                </div>
+                    <div class="pt-2 border-t border-stone-100 flex justify-end">
+                        <button 
+                            wire:click="closeReportModal" 
+                            class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs rounded-xl shadow-2xs transition cursor-pointer">
+                            {{ __('Entendido / Cerrar') }}
+                        </button>
+                    </div>
+                @endif
             </div>
         </div>
     @endif
@@ -686,7 +817,7 @@
                             {{ __($log) }}
                         </div>
                     @empty
-                        <div class="text-zinc-400 italic">{{ __('Ingresa la URL de tu tablero y da clic en "Sincronizar Desde Trello".') }}</div>
+                        <div class="text-zinc-400 italic">{{ __('Ingresa la URL de tu tablero y da clic en "Traer Solo Tarjetas Nuevas" o "Sincronización Completa".') }}</div>
                     @endforelse
                 </div>
             </div>

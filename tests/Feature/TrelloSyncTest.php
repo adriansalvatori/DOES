@@ -180,4 +180,138 @@ class TrelloSyncTest extends TestCase
         $this->assertEquals('https://trello.com/b/NEWBOARD123/my-board', Setting::get('trello_board_id'));
         $this->assertEquals('new_token_64_characters_long_12345678901234567890123456789012345', Setting::get('trello_user_token'));
     }
+
+    public function test_sync_only_new_cards_imports_new_cards_and_leaves_existing_untouched(): void
+    {
+        $existingOrder = Order::create([
+            'company_name' => 'ORIGINAL COMPANY',
+            'task_name' => 'Original Task Name',
+            'trello_card_id' => 'card_existing_123',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+        ]);
+
+        $this->mock(TrelloSyncService::class, function ($mock) {
+            $mock->shouldReceive('extractBoardId')->andReturn('mock_board_id');
+            $mock->shouldReceive('getBoardLists')->andReturn([
+                'success' => true,
+                'data' => [
+                    ['id' => 'list_entrante', 'name' => 'ENTRANTE'],
+                ],
+            ]);
+            $mock->shouldReceive('getBoardCards')->andReturn([
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 'card_existing_123',
+                        'name' => 'WO 999 - CHANGED COMPANY - Changed Task Name',
+                        'idList' => 'list_entrante',
+                    ],
+                    [
+                        'id' => 'card_brand_new_456',
+                        'name' => 'WO 500 - BRAND NEW CLIENT - New Flyer Design',
+                        'idList' => 'list_entrante',
+                    ],
+                ],
+            ]);
+            $mock->shouldReceive('syncCardToOrder')
+                ->once()
+                ->withArgs(fn ($card) => $card['id'] === 'card_brand_new_456')
+                ->andReturnUsing(function ($card) {
+                    $newOrder = Order::create([
+                        'company_name' => 'BRAND NEW CLIENT',
+                        'task_name' => 'New Flyer Design',
+                        'trello_card_id' => 'card_brand_new_456',
+                        'in_workspace' => false,
+                        'is_new_from_trello' => true,
+                        'core_status' => CoreStatus::ENTRANTE,
+                    ]);
+
+                    return [
+                        'order' => $newOrder,
+                        'action' => 'created',
+                        'company_name' => 'BRAND NEW CLIENT',
+                        'task_name' => 'New Flyer Design',
+                        'previous_status' => null,
+                        'new_status' => 'ENTRANTE',
+                        'details' => ['Nueva tarjeta importada desde Trello'],
+                    ];
+                });
+        });
+
+        $user = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($user);
+
+        Livewire::test(TrelloSync::class)
+            ->set('boardId', 'mock_board_id')
+            ->call('runTrelloSyncOnlyNew')
+            ->assertSet('syncReport.show', true)
+            ->assertSet('syncReport.added', 1)
+            ->assertSet('syncReport.unchanged', 1)
+            ->assertSet('syncReport.conflicts', 0)
+            ->assertSet('syncReport.pushed', 0)
+            ->assertSet('syncReport.moved', 0)
+            ->assertSet('syncReport.updated', 0)
+            ->assertSet('syncReport.deleted', 0)
+            ->assertSee('Sincronización completada: se importaron 1 tarjetas nuevas de Trello.');
+
+        // Verify existing order was NOT modified at all
+        $existingOrder->refresh();
+        $this->assertEquals('ORIGINAL COMPANY', $existingOrder->company_name);
+        $this->assertEquals('ORIGINAL TASK NAME', $existingOrder->task_name);
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $existingOrder->core_status);
+        $this->assertTrue($existingOrder->in_workspace);
+
+        // Verify new order exists in database
+        $this->assertDatabaseHas('orders', [
+            'trello_card_id' => 'card_brand_new_456',
+            'company_name' => 'BRAND NEW CLIENT',
+            'is_new_from_trello' => true,
+            'in_workspace' => false,
+        ]);
+    }
+
+    public function test_sync_only_new_cards_when_no_new_cards_exist(): void
+    {
+        Order::create([
+            'company_name' => 'EXISTING CLIENT',
+            'task_name' => 'Existing Task',
+            'trello_card_id' => 'card_existing_999',
+            'in_workspace' => false,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $this->mock(TrelloSyncService::class, function ($mock) {
+            $mock->shouldReceive('extractBoardId')->andReturn('mock_board_id');
+            $mock->shouldReceive('getBoardLists')->andReturn([
+                'success' => true,
+                'data' => [
+                    ['id' => 'list_entrante', 'name' => 'ENTRANTE'],
+                ],
+            ]);
+            $mock->shouldReceive('getBoardCards')->andReturn([
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 'card_existing_999',
+                        'name' => 'WO 123 - EXISTING CLIENT - Existing Task',
+                        'idList' => 'list_entrante',
+                    ],
+                ],
+            ]);
+            // syncCardToOrder should NOT be called at all
+            $mock->shouldNotReceive('syncCardToOrder');
+        });
+
+        $user = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($user);
+
+        Livewire::test(TrelloSync::class)
+            ->set('boardId', 'mock_board_id')
+            ->call('runTrelloSyncOnlyNew')
+            ->assertSet('syncReport.show', true)
+            ->assertSet('syncReport.added', 0)
+            ->assertSet('syncReport.unchanged', 1)
+            ->assertSee('No hay tarjetas nuevas en Trello (1 tarjetas existentes ya están registradas).');
+    }
 }

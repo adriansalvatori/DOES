@@ -67,6 +67,17 @@ enum SubtaskCategory: string
         };
     }
 
+    public function textColorClass(): string
+    {
+        return match ($this) {
+            self::CLIENT_ADJUSTMENTS => 'text-sky-700 hover:text-sky-800',
+            self::CAMILA_ADJUSTMENTS => 'text-purple-700 hover:text-purple-800',
+            self::PRODUCTION_ADJUSTMENTS => 'text-pink-700 hover:text-pink-800',
+            self::NEW_DESIGN => 'text-emerald-700 hover:text-emerald-800',
+            self::MANAGEMENT => 'text-amber-700 hover:text-amber-800',
+        };
+    }
+
     public function pillClass(): string
     {
         return match ($this) {

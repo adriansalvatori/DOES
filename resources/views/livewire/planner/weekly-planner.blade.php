@@ -965,7 +965,7 @@
             $colCount = max(1, $designerGridList->count());
             $isSingleDesignerFiltered = ($selectedDesignerFilter !== 'all' || $colCount === 1);
             $gridColsClass = $isSingleDesignerFiltered
-                ? 'grid-cols-1 lg:grid-cols-4'
+                ? 'grid-cols-1 lg:grid-cols-3'
                 : match($colCount) {
                     1 => 'grid-cols-1',
                     2 => 'grid-cols-1 md:grid-cols-2',
@@ -1472,11 +1472,11 @@
                                                                         type="button" 
                                                                         draggable="false"
                                                                         @click.stop="openCategory = !openCategory; openType = false"
-                                                                        class="px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer border hover:ring-2 hover:ring-offset-1 {{ $staskDone ? 'bg-stone-100/90 text-stone-400 border-stone-200/80 hover:bg-stone-200/60' : $cat->badgeStyle() }}"
+                                                                        class="px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 flex items-center gap-1 transition cursor-pointer hover:bg-stone-100/60 {{ $staskDone ? 'text-stone-400' : $cat->textColorClass() }}"
                                                                         title="{{ __('Al completar:') }} {{ $cat->returnActionLabel() }}. {{ __('Clic para cambiar') }}">
-                                                                        <span class="w-1.5 h-1.5 rounded-full {{ $staskDone ? 'bg-stone-300' : $cat->dotColorClass() }}"></span>
+                                                                        <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $staskDone ? 'bg-stone-300' : $cat->dotColorClass() }}"></span>
                                                                         <span>{{ $cat->shortReturnLabel() }}</span>
-                                                                        <x-lucide-chevron-down class="w-2.5 h-2.5 ml-0.5 {{ $staskDone ? 'text-stone-400 opacity-80' : 'opacity-60' }}" />
+                                                                        <x-lucide-chevron-down class="w-2.5 h-2.5 ml-0.5 {{ $staskDone ? 'text-stone-300' : 'opacity-50' }}" />
                                                                     </button>
 
                                                                     <!-- Category Dropdown Menu -->
@@ -1515,16 +1515,16 @@
                                                                         type="button" 
                                                                         draggable="false"
                                                                         @click.stop="openType = !openType; openCategory = false"
-                                                                        class="px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer hover:ring-2 hover:ring-offset-1 border {{ $staskDone ? 'bg-stone-100/90 text-stone-400 border-stone-200/80 hover:bg-stone-200/60' : ($stask->is_work_task !== false ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:ring-blue-300' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:ring-amber-300') }}"
+                                                                        class="px-1.5 py-0.5 rounded text-[10px] font-semibold shrink-0 flex items-center gap-1 transition cursor-pointer hover:bg-stone-100/60 {{ $staskDone ? 'text-stone-400' : ($stask->is_work_task !== false ? 'text-blue-600 hover:text-blue-700' : 'text-amber-600 hover:text-amber-700') }}"
                                                                         title="{{ __('Clic para cambiar tipo (Trabajo / Gestión)') }}">
                                                                         @if($stask->is_work_task !== false)
-                                                                            <x-lucide-wrench class="w-2.5 h-2.5 {{ $staskDone ? 'text-stone-400' : 'text-blue-600' }}" />
+                                                                            <x-lucide-wrench class="w-2.5 h-2.5 shrink-0 {{ $staskDone ? 'text-stone-300' : 'text-blue-600' }}" />
                                                                             <span>{{ __('Trabajo') }}</span>
                                                                         @else
-                                                                            <x-lucide-clipboard-list class="w-2.5 h-2.5 {{ $staskDone ? 'text-stone-400' : 'text-amber-600' }}" />
+                                                                            <x-lucide-clipboard-list class="w-2.5 h-2.5 shrink-0 {{ $staskDone ? 'text-stone-300' : 'text-amber-600' }}" />
                                                                             <span>{{ __('Gestión') }}</span>
                                                                         @endif
-                                                                        <x-lucide-chevron-down class="w-2.5 h-2.5 ml-0.5 {{ $staskDone ? 'text-stone-400 opacity-80' : 'opacity-60' }}" />
+                                                                        <x-lucide-chevron-down class="w-2.5 h-2.5 ml-0.5 {{ $staskDone ? 'text-stone-300' : 'opacity-50' }}" />
                                                                     </button>
 
                                                                     <!-- Type Dropdown Menu -->
@@ -1794,6 +1794,13 @@
                         $todayCompleted = $todayTasks->filter(fn($st) => $st->isDone())->count();
                         $todayPending = $todayTotal - $todayCompleted;
                         $todayPercentage = $todayTotal > 0 ? (int) round(($todayCompleted / $todayTotal) * 100) : 0;
+                        $designerColor = $singleDesigner->hex_color ?: match($singleDesigner->color_type) {
+                            'magenta' => '#F3A8FF',
+                            'cyan' => '#52EAFD',
+                            'emerald', 'green' => '#5FE9B5',
+                            'amber', 'yellow' => '#fbbf24',
+                            default => '#10b981',
+                        };
                     @endphp
 
                     <!-- Minimalist Dynamic Today's Progress Widget (Right Half) -->
@@ -1869,8 +1876,8 @@
                             <!-- The Progress Bar Track -->
                             <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden p-0.5 border border-stone-200/60 shadow-inner">
                                 <div 
-                                    class="h-full rounded-full transition-all duration-700 ease-out {{ $todayPercentage === 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm shadow-emerald-500/20' : ($todayPercentage > 0 ? 'bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-500 shadow-sm shadow-blue-500/20' : 'bg-transparent') }}"
-                                    style="width: {{ $todayPercentage }}%">
+                                    class="h-full rounded-full transition-all duration-700 ease-out shadow-xs"
+                                    style="width: {{ $todayPercentage }}%; @if($todayPercentage > 0) background: linear-gradient(90deg, #facc15 0%, {{ $designerColor }} 100%); @endif">
                                 </div>
                             </div>
                         </div>

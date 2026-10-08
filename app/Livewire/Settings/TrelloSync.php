@@ -66,6 +66,7 @@ class TrelloSync extends Component
 
     public array $syncReport = [
         'show' => false,
+        'type' => 'full',
         'total' => 0,
         'added' => 0,
         'moved' => 0,
@@ -387,6 +388,7 @@ class TrelloSync extends Component
 
         $this->syncReport = [
             'show' => true,
+            'type' => 'full',
             'total' => $totalSynced,
             'added' => $addedCount,
             'moved' => $movedCount,
@@ -401,6 +403,117 @@ class TrelloSync extends Component
 
         $this->syncLog[] = "[$timestamp] Sincronización procesada: {$totalSynced} tarjetas ({$addedCount} nuevas, {$pushedCount} enviadas a Trello, {$movedCount} movidas, {$updatedCount} actualizadas, {$conflictCount} conflictos, {$deletedCount} faltantes en Trello).";
         session()->flash('message', "Sincronización con Trello completada. ({$conflictCount} conflictos pendientes por resolver).");
+    }
+
+    public function runTrelloSyncOnlyNew(): void
+    {
+        if (empty(trim($this->boardId))) {
+            session()->flash('error', 'Por favor ingresa un ID o URL de Tablero Trello válido.');
+
+            return;
+        }
+
+        Setting::set('trello_board_id', trim($this->boardId));
+        Setting::set('trello_user_token', trim($this->userToken));
+        $this->dispatch('trello-settings-saved');
+
+        $syncService = app(TrelloSyncService::class);
+        $extractedBoardId = $syncService->extractBoardId($this->boardId);
+        $timestamp = now()->format('H:i:s');
+
+        $this->syncLog[] = "[$timestamp] Buscando únicamente tarjetas nuevas en Trello ({$extractedBoardId})...";
+
+        // Fetch lists
+        $listsRes = $syncService->getBoardLists($extractedBoardId, $this->apiKey, $this->userToken);
+        if (! $listsRes['success']) {
+            $this->syncLog[] = "[$timestamp] Error Trello API (Listas) - Status {$listsRes['status']}: {$listsRes['error']}";
+            session()->flash('error', 'No se pudo sincronizar con Trello. Revisa el log de consola.');
+
+            return;
+        }
+
+        $lists = $listsRes['data'];
+        $listsMap = [];
+        foreach ($lists as $list) {
+            $listsMap[$list['id']] = $list['name'];
+        }
+
+        // Fetch cards
+        $cardsRes = $syncService->getBoardCards($extractedBoardId, $this->apiKey, $this->userToken);
+        if (! $cardsRes['success']) {
+            $this->syncLog[] = "[$timestamp] Error Trello API (Tarjetas) - Status {$cardsRes['status']}: {$cardsRes['error']}";
+            session()->flash('error', 'Error al obtener tarjetas de Trello.');
+
+            return;
+        }
+
+        $cards = $cardsRes['data'];
+        $existingCardIds = Order::whereNotNull('trello_card_id')->pluck('trello_card_id')->flip()->all();
+
+        $addedCount = 0;
+        $skippedCount = 0;
+        $changesList = [];
+
+        foreach ($cards as $card) {
+            $cardId = $card['id'] ?? null;
+            if (! $cardId || isset($existingCardIds[$cardId])) {
+                $skippedCount++;
+
+                continue;
+            }
+
+            $res = $syncService->syncCardToOrder($card, $listsMap, $extractedBoardId, $this->apiKey, $this->userToken);
+            if (! $res) {
+                continue;
+            }
+
+            if ($res['action'] === 'created') {
+                $existingCardIds[$cardId] = true;
+                $addedCount++;
+                $changesList[] = [
+                    'order_id' => $res['order']->id,
+                    'action' => 'created',
+                    'company' => $res['company_name'] ?? 'Empresa',
+                    'task' => $res['task_name'] ?? 'Tarea',
+                    'previous_status' => $res['previous_status'] ?? '',
+                    'new_status' => $res['new_status'] ?? '',
+                    'details' => ! empty($res['details']) ? $res['details'] : ['Nueva tarjeta importada desde Trello'],
+                    'diff_fields' => [],
+                    'workspace_updated_at' => 'N/A',
+                    'trello_updated_at' => now()->format('d M Y, h:i A'),
+                    'workspace_data' => [],
+                    'trello_data' => [],
+                    'card_data' => $card,
+                ];
+            }
+        }
+
+        $totalEvaluated = count($cards);
+
+        $this->syncReport = [
+            'show' => true,
+            'type' => 'new_only',
+            'total' => $totalEvaluated,
+            'added' => $addedCount,
+            'moved' => 0,
+            'pushed' => 0,
+            'updated' => 0,
+            'conflicts' => 0,
+            'deleted' => 0,
+            'unchanged' => $skippedCount,
+            'timestamp' => now()->format('d M, Y - h:i A'),
+            'changes' => $changesList,
+        ];
+
+        $this->activeFilter = $addedCount > 0 ? 'created' : 'all';
+
+        $this->syncLog[] = "[$timestamp] Sincronización de solo nuevas finalizada: {$addedCount} nuevas tarjetas importadas ({$skippedCount} existentes omitidas de {$totalEvaluated} evaluadas).";
+
+        if ($addedCount > 0) {
+            session()->flash('message', "Sincronización completada: se importaron {$addedCount} tarjetas nuevas de Trello.");
+        } else {
+            session()->flash('message', "No hay tarjetas nuevas en Trello ({$skippedCount} tarjetas existentes ya están registradas).");
+        }
     }
 
     public function render()
