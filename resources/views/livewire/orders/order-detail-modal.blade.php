@@ -2769,7 +2769,10 @@
                             <!-- Add Comment Form with Modern Rich Editor -->
                             <div 
                                 wire:ignore
-                                class="bg-white border border-[#e9e9e7] focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 rounded-xl transition-all duration-150 shadow-2xs overflow-hidden" 
+                                class="relative bg-white border border-[#e9e9e7] focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/20 rounded-xl transition-all duration-150 shadow-2xs overflow-hidden" 
+                                x-on:livewire-upload-start="isUploadingPhotos = true"
+                                x-on:livewire-upload-finish="isUploadingPhotos = false"
+                                x-on:livewire-upload-error="isUploadingPhotos = false"
                                 x-data="{
                                     isBold: false,
                                     isItalic: false,
@@ -2779,6 +2782,9 @@
                                     isH2: false,
                                     isEmpty: true,
                                     isSubmitting: false,
+                                    isDraggingPhotos: false,
+                                    isUploadingPhotos: false,
+                                    stagedPhotos: [],
 
                                     init() {
                                         this.syncFromLivewire();
@@ -2791,6 +2797,7 @@
                                                     this.updateEmptyState();
                                                     this.updateActiveFormatting();
                                                 }
+                                                this.clearStagedPhotos();
                                             }
                                         });
                                     },
@@ -3499,15 +3506,142 @@
                                         const editor = this.$refs.editor;
                                         if (!editor) return;
                                         const md = this.getMarkdownFromDOM(editor).trim();
-                                        if (!md) return;
+                                        if (!md && this.stagedPhotos.length === 0) return;
+
+                                        if (this.isUploadingPhotos) {
+                                            return;
+                                        }
 
                                         this.isSubmitting = true;
                                         $wire.set('newTrelloComment', md);
                                         $wire.addTrelloComment().then(() => {
                                             this.isSubmitting = false;
+                                            this.clearStagedPhotos();
                                         }).catch(() => {
                                             this.isSubmitting = false;
                                         });
+                                    },
+
+                                    addFiles(fileList) {
+                                        if (!fileList || fileList.length === 0) return;
+                                        const maxBytes = 10 * 1024 * 1024;
+                                        let oversized = [];
+
+                                        for (let i = 0; i < fileList.length; i++) {
+                                            const file = fileList[i];
+                                            if (!file.type || !file.type.startsWith('image/')) {
+                                                continue;
+                                            }
+                                            if (file.size > maxBytes) {
+                                                oversized.push(file.name);
+                                                continue;
+                                            }
+
+                                            let sizeFormatted = '';
+                                            if (file.size < 1024 * 1024) {
+                                                sizeFormatted = (file.size / 1024).toFixed(1) + ' KB';
+                                            } else {
+                                                sizeFormatted = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+                                            }
+
+                                            this.stagedPhotos.push({
+                                                file: file,
+                                                url: URL.createObjectURL(file),
+                                                name: file.name,
+                                                size: sizeFormatted
+                                            });
+                                        }
+
+                                        if (oversized.length > 0) {
+                                            $wire.dispatch('toast', { message: '{{ __('Una o más fotos superan los 10 MB (límite de Trello): ') }}' + oversized.join(', ') });
+                                        }
+
+                                        this.syncPhotosToInput();
+                                    },
+
+                                    removePhoto(index) {
+                                        if (this.stagedPhotos[index]) {
+                                            try { URL.revokeObjectURL(this.stagedPhotos[index].url); } catch(e) {}
+                                            this.stagedPhotos.splice(index, 1);
+                                            this.syncPhotosToInput();
+                                            $wire.call('removeCommentPhoto', index);
+                                        }
+                                    },
+
+                                    clearStagedPhotos() {
+                                        this.stagedPhotos.forEach(p => {
+                                            try { URL.revokeObjectURL(p.url); } catch(e) {}
+                                        });
+                                        this.stagedPhotos = [];
+                                        const input = this.$refs.photoInput;
+                                        if (input) {
+                                            input.value = '';
+                                        }
+                                        $wire.call('clearCommentPhotos');
+                                    },
+
+                                    syncPhotosToInput() {
+                                        const input = this.$refs.photoInput;
+                                        if (!input) return;
+                                        try {
+                                            const dt = new DataTransfer();
+                                            this.stagedPhotos.forEach(p => dt.items.add(p.file));
+                                            input.files = dt.files;
+                                            input.dispatchEvent(new Event('change', { bubbles: true }));
+                                        } catch (e) {
+                                            console.error('Error syncing photos to input:', e);
+                                        }
+                                    },
+
+                                    handleFileSelect(event) {
+                                        const files = event.target.files;
+                                        if (files && files.length > 0) {
+                                            this.addFiles(files);
+                                        }
+                                    },
+
+                                    handlePaste(event) {
+                                        const clipboard = event.clipboardData;
+                                        if (!clipboard) return;
+
+                                        const items = clipboard.items;
+                                        let imageFiles = [];
+
+                                        if (items) {
+                                            for (let i = 0; i < items.length; i++) {
+                                                if (items[i].type && items[i].type.startsWith('image/')) {
+                                                    const file = items[i].getAsFile();
+                                                    if (file) {
+                                                        const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+                                                        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+                                                        const namedFile = new File([file], 'captura_' + timestamp + '.' + ext, { type: file.type });
+                                                        imageFiles.push(namedFile);
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (imageFiles.length > 0) {
+                                            event.preventDefault();
+                                            this.addFiles(imageFiles);
+                                        }
+                                    },
+
+                                    handleEditorDrop(event) {
+                                        this.isDraggingPhotos = false;
+                                        const dt = event.dataTransfer;
+                                        if (!dt || !dt.files || dt.files.length === 0) return;
+
+                                        let imageFiles = [];
+                                        for (let i = 0; i < dt.files.length; i++) {
+                                            if (dt.files[i].type && dt.files[i].type.startsWith('image/')) {
+                                                imageFiles.push(dt.files[i]);
+                                            }
+                                        }
+
+                                        if (imageFiles.length > 0) {
+                                            this.addFiles(imageFiles);
+                                        }
                                     },
 
                                     getMarkdownFromDOM(node) {
@@ -3759,10 +3893,7 @@
                                             title="{{ __('Lista numerada (1.)') }}"
                                         >
                                             <x-lucide-list-ordered class="w-3.5 h-3.5" />
-                                            <span class="hidden sm:inline">{{ __('Lista') }}</span>
-                                        </button>
-
-                                        <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
+                                          <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
 
                                         <!-- Divider Line -->
                                         <button 
@@ -3774,6 +3905,19 @@
                                         >
                                             <x-lucide-separator-horizontal class="w-3.5 h-3.5" />
                                         </button>
+
+                                        <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
+
+                                        <!-- Attach Photo Button in Toolbar -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="$refs.photoInput.click()" 
+                                            class="p-1.5 rounded-md border border-transparent text-zinc-600 hover:bg-stone-200/70 hover:text-sky-600 text-xs transition flex items-center justify-center cursor-pointer group" 
+                                            title="{{ __('Adjuntar foto(s)') }}"
+                                        >
+                                            <x-lucide-image class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                                        </button>
                                     </div>
 
                                     <div class="text-[10px] text-zinc-400 hidden md:flex items-center gap-1 font-mono">
@@ -3781,9 +3925,31 @@
                                     </div>
                                 </div>
 
+                                <!-- Animated Drag & Drop Overlay for Comment Photos -->
+                                <div 
+                                    x-show="isDraggingPhotos" 
+                                    x-transition:enter="transition ease-out duration-150"
+                                    x-transition:enter-start="opacity-0 scale-95"
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    x-transition:leave="transition ease-in duration-100"
+                                    x-transition:leave-start="opacity-100 scale-100"
+                                    x-transition:leave-end="opacity-0 scale-95"
+                                    class="absolute inset-0 z-30 rounded-xl bg-sky-50/95 backdrop-blur-xs border-2 border-dashed border-sky-500 flex flex-col items-center justify-center p-4 text-center pointer-events-none"
+                                    style="display: none;"
+                                >
+                                    <div class="w-10 h-10 rounded-full bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-600 mb-1.5 animate-bounce">
+                                        <x-lucide-image class="w-5 h-5" />
+                                    </div>
+                                    <p class="text-xs font-bold text-sky-950">{{ __('Suelta las fotos aquí') }}</p>
+                                    <p class="text-[11px] text-sky-700 mt-0.5">{{ __('Se adjuntarán a este comentario (máx. 10 MB c/u)') }}</p>
+                                </div>
+
                                 <!-- Contenteditable Input Area -->
                                 <div 
                                     @click="focusEditor()"
+                                    @dragover.prevent="isDraggingPhotos = true"
+                                    @dragleave.prevent="isDraggingPhotos = false"
+                                    @drop.prevent="handleEditorDrop($event)"
                                     class="p-3 min-h-[90px] max-h-[220px] overflow-y-auto cursor-text bg-white"
                                 >
                                     <div 
@@ -3793,44 +3959,124 @@
                                         @blur="handleBlur()"
                                         @keydown="handleKeydown($event)"
                                         @keyup="handleKeyup($event)"
+                                        @paste="handlePaste($event)"
                                         @pointerup="updateActiveFormatting()"
-                                        data-placeholder="{{ __('Escribe un comentario (# Título, - viñetas, --- divisor)...') }}"
+                                        data-placeholder="{{ __('Escribe un comentario (# Título, - viñetas, --- divisor, pega o arrastra fotos)...') }}"
                                         class="comment-editor-box w-full text-xs text-zinc-900 font-sans leading-relaxed outline-none break-words min-h-[64px]"
                                     ></div>
                                 </div>
 
+                                <!-- Staged Photos Tray (When photos are selected / dropped / pasted) -->
+                                <div 
+                                    x-show="stagedPhotos.length > 0" 
+                                    x-cloak
+                                    class="border-t border-[#f0f0ee] bg-stone-50/80 p-2.5 space-y-2 select-none"
+                                >
+                                    <div class="flex items-center justify-between text-[11px] px-0.5">
+                                        <span class="font-medium flex items-center gap-1.5 text-zinc-700">
+                                            <x-lucide-image class="w-3.5 h-3.5 text-sky-600" />
+                                            <span>{{ __('Fotos a adjuntar:') }}</span>
+                                            <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-200" x-text="stagedPhotos.length"></span>
+                                        </span>
+                                        <button 
+                                            type="button" 
+                                            @click="clearStagedPhotos()" 
+                                            class="text-[10px] text-zinc-400 hover:text-rose-600 transition cursor-pointer font-medium"
+                                        >
+                                            {{ __('Quitar todas') }}
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+                                        <template x-for="(photo, index) in stagedPhotos" :key="index">
+                                            <div class="relative group/preview shrink-0 w-20 h-20 rounded-lg overflow-hidden border border-stone-200 bg-white shadow-2xs">
+                                                <img :src="photo.url" :alt="photo.name" class="w-full h-full object-cover">
+                                                <div class="absolute inset-0 bg-stone-900/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <button 
+                                                        type="button" 
+                                                        @click="removePhoto(index)" 
+                                                        class="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700 transition cursor-pointer"
+                                                        title="{{ __('Quitar esta foto') }}"
+                                                    >
+                                                        <x-lucide-x class="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                                <div class="absolute bottom-0 inset-x-0 bg-stone-900/75 backdrop-blur-[1px] text-white text-[8px] px-1 py-0.5 truncate font-mono" x-text="photo.name"></div>
+                                            </div>
+                                        </template>
+
+                                        {{-- Add more photos button --}}
+                                        <button 
+                                            type="button" 
+                                            @click="$refs.photoInput.click()" 
+                                            class="shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-stone-300 hover:border-sky-400 bg-white hover:bg-sky-50/50 flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-sky-600 transition cursor-pointer"
+                                            title="{{ __('Agregar más fotos') }}"
+                                        >
+                                            <x-lucide-plus class="w-5 h-5" />
+                                            <span class="text-[9px] font-medium">{{ __('Agregar') }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <!-- Action Bar (Bottom) -->
-                                <div class="border-t border-[#f0f0ee] bg-[#fafaf9] px-3 py-2 flex items-center justify-between gap-2">
-                                    <div class="flex items-center gap-2 text-[10.5px] text-zinc-400 font-sans select-none">
-                                        <span class="flex items-center gap-1">
-                                            <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">Enter</kbd>
-                                            <span class="hidden sm:inline">{{ __('nueva línea') }}</span>
-                                        </span>
-                                        <span class="text-zinc-300">•</span>
-                                        <span class="flex items-center gap-1">
-                                            <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">⌘ / Ctrl + Enter</kbd>
-                                            <span class="hidden sm:inline">{{ __('publicar') }}</span>
-                                        </span>
+                                <div class="border-t border-[#f0f0ee] bg-[#fafaf9] px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
+                                    <div class="flex items-center gap-3">
+                                        <!-- Attach Photo Button in Action Bar -->
+                                        <button 
+                                            type="button" 
+                                            @click="$refs.photoInput.click()" 
+                                            class="px-2 py-1 rounded-md text-[11px] font-medium text-zinc-600 hover:text-sky-700 hover:bg-stone-200/60 transition flex items-center gap-1.5 cursor-pointer border border-transparent hover:border-stone-200"
+                                            title="{{ __('Adjuntar fotos a este comentario') }}"
+                                        >
+                                            <x-lucide-camera class="w-3.5 h-3.5 text-zinc-500" />
+                                            <span>{{ __('Adjuntar foto') }}</span>
+                                            <template x-if="stagedPhotos.length > 0">
+                                                <span class="px-1.5 py-0.2 rounded-full text-[9.5px] font-bold bg-sky-100 text-sky-700 border border-sky-300" x-text="stagedPhotos.length"></span>
+                                            </template>
+                                        </button>
+
+                                        <div class="hidden sm:flex items-center gap-2 text-[10.5px] text-zinc-400 font-sans select-none">
+                                            <span class="flex items-center gap-1">
+                                                <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">Enter</kbd>
+                                                <span>{{ __('nueva línea') }}</span>
+                                            </span>
+                                            <span class="text-zinc-300">•</span>
+                                            <span class="flex items-center gap-1">
+                                                <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">⌘ / Ctrl + Enter</kbd>
+                                                <span>{{ __('publicar') }}</span>
+                                            </span>
+                                        </div>
                                     </div>
 
                                     <div class="flex items-center gap-3">
-                                        <span class="text-[11px] text-zinc-400 hidden sm:inline">
+                                        <span class="text-[11px] text-zinc-400 hidden md:inline">
                                             {{ __('Como:') }} <strong class="text-zinc-700 font-medium">{{ auth()->user()?->name ?? __('Usuario') }}</strong>
                                         </span>
                                         <button 
                                             @click="submit()"
-                                            :disabled="isSubmitting || isEmpty"
+                                            :disabled="isSubmitting || isUploadingPhotos || (isEmpty && stagedPhotos.length === 0)"
                                             wire:loading.attr="disabled"
-                                            wire:target="addTrelloComment"
+                                            wire:target="addTrelloComment, commentPhotos"
                                             type="button" 
                                             class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
                                         >
-                                            <x-lucide-send x-show="!isSubmitting" wire:loading.remove wire:target="addTrelloComment" class="w-3.5 h-3.5" />
-                                            <x-lucide-loader-2 x-show="isSubmitting" wire:loading wire:target="addTrelloComment" class="w-3.5 h-3.5 animate-spin" />
-                                            <span>{{ __('Publicar en Trello') }}</span>
+                                            <x-lucide-send x-show="!isSubmitting && !isUploadingPhotos" wire:loading.remove wire:target="addTrelloComment, commentPhotos" class="w-3.5 h-3.5" />
+                                            <x-lucide-loader-2 x-show="isSubmitting || isUploadingPhotos" wire:loading wire:target="addTrelloComment, commentPhotos" class="w-3.5 h-3.5 animate-spin" />
+                                            <span x-text="isSubmitting ? '{{ __('Publicando...') }}' : (isUploadingPhotos ? '{{ __('Cargando fotos...') }}' : '{{ __('Publicar en Trello') }}')">{{ __('Publicar en Trello') }}</span>
                                         </button>
                                     </div>
                                 </div>
+
+                                <!-- Hidden File Input for Comment Photos -->
+                                <input 
+                                    type="file" 
+                                    wire:model="commentPhotos" 
+                                    x-ref="photoInput" 
+                                    @change="handleFileSelect($event)" 
+                                    accept="image/*" 
+                                    multiple 
+                                    class="hidden"
+                                >
                             </div>
 
                             <!-- Comments List -->
@@ -4013,6 +4259,20 @@
                         <div 
                             x-data="{
                                 isDragging: false,
+                                clientPreviewUrl: null,
+                                setPreview(file) {
+                                    if (!file || !(file instanceof Blob) || (file.type && !file.type.startsWith('image/'))) return;
+                                    if (this.clientPreviewUrl) {
+                                        URL.revokeObjectURL(this.clientPreviewUrl);
+                                    }
+                                    this.clientPreviewUrl = URL.createObjectURL(file);
+                                },
+                                clearPreview() {
+                                    if (this.clientPreviewUrl) {
+                                        URL.revokeObjectURL(this.clientPreviewUrl);
+                                        this.clientPreviewUrl = null;
+                                    }
+                                },
                                 handlePaste(e) {
                                     const items = (e.clipboardData || window.clipboardData)?.items;
                                     if (!items) return;
@@ -4021,6 +4281,7 @@
                                             e.preventDefault();
                                             const file = items[i].getAsFile();
                                             if (file) {
+                                                this.setPreview(file);
                                                 $wire.upload('approvalImage', file);
                                             }
                                             return;
@@ -4032,11 +4293,13 @@
                                     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                                         const file = e.dataTransfer.files[0];
                                         if (file && file.type.startsWith('image/')) {
+                                            this.setPreview(file);
                                             $wire.upload('approvalImage', file);
                                         }
                                     }
                                 }
                             }"
+                            x-init="$watch('$wire.approvalImage', value => { if (!value) clearPreview(); })"
                             @dragover.prevent="isDragging = true"
                             @dragenter.prevent="isDragging = true"
                             @dragleave.prevent="isDragging = false"
@@ -4060,17 +4323,39 @@
 
                             <!-- Uploaded image preview -->
                             @if($approvalImage && !$errors->has('approvalImage'))
+                                @php
+                                    $approvalPreviewUrl = null;
+                                    if (method_exists($approvalImage, 'temporaryUrl')) {
+                                        try {
+                                            $approvalPreviewUrl = $approvalImage->temporaryUrl();
+                                        } catch (\Throwable $e) {
+                                            $approvalPreviewUrl = null;
+                                        }
+                                    }
+                                @endphp
                                 <div wire:loading.remove wire:target="approvalImage" class="mt-2.5 p-2 rounded-lg bg-[#fafaf9] border border-stone-200 flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-2.5 min-w-0">
-                                        @if(method_exists($approvalImage, 'temporaryUrl'))
-                                            <img src="{{ $approvalImage->temporaryUrl() }}" alt="{{ __('Soporte') }}" class="w-12 h-12 object-cover rounded-md border border-stone-300 shadow-2xs shrink-0">
-                                        @endif
+                                        <div class="w-12 h-12 rounded-md border border-stone-300 shadow-2xs shrink-0 overflow-hidden bg-stone-100 flex items-center justify-center relative">
+                                            <template x-if="clientPreviewUrl">
+                                                <img :src="clientPreviewUrl" alt="{{ __('Soporte') }}" class="w-full h-full object-cover">
+                                            </template>
+                                            <template x-if="!clientPreviewUrl">
+                                                @if($approvalPreviewUrl)
+                                                    <img src="{{ $approvalPreviewUrl }}" alt="{{ __('Soporte') }}" class="w-full h-full object-cover" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                                    <div class="hidden w-full h-full items-center justify-center bg-stone-100 text-stone-400">
+                                                        <x-lucide-image class="w-5 h-5" />
+                                                    </div>
+                                                @else
+                                                    <x-lucide-image class="w-5 h-5 text-stone-400" />
+                                                @endif
+                                            </template>
+                                        </div>
                                         <div class="min-w-0">
                                             <span class="text-xs font-semibold text-zinc-800 truncate block">{{ __('Imagen de soporte adjunta') }}</span>
                                             <span class="text-[10px] text-zinc-400 block">{{ number_format($approvalImage->getSize() / 1024, 1) }} KB</span>
                                         </div>
                                     </div>
-                                    <button type="button" wire:click="removeApprovalImage" class="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="{{ __('Quitar imagen') }}">
+                                    <button type="button" wire:click="removeApprovalImage" @click="clearPreview()" class="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer" title="{{ __('Quitar imagen') }}">
                                         <x-lucide-trash-2 class="w-4 h-4" />
                                     </button>
                                 </div>
@@ -4081,7 +4366,7 @@
                                 <label for="approval-image-file" class="inline-flex items-center gap-1.5 font-medium hover:text-emerald-700 cursor-pointer transition select-none">
                                     <x-lucide-paperclip class="w-3.5 h-3.5 text-zinc-400" />
                                     <span>{{ __('Adjuntar imagen') }}</span>
-                                    <input type="file" id="approval-image-file" wire:model="approvalImage" accept="image/*" class="hidden">
+                                    <input type="file" id="approval-image-file" wire:model="approvalImage" accept="image/*" class="hidden" @change="if ($event.target.files && $event.target.files[0]) { setPreview($event.target.files[0]); }">
                                 </label>
 
                                 <span class="text-[10px] text-zinc-400 flex items-center gap-1 select-none">

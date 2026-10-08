@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Enums\SubtaskCategory;
 use App\Livewire\Dashboard\Index as DashboardIndex;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Livewire\Planner\WeeklyPlanner;
@@ -1130,5 +1131,248 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertDontSee('Enviar correo de atraso preventivo');
+    }
+
+    public function test_can_update_subtask_category_in_weekly_planner(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+        $order = Order::create([
+            'company_name' => 'Test Company',
+            'task_name' => 'Banner Design',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Ajustes cliente',
+            'status' => 'todo',
+            'scheduled_date' => now()->toDateString(),
+            'assignee_id' => $designer->id,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('updateTaskCategory', $subtask->id, SubtaskCategory::CLIENT_ADJUSTMENTS->value)
+            ->assertDispatched('order-updated')
+            ->assertDispatched('subtask-updated');
+
+        $this->assertEquals(
+            SubtaskCategory::CLIENT_ADJUSTMENTS,
+            $subtask->fresh()->category
+        );
+        $this->assertEquals(
+            CoreStatus::ENVIADO_AL_CLIENTE,
+            $subtask->fresh()->return_core_status
+        );
+    }
+
+    public function test_can_update_subtask_type_in_weekly_planner(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+        $order = Order::create([
+            'company_name' => 'Test Company',
+            'task_name' => 'Banner Design',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Subtarea de prueba',
+            'status' => 'todo',
+            'scheduled_date' => now()->toDateString(),
+            'assignee_id' => $designer->id,
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('updateTaskType', $subtask->id, false)
+            ->assertDispatched('order-updated')
+            ->assertDispatched('subtask-updated');
+
+        $this->assertFalse((bool) $subtask->fresh()->is_work_task);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('updateTaskType', $subtask->id, true)
+            ->assertDispatched('order-updated')
+            ->assertDispatched('subtask-updated');
+
+        $this->assertTrue((bool) $subtask->fresh()->is_work_task);
+    }
+
+    public function test_subtask_properties_rendered_in_by_designer_view_when_filtered_by_single_designer(): void
+    {
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true]);
+        $order = Order::create([
+            'company_name' => 'PORKYS REAL MEXICAN FOOD',
+            'task_name' => 'VARIOS DE LOCACION',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Ajustes cliente - MENU NUEVA INFORMACION',
+            'status' => 'todo',
+            'scheduled_date' => now()->startOfWeek(\Carbon\Carbon::MONDAY)->toDateString(),
+            'assignee_id' => $designer->id,
+            'category' => SubtaskCategory::CLIENT_ADJUSTMENTS,
+            'is_work_task' => true,
+        ]);
+
+        // When filtered by single designer in by_designer view
+        Livewire::test(WeeklyPlanner::class)
+            ->set('viewMode', 'by_designer')
+            ->set('selectedDesignerFilter', (string) $designer->id)
+            ->assertSee('Al Cliente')
+            ->assertSee('Trabajo');
+    }
+
+    public function test_adding_work_subtask_for_today_to_order_in_enviado_al_cliente_resets_sla_to_two_days_and_does_not_trigger_sla_warning_modal(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-08 10:00:00')); // Thursday
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $pastDueDate = Carbon::parse('2026-09-20'); // 18 days ago
+        $order = Order::create([
+            'company_name' => 'CLIENTE VIEJO CORP',
+            'task_name' => 'BOCETO INICIAL',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'substatus' => Substatus::WAITING_FOR_CLIENT,
+            'current_due_date' => $pastDueDate,
+            'original_due_date' => $pastDueDate,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $todayStr = now()->toDateString(); // 2026-10-08
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('scheduleSubtask', $order->id, 'Ajustes de cliente', $todayStr, $designer->id)
+            ->assertSet('showSlaWarningModal', false)
+            ->assertSessionMissing('warning');
+
+        $order->refresh();
+
+        // Order transitioned to Working Today with CAMBIOS_CLIENTE
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->core_status);
+        $this->assertEquals(Substatus::CAMBIOS_CLIENTE, $order->substatus);
+
+        // SLA was reset to 2 business days: Thursday -> Friday (1) -> Monday (2 = 2026-10-12)
+        $expectedNewDueDate = Carbon::parse('2026-10-12');
+        $this->assertEquals($expectedNewDueDate->toDateString(), $order->current_due_date->toDateString());
+    }
+
+    public function test_rescheduling_work_subtask_to_today_for_order_in_enviado_al_cliente_resets_sla_and_does_not_warn(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-08 10:00:00')); // Thursday
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $pastDueDate = Carbon::parse('2026-09-20');
+        $order = Order::create([
+            'company_name' => 'CLIENTE RESCHEDULE CORP',
+            'task_name' => 'DISENO CARRO',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'substatus' => Substatus::WAITING_FOR_CLIENT,
+            'current_due_date' => $pastDueDate,
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Ajustes logo',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => Carbon::parse('2026-10-15'), // Future date
+            'assignee_id' => $designer->id,
+            'is_work_task' => true,
+        ]);
+
+        // Reschedule to TODAY
+        Livewire::test(WeeklyPlanner::class)
+            ->call('rescheduleSubtask', $subtask->id, now()->toDateString())
+            ->assertSet('showSlaWarningModal', false)
+            ->assertSessionMissing('warning');
+
+        $order->refresh();
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->core_status);
+        $this->assertEquals('2026-10-12', $order->current_due_date->toDateString());
+    }
+
+    public function test_scheduling_subtask_beyond_sla_for_order_in_working_today_triggers_sla_warning_modal(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-08 10:00:00')); // Thursday
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'CLIENTE LATE WORK',
+            'task_name' => 'DISENO FACHADA',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => Carbon::parse('2026-10-12'), // 2 weekdays SLA (Monday)
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        // Schedule for next Thursday (2026-10-15), which is after 2026-10-12
+        $farFutureDate = Carbon::parse('2026-10-15')->toDateString();
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('scheduleSubtask', $order->id, 'Ajustes de cliente', $farFutureDate, $designer->id)
+            ->assertSet('showSlaWarningModal', true);
+    }
+
+    public function test_today_progress_widget_rendered_and_calculates_progress_correctly(): void
+    {
+        $designer1 = Designer::create(['name' => 'Euralíz', 'active' => true]);
+        $designer2 = Designer::create(['name' => 'Adrián', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'TAQUERIA LA CHULA',
+            'task_name' => 'Menu Board',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'designer_id' => $designer1->id,
+        ]);
+
+        $todayStr = now()->toDateString();
+
+        // 1 completed task, 1 pending task for today => 50%
+        RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Menu revisión',
+            'status' => 'done',
+            'completed_at' => now(),
+            'scheduled_date' => $todayStr,
+            'assignee_id' => $designer1->id,
+            'is_work_task' => true,
+        ]);
+
+        RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Imprimir vinilos',
+            'status' => 'todo',
+            'scheduled_date' => $todayStr,
+            'assignee_id' => $designer1->id,
+            'is_work_task' => true,
+        ]);
+
+        // When filtered by single designer (Euralíz)
+        Livewire::test(WeeklyPlanner::class)
+            ->set('viewMode', 'by_designer')
+            ->set('selectedDesignerFilter', (string) $designer1->id)
+            ->assertSee('Progreso de hoy')
+            ->assertSee('50%')
+            ->assertSee('Menu revisión')
+            ->assertSee('Imprimir vinilos');
+
+        // When viewing all designers, the right widget is not rendered
+        Livewire::test(WeeklyPlanner::class)
+            ->set('viewMode', 'by_designer')
+            ->set('selectedDesignerFilter', 'all')
+            ->assertDontSee('Progreso de hoy');
     }
 }

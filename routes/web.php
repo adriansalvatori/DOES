@@ -34,6 +34,7 @@ use App\Services\TrelloSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Livewire\Features\SupportFileUploads\FileUploadConfiguration;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 
 // Public Client Portal Routes (Auto-authenticated via unique QR token)
@@ -184,3 +185,41 @@ Route::get('/livewire/update', function (Request $request) {
 
     return redirect()->route('dashboard');
 });
+
+// Robust file preview route handler for Livewire uploads (handles proxy/SSL environments and inline disposition)
+$livewirePreviewPath = class_exists(EndpointResolver::class)
+    ? EndpointResolver::previewPath()
+    : '/livewire/preview-file/{filename}';
+
+$handleFilePreview = function (string $filename, Request $request) {
+    // Authorize: valid signed URL (absolute or relative) OR authenticated user session
+    $hasValidSignature = $request->hasValidSignature() || $request->hasValidSignature(false);
+
+    if (! $hasValidSignature && ! auth()->check()) {
+        abort(401);
+    }
+
+    if (! class_exists(FileUploadConfiguration::class)) {
+        abort(404);
+    }
+
+    $storage = FileUploadConfiguration::storage();
+    $path = FileUploadConfiguration::path($filename);
+
+    if (! $storage->exists($path)) {
+        abort(404);
+    }
+
+    return $storage->response($path, $filename, [
+        'Cache-Control' => 'no-cache, private',
+    ]);
+};
+
+Route::get($livewirePreviewPath, $handleFilePreview)
+    ->name('livewire.preview-file')
+    ->middleware(['web']);
+
+if ($livewirePreviewPath !== '/livewire/preview-file/{filename}') {
+    Route::get('/livewire/preview-file/{filename}', $handleFilePreview)
+        ->middleware(['web']);
+}

@@ -284,6 +284,10 @@ class AutomationEngine
             'substatus' => Substatus::CAMBIOS_CLIENTE,
             'client_last_response' => now(),
         ]);
+
+        $order->removeFlag(Substatus::OVERDUE);
+        $order->removeFlag(Substatus::ALMOST_OVERDUE);
+        $order->save();
     }
 
     /**
@@ -801,6 +805,10 @@ class AutomationEngine
                     'substatus' => $targetSubstatus,
                     'done_today' => false,
                 ]);
+
+                if ($prevStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                    $this->handleClientResponse($order);
+                }
 
                 OrderEvent::create([
                     'order_id' => $order->id,

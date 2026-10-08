@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\TrelloSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -373,5 +374,135 @@ class TrelloCardCommentsTest extends TestCase
         $this->assertStringContainsString('<h2>Subtítulo Secundario</h2>', $rendered);
         $this->assertStringContainsString('<hr', $rendered);
         $this->assertStringContainsString('Contenido normal de comentario.', $rendered);
+    }
+
+    public function test_posting_comment_with_attached_photo(): void
+    {
+        $order = Order::create([
+            'company_name' => 'FOTO CORP',
+            'task_name' => 'Diseño con Muestra',
+            'trello_card_id' => 'card_photo_123',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $fakePhoto = UploadedFile::fake()->image('muestra_color.jpg', 600, 400);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_photo_123/attachments*' => Http::response([
+                'id' => 'attach_photo_999',
+                'name' => 'muestra_color.jpg',
+                'url' => 'https://trello-attachments.s3.amazonaws.com/cards/card_photo_123/muestra_color.jpg',
+            ], 200),
+            'https://api.trello.com/1/cards/card_photo_123/actions*' => Http::response([], 200),
+            'https://api.trello.com/1/cards/card_photo_123/actions/comments*' => Http::response([
+                'id' => 'comm_with_photo',
+                'date' => now()->toIso8601String(),
+                'data' => [
+                    'text' => "Por favor revisar colores\n\n![muestra_color.jpg](https://trello-attachments.s3.amazonaws.com/cards/card_photo_123/muestra_color.jpg)",
+                ],
+                'memberCreator' => ['fullName' => 'Adrián Salvatori'],
+            ], 200),
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('newTrelloComment', 'Por favor revisar colores')
+            ->set('commentPhotos', [$fakePhoto])
+            ->call('addTrelloComment')
+            ->assertSet('newTrelloComment', '')
+            ->assertSet('commentPhotos', []);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+            'new_value' => 'muestra_color.jpg',
+        ]);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_COMMENT_ADDED',
+        ]);
+    }
+
+    public function test_posting_comment_with_only_photo_and_no_text(): void
+    {
+        $order = Order::create([
+            'company_name' => 'SOLO FOTO S.A.',
+            'task_name' => 'Banner Fachada',
+            'trello_card_id' => 'card_photo_only',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $fakePhoto = UploadedFile::fake()->image('captura_pantalla.png', 800, 600);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_photo_only/attachments*' => Http::response([
+                'id' => 'attach_photo_888',
+                'name' => 'captura_pantalla.png',
+                'url' => 'https://trello-attachments.s3.amazonaws.com/cards/card_photo_only/captura_pantalla.png',
+            ], 200),
+            'https://api.trello.com/1/cards/card_photo_only/actions*' => Http::response([], 200),
+            'https://api.trello.com/1/cards/card_photo_only/actions/comments*' => Http::response([
+                'id' => 'comm_photo_only',
+                'date' => now()->toIso8601String(),
+                'data' => [
+                    'text' => "📷 Foto adjunta:\n\n![captura_pantalla.png](https://trello-attachments.s3.amazonaws.com/cards/card_photo_only/captura_pantalla.png)",
+                ],
+                'memberCreator' => ['fullName' => 'Adrián Salvatori'],
+            ], 200),
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('newTrelloComment', '')
+            ->set('commentPhotos', [$fakePhoto])
+            ->call('addTrelloComment')
+            ->assertSet('newTrelloComment', '')
+            ->assertSet('commentPhotos', []);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+            'new_value' => 'captura_pantalla.png',
+        ]);
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_COMMENT_ADDED',
+        ]);
+    }
+
+    public function test_comment_markdown_rendering_transforms_images_into_proxied_cards(): void
+    {
+        $component = new OrderDetailModal;
+
+        $inputWithTrelloImage = "Muestra de prueba:\n\n![arte_final.png](https://trello-attachments.s3.amazonaws.com/123/arte_final.png)";
+        $rendered = $component->renderCommentMarkdown($inputWithTrelloImage);
+
+        // Proxied URL via trello.attachment-proxy
+        $this->assertStringContainsString('trello-attachment-proxy', $rendered);
+        // Includes click handler to open media preview modal
+        $this->assertStringContainsString('openMediaPreview', $rendered);
+        $this->assertStringContainsString('arte_final.png', $rendered);
+        $this->assertStringContainsString(__('Ampliar foto'), $rendered);
+    }
+
+    public function test_comment_photo_removal_and_clearing(): void
+    {
+        $component = new OrderDetailModal;
+        $fakePhoto1 = UploadedFile::fake()->image('foto1.jpg');
+        $fakePhoto2 = UploadedFile::fake()->image('foto2.jpg');
+
+        $component->commentPhotos = [$fakePhoto1, $fakePhoto2];
+        $this->assertCount(2, $component->commentPhotos);
+
+        $component->removeCommentPhoto(0);
+        $this->assertCount(1, $component->commentPhotos);
+        $this->assertSame($fakePhoto2, $component->commentPhotos[0]);
+
+        $component->clearCommentPhotos();
+        $this->assertEmpty($component->commentPhotos);
     }
 }

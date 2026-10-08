@@ -38,7 +38,12 @@ class AppServiceProvider extends ServiceProvider
         Order::observe(OrderObserver::class);
         RelatedTask::observe(RelatedTaskObserver::class);
 
-        if ($this->app->environment('production') || request()->header('x-forwarded-proto') === 'https') {
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+            if (config('app.url')) {
+                URL::forceRootUrl(config('app.url'));
+            }
+        } elseif (request()->header('x-forwarded-proto') === 'https') {
             URL::forceScheme('https');
         }
     }

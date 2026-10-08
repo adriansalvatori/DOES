@@ -6,7 +6,7 @@
     <title>{{ $title ?? (config('app.name') . ' - Trello Workflow Manager') }}</title>
     
     <!-- PWA & Favicon / App Icon -->
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">

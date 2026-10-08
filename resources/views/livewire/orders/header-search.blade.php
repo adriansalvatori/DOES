@@ -2,7 +2,6 @@
     x-data="{ 
         open: false, 
         selectedIndex: -1,
-        resultsCount: 0,
         focusInput() {
             this.open = true;
             $nextTick(() => {
@@ -14,12 +13,85 @@
             this.open = false;
             this.selectedIndex = -1;
             $wire.clearSearch();
+        },
+        getItems() {
+            return this.$refs.resultsContainer ? Array.from(this.$refs.resultsContainer.querySelectorAll('.search-result-btn')) : [];
+        },
+        selectNext() {
+            if (!this.open) {
+                this.open = true;
+                return;
+            }
+            const items = this.getItems();
+            if (items.length === 0) return;
+            if (this.selectedIndex < items.length - 1) {
+                this.selectedIndex++;
+            } else {
+                this.selectedIndex = 0;
+            }
+            this.scrollToSelected();
+        },
+        selectPrev() {
+            if (!this.open) {
+                this.open = true;
+                return;
+            }
+            const items = this.getItems();
+            if (items.length === 0) return;
+            if (this.selectedIndex > 0) {
+                this.selectedIndex--;
+            } else if (this.selectedIndex === 0) {
+                this.selectedIndex = -1;
+            } else {
+                this.selectedIndex = items.length - 1;
+            }
+            this.scrollToSelected();
+        },
+        scrollToSelected() {
+            this.$nextTick(() => {
+                if (this.selectedIndex < 0 || !this.$refs.resultsContainer) return;
+                const items = this.getItems();
+                const item = items[this.selectedIndex];
+                if (!item) return;
+                const targetEl = item.closest('.search-result-wrapper') || item;
+                const container = this.$refs.resultsContainer;
+
+                if (this.selectedIndex === 0) {
+                    container.scrollTop = 0;
+                    return;
+                }
+                if (this.selectedIndex === items.length - 1) {
+                    container.scrollTop = container.scrollHeight;
+                    return;
+                }
+
+                const containerRect = container.getBoundingClientRect();
+                const targetRect = targetEl.getBoundingClientRect();
+
+                if (targetRect.bottom > containerRect.bottom) {
+                    container.scrollTop += (targetRect.bottom - containerRect.bottom) + 8;
+                } else if (targetRect.top < containerRect.top) {
+                    container.scrollTop -= (containerRect.top - targetRect.top) + 8;
+                }
+            });
+        },
+        selectCurrent() {
+            if (!this.open) return;
+            const items = this.getItems();
+            if (items.length === 0) return;
+            const targetIdx = this.selectedIndex >= 0 ? this.selectedIndex : 0;
+            if (items[targetIdx]) {
+                items[targetIdx].click();
+            }
         }
     }"
     @keydown.window.cmd.k.prevent="focusInput()"
     @keydown.window.ctrl.k.prevent="focusInput()"
     @click.outside="open = false"
-    x-dropdown-nav
+    @keydown.arrow-down.prevent="selectNext()"
+    @keydown.arrow-up.prevent="selectPrev()"
+    @keydown.enter.prevent="selectCurrent()"
+    @keydown.escape="closeSearch()"
     class="relative flex-1 max-w-lg mx-2 sm:mx-4"
 >
     <!-- Search Bar Input Field & Create Task Button in Header -->
@@ -32,15 +104,13 @@
                 type="text" 
                 wire:model.live.debounce.200ms="search" 
                 @focus="open = true"
-                @keydown.escape="open = false"
-                @keydown.arrow-down.prevent="if (open && resultsCount > 0) { selectedIndex = (selectedIndex + 1) % resultsCount; }"
-                @keydown.arrow-up.prevent="if (open && resultsCount > 0) { selectedIndex = (selectedIndex - 1 + resultsCount) % resultsCount; }"
-                @keydown.enter.prevent="
-                    if (open && selectedIndex >= 0 && selectedIndex < resultsCount) {
-                        let btns = $refs.resultsContainer?.querySelectorAll('.search-result-btn');
-                        if (btns && btns[selectedIndex]) btns[selectedIndex].click();
-                    }
-                "
+                @input="selectedIndex = -1; open = true;"
+                @keydown.escape.stop="closeSearch()"
+                @keydown.arrow-down.prevent.stop="selectNext()"
+                @keydown.arrow-up.prevent.stop="selectPrev()"
+                @keydown.enter.prevent.stop="selectCurrent()"
+                @keydown.tab="if (open && getItems().length > 0) { $event.preventDefault(); selectNext(); }"
+                @keydown.shift.tab="if (open && getItems().length > 0) { $event.preventDefault(); selectPrev(); }"
                 placeholder="{{ __('Buscar en DOES (WO#, cliente, empresa, trabajo...)...') }}" 
                 class="w-full bg-[#f4f4f2] hover:bg-[#eaeaea] focus:bg-white border border-[#e2e2df] focus:border-stone-400 rounded-lg pl-8 pr-12 py-1 h-7.5 text-xs text-zinc-800 placeholder-zinc-400 transition focus:outline-none focus:ring-1 focus:ring-stone-300 shadow-2xs"
             />
@@ -83,8 +153,6 @@
         x-transition:leave="transition ease-in duration-75"
         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
         x-transition:leave-end="opacity-0 scale-98 -translate-y-1"
-        x-init="resultsCount = {{ count($results) + count($clientResults) }}"
-        x-effect="resultsCount = {{ count($results) + count($clientResults) }}"
         class="absolute left-0 top-full mt-2 bg-white border border-stone-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs max-h-[460px] flex flex-col w-full sm:w-[560px] max-w-[calc(100vw-2rem)]"
         style="display: none;"
     >
@@ -117,14 +185,13 @@
                         <div 
                             :class="{ 'bg-stone-100/90': selectedIndex === {{ $idx }} }"
                             @mouseenter="selectedIndex = {{ $idx }}"
-                            class="rounded-md transition"
+                            class="search-result-wrapper rounded-md transition"
                         >
                             <div 
                                 role="button"
-                                tabindex="0"
+                                tabindex="-1"
                                 wire:click="selectClient({{ $client->id }})"
                                 @click="closeSearch()"
-                                @keydown.enter="selectClient({{ $client->id }}); closeSearch();"
                                 class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex flex-nowrap items-center justify-between gap-2.5 group cursor-pointer min-w-0"
                             >
                                 <!-- Left Info Column -->
@@ -265,14 +332,13 @@
                         <div 
                             :class="{ 'bg-stone-100/90': selectedIndex === {{ $idx }} }"
                             @mouseenter="selectedIndex = {{ $idx }}"
-                            class="rounded-md transition"
+                            class="search-result-wrapper rounded-md transition"
                         >
                             <div 
                                 role="button"
-                                tabindex="0"
+                                tabindex="-1"
                                 wire:click="selectOrder({{ $order->id }})"
                                 @click="closeSearch()"
-                                @keydown.enter="selectOrder({{ $order->id }}); closeSearch();"
                                 class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex flex-nowrap items-center justify-between gap-2.5 group cursor-pointer min-w-0"
                             >
                                 <!-- Left Info Column -->
@@ -280,7 +346,7 @@
                                     <!-- Row 1: WO Badge, Company Name, Responsible -->
                                     <div class="flex items-center gap-2 truncate min-w-0">
                                         @if($order->wo_number)
-                                            <x-wo-badge :number="$order->wo_number" variant="outline" prefix="#" />
+                                            <x-wo-badge :number="$order->wo_number" variant="outline" prefix="#" tabindex="-1" />
                                         @endif
 
                                         <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none uppercase">
@@ -360,7 +426,7 @@
                 </span>
                 <span class="flex items-center gap-1">
                     <kbd class="px-1 py-0.2 rounded bg-white border border-stone-200 font-mono text-[9px]">↵</kbd>
-                    {{ __('Abrir orden') }}
+                    {{ __('Seleccionar') }}
                 </span>
             </div>
             <span class="flex items-center gap-1">

@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 
 class OrderDetailModal extends Component
@@ -131,6 +132,13 @@ class OrderDetailModal extends Component
 
     public $newTrelloComment = '';
 
+    /**
+     * Staged photo uploads for adding to a comment.
+     *
+     * @var array<int, TemporaryUploadedFile>
+     */
+    public $commentPhotos = [];
+
     public $isLoadingTrelloComments = false;
 
     public $trelloCommentError = null;
@@ -210,6 +218,7 @@ class OrderDetailModal extends Component
         $this->newTaskDate = now()->toDateString();
         $this->newTaskIsWork = true;
         $this->newTrelloComment = '';
+        $this->commentPhotos = [];
 
         $this->attachmentFile = null;
         $this->attachmentFiles = [];
@@ -330,6 +339,19 @@ class OrderDetailModal extends Component
     {
         $this->attachmentUploadError = null;
         $this->resetErrorBag(['attachmentFiles', 'attachmentFiles.*', 'attachmentFile']);
+    }
+
+    public function clearCommentPhotos(): void
+    {
+        $this->commentPhotos = [];
+        $this->resetErrorBag(['commentPhotos', 'commentPhotos.*']);
+    }
+
+    public function removeCommentPhoto(int $index): void
+    {
+        if (isset($this->commentPhotos[$index])) {
+            array_splice($this->commentPhotos, $index, 1);
+        }
     }
 
     public function updatedAttachmentFile(): void
@@ -687,7 +709,10 @@ class OrderDetailModal extends Component
 
     public function addTrelloComment()
     {
-        if (! $this->orderId || empty(trim($this->newTrelloComment))) {
+        $hasText = ! empty(trim($this->newTrelloComment));
+        $hasPhotos = ! empty($this->commentPhotos);
+
+        if (! $this->orderId || (! $hasText && ! $hasPhotos)) {
             return;
         }
 
@@ -698,9 +723,78 @@ class OrderDetailModal extends Component
             return;
         }
 
-        $commentText = trim($this->newTrelloComment);
         $authorName = auth()->user()?->name;
-        $res = app(TrelloSyncService::class)->addCardComment(
+        $trelloService = app(TrelloSyncService::class);
+        $uploadedPhotoMarkdown = [];
+
+        if ($hasPhotos) {
+            $photos = is_array($this->commentPhotos) ? $this->commentPhotos : [$this->commentPhotos];
+            $photos = array_values(array_filter($photos));
+
+            $this->validate([
+                'commentPhotos.*' => 'image|max:10240',
+            ], [
+                'commentPhotos.*.image' => __('Uno o más archivos seleccionados no son imágenes válidas.'),
+                'commentPhotos.*.max' => __('Las fotos no deben superar los 10 MB cada una.'),
+            ]);
+
+            foreach ($photos as $photo) {
+                try {
+                    $filePath = $photo->getRealPath();
+                    $fileName = $photo->getClientOriginalName();
+                    $mimeType = $photo->getMimeType();
+
+                    $uploadRes = $trelloService->uploadCardAttachment(
+                        cardId: $order->trello_card_id,
+                        filePath: $filePath,
+                        fileName: $fileName,
+                        mimeType: $mimeType,
+                    );
+
+                    if ($uploadRes['success']) {
+                        $attachment = $uploadRes['attachment'] ?? [];
+                        $attachUrl = $attachment['url'] ?? '';
+                        $attachName = $attachment['name'] ?? $fileName;
+
+                        OrderEvent::create([
+                            'order_id' => $order->id,
+                            'event_type' => 'TRELLO_ATTACHMENT_ADDED',
+                            'actor' => $authorName ?? __('Usuario'),
+                            'previous_value' => null,
+                            'new_value' => $attachName,
+                            'metadata' => [
+                                'file_name' => $attachName,
+                                'trello_card_id' => $order->trello_card_id,
+                                'attachment_id' => $attachment['id'] ?? null,
+                                'source' => 'comment',
+                            ],
+                        ]);
+
+                        if ($attachUrl) {
+                            $uploadedPhotoMarkdown[] = "![{$attachName}]({$attachUrl})";
+                        }
+                    } else {
+                        Log::warning("Error uploading comment photo to Trello card {$order->trello_card_id}: ".($uploadRes['error'] ?? 'Desconocido'));
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Exception uploading comment photo: '.$e->getMessage());
+                }
+            }
+        }
+
+        $commentText = trim($this->newTrelloComment);
+        if (! empty($uploadedPhotoMarkdown)) {
+            $photosBlock = implode("\n\n", $uploadedPhotoMarkdown);
+            if (empty($commentText)) {
+                $commentText = count($uploadedPhotoMarkdown) === 1
+                    ? __('📷 Foto adjunta').":\n\n".$photosBlock
+                    : __('📷 Fotos adjuntas').":\n\n".$photosBlock;
+            } else {
+                $commentText .= "\n\n".$photosBlock;
+            }
+        }
+
+        $res = $trelloService->addCardComment(
             cardId: $order->trello_card_id,
             text: $commentText,
             authorName: $authorName
@@ -716,17 +810,23 @@ class OrderDetailModal extends Component
                 'metadata' => [
                     'comment' => $commentText,
                     'trello_card_id' => $order->trello_card_id,
+                    'has_photos' => ! empty($uploadedPhotoMarkdown),
                 ],
             ]);
 
             NotificationDispatcher::dispatch(
                 eventType: 'new_comment',
                 label: 'New Comment',
-                order: $order
+                order: $order,
+                detailText: Str::limit($commentText, 100)
             );
 
             $this->newTrelloComment = '';
+            $this->commentPhotos = [];
             $this->loadTrelloComments();
+            if ($hasPhotos) {
+                $this->loadTrelloDetails();
+            }
             session()->flash('message', __('Comentario publicado en Trello correctamente.'));
             $this->dispatch('order-updated');
         } else {
@@ -791,13 +891,73 @@ class OrderDetailModal extends Component
         // Ensure dividers (---, ***, ___) have a blank line before them so they don't turn into Setext headings
         $clean = preg_replace('/(?<!\n)\n(---|---|\*\*\*|___)\n/u', "\n\n$1\n\n", $clean);
 
-        return Str::markdown($clean, [
+        $html = Str::markdown($clean, [
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
             'renderer' => [
                 'soft_break' => "<br>\n",
             ],
         ]);
+
+        // Transform <img> tags into interactive, proxied photo cards with lightbox modal preview
+        $html = preg_replace_callback('/<img\s+([^>]*?)src=["\']([^"\']+)["\']([^>]*?)\/?>/i', function ($matches) {
+            $otherAttrsBefore = $matches[1];
+            $src = html_entity_decode(trim($matches[2]));
+            $otherAttrsAfter = $matches[3];
+
+            // Extract alt text if present
+            $alt = '';
+            if (preg_match('/alt=["\']([^"\']*)["\']/i', $otherAttrsBefore.' '.$otherAttrsAfter, $altMatches)) {
+                $alt = html_entity_decode(trim($altMatches[1]));
+            }
+            if (empty($alt)) {
+                $path = parse_url($src, PHP_URL_PATH);
+                $alt = $path ? basename($path) : __('Foto');
+            }
+
+            // Check if URL is from Trello hosts and needs proxy
+            $host = parse_url($src, PHP_URL_HOST);
+            $isTrelloResource = false;
+            if ($host) {
+                $allowedHosts = ['trello.com', 'api.trello.com', 'trello-attachments.s3.amazonaws.com', 'trello-members.s3.amazonaws.com'];
+                foreach ($allowedHosts as $allowed) {
+                    if ($host === $allowed || str_ends_with((string) $host, '.'.$allowed)) {
+                        $isTrelloResource = true;
+                        break;
+                    }
+                }
+            }
+
+            $displayUrl = $isTrelloResource ? route('trello.attachment-proxy', ['url' => $src]) : $src;
+            $escapedSrc = addslashes($src);
+            $escapedAlt = addslashes(htmlspecialchars($alt, ENT_QUOTES, 'UTF-8'));
+            $safeAlt = htmlspecialchars($alt, ENT_QUOTES, 'UTF-8');
+
+            return '<div class="my-2 not-prose block">'
+                .'<div class="group/cphoto relative inline-flex flex-col rounded-xl overflow-hidden border border-stone-200/90 hover:border-sky-400 bg-stone-50 shadow-2xs hover:shadow-xs transition cursor-pointer max-w-sm" '
+                .'wire:click="openMediaPreview(\''.$escapedSrc.'\', \''.$escapedAlt.'\')" '
+                .'role="button" tabindex="0" title="'.__('Clic para ampliar').'">'
+                .'<div class="relative overflow-hidden bg-stone-100 flex items-center justify-center max-h-64">'
+                .'<img src="'.htmlspecialchars($displayUrl, ENT_QUOTES, 'UTF-8').'" alt="'.$safeAlt.'" class="max-h-64 w-auto max-w-full rounded-t-xl object-contain block group-hover/cphoto:scale-[1.02] transition-transform duration-200" loading="lazy" onerror="this.onerror=null; this.classList.add(\'opacity-40\');" />'
+                .'<div class="absolute inset-0 bg-stone-900/25 opacity-0 group-hover/cphoto:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">'
+                .'<span class="px-2.5 py-1 rounded-lg bg-white/95 text-stone-900 text-[11px] font-semibold shadow-xs flex items-center gap-1.5 backdrop-blur-xs">'
+                .'<svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>'
+                .__('Ampliar foto')
+                .'</span>'
+                .'</div>'
+                .'</div>'
+                .'<div class="px-2.5 py-1.5 bg-white border-t border-stone-200/80 text-[10.5px] text-zinc-600 flex items-center justify-between gap-2">'
+                .'<span class="truncate font-medium flex items-center gap-1">'
+                .'<svg class="w-3 h-3 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
+                .$safeAlt
+                .'</span>'
+                .'<span class="text-sky-600 hover:text-sky-700 text-[10px] font-semibold shrink-0">'.__('Ver').'</span>'
+                .'</div>'
+                .'</div>'
+                .'</div>';
+        }, $html);
+
+        return $html;
     }
 
     public function startEditing()
@@ -1718,6 +1878,7 @@ class OrderDetailModal extends Component
         $this->showMediaPreviewModal = false;
         $this->isEditing = false;
         $this->newTrelloComment = '';
+        $this->commentPhotos = [];
         $this->approvalComment = '';
         $this->approvalImage = null;
         $this->attachmentFile = null;
@@ -1935,12 +2096,19 @@ class OrderDetailModal extends Component
 
         if ($isWork && $taskDate->isToday()) {
             if ($order->core_status === CoreStatus::ARCHIVED) {
+                $previousStatus = $order->core_status;
                 $order->update([
                     'scheduled_date' => $taskDate->toDateString(),
                     'core_status' => CoreStatus::TO_DO_TODAY,
                     'substatus' => Substatus::TICKET,
                     'archived_at' => null,
                 ]);
+                app(AutomationEngine::class)->handleStatusChanged(
+                    $order->fresh(),
+                    $previousStatus,
+                    CoreStatus::TO_DO_TODAY,
+                    auth()->user()?->name ?? 'Usuario'
+                );
             } elseif ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION) {
                 $previousStatus = $order->core_status;
                 $updateData = [
@@ -1959,7 +2127,18 @@ class OrderDetailModal extends Component
                     $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
                 }
                 $order->update($updateData);
+
+                if ($previousStatus !== CoreStatus::TO_DO_TODAY) {
+                    app(AutomationEngine::class)->handleStatusChanged(
+                        $order->fresh(),
+                        $previousStatus,
+                        CoreStatus::TO_DO_TODAY,
+                        auth()->user()?->name ?? 'Usuario'
+                    );
+                }
             }
+        } elseif ($isWork && $order->core_status === CoreStatus::ENVIADO_AL_CLIENTE) {
+            app(AutomationEngine::class)->handleClientResponse($order);
         }
 
         $this->newTaskTitle = '';
@@ -2048,6 +2227,15 @@ class OrderDetailModal extends Component
                         $updateData['substatus'] = Substatus::CAMBIOS_CLIENTE;
                     }
                     $order->update($updateData);
+
+                    if ($previousStatus !== CoreStatus::TO_DO_TODAY) {
+                        app(AutomationEngine::class)->handleStatusChanged(
+                            $order->fresh(),
+                            $previousStatus,
+                            CoreStatus::TO_DO_TODAY,
+                            auth()->user()?->name ?? 'Usuario'
+                        );
+                    }
                 }
             }
 

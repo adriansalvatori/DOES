@@ -6,7 +6,7 @@
     <title>{{ $title ?? (__('Iniciar Sesión - ') . config('app.name')) }}</title>
     
     <!-- PWA & Favicon -->
-    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=3">
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">
     <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
     <meta name="app-name" content="{{ config('app.name') }}">
     <meta name="theme-color" content="#fbfbfa">

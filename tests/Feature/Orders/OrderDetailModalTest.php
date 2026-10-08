@@ -4,6 +4,7 @@ namespace Tests\Feature\Orders;
 
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
+use App\Enums\SubtaskCategory;
 use App\Enums\UserRole;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Client;
@@ -12,6 +13,7 @@ use App\Models\Order;
 use App\Models\Substatus as SubstatusModel;
 use App\Models\SubtaskPreset;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -1008,5 +1010,38 @@ class OrderDetailModalTest extends TestCase
             ->assertSet('showModal', false);
 
         $this->assertSoftDeleted('orders', ['id' => $order2->id]);
+    }
+
+    public function test_creating_work_subtask_for_today_in_order_detail_modal_resets_sla_from_enviado_al_cliente(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-08 10:00:00')); // Thursday
+        $user = User::factory()->create(['role' => UserRole::ADMIN]);
+        $this->actingAs($user);
+
+        $pastDueDate = Carbon::parse('2026-09-20');
+        $order = Order::create([
+            'company_name' => 'MODAL SLA TEST CORP',
+            'task_name' => 'DISENO FACHADA',
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'substatus' => Substatus::WAITING_FOR_CLIENT,
+            'current_due_date' => $pastDueDate,
+            'original_due_date' => $pastDueDate,
+            'in_workspace' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('newTaskTitle', 'Ajustes requeridos por cliente')
+            ->set('newTaskCategory', SubtaskCategory::CLIENT_ADJUSTMENTS->value)
+            ->set('newTaskDate', now()->toDateString())
+            ->set('newTaskIsWork', true)
+            ->call('addTask');
+
+        $order->refresh();
+
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->core_status);
+        $this->assertEquals(Substatus::CAMBIOS_CLIENTE, $order->substatus);
+        // Reset to 2 weekdays (Monday 2026-10-12)
+        $this->assertEquals('2026-10-12', $order->current_due_date->toDateString());
     }
 }

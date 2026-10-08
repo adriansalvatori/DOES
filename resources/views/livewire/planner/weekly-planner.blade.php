@@ -963,16 +963,19 @@
         @php
             $designerGridList = $designers->reject(fn($d) => str_contains(mb_strtolower($d->name), 'externo'));
             $colCount = max(1, $designerGridList->count());
-            $gridColsClass = match($colCount) {
-                1 => 'grid-cols-1',
-                2 => 'grid-cols-1 md:grid-cols-2',
-                3 => 'grid-cols-1 md:grid-cols-3',
-                4 => 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
-                default => 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5',
-            };
+            $isSingleDesignerFiltered = ($selectedDesignerFilter !== 'all' || $colCount === 1);
+            $gridColsClass = $isSingleDesignerFiltered
+                ? 'grid-cols-1 lg:grid-cols-4'
+                : match($colCount) {
+                    1 => 'grid-cols-1',
+                    2 => 'grid-cols-1 md:grid-cols-2',
+                    3 => 'grid-cols-1 md:grid-cols-3',
+                    4 => 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4',
+                    default => 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5',
+                };
         @endphp
         <div class="overflow-x-auto custom-horizontal-scrollbar pb-2 w-full min-h-0 flex-1">
-            <div class="grid {{ $gridColsClass }} gap-6 items-start divide-x divide-stone-200/60 w-full">
+            <div class="grid {{ $gridColsClass }} {{ $isSingleDesignerFiltered ? 'gap-6' : 'gap-6 divide-x divide-stone-200/60' }} items-start w-full">
                 @foreach($designerGridList as $designer)
                     @php
                         $designerSubtasks = $subtasks->filter(function ($st) use ($designer) {
@@ -988,7 +991,7 @@
                         $visibleDesignerSubtasks = $showSystemTasks ? $designerSubtasks : $designerSubtasks->filter(fn($st) => $st->isWorkTask());
                         $designerVisibleCount = $visibleDesignerSubtasks->count();
                     @endphp
-                    <div wire:key="planner-grid-designer-{{ $designer->id }}" class="flex flex-col min-w-0 pr-4 space-y-3">
+                    <div wire:key="planner-grid-designer-{{ $designer->id }}" class="flex flex-col min-w-0 {{ $isSingleDesignerFiltered ? 'lg:col-span-2' : 'pr-4' }} space-y-3">
                         
                         <!-- Designer Header -->
                         <div class="flex items-center justify-between border-b border-stone-200/60 pb-2">
@@ -1307,7 +1310,8 @@
                                                          @else
                                                              @click.stop="$dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
                                                          @endif
-                                                         :class="{ 'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }} }"
+                                                         x-data="{ openCategory: false, openType: false }"
+                                                         :class="{ 'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }}, 'z-30': openCategory || openType }"
                                                          class="relative py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 border rounded-lg transition group select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $staskDone ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
@@ -1457,14 +1461,123 @@
                                                             </div>
                                                         </div>
 
-                                                        <button 
-                                                            @click.stop 
-                                                            wire:click="deleteSubtask({{ $stask->id }})" 
-                                                            type="button"
-                                                            class="p-0.5 mt-0.5 text-zinc-400 hover:text-red-600 transition shrink-0 opacity-0 group-hover:opacity-100" 
-                                                            title="Eliminar subtarea">
-                                                            <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                                        </button>
+                                                        <div class="flex items-center gap-1.5 shrink-0 self-center">
+                                                            @if($isSingleDesignerFiltered && $stask->order)
+                                                                <!-- Subtask Category Dropdown (Return CoreStatus after Done) -->
+                                                                @php
+                                                                    $cat = $stask->category;
+                                                                @endphp
+                                                                <div class="relative inline-block" @click.stop draggable="false">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        draggable="false"
+                                                                        @click.stop="openCategory = !openCategory; openType = false"
+                                                                        class="px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer border hover:ring-2 hover:ring-offset-1 {{ $staskDone ? 'bg-stone-100/90 text-stone-400 border-stone-200/80 hover:bg-stone-200/60' : $cat->badgeStyle() }}"
+                                                                        title="{{ __('Al completar:') }} {{ $cat->returnActionLabel() }}. {{ __('Clic para cambiar') }}">
+                                                                        <span class="w-1.5 h-1.5 rounded-full {{ $staskDone ? 'bg-stone-300' : $cat->dotColorClass() }}"></span>
+                                                                        <span>{{ $cat->shortReturnLabel() }}</span>
+                                                                        <x-lucide-chevron-down class="w-2.5 h-2.5 ml-0.5 {{ $staskDone ? 'text-stone-400 opacity-80' : 'opacity-60' }}" />
+                                                                    </button>
+
+                                                                    <!-- Category Dropdown Menu -->
+                                                                    <div 
+                                                                        x-show="openCategory" 
+                                                                        @click.outside="openCategory = false"
+                                                                        x-cloak
+                                                                        x-transition:enter="transition ease-out duration-100"
+                                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                                        class="absolute right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[210px] space-y-1 text-left text-xs">
+                                                                        <div class="px-2 py-0.5 font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
+                                                                            {{ __('Al marcar como lista, enviar a:') }}
+                                                                        </div>
+                                                                        @foreach(\App\Enums\SubtaskCategory::cases() as $categoryCase)
+                                                                            <button 
+                                                                                type="button"
+                                                                                wire:click="updateTaskCategory({{ $stask->id }}, '{{ $categoryCase->value }}')"
+                                                                                @click="openCategory = false"
+                                                                                class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-stone-100 {{ $cat === $categoryCase ? 'font-bold text-zinc-900 bg-stone-100' : 'text-zinc-700' }}">
+                                                                                <span class="flex items-center gap-2">
+                                                                                    <span class="w-2 h-2 rounded-full shrink-0 {{ $categoryCase->dotColorClass() }}"></span>
+                                                                                    <span>{{ $categoryCase->label() }}</span>
+                                                                                </span>
+                                                                                @if($cat === $categoryCase)
+                                                                                    <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5]" />
+                                                                                @endif
+                                                                            </button>
+                                                                        @endforeach
+                                                                    </div>
+                                                                </div>
+
+                                                                <!-- Subtask Type Dropdown (Trabajo vs Gestión) -->
+                                                                <div class="relative inline-block" @click.stop draggable="false">
+                                                                    <button 
+                                                                        type="button" 
+                                                                        draggable="false"
+                                                                        @click.stop="openType = !openType; openCategory = false"
+                                                                        class="px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 flex items-center gap-1 transition cursor-pointer hover:ring-2 hover:ring-offset-1 border {{ $staskDone ? 'bg-stone-100/90 text-stone-400 border-stone-200/80 hover:bg-stone-200/60' : ($stask->is_work_task !== false ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:ring-blue-300' : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 hover:ring-amber-300') }}"
+                                                                        title="{{ __('Clic para cambiar tipo (Trabajo / Gestión)') }}">
+                                                                        @if($stask->is_work_task !== false)
+                                                                            <x-lucide-wrench class="w-2.5 h-2.5 {{ $staskDone ? 'text-stone-400' : 'text-blue-600' }}" />
+                                                                            <span>{{ __('Trabajo') }}</span>
+                                                                        @else
+                                                                            <x-lucide-clipboard-list class="w-2.5 h-2.5 {{ $staskDone ? 'text-stone-400' : 'text-amber-600' }}" />
+                                                                            <span>{{ __('Gestión') }}</span>
+                                                                        @endif
+                                                                        <x-lucide-chevron-down class="w-2.5 h-2.5 ml-0.5 {{ $staskDone ? 'text-stone-400 opacity-80' : 'opacity-60' }}" />
+                                                                    </button>
+
+                                                                    <!-- Type Dropdown Menu -->
+                                                                    <div 
+                                                                        x-show="openType" 
+                                                                        @click.outside="openType = false"
+                                                                        x-cloak
+                                                                        x-transition:enter="transition ease-out duration-100"
+                                                                        x-transition:enter-start="opacity-0 scale-95"
+                                                                        x-transition:enter-end="opacity-100 scale-100"
+                                                                        class="absolute right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 min-w-[150px] space-y-1 text-left text-xs">
+                                                                        <div class="px-2 py-0.5 font-bold text-[10px] uppercase text-zinc-400 tracking-wider">
+                                                                            {{ __('Tipo de Subtarea') }}
+                                                                        </div>
+                                                                        <button 
+                                                                            type="button"
+                                                                            wire:click="updateTaskType({{ $stask->id }}, true)"
+                                                                            @click="openType = false"
+                                                                            class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-blue-50 {{ $stask->is_work_task !== false ? 'text-blue-700 font-bold bg-blue-50/60' : 'text-zinc-700' }}">
+                                                                            <span class="flex items-center gap-1.5">
+                                                                                <x-lucide-wrench class="w-3.5 h-3.5 text-blue-600" />
+                                                                                <span>{{ __('Trabajo') }}</span>
+                                                                            </span>
+                                                                            @if($stask->is_work_task !== false)
+                                                                                <x-lucide-check class="w-3.5 h-3.5 text-blue-600 stroke-[2.5]" />
+                                                                            @endif
+                                                                        </button>
+                                                                        <button 
+                                                                            type="button"
+                                                                            wire:click="updateTaskType({{ $stask->id }}, false)"
+                                                                            @click="openType = false"
+                                                                            class="w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-amber-50 {{ $stask->is_work_task === false ? 'text-amber-700 font-bold bg-amber-50/60' : 'text-zinc-700' }}">
+                                                                            <span class="flex items-center gap-1.5">
+                                                                                <x-lucide-clipboard-list class="w-3.5 h-3.5 text-amber-600" />
+                                                                                <span>{{ __('Gestión') }}</span>
+                                                                            </span>
+                                                                            @if($stask->is_work_task === false)
+                                                                                <x-lucide-check class="w-3.5 h-3.5 text-amber-600 stroke-[2.5]" />
+                                                                            @endif
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            @endif
+
+                                                            <button 
+                                                                @click.stop 
+                                                                wire:click="deleteSubtask({{ $stask->id }})" 
+                                                                type="button"
+                                                                class="p-0.5 text-zinc-400 hover:text-red-600 transition shrink-0 opacity-0 group-hover:opacity-100" 
+                                                                title="Eliminar subtarea">
+                                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 @endforeach
                                             </div>
@@ -1653,6 +1766,135 @@
                         </div>
                     </div>
                 @endforeach
+
+                @if($isSingleDesignerFiltered && $designerGridList->isNotEmpty())
+                    @php
+                        $singleDesigner = $designerGridList->first();
+                        $todayDateStr = now()->toDateString();
+                        
+                        $todayTasks = $subtasks->filter(function ($st) use ($singleDesigner, $todayDateStr) {
+                            $isAssigned = false;
+                            if ($st->assignee_id) {
+                                $isAssigned = ((int) $st->assignee_id === (int) $singleDesigner->id);
+                            } elseif ($st->order) {
+                                $isAssigned = ((int) $st->order->designer_id === (int) $singleDesigner->id || $st->order->designers->contains('id', $singleDesigner->id));
+                            }
+                            if (! $isAssigned) {
+                                return false;
+                            }
+                            return $st->scheduled_date?->toDateString() === $todayDateStr;
+                        });
+
+                        if (! $showSystemTasks) {
+                            $todayTasks = $todayTasks->filter(fn($st) => $st->isWorkTask());
+                        }
+
+                        $todayTasks = $this->sortSubtaskCollection($todayTasks);
+                        $todayTotal = $todayTasks->count();
+                        $todayCompleted = $todayTasks->filter(fn($st) => $st->isDone())->count();
+                        $todayPending = $todayTotal - $todayCompleted;
+                        $todayPercentage = $todayTotal > 0 ? (int) round(($todayCompleted / $todayTotal) * 100) : 0;
+                    @endphp
+
+                    <!-- Minimalist Dynamic Today's Progress Widget (Right Half) -->
+                    <div 
+                        x-data="{ draggingOverToday: false }"
+                        @dragover.prevent="draggingOverToday = true"
+                        @dragenter.prevent="draggingOverToday = true"
+                        @dragleave="if (!$el.contains($event.relatedTarget)) draggingOverToday = false"
+                        @drop.prevent="
+                            draggingOverToday = false;
+                            let rawData = $event.dataTransfer.getData('text/plain');
+                            if (rawData) {
+                                if (rawData.startsWith('subtask:')) {
+                                    let taskId = parseInt(rawData.replace('subtask:', ''), 10);
+                                    $wire.rescheduleSubtask(taskId, '{{ $todayDateStr }}');
+                                } else {
+                                    let orderId = rawData.replace('order:', '');
+                                    $wire.scheduleOrder(orderId, '{{ $todayDateStr }}');
+                                }
+                            }
+                        "
+                        :class="{ 'ring-2 ring-indigo-500/70 border-indigo-400 bg-indigo-50/20': draggingOverToday }"
+                        class="lg:col-span-1 bg-white border border-[#e9e9e7] rounded-2xl shadow-xs p-5 space-y-4 lg:sticky lg:top-4 transition-all w-full min-w-0">
+                        
+                        <!-- Header -->
+                        <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
+                            <div>
+                                <span class="text-[11px] text-stone-400 font-medium capitalize block">
+                                    {{ now()->translatedFormat('l, d \d\e F') }}
+                                </span>
+                                <h3 class="text-base font-bold text-zinc-900 tracking-tight mt-0.5 flex items-center gap-2">
+                                    <span>{{ __('Progreso de hoy') }}</span>
+                                    <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $singleDesigner->dot_color_class }}" style="{{ $singleDesigner->dot_inline_style }}" title="{{ $singleDesigner->name }}"></span>
+                                </h3>
+                            </div>
+
+                            <!-- Quick Status Pill -->
+                            <div class="shrink-0">
+                                @if($todayTotal === 0)
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 text-zinc-500 border border-stone-200/60 whitespace-nowrap">
+                                        {{ __('Sin tareas') }}
+                                    </span>
+                                @elseif($todayPending === 0)
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                                        <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>{{ __('¡Al día!') }}</span>
+                                    </span>
+                                @else
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                                        <x-lucide-clock class="w-3.5 h-3.5 text-blue-600" />
+                                        <span>{{ $todayPending }} {{ __('pendientes') }}</span>
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar Section -->
+                        <div class="space-y-2.5">
+                            <div class="flex items-baseline justify-between">
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-3xl font-black font-mono tracking-tight text-zinc-900">
+                                        {{ $todayPercentage }}%
+                                    </span>
+                                    <span class="text-xs font-medium text-stone-500">
+                                        {{ __('completado') }}
+                                    </span>
+                                </div>
+                                <div class="text-xs font-medium text-stone-600">
+                                    <span class="font-bold text-zinc-900">{{ $todayCompleted }}</span> / {{ $todayTotal }} {{ __('completadas') }}
+                                </div>
+                            </div>
+
+                            <!-- The Progress Bar Track -->
+                            <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden p-0.5 border border-stone-200/60 shadow-inner">
+                                <div 
+                                    class="h-full rounded-full transition-all duration-700 ease-out {{ $todayPercentage === 100 ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-sm shadow-emerald-500/20' : ($todayPercentage > 0 ? 'bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-500 shadow-sm shadow-blue-500/20' : 'bg-transparent') }}"
+                                    style="width: {{ $todayPercentage }}%">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Simple Inline Stats (sin cajas visibles, mucho más pequeñas) -->
+                        <div class="flex items-center justify-between text-[11px] text-stone-500 pt-2 border-t border-stone-100">
+                            <div class="flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
+                                <span class="text-stone-500 font-medium">{{ __('Asignadas:') }}</span>
+                                <span class="font-bold font-mono text-zinc-800">{{ $todayTotal }}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                <span class="text-stone-500 font-medium">{{ __('Completadas:') }}</span>
+                                <span class="font-bold font-mono text-emerald-600">{{ $todayCompleted }}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                <span class="text-stone-500 font-medium">{{ __('Pendientes:') }}</span>
+                                <span class="font-bold font-mono text-amber-600">{{ $todayPending }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     @endif

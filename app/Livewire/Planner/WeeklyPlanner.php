@@ -383,6 +383,7 @@ class WeeklyPlanner extends Component
                 'sort_order' => $nextSortOrder,
             ]);
 
+            $previousStatus = $order->core_status;
             $updateData = ['in_workspace' => true];
 
             if ($isWorkTask && $scheduledDate->isToday()) {
@@ -395,7 +396,6 @@ class WeeklyPlanner extends Component
                 } elseif ($order->core_status === CoreStatus::EN_PRODUCCION) {
                     // Keep EN PRODUCCIÓN core status, subtask appears in Working Today
                 } else {
-                    $previousStatus = $order->core_status;
                     $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
                     if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
                         $updateData['origin_core_status'] = $previousStatus;
@@ -417,6 +417,21 @@ class WeeklyPlanner extends Component
 
             $order->update($updateData);
 
+            if ($isWorkTask && $scheduledDate->isToday() && $previousStatus !== CoreStatus::TO_DO_TODAY && $order->core_status === CoreStatus::TO_DO_TODAY) {
+                app(AutomationEngine::class)->handleStatusChanged(
+                    $order->fresh(),
+                    $previousStatus,
+                    CoreStatus::TO_DO_TODAY,
+                    auth()->user()?->name ?? __('Diseñador')
+                );
+                $order->refresh();
+            } elseif ($isWorkTask && $previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
+                app(AutomationEngine::class)->handleClientResponse($order);
+                $order->refresh();
+            }
+
+            $order->refresh();
+
             // Log OrderEvent for timeline
             OrderEvent::create([
                 'order_id' => $order->id,
@@ -432,7 +447,7 @@ class WeeklyPlanner extends Component
                 ],
             ]);
 
-            if ($order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
+            if (! $order->isSlaExempt() && $order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
                 $daysOverdue = (int) $order->current_due_date->diffInDays($scheduledDate);
                 $this->slaWarningDetails = [
                     'company_name' => $order->company_name,
@@ -526,6 +541,17 @@ class WeeklyPlanner extends Component
             }
 
             $order->update($updateData);
+
+            if (isset($previousStatus) && $previousStatus !== CoreStatus::TO_DO_TODAY && $order->core_status === CoreStatus::TO_DO_TODAY) {
+                app(AutomationEngine::class)->handleStatusChanged(
+                    $order->fresh(),
+                    $previousStatus,
+                    CoreStatus::TO_DO_TODAY,
+                    auth()->user()?->name ?? __('Diseñador')
+                );
+                $order->refresh();
+                $subtask->refresh();
+            }
         }
 
         if (! $subtask->isDone() && $subtask->order && ! $subtask->order->isSlaExempt() && ! $subtask->isFollowUp() && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
@@ -629,6 +655,39 @@ class WeeklyPlanner extends Component
         }
 
         $this->dispatch('order-updated');
+    }
+
+    public function updateTaskCategory(int|string $taskId, string $categoryValue): void
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $cat = SubtaskCategory::tryFrom($categoryValue) ?? SubtaskCategory::NEW_DESIGN;
+            $updates = [
+                'category' => $cat,
+                'return_core_status' => $cat->defaultReturnCoreStatus() ?? $task->return_core_status,
+            ];
+            if ($cat === SubtaskCategory::MANAGEMENT) {
+                $updates['is_work_task'] = false;
+            }
+            $task->update($updates);
+            $this->dispatch('order-updated');
+            $this->dispatch('subtask-updated');
+        }
+    }
+
+    public function updateTaskType(int|string $taskId, bool $isWork): void
+    {
+        $task = RelatedTask::find($taskId);
+        if ($task) {
+            $updates = ['is_work_task' => $isWork];
+            if ($isWork && $task->category === SubtaskCategory::MANAGEMENT) {
+                $updates['category'] = SubtaskCategory::NEW_DESIGN;
+                $updates['return_core_status'] = SubtaskCategory::NEW_DESIGN->defaultReturnCoreStatus();
+            }
+            $task->update($updates);
+            $this->dispatch('order-updated');
+            $this->dispatch('subtask-updated');
+        }
     }
 
     public function linkSubtaskToOrder($taskId, $orderId)

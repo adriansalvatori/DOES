@@ -6,8 +6,12 @@
     <title>{{ $title ?? 'Seguimiento de Pedidos · Kudos Print Media' }}</title>
 
     <!-- Web App & Styling -->
+    <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="{{ config('app.name') }}">
+    <meta name="app-name" content="{{ config('app.name') }}">
     <meta name="theme-color" content="#ffffff">
     <x-favicon-inverter />
 
