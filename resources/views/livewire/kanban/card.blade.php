@@ -234,9 +234,9 @@
                 <button
                     wire:click="trashOrder({{ $order->id }})"
                     @click.stop
-                    wire:confirm="{{ __('¿Mover esta orden a la papelera?') }}"
+                    wire:confirm="{{ __('¿Enviar esta orden a la papelera (archivar en Trello)?') }}"
                     class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-red-50 border-stone-200 text-zinc-500 hover:text-red-600' : ($isUrgent ? 'bg-white hover:bg-red-100 border-red-200 text-red-600 hover:text-red-800' : 'bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 hover:text-red-800') }}"
-                    title="{{ __('Mover a la papelera') }}"
+                    title="{{ __('Enviar a la papelera (archivar)') }}"
                 >
                     <x-lucide-trash-2 class="w-3 h-3" />
                 </button>

@@ -150,4 +150,61 @@ class OrderObserver
             }
         }
     }
+
+    /**
+     * Handle the Order "deleted" event (soft-delete archives card on Trello, force-delete permanently deletes card on Trello).
+     */
+    public function deleted(Order $order): void
+    {
+        $cardId = $order->trello_card_id;
+        if (! $cardId) {
+            return;
+        }
+
+        $isForceDeleting = $order->isForceDeleting();
+
+        $syncCallback = function () use ($cardId, $isForceDeleting, $order) {
+            try {
+                $service = app(TrelloSyncService::class);
+                if ($isForceDeleting) {
+                    $service->deleteCard($cardId);
+                } else {
+                    $service->archiveCard($cardId);
+                }
+            } catch (\Throwable $e) {
+                Log::warning("OrderObserver failed to sync card deletion for order #{$order->id}: ".$e->getMessage());
+            }
+        };
+
+        if (app()->environment('testing')) {
+            $syncCallback();
+        } else {
+            app()->terminating($syncCallback);
+        }
+    }
+
+    /**
+     * Handle the Order "restored" event (unarchives card on Trello).
+     */
+    public function restored(Order $order): void
+    {
+        $cardId = $order->trello_card_id;
+        if (! $cardId) {
+            return;
+        }
+
+        $syncCallback = function () use ($cardId, $order) {
+            try {
+                app(TrelloSyncService::class)->unarchiveCard($cardId);
+            } catch (\Throwable $e) {
+                Log::warning("OrderObserver failed to unarchive Trello card for order #{$order->id}: ".$e->getMessage());
+            }
+        };
+
+        if (app()->environment('testing')) {
+            $syncCallback();
+        } else {
+            app()->terminating($syncCallback);
+        }
+    }
 }

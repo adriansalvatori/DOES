@@ -314,4 +314,176 @@ class TrelloSyncTest extends TestCase
             ->assertSet('syncReport.unchanged', 1)
             ->assertSee('No hay tarjetas nuevas en Trello (1 tarjetas existentes ya están registradas).');
     }
+
+    public function test_sync_only_new_skips_and_canonicalizes_order_matched_by_shortlink(): void
+    {
+        // Existing order in DOES created by pasting Trello link with 8-char shortLink
+        $manualOrder = Order::create([
+            'company_name' => 'MANUAL CLIENT',
+            'task_name' => 'Manual Card',
+            'trello_card_id' => 'AbCdEf12',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+        ]);
+
+        $this->mock(TrelloSyncService::class, function ($mock) {
+            $mock->shouldReceive('extractBoardId')->andReturn('mock_board_id');
+            $mock->shouldReceive('getBoardLists')->andReturn([
+                'success' => true,
+                'data' => [
+                    ['id' => 'list_entrante', 'name' => 'ENTRANTE'],
+                ],
+            ]);
+            $mock->shouldReceive('getBoardCards')->andReturn([
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => '674a2b8e19c43f721598b012', // 24-char canonical ID from Trello API
+                        'shortLink' => 'AbCdEf12',           // 8-char shortLink from web link
+                        'name' => 'WO 999 - MANUAL CLIENT - Manual Card',
+                        'idList' => 'list_entrante',
+                    ],
+                ],
+            ]);
+            // It should NOT call syncCardToOrder to import a new card
+            $mock->shouldNotReceive('syncCardToOrder');
+        });
+
+        $user = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($user);
+
+        Livewire::test(TrelloSync::class)
+            ->set('boardId', 'mock_board_id')
+            ->call('runTrelloSyncOnlyNew')
+            ->assertSet('syncReport.show', true)
+            ->assertSet('syncReport.added', 0)
+            ->assertSet('syncReport.unchanged', 1);
+
+        // Verify order trello_card_id was auto-canonicalized to the 24-char ID
+        $manualOrder->refresh();
+        $this->assertEquals('674a2b8e19c43f721598b012', $manualOrder->trello_card_id);
+        $this->assertTrue($manualOrder->in_workspace);
+
+        // Verify NO duplicate orders were created
+        $this->assertEquals(1, Order::count());
+    }
+
+    public function test_cleanup_duplicates_command_merges_and_removes_duplicate_order(): void
+    {
+        // 1. Original order created by user
+        $original = Order::create([
+            'company_name' => 'ORIGINAL CLIENT',
+            'task_name' => 'Main Design',
+            'trello_card_id' => 'AbCdEf12',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+        ]);
+
+        // 2. Duplicate order imported by sync into backlog
+        $duplicate = Order::create([
+            'company_name' => 'ORIGINAL CLIENT',
+            'task_name' => 'Main Design',
+            'trello_card_id' => '674a2b8e19c43f721598b012',
+            'in_workspace' => false,
+            'is_new_from_trello' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $this->mock(TrelloSyncService::class, function ($mock) {
+            $mock->shouldReceive('extractBoardId')->andReturn('mock_board_id');
+            $mock->shouldReceive('getBoardCards')->andReturn([
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => '674a2b8e19c43f721598b012',
+                        'shortLink' => 'AbCdEf12',
+                        'name' => 'ORIGINAL CLIENT - Main Design',
+                    ],
+                ],
+            ]);
+        });
+
+        Setting::set('trello_board_id', 'mock_board_id');
+        Setting::set('trello_api_key', 'test_key');
+        Setting::set('trello_user_token', 'test_token');
+
+        $this->artisan('trello:cleanup-duplicates')
+            ->expectsOutputToContain('Limpieza completada: Se resolvieron 1 órdenes duplicadas.')
+            ->assertSuccessful();
+
+        // Original order was updated with canonical ID
+        $original->refresh();
+        $this->assertEquals('674a2b8e19c43f721598b012', $original->trello_card_id);
+
+        // Duplicate order was deleted
+        $this->assertDatabaseMissing('orders', ['id' => $duplicate->id]);
+        $this->assertEquals(1, Order::count());
+    }
+
+    public function test_find_existing_order_by_trello_card_matches_shortlink_and_canonicalizes(): void
+    {
+        $service = app(TrelloSyncService::class);
+
+        $order = Order::create([
+            'company_name' => 'ACME CORP',
+            'task_name' => 'Logo Redesign',
+            'trello_card_id' => 'xYz98765',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+        ]);
+
+        $cardData = [
+            'id' => '6543210987abcdef01234567',
+            'shortLink' => 'xYz98765',
+            'shortUrl' => 'https://trello.com/c/xYz98765',
+            'name' => 'ACME CORP - Logo Redesign',
+        ];
+
+        $found = $service->findExistingOrderByTrelloCard($cardData);
+
+        $this->assertNotNull($found);
+        $this->assertEquals($order->id, $found->id);
+
+        $order->refresh();
+        $this->assertEquals('6543210987abcdef01234567', $order->trello_card_id);
+    }
+
+    public function test_handle_missing_orders_preserves_orders_matching_incoming_shortlinks(): void
+    {
+        $service = app(TrelloSyncService::class);
+
+        $order = Order::create([
+            'company_name' => 'ACME',
+            'task_name' => 'Signage',
+            'trello_card_id' => 'shortLink99',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::EN_PRODUCCION,
+        ]);
+
+        // Incoming card has canonical ID and shortLink
+        $res = $service->handleMissingOrders(['674a2b8e19c43f721598b012'], ['shortLink99']);
+
+        $this->assertEquals(0, $res['count']);
+        $order->refresh();
+        $this->assertFalse((bool) $order->is_missing_from_trello);
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $order->core_status);
+    }
+
+    public function test_resolve_canonical_card_id_strips_url_and_handles_inputs(): void
+    {
+        $service = app(TrelloSyncService::class);
+
+        // 1. Full URL with slug
+        $res1 = $service->resolveCanonicalCardId('https://trello.com/c/short123/123-some-card-slug');
+        $this->assertEquals('short123', $res1['id']);
+
+        // 2. Full URL with query parameters
+        $res2 = $service->resolveCanonicalCardId('https://trello.com/c/short456?filter=open');
+        $this->assertEquals('short456', $res2['id']);
+
+        // 3. 24-char hex ID already canonical
+        $canonical = '674a2b8e19c43f721598b012';
+        $res3 = $service->resolveCanonicalCardId($canonical);
+        $this->assertEquals($canonical, $res3['id']);
+    }
 }

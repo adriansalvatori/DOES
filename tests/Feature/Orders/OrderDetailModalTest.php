@@ -953,7 +953,7 @@ class OrderDetailModalTest extends TestCase
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
             ->assertSeeHtml(__('Archivar orden'))
-            ->assertDontSeeHtml(__('Enviar a papelera'))
+            ->assertDontSeeHtml(__('Enviar a la papelera (archivar)'))
             ->call('openArchiveModal')
             ->assertSet('showArchiveModal', true)
             ->call('confirmArchive')
@@ -981,7 +981,7 @@ class OrderDetailModalTest extends TestCase
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order1->id)
             ->assertSeeHtml(__('Archivar orden'))
-            ->assertSeeHtml(__('Enviar a papelera'))
+            ->assertSeeHtml(__('Enviar a la papelera (archivar)'))
             ->call('deleteOrder')
             ->assertDispatched('order-updated')
             ->assertSet('showModal', false);
@@ -1004,7 +1004,7 @@ class OrderDetailModalTest extends TestCase
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order2->id)
             ->assertSeeHtml(__('Archivar orden'))
-            ->assertSeeHtml(__('Enviar a papelera'))
+            ->assertSeeHtml(__('Enviar a la papelera (archivar)'))
             ->call('deleteOrder')
             ->assertDispatched('order-updated')
             ->assertSet('showModal', false);

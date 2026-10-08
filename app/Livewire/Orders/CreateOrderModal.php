@@ -320,8 +320,9 @@ class CreateOrderModal extends Component
         $cleanWo = trim(preg_replace('/^WO\s*/i', '', $this->woNumber ?? ''));
 
         $cleanTrelloId = trim($this->trelloCardId ?? '');
-        if (preg_match('/trello\.com\/c\/([^\/]+)/i', $cleanTrelloId, $matches)) {
-            $cleanTrelloId = $matches[1];
+        if (! empty($cleanTrelloId)) {
+            $resolved = app(TrelloSyncService::class)->resolveCanonicalCardId($cleanTrelloId);
+            $cleanTrelloId = $resolved['id'] ?? $cleanTrelloId;
         }
 
         $cleanLocation = ! empty($this->locationName) ? mb_strtoupper(trim($this->locationName), 'UTF-8') : null;

@@ -129,4 +129,47 @@ class BacklogTrelloSyncTest extends TestCase
             ->assertSet('syncReport.unchanged', 1)
             ->assertSee('Sincronización completada: se importaron 1 tarjetas nuevas de Trello.');
     }
+
+    public function test_backlog_sync_only_new_skips_and_canonicalizes_order_matched_by_shortlink(): void
+    {
+        $existingOrder = Order::create([
+            'company_name' => 'MANUAL CLIENT',
+            'task_name' => 'Existing Manual Task',
+            'trello_card_id' => 'shortCode99',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::TO_DO_TODAY,
+        ]);
+
+        $this->mock(TrelloSyncService::class, function ($mock) {
+            $mock->shouldReceive('extractBoardId')->andReturn('mock_board_id');
+            $mock->shouldReceive('getBoardLists')->andReturn([
+                'success' => true,
+                'data' => [
+                    ['id' => 'list_entrante', 'name' => 'ENTRANTE'],
+                ],
+            ]);
+            $mock->shouldReceive('getBoardCards')->andReturn([
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => '674a2b8e19c43f721598b012',
+                        'shortLink' => 'shortCode99',
+                        'name' => 'WO 777 - MANUAL CLIENT - Existing Manual Task',
+                        'idList' => 'list_entrante',
+                    ],
+                ],
+            ]);
+            $mock->shouldNotReceive('syncCardToOrder');
+        });
+
+        Livewire::test(BacklogIndex::class)
+            ->call('runTrelloSyncOnlyNew')
+            ->assertSet('syncReport.show', true)
+            ->assertSet('syncReport.added', 0)
+            ->assertSet('syncReport.unchanged', 1);
+
+        $existingOrder->refresh();
+        $this->assertEquals('674a2b8e19c43f721598b012', $existingOrder->trello_card_id);
+        $this->assertEquals(1, Order::count());
+    }
 }

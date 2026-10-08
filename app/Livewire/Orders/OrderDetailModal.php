@@ -1556,8 +1556,9 @@ class OrderDetailModal extends Component
         $cleanWo = trim(preg_replace('/^WO\s*/i', '', $this->editWoNumber ?? ''));
 
         $cleanTrelloId = trim($this->editTrelloCardId ?? '');
-        if (preg_match('/trello\.com\/c\/([^\/]+)/i', $cleanTrelloId, $matches)) {
-            $cleanTrelloId = $matches[1];
+        if (! empty($cleanTrelloId)) {
+            $resolved = app(TrelloSyncService::class)->resolveCanonicalCardId($cleanTrelloId);
+            $cleanTrelloId = $resolved['id'] ?? $cleanTrelloId;
         }
 
         $this->editCompanyName = mb_strtoupper(trim($this->editCompanyName ?? ''), 'UTF-8');

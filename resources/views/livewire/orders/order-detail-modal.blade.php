@@ -386,15 +386,15 @@
                                         <button 
                                             type="button"
                                             wire:click="deleteOrder" 
-                                            wire:confirm="{{ __('¿Estás seguro de mover la orden :name a la Papelera de Reciclaje?', ['name' => $order->company_name]) }}" 
+                                            wire:confirm="{{ __('¿Estás seguro de mover la orden :name a la Papelera de Reciclaje (se archivará en Trello)?', ['name' => $order->company_name]) }}" 
                                             @click="open = false"
                                             class="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-700 transition flex items-center gap-2.5 cursor-pointer group">
                                             <div class="w-6 h-6 rounded-md bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-100">
                                                 <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                             </div>
                                             <div class="min-w-0 flex-1">
-                                                <span class="font-medium text-rose-700 block leading-tight">{{ __('Enviar a papelera') }}</span>
-                                                <span class="text-[10px] text-rose-500/80 block leading-tight">{{ __('Mover a reciclaje') }}</span>
+                                                <span class="font-medium text-rose-700 block leading-tight">{{ __('Enviar a la papelera (archivar)') }}</span>
+                                                <span class="text-[10px] text-rose-500/80 block leading-tight">{{ __('Mover a reciclaje y archivar en Trello') }}</span>
                                             </div>
                                         </button>
                                     </div>

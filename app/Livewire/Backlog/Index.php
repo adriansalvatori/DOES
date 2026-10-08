@@ -7,6 +7,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\Setting;
 use App\Services\ClientMatchingService;
+use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -242,6 +243,7 @@ class Index extends Component
 
         $cards = $cardsRes['data'];
         $incomingCardIds = array_column($cards, 'id');
+        $incomingShortLinks = array_values(array_filter(array_column($cards, 'shortLink')));
 
         $addedCount = 0;
         $movedCount = 0;
@@ -279,7 +281,7 @@ class Index extends Component
         }
 
         // Mark missing orders
-        $missingResult = $syncService->handleMissingOrders($incomingCardIds);
+        $missingResult = $syncService->handleMissingOrders($incomingCardIds, $incomingShortLinks);
         $deletedCount = $missingResult['count'];
         foreach ($missingResult['changes'] as $change) {
             $changesList[] = $change;
@@ -342,7 +344,25 @@ class Index extends Component
         }
 
         $cards = $cardsRes['data'];
-        $existingCardIds = Order::whereNotNull('trello_card_id')->pluck('trello_card_id')->flip()->all();
+
+        $existingOrders = Order::whereNotNull('trello_card_id')
+            ->where('trello_card_id', '!=', '')
+            ->get(['id', 'trello_card_id', 'wo_number']);
+
+        $existingTrelloMap = [];
+        $existingWoMap = [];
+
+        foreach ($existingOrders as $ord) {
+            $rawId = trim($ord->trello_card_id);
+            $existingTrelloMap[$rawId] = $ord;
+            if (preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $rawId, $m)) {
+                $existingTrelloMap[$m[1]] = $ord;
+            }
+            if ($ord->wo_number) {
+                $cleanWo = preg_replace('/^WO\s*/i', '', $ord->wo_number);
+                $existingWoMap[$cleanWo] = $ord;
+            }
+        }
 
         $addedCount = 0;
         $skippedCount = 0;
@@ -350,10 +370,48 @@ class Index extends Component
 
         foreach ($cards as $card) {
             $cardId = $card['id'] ?? null;
-            if (! $cardId || isset($existingCardIds[$cardId])) {
+            $shortLink = $card['shortLink'] ?? null;
+            if (! $shortLink && ! empty($card['shortUrl']) && preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $card['shortUrl'], $m)) {
+                $shortLink = $m[1];
+            }
+            if (! $shortLink && ! empty($card['url']) && preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $card['url'], $m)) {
+                $shortLink = $m[1];
+            }
+
+            // Check if card is already registered by canonical ID or shortLink
+            $matchedOrder = null;
+            if ($cardId && isset($existingTrelloMap[$cardId])) {
+                $matchedOrder = $existingTrelloMap[$cardId];
+            } elseif ($shortLink && isset($existingTrelloMap[$shortLink])) {
+                $matchedOrder = $existingTrelloMap[$shortLink];
+            }
+
+            if ($matchedOrder) {
+                // Auto-canonicalize trello_card_id to the 24-char ID if needed
+                if ($cardId && $matchedOrder->trello_card_id !== $cardId) {
+                    $matchedOrder->update(['trello_card_id' => $cardId]);
+                    $existingTrelloMap[$cardId] = $matchedOrder;
+                }
                 $skippedCount++;
 
                 continue;
+            }
+
+            // Also check by WO number if card title includes WO
+            $cardName = $card['name'] ?? '';
+            $parsed = OrderTitleParserService::parse($cardName);
+            if (! empty($parsed['wo_number']) && isset($existingWoMap[$parsed['wo_number']])) {
+                $woOrder = $existingWoMap[$parsed['wo_number']];
+                $existingRaw = trim($woOrder->trello_card_id ?? '');
+                if (empty($existingRaw) || $existingRaw === $shortLink || strlen($existingRaw) < 20) {
+                    if ($cardId) {
+                        $woOrder->update(['trello_card_id' => $cardId]);
+                        $existingTrelloMap[$cardId] = $woOrder;
+                    }
+                    $skippedCount++;
+
+                    continue;
+                }
             }
 
             $res = $syncService->syncCardToOrder($card, $listsMap, $extractedBoardId, $apiKey, $userToken);
@@ -362,7 +420,7 @@ class Index extends Component
             }
 
             if ($res['action'] === 'created') {
-                $existingCardIds[$cardId] = true;
+                $existingTrelloMap[$cardId] = $res['order'];
                 $addedCount++;
                 $changesList[] = [
                     'order_id' => $res['order']->id,

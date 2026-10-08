@@ -38,11 +38,33 @@ class TrashBin extends Component
 
     public function forceDeleteOrder(int $orderId): void
     {
+        $user = Auth::user();
+        if ($user && ! $user->canDeleteOrders()) {
+            abort(403, __('No tiene permisos para eliminar órdenes.'));
+        }
+
         $order = Order::withTrashed()->findOrFail($orderId);
-        $company = $order->company_name;
+        $company = $order->company_name ?? __('Orden');
         $order->forceDelete();
 
-        session()->flash('message', "Orden '{$company}' eliminada permanentemente.");
+        session()->flash('message', "Orden '{$company}' eliminada permanentemente de la app y de Trello.");
+    }
+
+    public function emptyTrash(): void
+    {
+        $user = Auth::user();
+        if ($user && ! $user->canDeleteOrders()) {
+            abort(403, __('No tiene permisos para vaciar la papelera.'));
+        }
+
+        $trashedOrders = Order::onlyTrashed()->get();
+        $count = $trashedOrders->count();
+
+        foreach ($trashedOrders as $order) {
+            $order->forceDelete();
+        }
+
+        session()->flash('message', "Se han eliminado permanentemente {$count} orden(es) de la papelera y de Trello.");
     }
 
     public function render()

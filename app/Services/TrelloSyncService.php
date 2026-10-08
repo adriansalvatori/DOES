@@ -241,7 +241,7 @@ class TrelloSyncService
             }
         }
 
-        $existing = Order::where('trello_card_id', $cardData['id'])->first();
+        $existing = $this->findExistingOrderByTrelloCard($cardData, $parsed);
         $isNew = ! $existing;
 
         $targetStatus = $coreStatus;
@@ -430,10 +430,12 @@ class TrelloSyncService
             $attributes['company_name'] = $existing->company_name;
         }
 
-        $order = Order::updateOrCreate(
-            ['trello_card_id' => $cardData['id']],
-            $attributes
-        );
+        if ($existing) {
+            $existing->update(array_merge(['trello_card_id' => $cardData['id']], $attributes));
+            $order = $existing;
+        } else {
+            $order = Order::create(array_merge(['trello_card_id' => $cardData['id']], $attributes));
+        }
 
         if (! ($existing && $existing->in_workspace && $existing->client_id)) {
             $createIfMissing = (bool) $order->in_workspace;
@@ -510,11 +512,30 @@ class TrelloSyncService
      * Orders in EN_PRODUCCION are completed (moved to ARCHIVED and archived_at set).
      * All missing orders are marked with is_missing_from_trello = true.
      */
-    public function handleMissingOrders(array $incomingCardIds): array
+    public function handleMissingOrders(array $incomingCardIds, array $incomingShortLinks = []): array
     {
+        $allValidIdentifiers = array_values(array_unique(array_filter(array_merge($incomingCardIds, $incomingShortLinks))));
+
         $deletedOrders = Order::whereNotNull('trello_card_id')
-            ->whereNotIn('trello_card_id', $incomingCardIds)
+            ->where('trello_card_id', '!=', '')
+            ->whereNotIn('trello_card_id', $allValidIdentifiers)
             ->get();
+
+        if (! empty($incomingShortLinks)) {
+            $deletedOrders = $deletedOrders->filter(function ($delOrder) use ($incomingShortLinks) {
+                $rawId = trim($delOrder->trello_card_id ?? '');
+                if (empty($rawId)) {
+                    return false;
+                }
+                if (preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $rawId, $m)) {
+                    if (in_array($m[1], $incomingShortLinks, true)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+        }
 
         $changesList = [];
         foreach ($deletedOrders as $delOrder) {
@@ -699,6 +720,151 @@ class TrelloSyncService
             return $response->successful();
         } catch (\Throwable $e) {
             Log::warning("Failed to update Trello card title {$cleanCardId}: ".$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Archive (close) a card on Trello.
+     */
+    public function archiveCard(string $cardId, ?string $apiKey = null, ?string $apiToken = null): bool
+    {
+        if ($this->isPaused()) {
+            Log::info("Trello card archive skipped for card {$cardId}: Trello sync is paused.");
+
+            return false;
+        }
+
+        $cleanCardId = $this->resolveCanonicalCardId($cardId)['id'] ?? trim($cardId);
+        if (empty($cleanCardId)) {
+            return false;
+        }
+
+        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+
+        if (empty($apiToken)) {
+            Log::info("Trello card archive skipped for card {$cleanCardId}: No API token set.");
+
+            return false;
+        }
+
+        try {
+            $response = Http::withQueryParameters([
+                'key' => $apiKey,
+                'token' => $apiToken,
+            ])->put("{$this->baseUrl}/cards/{$cleanCardId}", [
+                'closed' => 'true',
+            ]);
+
+            if ($response->successful()) {
+                Log::info("Trello card {$cleanCardId} archived successfully.");
+
+                return true;
+            }
+
+            Log::warning("Failed to archive Trello card {$cleanCardId}: ".$response->body());
+
+            return false;
+        } catch (\Throwable $e) {
+            Log::warning("Failed to archive Trello card {$cleanCardId}: ".$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Unarchive (reopen) a card on Trello.
+     */
+    public function unarchiveCard(string $cardId, ?string $apiKey = null, ?string $apiToken = null): bool
+    {
+        if ($this->isPaused()) {
+            Log::info("Trello card unarchive skipped for card {$cardId}: Trello sync is paused.");
+
+            return false;
+        }
+
+        $cleanCardId = $this->resolveCanonicalCardId($cardId)['id'] ?? trim($cardId);
+        if (empty($cleanCardId)) {
+            return false;
+        }
+
+        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+
+        if (empty($apiToken)) {
+            Log::info("Trello card unarchive skipped for card {$cleanCardId}: No API token set.");
+
+            return false;
+        }
+
+        try {
+            $response = Http::withQueryParameters([
+                'key' => $apiKey,
+                'token' => $apiToken,
+            ])->put("{$this->baseUrl}/cards/{$cleanCardId}", [
+                'closed' => 'false',
+            ]);
+
+            if ($response->successful()) {
+                Log::info("Trello card {$cleanCardId} unarchived successfully.");
+
+                return true;
+            }
+
+            Log::warning("Failed to unarchive Trello card {$cleanCardId}: ".$response->body());
+
+            return false;
+        } catch (\Throwable $e) {
+            Log::warning("Failed to unarchive Trello card {$cleanCardId}: ".$e->getMessage());
+
+            return false;
+        }
+    }
+
+    /**
+     * Permanently delete a card on Trello.
+     */
+    public function deleteCard(string $cardId, ?string $apiKey = null, ?string $apiToken = null): bool
+    {
+        if ($this->isPaused()) {
+            Log::info("Trello card delete skipped for card {$cardId}: Trello sync is paused.");
+
+            return false;
+        }
+
+        $cleanCardId = $this->resolveCanonicalCardId($cardId)['id'] ?? trim($cardId);
+        if (empty($cleanCardId)) {
+            return false;
+        }
+
+        $apiKey = ! empty(trim($apiKey ?? '')) ? trim($apiKey) : Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
+        $apiToken = ! empty(trim($apiToken ?? '')) ? trim($apiToken) : Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
+
+        if (empty($apiToken)) {
+            Log::info("Trello card delete skipped for card {$cleanCardId}: No API token set.");
+
+            return false;
+        }
+
+        try {
+            $response = Http::withQueryParameters([
+                'key' => $apiKey,
+                'token' => $apiToken,
+            ])->delete("{$this->baseUrl}/cards/{$cleanCardId}");
+
+            if ($response->successful()) {
+                Log::info("Trello card {$cleanCardId} permanently deleted.");
+
+                return true;
+            }
+
+            Log::warning("Failed to permanently delete Trello card {$cleanCardId}: ".$response->body());
+
+            return false;
+        } catch (\Throwable $e) {
+            Log::warning("Failed to permanently delete Trello card {$cleanCardId}: ".$e->getMessage());
 
             return false;
         }
@@ -1433,5 +1599,114 @@ class TrelloSyncService
 
             return ['success' => false, 'status' => 500, 'error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Find an existing Order matching a Trello card by canonical ID, shortLink, card URL, or WO number.
+     * When found via shortLink, auto-canonicalizes the order's trello_card_id to the 24-character ID.
+     */
+    public function findExistingOrderByTrelloCard(array $cardData, array $parsed = []): ?Order
+    {
+        $canonicalId = $cardData['id'] ?? null;
+        $shortLink = $cardData['shortLink'] ?? null;
+
+        if (! $shortLink && ! empty($cardData['shortUrl']) && preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $cardData['shortUrl'], $m)) {
+            $shortLink = $m[1];
+        }
+        if (! $shortLink && ! empty($cardData['url']) && preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $cardData['url'], $m)) {
+            $shortLink = $m[1];
+        }
+
+        // 1. Primary lookup: Match exact canonical 24-character ID
+        if ($canonicalId) {
+            $existing = Order::where('trello_card_id', $canonicalId)->first();
+            if ($existing) {
+                return $existing;
+            }
+        }
+
+        // 2. Secondary lookup: Match exact shortLink
+        if ($shortLink) {
+            $existing = Order::where('trello_card_id', $shortLink)->first();
+            if ($existing) {
+                if ($canonicalId && $existing->trello_card_id !== $canonicalId) {
+                    $existing->update(['trello_card_id' => $canonicalId]);
+                }
+
+                return $existing;
+            }
+
+            // 3. Tertiary lookup: Match if trello_card_id contains the shortLink (e.g. full URL)
+            $existing = Order::where('trello_card_id', 'like', "%{$shortLink}%")->first();
+            if ($existing) {
+                if ($canonicalId && $existing->trello_card_id !== $canonicalId) {
+                    $existing->update(['trello_card_id' => $canonicalId]);
+                }
+
+                return $existing;
+            }
+        }
+
+        // 4. Quaternary lookup: Match by WO Number if present
+        $woNumber = $parsed['wo_number'] ?? null;
+        if (! empty($woNumber)) {
+            $existing = Order::where(function ($q) use ($woNumber) {
+                $q->where('wo_number', "WO {$woNumber}")
+                    ->orWhere('wo_number', $woNumber);
+            })->first();
+
+            if ($existing) {
+                $existingRawTrello = trim($existing->trello_card_id ?? '');
+                // Link if it has no trello_card_id, or has this shortLink, or a short non-canonical ID
+                if (empty($existingRawTrello) || $existingRawTrello === $shortLink || strlen($existingRawTrello) < 20) {
+                    if ($canonicalId) {
+                        $existing->update(['trello_card_id' => $canonicalId]);
+                    }
+
+                    return $existing;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve any user-entered Trello card string (URL, shortLink, or ID) to its canonical 24-char ID.
+     *
+     * @return array{id: ?string, title: ?string}
+     */
+    public function resolveCanonicalCardId(string $input, ?string $apiKey = null, ?string $apiToken = null): array
+    {
+        $clean = trim($input);
+        if (empty($clean)) {
+            return ['id' => null, 'title' => null];
+        }
+
+        if (preg_match('/trello\.com\/c\/([a-zA-Z0-9]+)/i', $clean, $matches)) {
+            $clean = $matches[1];
+        }
+
+        // If it's already a 24-character hex ID, return it directly
+        if (strlen($clean) === 24 && ctype_xdigit($clean)) {
+            return ['id' => $clean, 'title' => null];
+        }
+
+        // If it's an 8-char shortLink, try resolving canonical ID via Trello API
+        if (strlen($clean) >= 6 && strlen($clean) <= 12) {
+            try {
+                $details = $this->getCardDetails($clean, $apiKey, $apiToken);
+                if ($details['success'] && ! empty($details['card']['id'])) {
+                    return [
+                        'id' => $details['card']['id'],
+                        'title' => $details['card']['name'] ?? null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // Ignore API resolution error and return clean candidate
+            }
+        }
+
+        return ['id' => $clean, 'title' => null];
     }
 }

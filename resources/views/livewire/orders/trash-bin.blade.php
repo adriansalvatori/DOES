@@ -1,14 +1,28 @@
 <div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
     <div class="bg-[#f7f7f5] pb-6 space-y-4">
         <!-- Page Header -->
-        <div class="border-b border-[#e9e9e7] bg-white px-6 py-4 flex items-center justify-between">
+        <div class="border-b border-[#e9e9e7] bg-white px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div class="min-w-0">
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Papelera') }}</h1>
             </div>
-            <a href="{{ route('kanban') }}" wire:navigate class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition">
-                <x-lucide-arrow-left class="w-3.5 h-3.5" />
-                {{ __('Volver al Kanban') }}
-            </a>
+            <div class="flex items-center gap-2">
+                @if($trashedOrders->isNotEmpty())
+                    <button
+                        type="button"
+                        wire:click="emptyTrash"
+                        wire:confirm="{{ __('¿Estás seguro de vaciar toda la papelera y eliminar todas las órdenes y sus tarjetas en Trello definitivamente? Esta acción es irreversible.') }}"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+                        title="{{ __('Vaciar papelera / eliminar todo definitivamente') }}"
+                    >
+                        <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                        {{ __('Vaciar papelera / eliminar todo definitivamente') }}
+                    </button>
+                @endif
+                <a href="{{ route('kanban') }}" wire:navigate class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition">
+                    <x-lucide-arrow-left class="w-3.5 h-3.5" />
+                    {{ __('Volver al Kanban') }}
+                </a>
+            </div>
         </div>
 
         <!-- Search Bar -->
@@ -97,12 +111,12 @@
                                 </button>
                                 <button
                                     wire:click="forceDeleteOrder({{ $order->id }})"
-                                    wire:confirm="{{ __('¿Eliminar permanentemente? Esta acción no se puede deshacer.') }}"
+                                    wire:confirm="{{ __('¿Eliminar permanentemente de la app y de Trello? Esta acción no se puede deshacer.') }}"
                                     class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 hover:text-red-800 text-[10px] font-semibold transition"
-                                    title="{{ __('Eliminar permanentemente') }}"
+                                    title="{{ __('Eliminar también de Trello') }}"
                                 >
                                     <x-lucide-trash class="w-3 h-3" />
-                                    {{ __('Eliminar') }}
+                                    {{ __('Eliminar también de Trello') }}
                                 </button>
                             </div>
 
