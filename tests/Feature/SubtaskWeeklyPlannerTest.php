@@ -1327,52 +1327,58 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
     public function test_today_progress_widget_rendered_and_calculates_progress_correctly(): void
     {
-        $designer1 = Designer::create(['name' => 'Euralíz', 'active' => true]);
-        $designer2 = Designer::create(['name' => 'Adrián', 'active' => true]);
+        Carbon::setTestNow(Carbon::parse('2026-10-07 10:00:00'));
 
-        $order = Order::create([
-            'company_name' => 'TAQUERIA LA CHULA',
-            'task_name' => 'Menu Board',
-            'core_status' => CoreStatus::TO_DO_TODAY,
-            'in_workspace' => true,
-            'designer_id' => $designer1->id,
-        ]);
+        try {
+            $designer1 = Designer::create(['name' => 'Euralíz', 'active' => true]);
+            $designer2 = Designer::create(['name' => 'Adrián', 'active' => true]);
 
-        $todayStr = now()->toDateString();
+            $order = Order::create([
+                'company_name' => 'TAQUERIA LA CHULA',
+                'task_name' => 'Menu Board',
+                'core_status' => CoreStatus::TO_DO_TODAY,
+                'in_workspace' => true,
+                'designer_id' => $designer1->id,
+            ]);
 
-        // 1 completed task, 1 pending task for today => 50%
-        RelatedTask::create([
-            'order_id' => $order->id,
-            'title' => 'Menu revisión',
-            'status' => 'done',
-            'completed_at' => now(),
-            'scheduled_date' => $todayStr,
-            'assignee_id' => $designer1->id,
-            'is_work_task' => true,
-        ]);
+            $todayStr = now()->toDateString();
 
-        RelatedTask::create([
-            'order_id' => $order->id,
-            'title' => 'Imprimir vinilos',
-            'status' => 'todo',
-            'scheduled_date' => $todayStr,
-            'assignee_id' => $designer1->id,
-            'is_work_task' => true,
-        ]);
+            // 1 completed task, 1 pending task for today => 50%
+            RelatedTask::create([
+                'order_id' => $order->id,
+                'title' => 'Menu revisión',
+                'status' => 'done',
+                'completed_at' => now(),
+                'scheduled_date' => $todayStr,
+                'assignee_id' => $designer1->id,
+                'is_work_task' => true,
+            ]);
 
-        // When filtered by single designer (Euralíz)
-        Livewire::test(WeeklyPlanner::class)
-            ->set('viewMode', 'by_designer')
-            ->set('selectedDesignerFilter', (string) $designer1->id)
-            ->assertSee('Progreso de hoy')
-            ->assertSee('50%')
-            ->assertSee('Menu revisión')
-            ->assertSee('Imprimir vinilos');
+            RelatedTask::create([
+                'order_id' => $order->id,
+                'title' => 'Imprimir vinilos',
+                'status' => 'todo',
+                'scheduled_date' => $todayStr,
+                'assignee_id' => $designer1->id,
+                'is_work_task' => true,
+            ]);
 
-        // When viewing all designers, the right widget is not rendered
-        Livewire::test(WeeklyPlanner::class)
-            ->set('viewMode', 'by_designer')
-            ->set('selectedDesignerFilter', 'all')
-            ->assertDontSee('Progreso de hoy');
+            // When filtered by single designer (Euralíz)
+            Livewire::test(WeeklyPlanner::class)
+                ->set('viewMode', 'by_designer')
+                ->set('selectedDesignerFilter', (string) $designer1->id)
+                ->assertSee('Progreso de hoy')
+                ->assertSee('50%')
+                ->assertSee('Menu revisión')
+                ->assertSee('Imprimir vinilos');
+
+            // When viewing all designers, the right widget is not rendered
+            Livewire::test(WeeklyPlanner::class)
+                ->set('viewMode', 'by_designer')
+                ->set('selectedDesignerFilter', 'all')
+                ->assertDontSee('Progreso de hoy');
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
