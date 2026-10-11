@@ -8,6 +8,7 @@ use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
 use App\Enums\SubtaskCategory;
 use App\Models\Client;
+use App\Models\Contact;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -24,6 +25,7 @@ use App\Services\TrelloSyncService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use League\CommonMark\Extension\TaskList\TaskListExtension;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -85,6 +87,8 @@ class OrderDetailModal extends Component
     public $editLocationName = '';
 
     public $editResponsiblePerson = '';
+
+    public ?int $editContactId = null;
 
     public $editTaskName = '';
 
@@ -872,7 +876,7 @@ class OrderDetailModal extends Component
         }
     }
 
-    public function renderCommentMarkdown(?string $text): string
+    public function renderCommentMarkdown(?string $text, ?string $commentId = null): string
     {
         if (empty($text)) {
             return '';
@@ -891,13 +895,70 @@ class OrderDetailModal extends Component
         // Ensure dividers (---, ***, ___) have a blank line before them so they don't turn into Setext headings
         $clean = preg_replace('/(?<!\n)\n(---|---|\*\*\*|___)\n/u', "\n\n$1\n\n", $clean);
 
+        // Normalize any checklist syntax:
+        // Handles: "[]", "[ ]", "[x]", "[X]", "- []", "- [ ]", "* []", "* [ ]", etc.
+        // Even when on an empty line like "[]" without text
+        $clean = preg_replace_callback('/^([ \t]*)(?:[-*+]|\d+[\.\)])?[ \t]*\[([ \t]*|[xX])\][ \t]*(.*)$/m', function ($matches) {
+            $indent = $matches[1];
+            $check = strtolower(trim($matches[2]));
+            $marker = ($check === 'x') ? 'x' : ' ';
+            $content = trim($matches[3]);
+            if ($content === '') {
+                $content = '&nbsp;';
+            }
+
+            return "{$indent}- [{$marker}] {$content}";
+        }, $clean);
+
         $html = Str::markdown($clean, [
             'html_input' => 'strip',
             'allow_unsafe_links' => false,
             'renderer' => [
                 'soft_break' => "<br>\n",
             ],
+        ], [
+            new TaskListExtension,
         ]);
+
+        // Transform task list items into modern, clean styled checkboxes
+        $checklistIdx = 0;
+        $html = preg_replace_callback('/<li[^>]*>\s*(?:<p>)?\s*<input([^>]*?)type=["\']checkbox["\']([^>]*?)>(.*?)(?:<\/p>)?\s*<\/li>/is', function ($matches) use (&$checklistIdx, $commentId) {
+            $idx = $checklistIdx++;
+            $inputAttrs = $matches[1].' '.$matches[2];
+            $isChecked = (bool) preg_match('/checked/i', $inputAttrs);
+            $itemContent = trim($matches[3]);
+
+            if ($commentId) {
+                $escapedCommentId = addslashes($commentId);
+                if ($isChecked) {
+                    $checkboxButton = '<button type="button" wire:click="toggleCommentChecklist(\''.$escapedCommentId.'\', '.$idx.')" wire:loading.attr="disabled" class="mt-0.5 w-4 h-4 rounded border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs group/chk focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="'.__('Desmarcar tarea').'">'
+                        .'<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>'
+                        .'</button>';
+                } else {
+                    $checkboxButton = '<button type="button" wire:click="toggleCommentChecklist(\''.$escapedCommentId.'\', '.$idx.')" wire:loading.attr="disabled" class="mt-0.5 w-4 h-4 rounded border border-stone-300 hover:border-emerald-500 bg-white hover:bg-emerald-50 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs group/chk focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="'.__('Marcar como completada').'">'
+                        .'<svg class="w-3 h-3 text-emerald-600 opacity-0 group-hover/chk:opacity-40 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>'
+                        .'</button>';
+                }
+            } else {
+                if ($isChecked) {
+                    $checkboxButton = '<span class="mt-0.5 w-4 h-4 rounded border border-emerald-600 bg-emerald-600 flex items-center justify-center shrink-0 shadow-2xs select-none">'
+                        .'<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>'
+                        .'</span>';
+                } else {
+                    $checkboxButton = '<span class="mt-0.5 w-4 h-4 rounded border border-stone-300 bg-white flex items-center justify-center shrink-0 shadow-2xs select-none"></span>';
+                }
+            }
+
+            $textClass = $isChecked ? 'text-zinc-400 line-through' : 'text-zinc-800';
+
+            return '<li class="task-list-item not-prose list-none flex items-start gap-2.5 my-1.5 select-text">'
+                .$checkboxButton
+                .'<span class="'.$textClass.' leading-snug break-words">'.$itemContent.'</span>'
+                .'</li>';
+        }, $html);
+
+        // Ensure <ul> containing task list items has list-none and no bullet indentation
+        $html = preg_replace('/<ul>(?=\s*<li class="task-list-item)/is', '<ul class="task-list list-none pl-0 my-1.5 space-y-1.5">', $html);
 
         // Transform <img> tags into interactive, proxied photo cards with lightbox modal preview
         $html = preg_replace_callback('/<img\s+([^>]*?)src=["\']([^"\']+)["\']([^>]*?)\/?>/i', function ($matches) {
@@ -960,6 +1021,74 @@ class OrderDetailModal extends Component
         return $html;
     }
 
+    public function toggleCommentChecklist(string $commentId, int $itemIndex): void
+    {
+        if (empty($commentId) || ! $this->orderId) {
+            return;
+        }
+
+        $order = Order::find($this->orderId);
+        if (! $order || empty($order->trello_card_id)) {
+            return;
+        }
+
+        // Find comment in trelloComments
+        $commentIndex = null;
+        $targetComment = null;
+        foreach ($this->trelloComments as $idx => $comment) {
+            if (($comment['id'] ?? null) === $commentId) {
+                $commentIndex = $idx;
+                $targetComment = $comment;
+                break;
+            }
+        }
+
+        if ($targetComment === null) {
+            return;
+        }
+
+        $rawText = $targetComment['text'] ?? '';
+        $cleanText = $targetComment['clean_text'] ?? $rawText;
+
+        $toggleMarker = function (string $text) use ($itemIndex) {
+            $current = 0;
+
+            return preg_replace_callback('/(?:^|[\r\n]+)[ \t]*(?:[-*+]|\d+[\.\)])?[ \t]*\[\K([ \t]*|[xX])(?=\])/m', function ($m) use (&$current, $itemIndex) {
+                $idx = $current++;
+                if ($idx === $itemIndex) {
+                    return (strcasecmp(trim($m[1]), 'x') === 0) ? ' ' : 'x';
+                }
+
+                return $m[1];
+            }, $text);
+        };
+
+        $newRawText = $toggleMarker($rawText);
+        $newCleanText = $toggleMarker($cleanText);
+
+        if ($newRawText === $rawText && $newCleanText === $cleanText) {
+            return;
+        }
+
+        // Optimistically update local state so the UI reacts immediately
+        $previousComment = $this->trelloComments[$commentIndex];
+        $this->trelloComments[$commentIndex]['text'] = $newRawText;
+        $this->trelloComments[$commentIndex]['clean_text'] = $newCleanText;
+
+        $res = app(TrelloSyncService::class)->updateCardComment($commentId, $newRawText);
+
+        if (! ($res['success'] ?? false)) {
+            // Revert optimistic update
+            $this->trelloComments[$commentIndex] = $previousComment;
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => __('No se pudo actualizar el checklist en Trello: :error', ['error' => $res['error'] ?? __('Error desconocido')]),
+            ]);
+        } else {
+            $this->dispatch('order-updated');
+        }
+    }
+
     public function startEditing()
     {
         if (! $this->orderId) {
@@ -971,7 +1100,8 @@ class OrderDetailModal extends Component
         $this->editTrelloCardId = $order->trello_card_id ?? '';
         $this->editCompanyName = $order->company_name ?? '';
         $this->editLocationName = $order->location_name ?? '';
-        $this->editResponsiblePerson = $order->responsible_person ?? '';
+        $this->editResponsiblePerson = $order->display_responsible_person;
+        $this->editContactId = $order->contact_id;
         $this->editTaskName = $order->task_name ?? '';
         $this->editDesignerId = $order->designer_id;
         $this->editDesignerIds = $order->designers->pluck('id')->toArray();
@@ -1108,6 +1238,30 @@ class OrderDetailModal extends Component
     public function cancelEditing()
     {
         $this->isEditing = false;
+    }
+
+    public function updatedEditCompanyName($value): void
+    {
+        $clean = mb_strtoupper(trim($value ?? ''), 'UTF-8');
+        if (empty($clean)) {
+            return;
+        }
+
+        $client = Client::with('contacts')->where('name', $clean)->first();
+        if (! $client) {
+            return;
+        }
+
+        if (empty(trim($this->editResponsiblePerson)) || mb_strtoupper(trim($this->editResponsiblePerson), 'UTF-8') === 'MAIN') {
+            $primary = $client->primary_contact;
+            if ($primary) {
+                $this->editContactId = $primary->id;
+                $this->editResponsiblePerson = $primary->name;
+            } else {
+                $this->editContactId = null;
+                $this->editResponsiblePerson = 'MAIN';
+            }
+        }
     }
 
     public function updatedEditSubstatus($value)
@@ -1622,13 +1776,46 @@ class OrderDetailModal extends Component
             $finalPendingWoNumber = $order->pending_wo_number;
         }
 
+        $matched = null;
+        if (! empty($this->editCompanyName)) {
+            $rawMatchString = $this->editCompanyName.($cleanLocationName ? ' REF '.$cleanLocationName : '');
+            $matched = app(ClientMatchingService::class)->matchOrCreate($rawMatchString, $this->editResponsiblePerson);
+        }
+
+        $rawResp = trim($this->editResponsiblePerson ?? '');
+        $finalContactId = $this->editContactId;
+        $finalRespName = null;
+
+        if (empty($rawResp) || mb_strtoupper($rawResp, 'UTF-8') === 'MAIN') {
+            if ($matched && $matched['client'] && $matched['client']->primary_contact) {
+                $finalContactId = $matched['client']->primary_contact->id;
+                $finalRespName = $matched['client']->primary_contact->name;
+            } elseif ($order->client && $order->client->primary_contact) {
+                $finalContactId = $order->client->primary_contact->id;
+                $finalRespName = $order->client->primary_contact->name;
+            } else {
+                $finalContactId = null;
+                $finalRespName = 'MAIN';
+            }
+        } else {
+            $finalRespName = $rawResp;
+            if (! $finalContactId) {
+                $cleanResp = mb_strtoupper($rawResp, 'UTF-8');
+                $contact = Contact::where('name', $cleanResp)->first();
+                if ($contact) {
+                    $finalContactId = $contact->id;
+                }
+            }
+        }
+
         $updateData = [
             'wo_number' => $finalWoNumber,
             'pending_wo_number' => $finalPendingWoNumber,
             'trello_card_id' => ! empty($cleanTrelloId) ? $cleanTrelloId : null,
             'company_name' => $this->editCompanyName,
             'location_name' => $cleanLocationName,
-            'responsible_person' => ! empty($this->editResponsiblePerson) ? $this->editResponsiblePerson : null,
+            'contact_id' => $finalContactId,
+            'responsible_person' => $finalRespName,
             'task_name' => $this->editTaskName,
             'designer_id' => ! empty($this->editDesignerIds) ? reset($this->editDesignerIds) : null,
             'core_status' => $newCoreStatus ?: $order->core_status,
@@ -1639,16 +1826,15 @@ class OrderDetailModal extends Component
             'done_today' => $isDoneStatus ? true : $order->done_today,
         ];
 
-        if (! empty($this->editCompanyName)) {
-            $rawMatchString = $this->editCompanyName.($cleanLocationName ? ' REF '.$cleanLocationName : '');
-            $matched = app(ClientMatchingService::class)->matchOrCreate($rawMatchString, $this->editResponsiblePerson);
-            if ($matched['client']) {
-                $updateData['client_id'] = $matched['client']->id;
-                $updateData['company_name'] = $matched['client']->name;
+        if ($matched && $matched['client']) {
+            $updateData['client_id'] = $matched['client']->id;
+            $updateData['company_name'] = $matched['client']->name;
+            if ($finalContactId && ! $matched['client']->contacts()->where('contacts.id', $finalContactId)->exists()) {
+                $matched['client']->contacts()->attach($finalContactId, ['is_primary' => false]);
             }
-            if ($matched['location']) {
-                $updateData['client_location_id'] = $matched['location']->id;
-            }
+        }
+        if ($matched && $matched['location']) {
+            $updateData['client_location_id'] = $matched['location']->id;
         }
 
         if ($addToWorkspace) {
@@ -2399,6 +2585,10 @@ class OrderDetailModal extends Component
             $clientOtherActiveOrders = $this->sortOrdersCollection($rawOtherOrders, $this->activeOrdersSortField, $this->activeOrdersSortDirection);
         }
 
+        $selectedContact = $this->editContactId
+            ? Contact::find($this->editContactId)
+            : (! empty($this->editResponsiblePerson) ? Contact::where('name', mb_strtoupper(trim($this->editResponsiblePerson), 'UTF-8'))->first() : ($order?->contact ?? null));
+
         return view('livewire.orders.order-detail-modal', [
             'order' => $order,
             'clientOtherActiveOrders' => $clientOtherActiveOrders,
@@ -2425,12 +2615,37 @@ class OrderDetailModal extends Component
                 ->orderBy('location_name')
                 ->pluck('location_name'),
             'clientLocations' => $clientLocations,
-            'clientContacts' => $clientContacts,
+            'clientContacts' => $client ? $client->contacts : collect(),
+            'directoryContacts' => Contact::orderBy('name')->get(),
+            'selectedContact' => $selectedContact,
             'availableTrelloCards' => Order::whereNotNull('trello_card_id')
                 ->where('trello_card_id', '!=', '')
                 ->orderBy('trello_created_at', 'desc')
                 ->take(100)
                 ->get(['id', 'trello_card_id', 'company_name', 'task_name', 'trello_title', 'wo_number']),
         ]);
+    }
+
+    public function createContactForCompany(string $name): void
+    {
+        $cleanName = mb_strtoupper(trim($name), 'UTF-8');
+        if (empty($cleanName)) {
+            return;
+        }
+
+        $contact = Contact::firstOrCreate(['name' => $cleanName], [
+            'preferred_channel' => 'any',
+            'preferred_language' => 'es',
+        ]);
+
+        if (! empty(trim($this->editCompanyName))) {
+            $client = Client::where('name', mb_strtoupper(trim($this->editCompanyName), 'UTF-8'))->first();
+            if ($client && ! $client->contacts()->where('contacts.id', $contact->id)->exists()) {
+                $client->contacts()->attach($contact->id, ['is_primary' => false]);
+            }
+        }
+
+        $this->editContactId = $contact->id;
+        $this->editResponsiblePerson = $contact->name;
     }
 }

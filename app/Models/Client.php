@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -24,11 +24,13 @@ class Client extends Model
         'website',
         'notes',
         'portal_token',
+        'brand_kit',
     ];
 
     protected $casts = [
         'aliases' => 'array',
         'phones' => 'array',
+        'brand_kit' => 'array',
     ];
 
     protected function name(): Attribute
@@ -133,14 +135,31 @@ class Client extends Model
         return $this->hasMany(ClientLocation::class)->orderBy('name');
     }
 
-    public function contacts(): HasMany
+    public function contacts(): BelongsToMany
     {
-        return $this->hasMany(ClientContact::class)->orderByDesc('is_primary')->orderBy('name');
+        return $this->belongsToMany(Contact::class, 'client_contact')
+            ->withPivot('is_primary', 'role')
+            ->withTimestamps()
+            ->orderByDesc('client_contact.is_primary')
+            ->orderBy('contacts.name');
     }
 
-    public function primaryContact(): HasOne
+    public function primaryContact(): BelongsToMany
     {
-        return $this->hasOne(ClientContact::class)->where('is_primary', true);
+        return $this->contacts()->wherePivot('is_primary', true);
+    }
+
+    public function getPrimaryContactAttribute(): ?Contact
+    {
+        if ($this->relationLoaded('primaryContact')) {
+            return $this->getRelation('primaryContact')->first();
+        }
+
+        if ($this->relationLoaded('contacts')) {
+            return $this->contacts->firstWhere('pivot.is_primary', true) ?: $this->contacts->first();
+        }
+
+        return $this->contacts()->wherePivot('is_primary', true)->first() ?: $this->contacts()->first();
     }
 
     public function links(): HasMany
@@ -182,5 +201,53 @@ class Client extends Model
         }
 
         return $grouped;
+    }
+
+    public function getBrandKit(): array
+    {
+        $default = [
+            'drive_url' => '',
+            'brandbook_url' => '',
+            'logo_url' => '',
+            'catalog_url' => '',
+            'colors' => [],
+            'fonts' => [],
+            'guidelines' => '',
+            'client_notes' => '',
+            'custom_links' => [],
+        ];
+
+        $data = is_array($this->brand_kit) ? $this->brand_kit : [];
+
+        // If client has legacy ClientLink records and custom_links is empty, populate from client_links
+        if (empty($data['custom_links']) && ($this->relationLoaded('links') ? $this->links->isNotEmpty() : $this->links()->exists())) {
+            $legacyLinks = $this->links;
+            $custom = [];
+            foreach ($legacyLinks as $legacy) {
+                $custom[] = [
+                    'label' => $legacy->label,
+                    'url' => $legacy->url,
+                    'notes' => $legacy->department ?? '',
+                ];
+            }
+            $data['custom_links'] = $custom;
+        }
+
+        return array_merge($default, $data);
+    }
+
+    public function hasBrandKit(): bool
+    {
+        $kit = $this->getBrandKit();
+
+        return ! empty(trim($kit['drive_url'] ?? ''))
+            || ! empty(trim($kit['brandbook_url'] ?? ''))
+            || ! empty(trim($kit['logo_url'] ?? ''))
+            || ! empty(trim($kit['catalog_url'] ?? ''))
+            || ! empty($kit['colors'])
+            || ! empty($kit['fonts'])
+            || ! empty(trim($kit['guidelines'] ?? ''))
+            || ! empty(trim($kit['client_notes'] ?? ''))
+            || ! empty($kit['custom_links']);
     }
 }

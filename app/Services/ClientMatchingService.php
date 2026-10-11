@@ -3,9 +3,9 @@
 namespace App\Services;
 
 use App\Models\Client;
-use App\Models\ClientContact;
 use App\Models\ClientLink;
 use App\Models\ClientLocation;
+use App\Models\Contact;
 use App\Models\Designer;
 use App\Models\Order;
 use Illuminate\Support\Str;
@@ -91,12 +91,22 @@ class ClientMatchingService
         if ($responsiblePerson && ! empty(trim($responsiblePerson))) {
             $cleanPerson = trim($responsiblePerson);
             if ($this->isValidContactName($cleanPerson, $client)) {
-                $hasContact = $client->contacts()->where('name', $cleanPerson)->exists();
-                if (! $hasContact) {
-                    ClientContact::create([
-                        'client_id' => $client->id,
-                        'name' => $cleanPerson,
-                        'is_primary' => $client->contacts()->where('is_primary', true)->doesntExist(),
+                $cleanPersonUpper = mb_strtoupper($cleanPerson, 'UTF-8');
+                $contact = Contact::where('name', $cleanPersonUpper)->first();
+                if (! $contact) {
+                    $contact = Contact::create([
+                        'name' => $cleanPersonUpper,
+                        'preferred_channel' => 'any',
+                        'preferred_language' => 'es',
+                    ]);
+                }
+
+                if (! $client->contacts()->where('contacts.id', $contact->id)->exists()) {
+                    $isFirst = $client->contacts()->wherePivot('is_primary', true)->doesntExist();
+                    $client->contacts()->attach($contact->id, [
+                        'is_primary' => $isFirst,
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
             }
@@ -143,7 +153,7 @@ class ClientMatchingService
 
         // Known designer, status, workflow, product, or location keywords from backlog cards
         $invalidKeywords = [
-            'ALTA', 'CAMILA', 'KIKE', 'CLIENT NAME',
+            'ALTA', 'CAMILA', 'KIKE', 'CLIENT NAME', 'MAIN',
             'MARCA PROPIA', 'CLIENT', 'ENTREGADO', 'UPDATE', 'PERMIT', '4OVER', 'PICASSO',
             'BUSINESS CARDS', 'BOLSO', 'PASAPORTE', 'PORTA', 'LOCACION', 'LOGO', 'DIPSA',
             'MARIETTA', 'CONFIANZA', 'SAVANNAH', 'DORAVILLE', 'BEAVER', 'MI TIERRA',
@@ -181,10 +191,11 @@ class ClientMatchingService
     public function purgeBogusContacts(): int
     {
         $purged = 0;
-        $contacts = ClientContact::with('client')->get();
+        $contacts = Contact::with('clients')->get();
 
         foreach ($contacts as $contact) {
-            if (! $this->isValidContactName($contact->name, $contact->client)) {
+            $sampleClient = $contact->clients->first();
+            if (! $this->isValidContactName($contact->name, $sampleClient)) {
                 $contact->delete();
                 $purged++;
             }
@@ -282,39 +293,19 @@ class ClientMatchingService
             'client_id' => $targetClient->id,
         ]);
 
-        // Move or merge contacts
-        $sourceContacts = ClientContact::where('client_id', $sourceClient->id)->get();
+        // Move or attach contacts
+        $sourceContacts = $sourceClient->contacts()->get();
         foreach ($sourceContacts as $sContact) {
-            $sNameClean = mb_strtolower(trim($sContact->name), 'UTF-8');
-            $existingTargetContact = ClientContact::where('client_id', $targetClient->id)
-                ->get()
-                ->first(fn ($c) => mb_strtolower(trim($c->name), 'UTF-8') === $sNameClean || Str::contains(mb_strtolower(trim($c->name), 'UTF-8'), $sNameClean) || Str::contains($sNameClean, mb_strtolower(trim($c->name), 'UTF-8')));
-
-            if ($existingTargetContact) {
-                $updateData = [];
-                if (mb_strlen($sContact->name, 'UTF-8') > mb_strlen($existingTargetContact->name, 'UTF-8')) {
-                    $updateData['name'] = $sContact->name;
-                }
-                if (empty($existingTargetContact->phone) && ! empty($sContact->phone)) {
-                    $updateData['phone'] = $sContact->phone;
-                }
-                if (empty($existingTargetContact->email) && ! empty($sContact->email)) {
-                    $updateData['email'] = $sContact->email;
-                }
-                if (empty($existingTargetContact->department) && ! empty($sContact->department)) {
-                    $updateData['department'] = $sContact->department;
-                }
-                if (! empty($updateData)) {
-                    $existingTargetContact->update($updateData);
-                }
-                $sContact->delete();
-            } else {
-                $sContact->update([
-                    'client_id' => $targetClient->id,
-                    'is_primary' => false,
+            if (! $targetClient->contacts()->where('contacts.id', $sContact->id)->exists()) {
+                $targetClient->contacts()->attach($sContact->id, [
+                    'is_primary' => (bool) ($sContact->pivot->is_primary ?? false),
+                    'role' => $sContact->pivot->role ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
+        $sourceClient->contacts()->detach();
 
         // Move links
         ClientLink::where('client_id', $sourceClient->id)->update([
@@ -323,5 +314,94 @@ class ClientMatchingService
 
         // Delete source client
         $sourceClient->delete();
+    }
+
+    /**
+     * Find potential merge candidates for a given contact.
+     */
+    public function findContactMergeSuggestions(Contact $contact): array
+    {
+        $allOtherContacts = Contact::where('id', '!=', $contact->id)->get();
+        $suggestions = [];
+
+        $targetName = mb_strtolower(trim($contact->name), 'UTF-8');
+
+        foreach ($allOtherContacts as $other) {
+            $otherName = mb_strtolower(trim($other->name), 'UTF-8');
+
+            if (Str::contains($otherName, $targetName) || Str::contains($targetName, $otherName) || levenshtein($targetName, $otherName) <= 2) {
+                $suggestions[] = [
+                    'contact' => $other,
+                    'reason' => 'Nombre similar',
+                ];
+            }
+        }
+
+        return $suggestions;
+    }
+
+    /**
+     * Merge sourceContact into targetContact:
+     * - Reassign all orders to targetContact
+     * - Link all sourceContact's clients to targetContact
+     * - Combine phone/email/channel/notes
+     * - Delete sourceContact
+     */
+    public function mergeContacts(Contact $sourceContact, Contact $targetContact): void
+    {
+        // Reassign orders
+        Order::where('contact_id', $sourceContact->id)->update([
+            'contact_id' => $targetContact->id,
+            'responsible_person' => $targetContact->name,
+        ]);
+
+        // Reassign orders that matched sourceContact by text
+        Order::where('responsible_person', $sourceContact->name)->update([
+            'contact_id' => $targetContact->id,
+            'responsible_person' => $targetContact->name,
+        ]);
+
+        // Move clients
+        $sourceClients = $sourceContact->clients()->get();
+        foreach ($sourceClients as $cl) {
+            if (! $targetContact->clients()->where('clients.id', $cl->id)->exists()) {
+                $targetContact->clients()->attach($cl->id, [
+                    'is_primary' => (bool) ($cl->pivot->is_primary ?? false),
+                    'role' => $cl->pivot->role ?? null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        $sourceContact->clients()->detach();
+
+        // Fill missing fields on target
+        $targetUpdates = [];
+        if (empty($targetContact->phone) && ! empty($sourceContact->phone)) {
+            $targetUpdates['phone'] = $sourceContact->phone;
+        }
+        if (empty($targetContact->email) && ! empty($sourceContact->email)) {
+            $targetUpdates['email'] = $sourceContact->email;
+        }
+        if (empty($targetContact->role_title) && ! empty($sourceContact->role_title)) {
+            $targetUpdates['role_title'] = $sourceContact->role_title;
+        }
+        if (empty($targetContact->notes) && ! empty($sourceContact->notes)) {
+            $targetUpdates['notes'] = $sourceContact->notes;
+        } elseif (! empty($sourceContact->notes) && ! Str::contains($targetContact->notes ?? '', $sourceContact->notes)) {
+            $targetUpdates['notes'] = trim(($targetContact->notes ?? '')."\n\n[Fusionado]: ".$sourceContact->notes);
+        }
+        if (($targetContact->preferred_channel === 'any' || empty($targetContact->preferred_channel)) && $sourceContact->preferred_channel !== 'any') {
+            $targetUpdates['preferred_channel'] = $sourceContact->preferred_channel;
+        }
+        if ($targetContact->preferred_language === 'es' && $sourceContact->preferred_language !== 'es') {
+            $targetUpdates['preferred_language'] = $sourceContact->preferred_language;
+        }
+
+        if (! empty($targetUpdates)) {
+            $targetContact->update($targetUpdates);
+        }
+
+        $sourceContact->delete();
     }
 }

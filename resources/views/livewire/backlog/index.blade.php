@@ -694,7 +694,7 @@
                         </div>
 
                         <div class="flex items-center justify-between text-[10px] pt-1.5 border-t border-sky-100 text-zinc-500">
-                            <span>Resp: <strong class="text-zinc-700">{{ $nOrder->responsible_person ?: 'N/A' }}</strong></span>
+                            <span>Resp: <strong class="text-zinc-700">{{ $nOrder->display_responsible_person }}</strong></span>
                             <button wire:click="$dispatch('open-order-detail', { orderId: {{ $nOrder->id }} })" class="text-sky-700 hover:underline font-medium">
                                 Ver Detalle →
                             </button>
@@ -755,13 +755,12 @@
                                 <span class="truncate block max-w-xs uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
                             </td>
                             <td class="p-3 whitespace-nowrap">
-                                @if($order->responsible_person)
-                                    <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200 text-[10px] font-bold">
-                                        {{ $order->responsible_person }}
-                                    </span>
-                                @else
-                                    <span class="text-zinc-400 text-[10px]">—</span>
-                                @endif
+                                @php
+                                    $respBadge = $order->display_responsible_person;
+                                @endphp
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold {{ $respBadge === 'MAIN' ? 'bg-stone-100 text-stone-600 border border-stone-200' : 'bg-indigo-50 text-indigo-800 border border-indigo-200' }}">
+                                    {{ $respBadge }}
+                                </span>
                             </td>
                             <td class="p-3 text-zinc-600 min-w-0">
                                 <span class="truncate block max-w-sm uppercase" title="{{ $order->task_name }}">{{ $order->task_name }}</span>

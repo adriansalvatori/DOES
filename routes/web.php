@@ -3,6 +3,7 @@
 use App\Livewire\Auth\Login;
 use App\Livewire\Backlog\Index as BacklogIndex;
 use App\Livewire\Clients\ClientIndex;
+use App\Livewire\Contacts\ContactIndex;
 use App\Livewire\Dashboard\Analytics;
 use App\Livewire\Dashboard\Index;
 use App\Livewire\Kanban\Board;
@@ -82,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/overview', OverviewIndex::class)->name('overview');
     Route::get('/pricing', PricingIndex::class)->name('pricing');
     Route::get('/design-resources', DesignResourcesIndex::class)->name('design-resources');
+    Route::get('/contacts', ContactIndex::class)->name('contacts');
     Route::get('/clients', ClientIndex::class)->name('clients');
     Route::get('/analytics', Analytics::class)->name('analytics');
     Route::get('/backlog', BacklogIndex::class)->name('backlog');

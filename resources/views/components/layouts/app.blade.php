@@ -189,10 +189,16 @@
                 <!-- (separador) -->
                 <div class="my-2 border-t border-[#e9e9e7]"></div>
 
-                <!-- Clientes -->
-                <a href="/clients" wire:navigate title="{{ __('Clientes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('clients*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
-                    <x-lucide-building-2 class="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Clientes') }}</span>
+                <!-- Directorio de Clientes -->
+                <a href="/contacts" wire:navigate title="{{ __('Directorio de Clientes') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('contacts*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-users class="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Directorio de Clientes') }}</span>
+                </a>
+
+                <!-- Compañías -->
+                <a href="/clients" wire:navigate title="{{ __('Compañías') }}" class="w-full px-2.5 py-1.5 rounded-md font-medium flex items-center gap-2.5 transition text-xs {{ request()->is('clients*') ? 'bg-[#ebebeb] text-zinc-900 font-semibold' : 'text-zinc-600 hover:bg-[#efefed] hover:text-zinc-900' }}">
+                    <x-lucide-building-2 class="w-4 h-4 text-zinc-500 shrink-0" />
+                    <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Compañías') }}</span>
                 </a>
 
                 <!-- Archivadas -->
@@ -771,6 +777,9 @@
 
     <!-- Global Client Detail Side Flyout Drawer Component -->
     <livewire:clients.client-flyout-panel />
+
+    <!-- Global Contact Detail Side Flyout Drawer Component -->
+    <livewire:contacts.contact-flyout-panel />
 
     <!-- Global Create Order Modal Component -->
     <livewire:orders.create-order-modal />

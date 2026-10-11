@@ -33,6 +33,7 @@ class Order extends Model
         'location_name',
         'client_id',
         'client_location_id',
+        'contact_id',
         'responsible_person',
         'task_name',
         'trello_title',
@@ -214,6 +215,32 @@ class Order extends Model
         return $this->location_name ?: $this->clientLocation?->name;
     }
 
+    public function getDisplayResponsiblePersonAttribute(): string
+    {
+        $resp = trim($this->responsible_person ?? '');
+        if ($resp !== '' && mb_strtoupper($resp, 'UTF-8') !== 'MAIN') {
+            return $resp;
+        }
+
+        if ($this->contact_id && $this->relationLoaded('contact') && $this->contact) {
+            return $this->contact->name;
+        }
+
+        if ($this->client_id && $this->relationLoaded('client') && $this->client?->primary_contact) {
+            return $this->client->primary_contact->name;
+        }
+
+        if ($this->contact_id && $this->contact) {
+            return $this->contact->name;
+        }
+
+        if ($this->client_id && $this->client?->primary_contact) {
+            return $this->client->primary_contact->name;
+        }
+
+        return 'MAIN';
+    }
+
     public function getApprovalTypeLabelAttribute(): ?string
     {
         return match ($this->approval_type) {
@@ -325,6 +352,11 @@ class Order extends Model
     public function clientLocation(): BelongsTo
     {
         return $this->belongsTo(ClientLocation::class, 'client_location_id');
+    }
+
+    public function contact(): BelongsTo
+    {
+        return $this->belongsTo(Contact::class);
     }
 
     public function designer(): BelongsTo

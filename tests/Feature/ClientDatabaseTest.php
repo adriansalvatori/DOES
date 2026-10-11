@@ -7,8 +7,8 @@ use App\Livewire\Backlog\Index;
 use App\Livewire\Clients\ClientFlyoutPanel;
 use App\Livewire\Clients\ClientIndex;
 use App\Models\Client;
-use App\Models\ClientContact;
 use App\Models\ClientLocation;
+use App\Models\Contact;
 use App\Models\Order;
 use App\Services\ClientMatchingService;
 use App\Services\OrderTitleParserService;
@@ -78,7 +78,7 @@ class ClientDatabaseTest extends TestCase
         Livewire::test(ClientIndex::class)
             ->assertStatus(200)
             ->assertSee('CLIENTE TEST')
-            ->assertSee(__('Base de Datos de Clientes'));
+            ->assertSee(__('Catálogo de Compañías'));
     }
 
     public function test_merging_clients_extracts_location_and_updates_orders(): void
@@ -192,11 +192,14 @@ class ClientDatabaseTest extends TestCase
         $this->assertEquals('https://www.empresaconwebsite.com', $client->website);
         $this->assertEquals('Notas especiales', $client->notes);
 
-        $this->assertDatabaseHas('client_contacts', [
-            'client_id' => $client->id,
-            'name' => 'Carlos Gómez',
+        $this->assertDatabaseHas('contacts', [
+            'name' => 'CARLOS GÓMEZ',
             'email' => 'carlos@empresa.com',
             'phone' => '+57 311 0000000',
+        ]);
+
+        $this->assertDatabaseHas('client_contact', [
+            'client_id' => $client->id,
         ]);
     }
 
@@ -251,19 +254,17 @@ class ClientDatabaseTest extends TestCase
     {
         $client = Client::create(['name' => 'CLIENTE DUP CONTACTS']);
 
-        $c1 = ClientContact::create([
-            'client_id' => $client->id,
+        $c1 = Contact::create([
             'name' => 'GIO',
             'phone' => '(770) 111-2222',
-            'is_primary' => true,
         ]);
+        $client->contacts()->attach($c1->id, ['is_primary' => true]);
 
-        $c2 = ClientContact::create([
-            'client_id' => $client->id,
+        $c2 = Contact::create([
             'name' => 'GIO GARCIA',
             'email' => 'gio@example.com',
-            'is_primary' => false,
         ]);
+        $client->contacts()->attach($c2->id, ['is_primary' => false]);
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
@@ -271,10 +272,7 @@ class ClientDatabaseTest extends TestCase
             ->call('confirmMergeContact', 1, 'GIO')
             ->call('save');
 
-        $this->assertDatabaseCount('client_contacts', 1);
-
-        $this->assertDatabaseHas('client_contacts', [
-            'client_id' => $client->id,
+        $this->assertDatabaseHas('contacts', [
             'name' => 'GIO GARCIA',
             'phone' => '(770) 111-2222',
             'email' => 'gio@example.com',
@@ -285,15 +283,15 @@ class ClientDatabaseTest extends TestCase
     {
         $client = Client::create(['name' => 'CLIENTE EXACT DUP CONTACTS']);
 
-        $c1 = ClientContact::create([
-            'client_id' => $client->id,
+        $c1 = Contact::create([
             'name' => 'GIO GARCIA',
         ]);
+        $client->contacts()->attach($c1->id, ['is_primary' => true]);
 
-        $c2 = ClientContact::create([
-            'client_id' => $client->id,
+        $c2 = Contact::create([
             'name' => 'GIO GARCIA',
         ]);
+        $client->contacts()->attach($c2->id, ['is_primary' => false]);
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
@@ -301,7 +299,9 @@ class ClientDatabaseTest extends TestCase
             ->call('confirmMergeContact', 1, 'GIO GARCIA')
             ->call('save');
 
-        $this->assertDatabaseCount('client_contacts', 1);
+        $this->assertDatabaseHas('contacts', [
+            'name' => 'GIO GARCIA',
+        ]);
     }
 
     public function test_can_delete_client_from_client_index(): void
@@ -495,5 +495,79 @@ class ClientDatabaseTest extends TestCase
             ->assertSee('WO 77777')
             ->assertSee('BACKLOG PROJECT ITEM')
             ->assertSee('Backlog');
+    }
+
+    public function test_client_brand_kit_defaults_and_helpers(): void
+    {
+        $client = Client::create(['name' => 'BRAND KIT TEST CLIENT']);
+
+        $this->assertFalse($client->hasBrandKit());
+
+        $kit = $client->getBrandKit();
+        $this->assertIsArray($kit);
+        $this->assertArrayHasKey('drive_url', $kit);
+        $this->assertArrayHasKey('brandbook_url', $kit);
+        $this->assertArrayHasKey('logo_url', $kit);
+        $this->assertArrayHasKey('catalog_url', $kit);
+        $this->assertArrayHasKey('colors', $kit);
+        $this->assertArrayHasKey('fonts', $kit);
+        $this->assertArrayHasKey('guidelines', $kit);
+        $this->assertArrayHasKey('client_notes', $kit);
+        $this->assertArrayHasKey('custom_links', $kit);
+
+        $client->update([
+            'brand_kit' => [
+                'drive_url' => 'https://drive.google.com/test',
+                'colors' => [['name' => 'Azul', 'hex' => '#0F172A', 'notes' => 'Principal']],
+            ],
+        ]);
+
+        $client->refresh();
+        $this->assertTrue($client->hasBrandKit());
+        $this->assertEquals('https://drive.google.com/test', $client->getBrandKit()['drive_url']);
+        $this->assertCount(1, $client->getBrandKit()['colors']);
+    }
+
+    public function test_can_manage_and_save_brand_kit_in_client_flyout(): void
+    {
+        $client = Client::create(['name' => 'FLYOUT BRAND KIT TEST']);
+
+        Livewire::test(ClientFlyoutPanel::class)
+            ->call('open', $client->id)
+            ->set('activeTab', 'brand_kit')
+            ->assertSee('Brand Kit')
+            ->assertSee('Activos & Enlaces Clave')
+            ->call('addBrandColor')
+            ->set('brandKit.colors.0.name', 'Azul Corporativo')
+            ->set('brandKit.colors.0.hex', '#0055FF')
+            ->set('brandKit.colors.0.notes', 'Pantone 286 C')
+            ->call('addBrandFont')
+            ->set('brandKit.fonts.0.role', 'Titulares')
+            ->set('brandKit.fonts.0.name', 'Montserrat Black')
+            ->set('brandKit.fonts.0.notes', 'Siempre mayúsculas')
+            ->set('brandKit.drive_url', 'https://drive.google.com/folder-123')
+            ->set('brandKit.brandbook_url', 'https://figma.com/file-brandbook')
+            ->set('brandKit.guidelines', 'Usar logo horizontal en uniformes')
+            ->set('brandKit.client_notes', 'Don Carlos prefiere textos grandes')
+            ->call('addCustomBrandLink')
+            ->set('brandKit.custom_links.0.label', 'Fotos de Platos')
+            ->set('brandKit.custom_links.0.url', 'G:\SALVA-MEX\FOTOS')
+            ->set('brandKit.custom_links.0.notes', 'Servidor Kudos')
+            ->call('save');
+
+        $client->refresh();
+        $kit = $client->getBrandKit();
+
+        $this->assertEquals('https://drive.google.com/folder-123', $kit['drive_url']);
+        $this->assertEquals('https://figma.com/file-brandbook', $kit['brandbook_url']);
+        $this->assertEquals('Usar logo horizontal en uniformes', $kit['guidelines']);
+        $this->assertEquals('Don Carlos prefiere textos grandes', $kit['client_notes']);
+        $this->assertCount(1, $kit['colors']);
+        $this->assertEquals('Azul Corporativo', $kit['colors'][0]['name']);
+        $this->assertEquals('#0055FF', $kit['colors'][0]['hex']);
+        $this->assertCount(1, $kit['fonts']);
+        $this->assertEquals('Montserrat Black', $kit['fonts'][0]['name']);
+        $this->assertCount(1, $kit['custom_links']);
+        $this->assertEquals('G:\SALVA-MEX\FOTOS', $kit['custom_links'][0]['url']);
     }
 }

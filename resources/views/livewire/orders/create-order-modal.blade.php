@@ -241,15 +241,18 @@
                         <div class="relative" 
                              x-data="{ 
                                  open: false,
-                                 selectResp(resp) {
-                                     $wire.set('responsiblePerson', resp);
+                                 selectResp(id, name) {
+                                     $wire.set('contactId', id);
+                                     $wire.set('responsiblePerson', name);
                                      this.open = false;
                                  }
                              }"
                              x-dropdown-nav>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-user-check class="w-3 h-3 text-zinc-400" />
-                                <span>Responsable</span>
+                            <label class="block font-medium text-zinc-700 mb-1 flex items-center justify-between">
+                                <span class="flex items-center gap-1">
+                                    <x-lucide-user-check class="w-3 h-3 text-zinc-400" />
+                                    <span>{{ __('Responsable / Cliente') }}</span>
+                                </span>
                             </label>
                             <div class="relative">
                                 <input 
@@ -258,14 +261,14 @@
                                     @focus="open = true"
                                     @click.outside="open = false"
                                     autocomplete="off"
-                                    placeholder="Ej. AGUSTIN o buscar..." 
+                                    placeholder="{{ __('Ej. MARCELA o buscar cliente...') }}" 
                                     class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none pr-7 font-semibold">
                                 
                                 <button 
                                     type="button" 
                                     @click="open = !open" 
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                    title="Ver lista de responsables">
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5 cursor-pointer"
+                                    title="{{ __('Ver lista de clientes') }}">
                                     <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                 </button>
                             </div>
@@ -276,50 +279,62 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs"
+                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-64 overflow-y-auto divide-y divide-stone-100 text-xs custom-vertical-scrollbar"
                                 style="display: none;">
                                 
-                                @if(!empty($clientContacts))
+                                {{-- Contactos vinculados a esta marca/compañía --}}
+                                @if(!empty($clientContacts) && $clientContacts->isNotEmpty())
                                     <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
-                                        <span>Contactos del cliente</span>
-                                        <x-lucide-user class="w-3 h-3 text-emerald-600" />
+                                        <span>{{ __('Contactos de esta compañía') }}</span>
+                                        <x-lucide-user-check class="w-3 h-3 text-emerald-600" />
                                     </div>
-                                    @foreach($clientContacts as $cResp)
+                                    @foreach($clientContacts as $c)
                                         <button 
                                             type="button"
-                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($cResp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
-                                            @click="selectResp('{{ addslashes($cResp) }}')" 
-                                            class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition flex items-center justify-between">
-                                            <span>{{ $cResp }}</span>
-                                            <span class="text-[10px] text-emerald-600 font-medium">(Registrado)</span>
+                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($c->name)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                            @click="selectResp({{ $c->id }}, '{{ addslashes($c->name) }}')" 
+                                            class="w-full text-left px-3 py-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition truncate block">
+                                            {{ $c->name }}
                                         </button>
                                     @endforeach
                                 @endif
 
+                                {{-- Otros clientes del directorio global --}}
                                 @php
-                                    $otherResponsibles = array_diff($existingResponsibles->toArray(), $clientContacts ?? []);
+                                    $linkedIds = !empty($clientContacts) ? $clientContacts->pluck('id')->toArray() : [];
+                                    $otherContacts = $directoryContacts->filter(fn($dc) => !in_array($dc->id, $linkedIds, true));
                                 @endphp
 
-                                @if(!empty($otherResponsibles))
-                                    @if(!empty($clientContacts))
-                                        <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
-                                            Otros responsables
-                                        </div>
-                                    @endif
-                                    @foreach($otherResponsibles as $resp)
+                                @if($otherContacts->isNotEmpty())
+                                    <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400 flex items-center justify-between">
+                                        <span>{{ __('Directorio de clientes') }}</span>
+                                        <x-lucide-users class="w-3 h-3 text-zinc-400" />
+                                    </div>
+                                    @foreach($otherContacts as $dc)
                                         <button 
                                             type="button"
-                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
-                                            @click="selectResp('{{ addslashes($resp) }}')" 
-                                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition">
-                                            {{ $resp }}
+                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($dc->name)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                            @click="selectResp({{ $dc->id }}, '{{ addslashes($dc->name) }}')" 
+                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 focus:bg-stone-50 focus:outline-none cursor-pointer font-medium text-zinc-800 transition truncate block">
+                                            {{ $dc->name }}
                                         </button>
                                     @endforeach
                                 @endif
 
-                                @if(empty($clientContacts) && empty($otherResponsibles))
-                                    <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo responsable...</div>
-                                @endif
+                                {{-- Botón intuitivo para crear contacto sobre la marcha si no existe --}}
+                                <div x-show="Boolean($wire.responsiblePerson && $wire.responsiblePerson.trim().length >= 2)">
+                                    <button 
+                                        type="button" 
+                                        @click="$wire.createContactForCompany($wire.responsiblePerson); open = false;"
+                                        class="w-full text-left p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-t border-emerald-200 transition font-bold text-xs flex items-center justify-between gap-2 cursor-pointer"
+                                    >
+                                        <div class="flex items-center gap-1.5 min-w-0">
+                                            <x-lucide-user-plus class="w-4 h-4 text-emerald-600 shrink-0" />
+                                            <span class="truncate">{{ __('+ Crear contacto para esta compañía:') }} <strong class="uppercase" x-text="$wire.responsiblePerson"></strong></span>
+                                        </div>
+                                        <span class="text-[10px] text-emerald-800 bg-emerald-200/80 px-1.5 py-0.5 rounded font-bold shrink-0">{{ __('Crear') }}</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

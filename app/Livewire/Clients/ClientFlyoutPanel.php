@@ -3,9 +3,9 @@
 namespace App\Livewire\Clients;
 
 use App\Models\Client;
-use App\Models\ClientContact;
 use App\Models\ClientLink;
 use App\Models\ClientLocation;
+use App\Models\Contact;
 use App\Models\Order;
 use App\Services\ClientMatchingService;
 use App\Services\QrCodeService;
@@ -36,6 +36,18 @@ class ClientFlyoutPanel extends Component
     public array $contacts = [];
 
     public array $links = [];
+
+    public array $brandKit = [
+        'drive_url' => '',
+        'brandbook_url' => '',
+        'logo_url' => '',
+        'catalog_url' => '',
+        'colors' => [],
+        'fonts' => [],
+        'guidelines' => '',
+        'client_notes' => '',
+        'custom_links' => [],
+    ];
 
     public array $locations = [];
 
@@ -113,13 +125,15 @@ class ClientFlyoutPanel extends Component
                     'name' => $c->name,
                     'phone' => ClientLocation::formatPhoneNumber($c->phone ?? ''),
                     'email' => $c->email ?? '',
-                    'department' => $c->department ?? '',
-                    'is_primary' => (bool) $c->is_primary,
+                    'department' => $c->role_title ?? $c->pivot?->role ?? '',
+                    'preferred_channel' => $c->preferred_channel ?? 'any',
+                    'preferred_language' => $c->preferred_language ?? 'es',
+                    'is_primary' => (bool) ($c->pivot?->is_primary ?? false),
                 ])->toArray();
 
                 if (empty($this->contacts)) {
                     $this->contacts = [
-                        ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
+                        ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'preferred_channel' => 'any', 'preferred_language' => 'es', 'is_primary' => true],
                     ];
                 }
 
@@ -129,6 +143,8 @@ class ClientFlyoutPanel extends Component
                     'url' => $l->url,
                     'department' => $l->department ?? '',
                 ])->toArray();
+
+                $this->brandKit = $client->getBrandKit();
 
                 $this->locations = $client->locations->map(function ($loc) {
                     $addr = trim($loc->address ?? '');
@@ -165,11 +181,22 @@ class ClientFlyoutPanel extends Component
             $this->newAlias = '';
             $this->notes = '';
             $this->contacts = [
-                ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'is_primary' => true],
+                ['id' => null, 'name' => '', 'phone' => '', 'email' => '', 'department' => '', 'preferred_channel' => 'any', 'preferred_language' => 'es', 'is_primary' => true],
             ];
             $this->links = [
                 ['id' => null, 'label' => 'Brandbook', 'url' => '', 'department' => ''],
                 ['id' => null, 'label' => 'Assets / Recursos', 'url' => '', 'department' => ''],
+            ];
+            $this->brandKit = [
+                'drive_url' => '',
+                'brandbook_url' => '',
+                'logo_url' => '',
+                'catalog_url' => '',
+                'colors' => [],
+                'fonts' => [],
+                'guidelines' => '',
+                'client_notes' => '',
+                'custom_links' => [],
             ];
             $this->locations = [
                 ['id' => null, 'name' => 'SEDE PRINCIPAL', 'address' => '', 'phone' => '', 'email' => '', 'manager_name' => '', 'notes' => ''],
@@ -236,6 +263,8 @@ class ClientFlyoutPanel extends Component
             'phone' => '',
             'email' => '',
             'department' => '',
+            'preferred_channel' => 'any',
+            'preferred_language' => 'es',
             'is_primary' => empty($this->contacts),
         ];
     }
@@ -254,6 +283,67 @@ class ClientFlyoutPanel extends Component
             'url' => '',
             'department' => '',
         ];
+    }
+
+    public function addBrandColor(): void
+    {
+        if (! isset($this->brandKit['colors']) || ! is_array($this->brandKit['colors'])) {
+            $this->brandKit['colors'] = [];
+        }
+        $this->brandKit['colors'][] = [
+            'name' => '',
+            'hex' => '#0F172A',
+            'notes' => '',
+        ];
+    }
+
+    public function removeBrandColor(int $index): void
+    {
+        if (isset($this->brandKit['colors'][$index])) {
+            unset($this->brandKit['colors'][$index]);
+            $this->brandKit['colors'] = array_values($this->brandKit['colors']);
+        }
+    }
+
+    public function addBrandFont(): void
+    {
+        if (! isset($this->brandKit['fonts']) || ! is_array($this->brandKit['fonts'])) {
+            $this->brandKit['fonts'] = [];
+        }
+        $this->brandKit['fonts'][] = [
+            'role' => '',
+            'name' => '',
+            'url' => '',
+            'notes' => '',
+        ];
+    }
+
+    public function removeBrandFont(int $index): void
+    {
+        if (isset($this->brandKit['fonts'][$index])) {
+            unset($this->brandKit['fonts'][$index]);
+            $this->brandKit['fonts'] = array_values($this->brandKit['fonts']);
+        }
+    }
+
+    public function addCustomBrandLink(): void
+    {
+        if (! isset($this->brandKit['custom_links']) || ! is_array($this->brandKit['custom_links'])) {
+            $this->brandKit['custom_links'] = [];
+        }
+        $this->brandKit['custom_links'][] = [
+            'label' => '',
+            'url' => '',
+            'notes' => '',
+        ];
+    }
+
+    public function removeCustomBrandLink(int $index): void
+    {
+        if (isset($this->brandKit['custom_links'][$index])) {
+            unset($this->brandKit['custom_links'][$index]);
+            $this->brandKit['custom_links'] = array_values($this->brandKit['custom_links']);
+        }
     }
 
     public array $dismissedContactDuplicates = [];
@@ -308,8 +398,8 @@ class ClientFlyoutPanel extends Component
                 $target['is_primary'] = true;
             }
 
-            if (! empty($source['id'])) {
-                ClientContact::where('id', $source['id'])->delete();
+            if (! empty($source['id']) && $this->clientId) {
+                Client::find($this->clientId)?->contacts()->detach($source['id']);
             }
 
             unset($this->contacts[$index]);
@@ -389,6 +479,8 @@ class ClientFlyoutPanel extends Component
             'phone' => '',
             'email' => '',
             'department' => '',
+            'preferred_channel' => 'any',
+            'preferred_language' => 'es',
             'is_primary' => empty($this->contacts),
         ];
     }
@@ -487,6 +579,63 @@ class ClientFlyoutPanel extends Component
         $cleanWebsite = trim($this->website);
         $aliasesArray = array_values(array_filter(array_map('trim', $this->aliases)));
 
+        $cleanedColors = [];
+        foreach ($this->brandKit['colors'] ?? [] as $color) {
+            $hex = trim($color['hex'] ?? '');
+            $name = trim($color['name'] ?? '');
+            $notes = trim($color['notes'] ?? '');
+            if ($hex !== '' || $name !== '' || $notes !== '') {
+                $cleanedColors[] = [
+                    'name' => $name,
+                    'hex' => $hex !== '' ? (str_starts_with($hex, '#') ? $hex : '#'.$hex) : '',
+                    'notes' => $notes,
+                ];
+            }
+        }
+
+        $cleanedFonts = [];
+        foreach ($this->brandKit['fonts'] ?? [] as $font) {
+            $name = trim($font['name'] ?? '');
+            $role = trim($font['role'] ?? '');
+            $url = trim($font['url'] ?? '');
+            $notes = trim($font['notes'] ?? '');
+            if ($name !== '' || $role !== '' || $url !== '' || $notes !== '') {
+                $cleanedFonts[] = [
+                    'role' => $role,
+                    'name' => $name,
+                    'url' => $url,
+                    'notes' => $notes,
+                ];
+            }
+        }
+
+        $cleanedCustomLinks = [];
+        foreach ($this->brandKit['custom_links'] ?? [] as $link) {
+            $label = trim($link['label'] ?? '');
+            $url = trim($link['url'] ?? '');
+            $notes = trim($link['notes'] ?? '');
+            if ($label !== '' || $url !== '' || $notes !== '') {
+                $cleanedCustomLinks[] = [
+                    'label' => $label,
+                    'url' => $url,
+                    'notes' => $notes,
+                ];
+            }
+        }
+
+        $cleanBrandKit = [
+            'drive_url' => trim($this->brandKit['drive_url'] ?? ''),
+            'brandbook_url' => trim($this->brandKit['brandbook_url'] ?? ''),
+            'logo_url' => trim($this->brandKit['logo_url'] ?? ''),
+            'catalog_url' => trim($this->brandKit['catalog_url'] ?? ''),
+            'colors' => $cleanedColors,
+            'fonts' => $cleanedFonts,
+            'guidelines' => trim($this->brandKit['guidelines'] ?? ''),
+            'client_notes' => trim($this->brandKit['client_notes'] ?? ''),
+            'custom_links' => $cleanedCustomLinks,
+        ];
+        $this->brandKit = $cleanBrandKit;
+
         if ($this->clientId) {
             $client = Client::findOrFail($this->clientId);
             $client->update([
@@ -495,6 +644,7 @@ class ClientFlyoutPanel extends Component
                 'aliases' => $aliasesArray,
                 'phones' => $cleanPhones,
                 'notes' => $this->notes,
+                'brand_kit' => $cleanBrandKit,
             ]);
         } else {
             $client = Client::create([
@@ -503,6 +653,7 @@ class ClientFlyoutPanel extends Component
                 'aliases' => $aliasesArray,
                 'phones' => $cleanPhones,
                 'notes' => $this->notes,
+                'brand_kit' => $cleanBrandKit,
             ]);
             $this->clientId = $client->id;
         }
@@ -518,58 +669,88 @@ class ClientFlyoutPanel extends Component
         // Sync contacts
         $existingContactIds = [];
         foreach ($this->contacts as $cData) {
-            if (empty(trim($cData['name'] ?? ''))) {
+            $cName = mb_strtoupper(trim($cData['name'] ?? ''), 'UTF-8');
+            if (empty($cName)) {
                 continue;
             }
             $cPhone = ClientLocation::formatPhoneNumber($cData['phone'] ?? '');
+            $cEmail = trim($cData['email'] ?? '');
+            $cRole = trim($cData['department'] ?? '');
+            $cChannel = $cData['preferred_channel'] ?? 'any';
+            $cLang = $cData['preferred_language'] ?? 'es';
+            $isPrimary = (bool) ($cData['is_primary'] ?? false);
+
             if (! empty($cData['id'])) {
-                $contact = ClientContact::find($cData['id']);
+                $contact = Contact::find($cData['id']);
                 if ($contact) {
                     $contact->update([
-                        'name' => trim($cData['name']),
+                        'name' => $cName,
                         'phone' => $cPhone,
-                        'email' => trim($cData['email'] ?? ''),
-                        'department' => trim($cData['department'] ?? ''),
-                        'is_primary' => (bool) ($cData['is_primary'] ?? false),
+                        'email' => $cEmail,
+                        'role_title' => $cRole,
+                        'preferred_channel' => $cChannel,
+                        'preferred_language' => $cLang,
+                    ]);
+                    $client->contacts()->syncWithoutDetaching([
+                        $contact->id => ['is_primary' => $isPrimary, 'role' => $cRole],
                     ]);
                     $existingContactIds[] = $contact->id;
                 }
             } else {
-                $newContact = ClientContact::create([
-                    'client_id' => $client->id,
-                    'name' => trim($cData['name']),
-                    'phone' => $cPhone,
-                    'email' => trim($cData['email'] ?? ''),
-                    'department' => trim($cData['department'] ?? ''),
-                    'is_primary' => (bool) ($cData['is_primary'] ?? false),
+                $contact = Contact::where('name', $cName)->first();
+                if (! $contact) {
+                    $contact = Contact::create([
+                        'name' => $cName,
+                        'phone' => $cPhone,
+                        'email' => $cEmail,
+                        'role_title' => $cRole,
+                        'preferred_channel' => $cChannel,
+                        'preferred_language' => $cLang,
+                    ]);
+                } else {
+                    $contact->update(array_filter([
+                        'phone' => $cPhone ?: $contact->phone,
+                        'email' => $cEmail ?: $contact->email,
+                        'role_title' => $cRole ?: $contact->role_title,
+                    ]));
+                }
+                $client->contacts()->syncWithoutDetaching([
+                    $contact->id => ['is_primary' => $isPrimary, 'role' => $cRole],
                 ]);
-                $existingContactIds[] = $newContact->id;
+                $existingContactIds[] = $contact->id;
             }
         }
-        ClientContact::where('client_id', $client->id)->whereNotIn('id', $existingContactIds)->delete();
+        $contactsToDetach = $client->contacts()->whereNotIn('contacts.id', $existingContactIds)->pluck('contacts.id');
+        if ($contactsToDetach->isNotEmpty()) {
+            $client->contacts()->detach($contactsToDetach);
+        }
 
         // Sync links
+        $linksToSync = ! empty($cleanedCustomLinks) ? $cleanedCustomLinks : $this->links;
         $existingLinkIds = [];
-        foreach ($this->links as $lData) {
-            if (empty(trim($lData['label'] ?? '')) || empty(trim($lData['url'] ?? ''))) {
+        foreach ($linksToSync as $lData) {
+            $label = trim($lData['label'] ?? '');
+            $url = trim($lData['url'] ?? '');
+            $dept = trim($lData['notes'] ?? $lData['department'] ?? '');
+            if (empty($label) || empty($url)) {
                 continue;
             }
             if (! empty($lData['id'])) {
                 $link = ClientLink::find($lData['id']);
                 if ($link) {
                     $link->update([
-                        'label' => trim($lData['label']),
-                        'url' => trim($lData['url']),
-                        'department' => trim($lData['department'] ?? ''),
+                        'label' => $label,
+                        'url' => $url,
+                        'department' => $dept,
                     ]);
                     $existingLinkIds[] = $link->id;
                 }
             } else {
                 $newLink = ClientLink::create([
                     'client_id' => $client->id,
-                    'label' => trim($lData['label']),
-                    'url' => trim($lData['url']),
-                    'department' => trim($lData['department'] ?? ''),
+                    'label' => $label,
+                    'url' => $url,
+                    'department' => $dept,
                 ]);
                 $existingLinkIds[] = $newLink->id;
             }

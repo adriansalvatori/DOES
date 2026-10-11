@@ -4,7 +4,7 @@
     <div id="tour-client-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
         {{-- Row 1: Title & Badge --}}
         <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Base de Datos de Clientes') }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Catálogo de Compañías') }}</h1>
             <span class="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-[11px] font-bold text-zinc-600">{{ $totalClientsCount }}</span>
         </div>
 
@@ -77,7 +77,7 @@
                                         {{ $client->name }}
                                     </span>
                                     @php
-                                        $primaryContact = $client->primaryContact ?: $client->contacts->first();
+                                        $primaryContact = ($client->primaryContact instanceof \Illuminate\Support\Collection ? $client->primaryContact->first() : $client->primaryContact) ?: $client->contacts->first();
                                         $mainLocation = $client->locations->first();
                                         $mainAddress = trim($mainLocation?->address ?? '');
                                     @endphp
@@ -163,21 +163,21 @@
                                 </div>
                             </td>
                             <td class="py-2.5 px-3.5 text-right">
-                                <div class="inline-flex items-center gap-1.5 justify-end flex-wrap sm:flex-nowrap">
+                                <div class="inline-flex items-center gap-2 justify-end flex-wrap sm:flex-nowrap">
                                     <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $client->active_orders_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' : 'bg-stone-100/70 text-zinc-400 border-stone-200/60' }} border inline-flex items-center gap-1 shrink-0">
                                         <x-lucide-zap class="w-3 h-3 {{ $client->active_orders_count > 0 ? 'text-emerald-600' : 'text-zinc-400' }}" />
                                         <span>{{ $client->active_orders_count }} activas</span>
                                     </span>
 
                                     @if($client->archived_orders_count > 0)
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-100/80 text-zinc-500 border border-stone-200/60 inline-flex items-center gap-1 shrink-0" title="{{ $client->archived_orders_count }} {{ __('órdenes archivadas') }}">
+                                        <span class="inline-flex items-center gap-1 text-[9px] font-medium text-zinc-500 shrink-0" title="{{ $client->archived_orders_count }} {{ __('órdenes archivadas') }}">
                                             <x-lucide-archive class="w-2.5 h-2.5 text-zinc-400" />
                                             <span>{{ $client->archived_orders_count }} arch.</span>
                                         </span>
                                     @endif
 
                                     @if($client->backlog_orders_count > 0)
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-100/80 text-zinc-500 border border-stone-200/60 inline-flex items-center gap-1 shrink-0" title="{{ $client->backlog_orders_count }} {{ __('órdenes en backlog') }}">
+                                        <span class="inline-flex items-center gap-1 text-[9px] font-medium text-zinc-500 shrink-0" title="{{ $client->backlog_orders_count }} {{ __('órdenes en backlog') }}">
                                             <x-lucide-inbox class="w-2.5 h-2.5 text-zinc-400" />
                                             <span>{{ $client->backlog_orders_count }} backlog</span>
                                         </span>

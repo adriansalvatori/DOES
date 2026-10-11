@@ -353,13 +353,14 @@
                                             {{ $order->company_name }}
                                         </span>
 
-                                        @if($order->responsible_person)
-                                            <span class="text-zinc-300 text-[10px] shrink-0">•</span>
-                                            <span class="truncate flex items-center gap-1 text-[10px] text-zinc-500 font-medium min-w-0">
-                                                <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                <span class="truncate">{{ $order->responsible_person }}</span>
-                                            </span>
-                                        @endif
+                                        @php
+                                            $respBadge = $order->display_responsible_person;
+                                        @endphp
+                                        <span class="text-zinc-300 text-[10px] shrink-0">•</span>
+                                        <span class="truncate flex items-center gap-1 text-[10px] {{ $respBadge === 'MAIN' ? 'text-zinc-400' : 'text-zinc-500 font-medium' }} min-w-0">
+                                            <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
+                                            <span class="truncate">{{ $respBadge }}</span>
+                                        </span>
                                     </div>
 
                                     <!-- Row 2: Designer, Order name -->

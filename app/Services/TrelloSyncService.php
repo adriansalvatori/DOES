@@ -1174,6 +1174,60 @@ class TrelloSyncService
     }
 
     /**
+     * Update an existing comment text on Trello by its action ID.
+     */
+    public function updateCardComment(string $actionId, string $newText, ?string $apiKey = null, ?string $apiToken = null): array
+    {
+        if ($this->isPaused()) {
+            Log::info("Trello comment update skipped for action {$actionId}: Trello sync is currently paused.");
+
+            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+        }
+
+        $actionId = trim($actionId);
+        if (empty($actionId)) {
+            return ['success' => false, 'error' => 'Action ID is required.'];
+        }
+
+        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+
+        if (! $apiToken) {
+            return ['success' => false, 'error' => 'Se requiere Token de Usuario Trello para actualizar comentarios.'];
+        }
+
+        $params = [
+            'key' => $apiKey,
+            'token' => $apiToken,
+        ];
+
+        try {
+            $response = Http::asJson()->put("{$this->baseUrl}/actions/{$actionId}", array_merge($params, [
+                'text' => $newText,
+            ]));
+
+            if ($response->successful()) {
+                return ['success' => true, 'data' => $response->json()];
+            }
+
+            // Fallback to /actions/{id}/text if /actions/{id} returns an error
+            $fallbackResponse = Http::asJson()->put("{$this->baseUrl}/actions/{$actionId}/text", array_merge($params, [
+                'value' => $newText,
+            ]));
+
+            if ($fallbackResponse->successful()) {
+                return ['success' => true, 'data' => $fallbackResponse->json()];
+            }
+
+            return ['success' => false, 'status' => $response->status(), 'error' => $response->body()];
+        } catch (\Exception $e) {
+            Log::error("Trello API error updating comment action {$actionId}: ".$e->getMessage());
+
+            return ['success' => false, 'status' => 500, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Get comments for all active workspace orders that have a Trello card linked.
      */
     public function getWorkspaceActiveOrdersComments(?string $apiKey = null, ?string $apiToken = null): array

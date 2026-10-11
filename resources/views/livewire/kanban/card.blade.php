@@ -54,12 +54,13 @@
                 </span>
             @endif
 
-            @if($order->responsible_person)
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-1 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-indigo-50 text-indigo-800 border border-indigo-200' }}">
-                    <x-lucide-user class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : 'text-indigo-600' }} shrink-0" />
-                    <span>{{ $order->responsible_person }}</span>
-                </span>
-            @endif
+            @php
+                $respBadge = $order->display_responsible_person;
+            @endphp
+            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-1 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : ($respBadge === 'MAIN' ? 'bg-stone-100 text-stone-600 border border-stone-200' : 'bg-indigo-50 text-indigo-800 border border-indigo-200') }}">
+                <x-lucide-user class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : ($respBadge === 'MAIN' ? 'text-stone-400' : 'text-indigo-600') }} shrink-0" />
+                <span>{{ $respBadge }}</span>
+            </span>
 
             @if($order->substatus && $order->substatus->value !== 'URGENTE')
                 <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}" style="{{ ! $isBlocked ? $order->substatus->getInlineBadgeStyle() : '' }}">

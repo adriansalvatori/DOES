@@ -8,7 +8,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Base de Datos de Clientes')]
+#[Title('Catálogo de Compañías')]
 class ClientIndex extends Component
 {
     public string $search = '';

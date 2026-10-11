@@ -1772,16 +1772,17 @@
                         $singleDesigner = $designerGridList->first();
                         $todayDateStr = now()->toDateString();
                         
-                        $todayTasks = $subtasks->filter(function ($st) use ($singleDesigner, $todayDateStr) {
-                            $isAssigned = false;
+                        $singleDesignerSubtasks = $subtasks->filter(function ($st) use ($singleDesigner) {
                             if ($st->assignee_id) {
-                                $isAssigned = ((int) $st->assignee_id === (int) $singleDesigner->id);
-                            } elseif ($st->order) {
-                                $isAssigned = ((int) $st->order->designer_id === (int) $singleDesigner->id || $st->order->designers->contains('id', $singleDesigner->id));
+                                return (int) $st->assignee_id === (int) $singleDesigner->id;
                             }
-                            if (! $isAssigned) {
-                                return false;
+                            if ($st->order) {
+                                return (int) $st->order->designer_id === (int) $singleDesigner->id || $st->order->designers->contains('id', $singleDesigner->id);
                             }
+                            return false;
+                        });
+
+                        $todayTasks = $singleDesignerSubtasks->filter(function ($st) use ($todayDateStr) {
                             return $st->scheduled_date?->toDateString() === $todayDateStr;
                         });
 
@@ -1801,105 +1802,234 @@
                             'amber', 'yellow' => '#fbbf24',
                             default => '#10b981',
                         };
+
+                        $weekMondayStr = $days[0]['date_string'] ?? now()->startOfWeek(Carbon\Carbon::MONDAY)->toDateString();
+                        $weekFridayStr = ($days[4]['date_string'] ?? null) ?: Carbon\Carbon::parse($weekMondayStr)->addDays(4)->toDateString();
+
+                        $weekAltaTasks = $singleDesignerSubtasks->filter(function ($st) use ($weekMondayStr, $weekFridayStr) {
+                            $dateStr = $st->scheduled_date?->toDateString();
+                            if (! $dateStr) {
+                                return false;
+                            }
+                            if ($dateStr >= $weekMondayStr && $dateStr <= $weekFridayStr) {
+                                return true;
+                            }
+                            if ($dateStr < $weekMondayStr && ! $st->isDone()) {
+                                return true;
+                            }
+                            return false;
+                        });
+
+                        $altaMirrorTasks = $weekAltaTasks->filter(function ($st) {
+                            if (! $st->order) {
+                                return false;
+                            }
+
+                            $titleUpper = mb_strtoupper($st->title ?? '', 'UTF-8');
+                            if (str_contains($titleUpper, 'ALTA') || $st->type === \App\Enums\RelatedTaskType::PONER_ALTA) {
+                                return true;
+                            }
+
+                            if ($st->order->substatus === \App\Enums\Substatus::PONER_EN_ALTA && ! str_contains($titleUpper, 'FOLLOW UP')) {
+                                return $st->isPonerEnAlta();
+                            }
+
+                            return false;
+                        })->unique('id')->sortBy([
+                            fn($a, $b) => ($a->isDone() ? 1 : 0) <=> ($b->isDone() ? 1 : 0),
+                            fn($a, $b) => ($a->scheduled_date?->timestamp ?? 0) <=> ($b->scheduled_date?->timestamp ?? 0),
+                        ]);
+
+                        $altaTotalCount = $altaMirrorTasks->count();
+                        $altaCompletedCount = $altaMirrorTasks->filter(fn($st) => $st->isDone())->count();
+                        $altaPendingCount = $altaTotalCount - $altaCompletedCount;
                     @endphp
 
-                    <!-- Minimalist Dynamic Today's Progress Widget (Right Half) -->
-                    <div 
-                        x-data="{ draggingOverToday: false }"
-                        @dragover.prevent="draggingOverToday = true"
-                        @dragenter.prevent="draggingOverToday = true"
-                        @dragleave="if (!$el.contains($event.relatedTarget)) draggingOverToday = false"
-                        @drop.prevent="
-                            draggingOverToday = false;
-                            let rawData = $event.dataTransfer.getData('text/plain');
-                            if (rawData) {
-                                if (rawData.startsWith('subtask:')) {
-                                    let taskId = parseInt(rawData.replace('subtask:', ''), 10);
-                                    $wire.rescheduleSubtask(taskId, '{{ $todayDateStr }}');
-                                } else {
-                                    let orderId = rawData.replace('order:', '');
-                                    $wire.scheduleOrder(orderId, '{{ $todayDateStr }}');
+                    <!-- Right Column (33%): Today's Progress & ALTA Mirror -->
+                    <div class="lg:col-span-1 space-y-4 lg:sticky lg:top-4 transition-all w-full min-w-0">
+
+                        <!-- Minimalist Dynamic Today's Progress Widget -->
+                        <div 
+                            x-data="{ draggingOverToday: false }"
+                            @dragover.prevent="draggingOverToday = true"
+                            @dragenter.prevent="draggingOverToday = true"
+                            @dragleave="if (!$el.contains($event.relatedTarget)) draggingOverToday = false"
+                            @drop.prevent="
+                                draggingOverToday = false;
+                                let rawData = $event.dataTransfer.getData('text/plain');
+                                if (rawData) {
+                                    if (rawData.startsWith('subtask:')) {
+                                        let taskId = parseInt(rawData.replace('subtask:', ''), 10);
+                                        $wire.rescheduleSubtask(taskId, '{{ $todayDateStr }}');
+                                    } else {
+                                        let orderId = rawData.replace('order:', '');
+                                        $wire.scheduleOrder(orderId, '{{ $todayDateStr }}');
+                                    }
                                 }
-                            }
-                        "
-                        :class="{ 'ring-2 ring-indigo-500/70 border-indigo-400 bg-indigo-50/20': draggingOverToday }"
-                        class="lg:col-span-1 bg-white border border-[#e9e9e7] rounded-2xl shadow-xs p-5 space-y-4 lg:sticky lg:top-4 transition-all w-full min-w-0">
-                        
-                        <!-- Header -->
-                        <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
-                            <div>
-                                <span class="text-[11px] text-stone-400 font-medium capitalize block">
-                                    {{ now()->translatedFormat('l, d \d\e F') }}
-                                </span>
-                                <h3 class="text-base font-bold text-zinc-900 tracking-tight mt-0.5 flex items-center gap-2">
-                                    <span>{{ __('Progreso de hoy') }}</span>
-                                    <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $singleDesigner->dot_color_class }}" style="{{ $singleDesigner->dot_inline_style }}" title="{{ $singleDesigner->name }}"></span>
-                                </h3>
+                            "
+                            :class="{ 'ring-2 ring-indigo-500/70 border-indigo-400 bg-indigo-50/20': draggingOverToday }"
+                            class="bg-white border border-[#e9e9e7] rounded-2xl shadow-xs p-5 space-y-4 transition-all w-full min-w-0">
+                            
+                            <!-- Header -->
+                            <div class="flex items-start justify-between gap-4 border-b border-stone-100 pb-4">
+                                <div>
+                                    <span class="text-[11px] text-stone-400 font-medium capitalize block">
+                                        {{ now()->translatedFormat('l, d \d\e F') }}
+                                    </span>
+                                    <h3 class="text-base font-bold text-zinc-900 tracking-tight mt-0.5 flex items-center gap-2">
+                                        <span>{{ __('Progreso de hoy') }}</span>
+                                        <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $singleDesigner->dot_color_class }}" style="{{ $singleDesigner->dot_inline_style }}" title="{{ $singleDesigner->name }}"></span>
+                                    </h3>
+                                </div>
+
+                                <!-- Quick Status Pill -->
+                                <div class="shrink-0">
+                                    @if($todayTotal === 0)
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 text-zinc-500 border border-stone-200/60 whitespace-nowrap">
+                                            {{ __('Sin tareas') }}
+                                        </span>
+                                    @elseif($todayPending === 0)
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                                            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600" />
+                                            <span>{{ __('¡Al día!') }}</span>
+                                        </span>
+                                    @else
+                                        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center gap-1 shadow-2xs whitespace-nowrap">
+                                            <x-lucide-clock class="w-3.5 h-3.5 text-blue-600" />
+                                            <span>{{ $todayPending }} {{ __('pendientes') }}</span>
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
 
-                            <!-- Quick Status Pill -->
-                            <div class="shrink-0">
-                                @if($todayTotal === 0)
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 text-zinc-500 border border-stone-200/60 whitespace-nowrap">
-                                        {{ __('Sin tareas') }}
-                                    </span>
-                                @elseif($todayPending === 0)
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shadow-2xs whitespace-nowrap">
-                                        <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600" />
-                                        <span>{{ __('¡Al día!') }}</span>
-                                    </span>
-                                @else
-                                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/80 flex items-center gap-1 shadow-2xs whitespace-nowrap">
-                                        <x-lucide-clock class="w-3.5 h-3.5 text-blue-600" />
-                                        <span>{{ $todayPending }} {{ __('pendientes') }}</span>
-                                    </span>
+                            <!-- Progress Bar Section -->
+                            <div class="space-y-2.5">
+                                <div class="flex items-baseline justify-between">
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-3xl font-black font-mono tracking-tight text-zinc-900">
+                                            {{ $todayPercentage }}%
+                                        </span>
+                                        <span class="text-xs font-medium text-stone-500">
+                                            {{ __('completado') }}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs font-medium text-stone-600">
+                                        <span class="font-bold text-zinc-900">{{ $todayCompleted }}</span> / {{ $todayTotal }} {{ __('completadas') }}
+                                    </div>
+                                </div>
+
+                                <!-- The Progress Bar Track -->
+                                <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden p-0.5 border border-stone-200/60 shadow-inner">
+                                    <div 
+                                        class="h-full rounded-full transition-all duration-700 ease-out shadow-xs"
+                                        style="width: {{ $todayPercentage }}%; @if($todayPercentage > 0) background: linear-gradient(90deg, #facc15 0%, {{ $designerColor }} 100%); @endif">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Simple Inline Stats (sin cajas visibles, mucho más pequeñas) -->
+                            <div class="flex items-center justify-between text-[11px] text-stone-500 pt-2 border-t border-stone-100">
+                                <div class="flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
+                                    <span class="text-stone-500 font-medium">{{ __('Asignadas:') }}</span>
+                                    <span class="font-bold font-mono text-zinc-800">{{ $todayTotal }}</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    <span class="text-stone-500 font-medium">{{ __('Completadas:') }}</span>
+                                    <span class="font-bold font-mono text-emerald-600">{{ $todayCompleted }}</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    <span class="text-stone-500 font-medium">{{ __('Pendientes:') }}</span>
+                                    <span class="font-bold font-mono text-amber-600">{{ $todayPending }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Minimalist Mirror de Órdenes para ALTA -->
+                        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-xs p-5 space-y-3 transition-all w-full min-w-0">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between gap-3 border-b border-stone-100 pb-3">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <span class="w-2 h-2 rounded-full bg-pink-500 shrink-0"></span>
+                                    <h3 class="text-xs font-bold text-zinc-900 tracking-tight uppercase truncate">
+                                        {{ __('Poner en ALTA') }}
+                                    </h3>
+                                </div>
+                                @if($altaTotalCount > 0)
+                                    <div class="shrink-0 flex items-center gap-1.5">
+                                        @if($altaPendingCount === 0)
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80 flex items-center gap-1 whitespace-nowrap">
+                                                <x-lucide-check-circle-2 class="w-3 h-3 text-emerald-600" />
+                                                <span>{{ __('Al día') }}</span>
+                                            </span>
+                                        @else
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-pink-50 text-pink-700 border border-pink-200/70 whitespace-nowrap">
+                                                {{ $altaPendingCount }} {{ __('pendientes') }}
+                                            </span>
+                                        @endif
+                                    </div>
                                 @endif
                             </div>
+
+                            <!-- Checklist Items (sin cajas dentro de cajas, estilo lista minimalista) -->
+                            @if($altaMirrorTasks->isNotEmpty())
+                                <div class="divide-y divide-stone-100/70 -mx-1">
+                                    @foreach($altaMirrorTasks as $stask)
+                                        @php
+                                            $stDone = $stask->isDone();
+                                        @endphp
+                                        <div 
+                                            wire:key="alta-mirror-stask-{{ $stask->id }}-{{ $stask->status }}"
+                                            @click="$dispatch('open-order-detail', { orderId: {{ $stask->order->id }} })"
+                                            class="group flex items-start gap-2.5 py-2 px-1.5 rounded-lg hover:bg-stone-50/80 transition-colors cursor-pointer select-none">
+                                            
+                                            <!-- Checkbox -->
+                                            <button 
+                                                type="button"
+                                                @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
+                                                class="w-3.5 h-3.5 mt-0.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
+                                                title="{{ $stDone ? __('Marcar como pendiente') : __('Marcar como completada') }}">
+                                                <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                            </button>
+
+                                            <!-- Content: Company & Task -->
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-1.5 min-w-0">
+                                                    <span class="text-[11px] font-bold uppercase tracking-tight truncate {{ $stDone ? 'line-through text-stone-400' : 'text-zinc-900 group-hover:text-zinc-950' }}" title="{{ $stask->order->company_name }}">
+                                                        {{ $stask->order->company_name }}
+                                                    </span>
+                                                    @if($stask->order->location_text)
+                                                        <span class="text-[9.5px] font-medium text-stone-400 truncate shrink-0 {{ $stDone ? 'line-through text-stone-300' : '' }}" title="{{ $stask->order->location_text }}">
+                                                            • {{ $stask->order->location_text }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                <p class="text-[10px] leading-tight truncate mt-0.5 {{ $stDone ? 'line-through text-stone-300' : 'text-stone-500 font-medium' }}" title="{{ $stask->order->task_name }}">
+                                                    {{ $stask->order->task_name }}
+                                                </p>
+                                            </div>
+
+                                            <!-- Scheduled Day Indicator -->
+                                            @if($stask->scheduled_date)
+                                                <span class="text-[9.5px] font-mono shrink-0 self-start mt-0.5 {{ $stDone ? 'text-stone-300 line-through' : ($stask->scheduled_date->isToday() ? 'text-amber-600 font-semibold' : 'text-stone-400 font-medium') }}">
+                                                    {{ $stask->scheduled_date->translatedFormat('D j') }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="py-5 text-center">
+                                    <x-lucide-check-circle-2 class="w-4 h-4 text-stone-300 mx-auto mb-1" />
+                                    <p class="text-[11px] text-stone-400 font-medium">
+                                        {{ __('Sin órdenes para ALTA esta semana') }}
+                                    </p>
+                                </div>
+                            @endif
                         </div>
 
-                        <!-- Progress Bar Section -->
-                        <div class="space-y-2.5">
-                            <div class="flex items-baseline justify-between">
-                                <div class="flex items-baseline gap-2">
-                                    <span class="text-3xl font-black font-mono tracking-tight text-zinc-900">
-                                        {{ $todayPercentage }}%
-                                    </span>
-                                    <span class="text-xs font-medium text-stone-500">
-                                        {{ __('completado') }}
-                                    </span>
-                                </div>
-                                <div class="text-xs font-medium text-stone-600">
-                                    <span class="font-bold text-zinc-900">{{ $todayCompleted }}</span> / {{ $todayTotal }} {{ __('completadas') }}
-                                </div>
-                            </div>
-
-                            <!-- The Progress Bar Track -->
-                            <div class="w-full bg-stone-100 rounded-full h-3 overflow-hidden p-0.5 border border-stone-200/60 shadow-inner">
-                                <div 
-                                    class="h-full rounded-full transition-all duration-700 ease-out shadow-xs"
-                                    style="width: {{ $todayPercentage }}%; @if($todayPercentage > 0) background: linear-gradient(90deg, #facc15 0%, {{ $designerColor }} 100%); @endif">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Simple Inline Stats (sin cajas visibles, mucho más pequeñas) -->
-                        <div class="flex items-center justify-between text-[11px] text-stone-500 pt-2 border-t border-stone-100">
-                            <div class="flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
-                                <span class="text-stone-500 font-medium">{{ __('Asignadas:') }}</span>
-                                <span class="font-bold font-mono text-zinc-800">{{ $todayTotal }}</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                <span class="text-stone-500 font-medium">{{ __('Completadas:') }}</span>
-                                <span class="font-bold font-mono text-emerald-600">{{ $todayCompleted }}</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                <span class="text-stone-500 font-medium">{{ __('Pendientes:') }}</span>
-                                <span class="font-bold font-mono text-amber-600">{{ $todayPending }}</span>
-                            </div>
-                        </div>
                     </div>
                 @endif
             </div>

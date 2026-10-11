@@ -3,9 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Client;
-use App\Models\ClientContact;
 use App\Models\ClientLink;
 use App\Models\ClientLocation;
+use App\Models\Contact;
 use App\Models\Order;
 use App\Services\ClientMatchingService;
 use Illuminate\Console\Command;
@@ -43,7 +43,8 @@ class ConsolidateClientsCommand extends Command
 
             // Wipe existing client tables to eliminate bogus backlog entries
             ClientLocation::query()->forceDelete();
-            ClientContact::query()->delete();
+            DB::table('client_contact')->delete();
+            Contact::query()->forceDelete();
             ClientLink::query()->delete();
             Client::query()->forceDelete();
 

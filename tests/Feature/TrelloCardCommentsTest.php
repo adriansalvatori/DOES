@@ -505,4 +505,138 @@ class TrelloCardCommentsTest extends TestCase
         $component->clearCommentPhotos();
         $this->assertEmpty($component->commentPhotos);
     }
+
+    public function test_comment_markdown_rendering_supports_checklists(): void
+    {
+        $component = new OrderDetailModal;
+
+        $input = "- [ ] Tarea pendiente\n- [x] Tarea realizada\n[ ] Tarea sin viñeta";
+        $rendered = $component->renderCommentMarkdown($input, 'comm_test_777');
+
+        $this->assertStringContainsString('task-list-item', $rendered);
+        $this->assertStringContainsString('task-list', $rendered);
+        $this->assertStringContainsString('wire:click="toggleCommentChecklist(\'comm_test_777\', 0)"', $rendered);
+        $this->assertStringContainsString('wire:click="toggleCommentChecklist(\'comm_test_777\', 1)"', $rendered);
+        $this->assertStringContainsString('Tarea pendiente', $rendered);
+        $this->assertStringContainsString('Tarea realizada', $rendered);
+        $this->assertStringContainsString('Tarea sin viñeta', $rendered);
+        $this->assertStringContainsString('line-through', $rendered);
+    }
+
+    public function test_comment_markdown_rendering_supports_spaceless_and_empty_brackets(): void
+    {
+        $component = new OrderDetailModal;
+
+        // Exactly the case reported by the user: [] Testing \n [] \n [] this is a te \n [] nothing e
+        $input = "[] Testing\n[]\n[] this is a te\n[] nothing e";
+        $rendered = $component->renderCommentMarkdown($input, 'comm_user_case');
+
+        $this->assertStringContainsString('task-list-item', $rendered);
+        $this->assertStringContainsString('Testing', $rendered);
+        $this->assertStringContainsString('this is a te', $rendered);
+        $this->assertStringContainsString('nothing e', $rendered);
+        $this->assertStringContainsString('wire:click="toggleCommentChecklist(\'comm_user_case\', 0)"', $rendered);
+        $this->assertStringContainsString('wire:click="toggleCommentChecklist(\'comm_user_case\', 1)"', $rendered);
+        $this->assertStringContainsString('wire:click="toggleCommentChecklist(\'comm_user_case\', 2)"', $rendered);
+        $this->assertStringContainsString('wire:click="toggleCommentChecklist(\'comm_user_case\', 3)"', $rendered);
+    }
+
+    public function test_toggling_comment_checklist_item_updates_state_and_syncs_to_trello(): void
+    {
+        Http::fake([
+            'https://api.trello.com/1/actions/action_chk_123*' => Http::response([
+                'id' => 'action_chk_123',
+                'data' => ['text' => "**User:**\n\n- [x] Revisar archivo\n- [ ] Imprimir"],
+            ], 200),
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'CHECKLIST CO',
+            'task_name' => 'Diseño con Checklist',
+            'trello_card_id' => 'card_chk_123',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $component = new OrderDetailModal;
+        $component->orderId = $order->id;
+        $component->trelloComments = [
+            [
+                'id' => 'action_chk_123',
+                'text' => "**User:**\n\n- [ ] Revisar archivo\n- [ ] Imprimir",
+                'clean_text' => "- [ ] Revisar archivo\n- [ ] Imprimir",
+            ],
+        ];
+
+        // Toggle first checklist item (index 0) from unchecked to checked
+        $component->toggleCommentChecklist('action_chk_123', 0);
+
+        $this->assertStringContainsString('- [x] Revisar archivo', $component->trelloComments[0]['clean_text']);
+        $this->assertStringContainsString('- [x] Revisar archivo', $component->trelloComments[0]['text']);
+        $this->assertStringContainsString('- [ ] Imprimir', $component->trelloComments[0]['clean_text']);
+
+        // Toggle it back from checked to unchecked
+        $component->toggleCommentChecklist('action_chk_123', 0);
+        $this->assertStringContainsString('- [ ] Revisar archivo', $component->trelloComments[0]['clean_text']);
+        $this->assertStringContainsString('- [ ] Revisar archivo', $component->trelloComments[0]['text']);
+    }
+
+    public function test_toggling_comment_with_spaceless_brackets(): void
+    {
+        Http::fake([
+            'https://api.trello.com/1/actions/action_spaceless*' => Http::response([
+                'id' => 'action_spaceless',
+                'data' => ['text' => "[] Tarea 1\n[x] Tarea 2"],
+            ], 200),
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'SPACELESS CO',
+            'task_name' => 'Task',
+            'trello_card_id' => 'card_space_123',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $component = new OrderDetailModal;
+        $component->orderId = $order->id;
+        $component->trelloComments = [
+            [
+                'id' => 'action_spaceless',
+                'text' => "[] Tarea 1\n[] Tarea 2",
+                'clean_text' => "[] Tarea 1\n[] Tarea 2",
+            ],
+        ];
+
+        // Toggle first item (index 0) from [] to [x]
+        $component->toggleCommentChecklist('action_spaceless', 0);
+        $this->assertStringContainsString('[x] Tarea 1', $component->trelloComments[0]['clean_text']);
+        $this->assertStringContainsString('[] Tarea 2', $component->trelloComments[0]['clean_text']);
+
+        // Toggle second item (index 1)
+        $component->toggleCommentChecklist('action_spaceless', 1);
+        $this->assertStringContainsString('[x] Tarea 1', $component->trelloComments[0]['clean_text']);
+        $this->assertStringContainsString('[x] Tarea 2', $component->trelloComments[0]['clean_text']);
+
+        // Toggle first item back to unchecked
+        $component->toggleCommentChecklist('action_spaceless', 0);
+        $this->assertStringContainsString('[ ] Tarea 1', $component->trelloComments[0]['clean_text']);
+        $this->assertStringContainsString('[x] Tarea 2', $component->trelloComments[0]['clean_text']);
+    }
+
+    public function test_update_card_comment_service_method(): void
+    {
+        Http::fake([
+            'https://api.trello.com/1/actions/action_999*' => Http::response([
+                'id' => 'action_999',
+                'data' => ['text' => 'Texto actualizado'],
+            ], 200),
+        ]);
+
+        $service = app(TrelloSyncService::class);
+        $res = $service->updateCardComment('action_999', 'Texto actualizado', 'dummy_key', 'dummy_token');
+
+        $this->assertTrue($res['success']);
+        $this->assertEquals('action_999', $res['data']['id']);
+    }
 }

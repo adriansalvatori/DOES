@@ -509,12 +509,13 @@
                     </div>
 
                     <!-- Responsible Contact Badge -->
-                    @if($order->responsible_person)
-                        <span class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200 flex items-center gap-1.5">
-                            <x-lucide-user class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                            <span>{{ $order->responsible_person }}</span>
-                        </span>
-                    @endif
+                    @php
+                        $respBadge = $order->display_responsible_person;
+                    @endphp
+                    <span class="px-2.5 py-1 rounded-md text-[11px] font-bold {{ $respBadge === 'MAIN' ? 'bg-stone-100 text-stone-600 border border-stone-200' : 'bg-indigo-50 text-indigo-800 border border-indigo-200' }} flex items-center gap-1.5">
+                        <x-lucide-user class="w-3.5 h-3.5 {{ $respBadge === 'MAIN' ? 'text-stone-400' : 'text-indigo-600' }} shrink-0" />
+                        <span>{{ $respBadge }}</span>
+                    </span>
 
                     <!-- Backlog Status Badge -->
                     @if(!$order->in_workspace)
@@ -735,13 +736,16 @@
                             <div class="space-y-1 relative" 
                                  x-data="{ 
                                      open: false,
-                                     selectResp(resp) {
-                                         $wire.set('editResponsiblePerson', resp);
+                                     selectResp(id, name) {
+                                         $wire.set('editContactId', id);
+                                         $wire.set('editResponsiblePerson', name);
                                          this.open = false;
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="font-medium text-zinc-700 block">{{ __('Persona Responsable / Cliente:') }}</label>
+                                <div class="flex items-center justify-between">
+                                    <label class="font-medium text-zinc-700 block">{{ __('Persona Responsable / Cliente:') }}</label>
+                                </div>
                                 <div class="relative">
                                     <input 
                                         type="text" 
@@ -749,14 +753,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('Ej: MARCELA o buscar...') }}" 
+                                        placeholder="{{ __('Ej: MARCELA o buscar cliente...') }}" 
                                         class="bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none w-full pr-7 font-semibold">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
-                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                        title="{{ __('Ver lista de responsables') }}">
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5 cursor-pointer"
+                                        title="{{ __('Ver lista de clientes') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -766,48 +770,61 @@
                                     x-transition:enter="transition ease-out duration-100"
                                     x-transition:enter-start="opacity-0 scale-95"
                                     x-transition:enter-end="opacity-100 scale-100"
-                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs">
-                                      @if(!empty($clientContacts))
+                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs custom-vertical-scrollbar">
+                                    
+                                    {{-- Contactos de esta compañía --}}
+                                    @if(!empty($clientContacts) && $clientContacts->isNotEmpty())
                                         <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
-                                            <span>{{ __('Contactos del cliente') }}</span>
-                                            <x-lucide-user class="w-3 h-3 text-emerald-600" />
+                                            <span>{{ __('Contactos de esta compañía') }}</span>
+                                            <x-lucide-user-check class="w-3 h-3 text-emerald-600" />
                                         </div>
-                                        @foreach($clientContacts as $cResp)
+                                        @foreach($clientContacts as $c)
                                             <button 
                                                 type="button"
-                                                x-show="!$wire.editResponsiblePerson || '{{ strtolower(addslashes($cResp)) }}'.includes(($wire.editResponsiblePerson || '').toLowerCase())"
-                                                @click="selectResp('{{ addslashes($cResp) }}')" 
-                                                class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition flex items-center justify-between">
-                                                <span>{{ $cResp }}</span>
-                                                <span class="text-[10px] text-emerald-600 font-medium">({{ __('Registrado') }})</span>
+                                                x-show="!$wire.editResponsiblePerson || '{{ strtolower(addslashes($c->name)) }}'.includes(($wire.editResponsiblePerson || '').toLowerCase())"
+                                                @click="selectResp({{ $c->id }}, '{{ addslashes($c->name) }}')" 
+                                                class="w-full text-left px-3 py-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition truncate block">
+                                                {{ $c->name }}
                                             </button>
                                         @endforeach
                                     @endif
 
+                                    {{-- Otros clientes del directorio global --}}
                                     @php
-                                        $otherResponsibles = array_diff($existingResponsibles->toArray(), $clientContacts ?? []);
+                                        $linkedIds = !empty($clientContacts) ? $clientContacts->pluck('id')->toArray() : [];
+                                        $otherContacts = $directoryContacts->filter(fn($dc) => !in_array($dc->id, $linkedIds, true));
                                     @endphp
 
-                                    @if(!empty($otherResponsibles))
-                                        @if(!empty($clientContacts))
-                                            <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
-                                                {{ __('Otros responsables') }}
-                                            </div>
-                                        @endif
-                                        @foreach($otherResponsibles as $resp)
+                                    @if($otherContacts->isNotEmpty())
+                                        <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400 flex items-center justify-between">
+                                            <span>{{ __('Directorio de clientes') }}</span>
+                                            <x-lucide-users class="w-3 h-3 text-zinc-400" />
+                                        </div>
+                                        @foreach($otherContacts as $dc)
                                             <button 
                                                 type="button"
-                                                x-show="!$wire.editResponsiblePerson || '{{ strtolower(addslashes($resp)) }}'.includes(($wire.editResponsiblePerson || '').toLowerCase())"
-                                                @click="selectResp('{{ addslashes($resp) }}')" 
-                                                class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition">
-                                                {{ $resp }}
+                                                x-show="!$wire.editResponsiblePerson || '{{ strtolower(addslashes($dc->name)) }}'.includes(($wire.editResponsiblePerson || '').toLowerCase())"
+                                                @click="selectResp({{ $dc->id }}, '{{ addslashes($dc->name) }}')" 
+                                                class="w-full text-left px-3 py-2 hover:bg-stone-50 focus:bg-stone-50 focus:outline-none cursor-pointer font-medium text-zinc-800 transition truncate block">
+                                                {{ $dc->name }}
                                             </button>
                                         @endforeach
                                     @endif
 
-                                    @if(empty($clientContacts) && empty($otherResponsibles))
-                                        <div class="p-2.5 text-zinc-400 italic text-[11px]">{{ __('Escribe un nuevo nombre...') }}</div>
-                                    @endif
+                                    {{-- Botón intuitivo para crear contacto sobre la marcha si no existe --}}
+                                    <div x-show="Boolean($wire.editResponsiblePerson && $wire.editResponsiblePerson.trim().length >= 2)">
+                                        <button 
+                                            type="button" 
+                                            @click="$wire.createContactForCompany($wire.editResponsiblePerson); open = false;"
+                                            class="w-full text-left p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-t border-emerald-200 transition font-bold text-xs flex items-center justify-between gap-2 cursor-pointer"
+                                        >
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <x-lucide-user-plus class="w-4 h-4 text-emerald-600 shrink-0" />
+                                                <span class="truncate">{{ __('+ Crear contacto para esta compañía:') }} <strong class="uppercase" x-text="$wire.editResponsiblePerson"></strong></span>
+                                            </div>
+                                            <span class="text-[10px] text-emerald-800 bg-emerald-200/80 px-1.5 py-0.5 rounded font-bold shrink-0">{{ __('Crear') }}</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2385,7 +2402,28 @@
                                         return "[$label]($url)";
                                     }, $trelloDescription);
 
-                                    $htmlDesc = \Illuminate\Support\Str::markdown($formattedDesc, ['html_input' => 'strip', 'allow_unsafe_links' => false]);
+                                    $formattedDesc = preg_replace_callback('/^([ \t]*)(?:[-*+]|\d+[\.\)])?[ \t]*\[([ \t]*|[xX])\][ \t]*(.*)$/m', function ($matches) {
+                                        $indent = $matches[1];
+                                        $check = strtolower(trim($matches[2]));
+                                        $marker = ($check === 'x') ? 'x' : ' ';
+                                        $content = trim($matches[3]);
+                                        if ($content === '') {
+                                            $content = '&nbsp;';
+                                        }
+
+                                        return "{$indent}- [{$marker}] {$content}";
+                                    }, $formattedDesc);
+                                    $htmlDesc = \Illuminate\Support\Str::markdown($formattedDesc, ['html_input' => 'strip', 'allow_unsafe_links' => false], [new \League\CommonMark\Extension\TaskList\TaskListExtension()]);
+                                    $htmlDesc = preg_replace_callback('/<li[^>]*>\s*(?:<p>)?\s*<input([^>]*?)type=[\'"]checkbox[\'"]([^>]*?)>(.*?)(?:<\/p>)?\s*<\/li>/is', function ($matches) {
+                                        $isChecked = (bool) preg_match('/checked/i', $matches[1].' '.$matches[2]);
+                                        $content = trim($matches[3]);
+                                        $badge = $isChecked 
+                                            ? '<span class="mt-0.5 w-4 h-4 rounded border border-emerald-600 bg-emerald-600 flex items-center justify-center shrink-0 shadow-2xs select-none"><svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></span>'
+                                            : '<span class="mt-0.5 w-4 h-4 rounded border border-stone-300 bg-white flex items-center justify-center shrink-0 shadow-2xs select-none"></span>';
+                                        $textClass = $isChecked ? 'text-zinc-400 line-through' : 'text-zinc-800';
+                                        return '<li class="task-list-item not-prose list-none flex items-start gap-2.5 my-1.5 select-text">' . $badge . '<span class="' . $textClass . ' leading-snug break-words">' . $content . '</span></li>';
+                                    }, $htmlDesc);
+                                    $htmlDesc = preg_replace('/<ul>(?=\s*<li class="task-list-item)/is', '<ul class="task-list list-none pl-0 my-1.5 space-y-1.5">', $htmlDesc);
                                     $htmlDesc = preg_replace_callback('/<a\s+(?:[^>]*?\s+)?href=([\'"])(.*?)\1[^>]*>(.*?)<\/a>/i', function($matches) {
                                         $url = html_entity_decode($matches[2]);
                                         $rawLabel = strip_tags($matches[3]);
@@ -2395,7 +2433,7 @@
                                         return '<button type="button" wire:click="openMediaPreview(\'' . $escapedUrl . '\', \'' . $escapedLabel . '\')" class="text-sky-600 font-semibold underline hover:text-sky-800 transition cursor-pointer inline-flex items-center gap-1 my-0.5">' . $matches[3] . ' <svg class="w-3 h-3 inline-block shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>';
                                     }, $htmlDesc);
                                 @endphp
-                                <div class="text-xs text-zinc-800 leading-relaxed bg-white border border-stone-200/80 rounded-lg p-3 max-h-60 overflow-y-auto prose prose-xs prose-stone max-w-none shadow-2xs [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5">
+                                <div class="text-xs text-zinc-800 leading-relaxed bg-white border border-stone-200/80 rounded-lg p-3 max-h-60 overflow-y-auto prose prose-xs prose-stone max-w-none shadow-2xs [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_ul.task-list]:list-none [&_ul.task-list]:pl-0 [&_li.task-list-item]:list-none">
                                     {!! $htmlDesc !!}
                                 </div>
                             @else
@@ -2776,6 +2814,7 @@
                                 x-data="{
                                     isBold: false,
                                     isItalic: false,
+                                    isChecklist: false,
                                     isOrderedList: false,
                                     isUnorderedList: false,
                                     isH1: false,
@@ -2832,10 +2871,14 @@
                                             const currentBlock = this.getCurrentBlock();
                                             const blockTag = currentBlock ? currentBlock.tagName.toLowerCase() : '';
 
+                                            const liText = li ? (li.textContent || '').trim() : '';
+                                            const isLiChecklist = Boolean(li && /^\[[ xX]\]/.test(liText));
+
                                             this.isBold = document.queryCommandState('bold');
                                             this.isItalic = document.queryCommandState('italic');
                                             this.isOrderedList = Boolean(list && list.tagName.toLowerCase() === 'ol');
-                                            this.isUnorderedList = Boolean(list && list.tagName.toLowerCase() === 'ul');
+                                            this.isChecklist = isLiChecklist;
+                                            this.isUnorderedList = Boolean(list && list.tagName.toLowerCase() === 'ul' && !isLiChecklist);
                                             this.isH1 = blockTag === 'h1';
                                             this.isH2 = blockTag === 'h2';
                                         } catch (e) {}
@@ -2955,93 +2998,255 @@
                                         this.handleAfterChange();
                                     },
 
-                                    toggleList(type) {
-                                        this.$refs.editor.focus();
-                                        const sel = window.getSelection();
-                                        if (!sel || sel.rangeCount === 0) return;
+                                    normalizeBrBlocks() {
+                                        const editor = this.$refs.editor;
+                                        if (!editor) return;
 
-                                        const li = this.getClosestLi(sel.anchorNode);
-                                        if (li) {
-                                            const currentList = li.closest('ul, ol');
-                                            if (currentList) {
-                                                const currentType = currentList.tagName.toLowerCase();
-                                                if (currentType === type) {
-                                                    // Toggle off: unwrap li into div
+                                        const children = Array.from(editor.childNodes);
+                                        for (const child of children) {
+                                            if (child.nodeType === Node.TEXT_NODE) {
+                                                const text = child.nodeValue;
+                                                if (text && text.trim().length > 0) {
                                                     const div = document.createElement('div');
-                                                    div.innerHTML = li.innerHTML || '<br>';
-                                                    currentList.parentNode.insertBefore(div, currentList.nextSibling);
-                                                    li.remove();
-                                                    if (currentList.children.length === 0) {
-                                                        currentList.remove();
+                                                    div.textContent = text;
+                                                    editor.replaceChild(div, child);
+                                                }
+                                                continue;
+                                            }
+
+                                            if (child.nodeType !== Node.ELEMENT_NODE) continue;
+
+                                            const tag = child.tagName.toLowerCase();
+                                            if (tag === 'ul' || tag === 'ol' || tag === 'hr') continue;
+
+                                            const brs = child.querySelectorAll('br');
+                                            if (brs.length > 0 && (child.childNodes.length > 1 || child.textContent.trim().length > 0)) {
+                                                const lines = [];
+                                                let currentDiv = document.createElement('div');
+                                                for (const n of Array.from(child.childNodes)) {
+                                                    if (n.nodeName === 'BR') {
+                                                        if (currentDiv.childNodes.length === 0) currentDiv.innerHTML = '<br>';
+                                                        lines.push(currentDiv);
+                                                        currentDiv = document.createElement('div');
+                                                    } else {
+                                                        currentDiv.appendChild(n.cloneNode(true));
                                                     }
-                                                    this.setCursorToEnd(div);
-                                                    this.handleAfterChange();
-                                                    return;
-                                                } else {
-                                                    // Switch list type between ul and ol
-                                                    const newList = document.createElement(type);
-                                                    while (currentList.firstChild) {
-                                                        newList.appendChild(currentList.firstChild);
-                                                    }
-                                                    currentList.parentNode.replaceChild(newList, currentList);
-                                                    this.handleAfterChange();
-                                                    return;
+                                                }
+                                                if (currentDiv.childNodes.length > 0) {
+                                                    lines.push(currentDiv);
+                                                }
+                                                if (lines.length > 1) {
+                                                    const frag = document.createDocumentFragment();
+                                                    lines.forEach(l => frag.appendChild(l));
+                                                    editor.replaceChild(frag, child);
                                                 }
                                             }
                                         }
-
-                                        // Not in list: convert ONLY the current line / block!
-                                        this.convertCurrentLineToList(type);
                                     },
 
-                                    convertCurrentLineToList(type) {
+                                    getBlocksInRange(range) {
+                                        const editor = this.$refs.editor;
+                                        if (!editor || !range) return [];
+
+                                        const candidates = [];
+                                        for (const child of Array.from(editor.children)) {
+                                            if (child.tagName === 'UL' || child.tagName === 'OL') {
+                                                for (const li of Array.from(child.children)) {
+                                                    if (li.tagName === 'LI') candidates.push(li);
+                                                }
+                                            } else {
+                                                candidates.push(child);
+                                            }
+                                        }
+
+                                        if (range.collapsed) {
+                                            const sel = window.getSelection();
+                                            const node = sel ? sel.anchorNode : null;
+                                            if (!node) return [];
+                                            for (const c of candidates) {
+                                                if (c === node || c.contains(node)) return [c];
+                                            }
+                                            return [];
+                                        }
+
+                                        const selected = [];
+                                        for (const c of candidates) {
+                                            try {
+                                                if (range.intersectsNode(c)) {
+                                                    selected.push(c);
+                                                }
+                                            } catch (e) {
+                                                if (c.contains(range.startContainer) || c.contains(range.endContainer)) {
+                                                    selected.push(c);
+                                                }
+                                            }
+                                        }
+                                        return selected;
+                                    },
+
+                                    selectBlocks(blocks) {
+                                        if (!blocks || blocks.length === 0) return;
+                                        try {
+                                            const sel = window.getSelection();
+                                            if (!sel) return;
+                                            const newRange = document.createRange();
+                                            const first = blocks[0];
+                                            const last = blocks[blocks.length - 1];
+                                            newRange.setStart(first, 0);
+                                            newRange.setEnd(last, last.childNodes.length);
+                                            sel.removeAllRanges();
+                                            sel.addRange(newRange);
+                                        } catch (e) {}
+                                    },
+
+                                    formatBlocksAsList(type) {
+                                        this.$refs.editor.focus();
+                                        const editor = this.$refs.editor;
                                         const sel = window.getSelection();
                                         if (!sel || sel.rangeCount === 0) return;
 
-                                        const editor = this.$refs.editor;
-                                        let currentBlock = this.getCurrentBlock();
+                                        if (!editor.firstChild) {
+                                            editor.innerHTML = '<div><br></div>';
+                                        }
 
-                                        if (!currentBlock || currentBlock === editor) {
-                                            const list = document.createElement(type);
-                                            const newLi = document.createElement('li');
-                                            newLi.innerHTML = '<br>';
-                                            list.appendChild(newLi);
-                                            editor.appendChild(list);
-                                            this.setCursorToStart(newLi);
+                                        this.normalizeBrBlocks();
+
+                                        const range = sel.getRangeAt(0);
+                                        const wasCollapsed = range.collapsed;
+
+                                        let selectedBlocks = this.getBlocksInRange(range);
+
+                                        if (selectedBlocks.length === 0) {
+                                            let block = this.getCurrentBlock();
+                                            if (block && block !== editor) {
+                                                selectedBlocks = [block];
+                                            } else if (editor.firstElementChild) {
+                                                selectedBlocks = [editor.firstElementChild];
+                                            }
+                                        }
+
+                                        if (selectedBlocks.length === 0) return;
+
+                                        // Check if ALL selected blocks are already of the exact requested list type
+                                        let allAlreadyType = true;
+                                        for (const b of selectedBlocks) {
+                                            const li = b.tagName === 'LI' ? b : this.getClosestLi(b);
+                                            if (!li) {
+                                                allAlreadyType = false;
+                                                break;
+                                            }
+                                            const parentList = li.closest('ul, ol');
+                                            if (!parentList) {
+                                                allAlreadyType = false;
+                                                break;
+                                            }
+
+                                            const isCheck = /^\[[ xX]\]/.test((li.textContent || '').trim());
+                                            if (type === 'checklist') {
+                                                if (!isCheck) { allAlreadyType = false; break; }
+                                            } else if (type === 'ul') {
+                                                if (parentList.tagName.toLowerCase() !== 'ul' || isCheck) { allAlreadyType = false; break; }
+                                            } else if (type === 'ol') {
+                                                if (parentList.tagName.toLowerCase() !== 'ol') { allAlreadyType = false; break; }
+                                            }
+                                        }
+
+                                        if (allAlreadyType) {
+                                            // TOGGLE OFF: revert selected items to normal div lines
+                                            const newDivs = [];
+                                            for (const b of selectedBlocks) {
+                                                const li = b.tagName === 'LI' ? b : this.getClosestLi(b);
+                                                if (!li) continue;
+
+                                                const div = document.createElement('div');
+                                                let html = li.innerHTML || '';
+                                                if (type === 'checklist') {
+                                                    html = html.replace(/^(\s*\[[ xX]\]\s*|\[[ xX]\]&nbsp;)/i, '');
+                                                }
+                                                div.innerHTML = html.trim() ? html : '<br>';
+
+                                                const list = li.closest('ul, ol');
+                                                if (list) {
+                                                    list.parentNode.insertBefore(div, list.nextSibling);
+                                                } else {
+                                                    editor.appendChild(div);
+                                                }
+                                                li.remove();
+                                                if (list && list.children.length === 0) {
+                                                    list.remove();
+                                                }
+                                                newDivs.push(div);
+                                            }
+
+                                            if (newDivs.length > 0) {
+                                                if (wasCollapsed) {
+                                                    this.setCursorToEnd(newDivs[0]);
+                                                } else {
+                                                    this.selectBlocks(newDivs);
+                                                }
+                                            }
                                             this.handleAfterChange();
                                             return;
                                         }
 
-                                        if (currentBlock.tagName === 'UL' || currentBlock.tagName === 'OL') {
-                                            return;
+                                        // CONVERT TO LIST: create list items for all selected blocks
+                                        const listTag = (type === 'ol') ? 'ol' : 'ul';
+                                        const newList = document.createElement(listTag);
+
+                                        const firstBlock = selectedBlocks[0];
+                                        const insertRef = firstBlock.tagName === 'LI' ? (firstBlock.closest('ul, ol') || firstBlock) : firstBlock;
+
+                                        insertRef.parentNode.insertBefore(newList, insertRef);
+
+                                        const newLis = [];
+                                        for (const b of selectedBlocks) {
+                                            const newLi = document.createElement('li');
+                                            let html = b.innerHTML ? b.innerHTML.trim() : '';
+
+                                            // Clean up previous list / numbering / checklist prefixes
+                                            html = html.replace(/^(\s*[-*]|\s*\d+[.)]|\s*\[[ xX]\])\s*/i, '');
+                                            html = html.replace(/^\[[ xX]\]&nbsp;/i, '');
+
+                                            if (type === 'checklist') {
+                                                newLi.innerHTML = '[ ] &nbsp;' + (html === '<br>' || !html ? '' : html);
+                                            } else {
+                                                newLi.innerHTML = html && html !== '<br>' ? html : '<br>';
+                                            }
+
+                                            newList.appendChild(newLi);
+                                            newLis.push(newLi);
+
+                                            if (b.tagName === 'LI') {
+                                                const oldList = b.closest('ul, ol');
+                                                b.remove();
+                                                if (oldList && oldList.children.length === 0 && oldList !== newList) {
+                                                    oldList.remove();
+                                                }
+                                            } else {
+                                                b.remove();
+                                            }
                                         }
 
-                                        // If currentBlock has <br> tags, split it so each line has its own div
-                                        if (currentBlock.innerHTML && currentBlock.innerHTML.includes('<br>') && currentBlock.childNodes.length > 1) {
-                                            this.splitBlockByBr(currentBlock);
-                                            currentBlock = this.getCurrentBlock();
+                                        if (insertRef && insertRef !== newList && insertRef.children && insertRef.children.length === 0 && (insertRef.tagName === 'UL' || insertRef.tagName === 'OL')) {
+                                            insertRef.remove();
                                         }
 
-                                        // Now convert ONLY currentBlock into list of requested type
-                                        const list = document.createElement(type);
-                                        const newLi = document.createElement('li');
-
-                                        let html = currentBlock.innerHTML ? currentBlock.innerHTML.trim() : '';
-                                        html = html.replace(/^(\s*[-*]|\s*\d+[.)])\s*/, '');
-
-                                        if (!html || html === '<br>') {
-                                            newLi.innerHTML = '<br>';
-                                            list.appendChild(newLi);
-                                            currentBlock.parentNode.replaceChild(list, currentBlock);
-                                            this.setCursorToStart(newLi);
-                                        } else {
-                                            newLi.innerHTML = html;
-                                            list.appendChild(newLi);
-                                            currentBlock.parentNode.replaceChild(list, currentBlock);
-                                            this.setCursorToEnd(newLi);
+                                        if (newLis.length > 0) {
+                                            if (wasCollapsed) {
+                                                this.setCursorToEnd(newLis[0]);
+                                            } else {
+                                                this.selectBlocks(newLis);
+                                            }
                                         }
-
                                         this.handleAfterChange();
+                                    },
+
+                                    toggleList(type) {
+                                        this.formatBlocksAsList(type);
+                                    },
+
+                                    toggleChecklist() {
+                                        this.formatBlocksAsList('checklist');
                                     },
 
                                     convertLineToHeading(level, remainingText) {
@@ -3231,21 +3436,24 @@
 
                                         const li = this.getClosestLi(sel.anchorNode);
                                         if (li) {
-                                            const text = (li.textContent || '').replace(/\u200B/g, '').trim();
-                                            if (!text) {
+                                            const rawText = (li.textContent || '').replace(/\u200B/g, '').trim();
+                                            const isChecklist = /^\[[ xX]\]/.test(rawText);
+                                            const isOnlyMarker = rawText === '[ ]' || rawText === '[x]' || rawText === '[X]' || rawText === '[]' || !rawText;
+
+                                            if (isOnlyMarker) {
                                                 this.exitList(li);
                                                 return;
                                             }
 
                                             // In list: insert a new <li> directly inside this list
                                             const newLi = document.createElement('li');
-                                            newLi.innerHTML = '<br>';
+                                            newLi.innerHTML = isChecklist ? '[ ] &nbsp;' : '<br>';
                                             if (li.nextSibling) {
                                                 li.parentNode.insertBefore(newLi, li.nextSibling);
                                             } else {
                                                 li.parentNode.appendChild(newLi);
                                             }
-                                            this.setCursorToStart(newLi);
+                                            this.setCursorToEnd(newLi);
                                             this.handleAfterChange();
                                             return;
                                         }
@@ -3437,6 +3645,14 @@
                                                 } else if (/^###[\s\u00A0]/.test(text) && !this.isInList(node)) {
                                                     const rem = text.replace(/^###[\s\u00A0]/, '');
                                                     this.convertLineToHeading('h2', rem);
+                                                    return;
+                                                }
+
+                                                // Check for checklist: '[] ', '[ ] ', '- [ ] ', '* [ ] '
+                                                if (/^(?:[\-\*]\s*)?\[\s*\][\s\u00A0]/.test(text) && !this.isInList(node)) {
+                                                    const rem = text.replace(/^(?:[\-\*]\s*)?\[\s*\][\s\u00A0]/, '');
+                                                    node.nodeValue = '[ ] ' + rem;
+                                                    this.toggleList('ul');
                                                     return;
                                                 }
 
@@ -3715,7 +3931,16 @@
                                                         const idx = siblings.indexOf(child) + 1;
                                                         text += idx + '. ' + childContent.trim() + '\n';
                                                     } else {
-                                                        text += '- ' + childContent.trim() + '\n';
+                                                        const trimmed = childContent.trim();
+                                                        if (/^\[([ \t]*|[xX])\]/.test(trimmed)) {
+                                                            const normalized = trimmed.replace(/^\[([ \t]*|[xX])\][ \t]*/, (m, p1) => {
+                                                                const mark = p1.trim().toLowerCase() === 'x' ? 'x' : ' ';
+                                                                return '- [' + mark + '] ';
+                                                            });
+                                                            text += normalized + '\n';
+                                                        } else {
+                                                            text += '- ' + trimmed + '\n';
+                                                        }
                                                     }
                                                 } else if (tag === 'ul' || tag === 'ol') {
                                                     text += (text && !text.endsWith('\n') ? '\n' : '') + childContent + (childContent.endsWith('\n') ? '' : '\n');
@@ -3726,7 +3951,14 @@
                                                         if (text && !text.endsWith('\n')) {
                                                             text += '\n';
                                                         }
-                                                        text += childContent + '\n';
+                                                        let line = childContent;
+                                                        if (/^[ \t]*(?:[-*+]|\d+[\.\)])?[ \t]*\[([ \t]*|[xX])\]/.test(line)) {
+                                                            line = line.replace(/^[ \t]*(?:[-*+]|\d+[\.\)])?[ \t]*\[([ \t]*|[xX])\][ \t]*/, (m, p1) => {
+                                                                const mark = p1.trim().toLowerCase() === 'x' ? 'x' : ' ';
+                                                                return '- [' + mark + '] ';
+                                                            });
+                                                        }
+                                                        text += line + '\n';
                                                     }
                                                 } else if (tag === 'br') {
                                                     text += '\n';
@@ -3893,7 +4125,23 @@
                                             title="{{ __('Lista numerada (1.)') }}"
                                         >
                                             <x-lucide-list-ordered class="w-3.5 h-3.5" />
-                                          <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
+                                            <span class="hidden sm:inline">{{ __('Numerada') }}</span>
+                                        </button>
+
+                                        <!-- Checklist -->
+                                        <button 
+                                            type="button" 
+                                            @mousedown.prevent 
+                                            @click="toggleChecklist()" 
+                                            :class="isChecklist ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
+                                            class="px-2 py-1 rounded-md border text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer" 
+                                            title="{{ __('Lista de verificación (- [ ])') }}"
+                                        >
+                                            <x-lucide-check-square class="w-3.5 h-3.5 text-emerald-600" />
+                                            <span class="hidden sm:inline">{{ __('Checklist') }}</span>
+                                        </button>
+
+                                        <div class="h-3.5 w-px bg-stone-200 mx-1"></div>
 
                                         <!-- Divider Line -->
                                         <button 
@@ -4147,8 +4395,8 @@
                                                 </div>
                                             </div>
 
-                                            <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_h1]:text-sm [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h1]:mt-2.5 [&_h1]:mb-1 [&_h2]:text-xs [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h2]:mt-2 [&_h2]:mb-0.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-zinc-800 [&_h3]:mt-1.5 [&_h3]:mb-0.5 [&_hr]:my-2.5 [&_hr]:border-stone-200">
-                                                {!! $this->renderCommentMarkdown(!empty($comment['clean_text']) ? $comment['clean_text'] : ($comment['text'] ?? '')) !!}
+                                            <div class="text-xs text-zinc-700 leading-relaxed pl-7 break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_ul.task-list]:list-none [&_ul.task-list]:pl-0 [&_li.task-list-item]:list-none [&_h1]:text-sm [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h1]:mt-2.5 [&_h1]:mb-1 [&_h2]:text-xs [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h2]:mt-2 [&_h2]:mb-0.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-zinc-800 [&_h3]:mt-1.5 [&_h3]:mb-0.5 [&_hr]:my-2.5 [&_hr]:border-stone-200">
+                                                {!! $this->renderCommentMarkdown(!empty($comment['clean_text']) ? $comment['clean_text'] : ($comment['text'] ?? ''), $comment['id'] ?? null) !!}
                                             </div>
                                         </div>
                                     @endforeach

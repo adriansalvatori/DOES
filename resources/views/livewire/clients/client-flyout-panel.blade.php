@@ -62,7 +62,8 @@
                     label: (l.label || '').trim(),
                     department: (l.department || '').trim(),
                     url: (l.url || '').trim()
-                }))
+                })),
+                brandKit: JSON.stringify($wire.brandKit || {})
             });
         },
         isDirty() {
@@ -95,7 +96,8 @@
                     label: (l.label || '').trim(),
                     department: (l.department || '').trim(),
                     url: (l.url || '').trim()
-                }))
+                })),
+                brandKit: JSON.stringify($wire.brandKit || {})
             });
             return current !== this.initialSnapshot;
         },
@@ -159,7 +161,7 @@
                             {{ $clientId ? ($name ?: __('Detalle del Cliente')) : __('Nuevo Cliente') }}
                         </h2>
                         @php
-                            $primaryContact = $currentClient?->primaryContact ?: $currentClient?->contacts->first();
+                            $primaryContact = ($currentClient?->primaryContact instanceof \Illuminate\Support\Collection ? $currentClient?->primaryContact->first() : $currentClient?->primaryContact) ?: $currentClient?->contacts->first();
                         @endphp
                         @if($currentClient)
                             <div class="flex items-center gap-2.5 text-xs text-zinc-600 mt-0.5 flex-wrap">
@@ -255,11 +257,11 @@
                 </button>
                 <button 
                     type="button" 
-                    wire:click="$set('activeTab', 'links')"
-                    class="py-3 px-3 border-b-2 font-medium transition cursor-pointer flex items-center gap-2 text-xs {{ $activeTab === 'links' ? 'border-emerald-600 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
+                    wire:click="$set('activeTab', 'brand_kit')"
+                    class="py-3 px-3 border-b-2 font-medium transition cursor-pointer flex items-center gap-2 text-xs {{ $activeTab === 'brand_kit' || $activeTab === 'links' ? 'border-emerald-600 text-zinc-900 font-semibold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
                 >
-                    <x-lucide-link class="w-3.5 h-3.5 {{ $activeTab === 'links' ? 'text-emerald-600' : 'text-zinc-400' }}" />
-                    <span>{{ __('Enlaces & Recursos') }}</span>
+                    <x-lucide-palette class="w-3.5 h-3.5 {{ $activeTab === 'brand_kit' || $activeTab === 'links' ? 'text-emerald-600' : 'text-zinc-400' }}" />
+                    <span>{{ __('Brand Kit') }}</span>
                 </button>
                 @if($currentClient)
                     <button 
@@ -1068,6 +1070,33 @@
                                                     class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md px-2 py-1 text-xs text-zinc-700 focus:outline-none transition"
                                                 />
                                             </div>
+
+                                            {{-- Channel & Language Preferences --}}
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+                                                <div class="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                                                    <span class="shrink-0 font-medium text-[10px] text-zinc-400 uppercase tracking-wider">{{ __('Canal:') }}</span>
+                                                    <select 
+                                                        wire:model="contacts.{{ $index }}.preferred_channel"
+                                                        class="bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 rounded px-1.5 py-0.5 text-xs text-zinc-700 focus:outline-none transition w-full"
+                                                    >
+                                                        <option value="any">{{ __('Cualquiera') }}</option>
+                                                        <option value="whatsapp">WhatsApp</option>
+                                                        <option value="call">{{ __('Llamada') }}</option>
+                                                        <option value="email">Email</option>
+                                                    </select>
+                                                </div>
+                                                <div class="flex items-center gap-1.5 text-[11px] text-zinc-500">
+                                                    <span class="shrink-0 font-medium text-[10px] text-zinc-400 uppercase tracking-wider">{{ __('Idioma:') }}</span>
+                                                    <select 
+                                                        wire:model="contacts.{{ $index }}.preferred_language"
+                                                        class="bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent focus:border-zinc-300 rounded px-1.5 py-0.5 text-xs text-zinc-700 focus:outline-none transition w-full"
+                                                    >
+                                                        <option value="es">ES - {{ __('Español') }}</option>
+                                                        <option value="en">EN - {{ __('Inglés') }}</option>
+                                                        <option value="both">ES / EN - {{ __('Ambos / Bilingüe') }}</option>
+                                                    </select>
+                                                </div>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -1076,65 +1105,561 @@
                     </div>
                 @endif
 
-                {{-- TAB 2: Enlaces & Recursos (Drive, Brandbook, Assets) --}}
-                @if($activeTab === 'links')
-                    <div class="space-y-5">
-                        <div class="flex items-center justify-between pb-1">
-                            <div>
-                                <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                                    {{ __('Enlaces y Recursos Agrupados') }}
-                                </h3>
-                                <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Google Drive (Brandbook, Assets) o recursos por departamento.') }}</p>
+                {{-- TAB 2: Brand Kit (Diseño, Recursos, Fuentes, Colores & Directrices) --}}
+                @if($activeTab === 'brand_kit' || $activeTab === 'links')
+                    <div 
+                        x-data="{
+                            copiedItem: null,
+                            copyText(text, id) {
+                                if (!text) return;
+                                if (navigator.clipboard && window.isSecureContext) {
+                                    navigator.clipboard.writeText(text).then(() => {
+                                        this.copiedItem = id;
+                                        setTimeout(() => { if (this.copiedItem === id) this.copiedItem = null; }, 2000);
+                                    });
+                                } else {
+                                    const ta = document.createElement('textarea');
+                                    ta.value = text;
+                                    ta.style.position = 'fixed';
+                                    ta.style.opacity = '0';
+                                    document.body.appendChild(ta);
+                                    ta.focus();
+                                    ta.select();
+                                    try { document.execCommand('copy'); } catch (e) {}
+                                    document.body.removeChild(ta);
+                                    this.copiedItem = id;
+                                    setTimeout(() => { if (this.copiedItem === id) this.copiedItem = null; }, 2000);
+                                }
+                            }
+                        }"
+                        class="space-y-6"
+                    >
+                        {{-- Section 1: Activos y Enlaces Clave --}}
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between pb-1">
+                                <div>
+                                    <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <x-lucide-folder class="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>{{ __('Activos & Enlaces Clave') }}</span>
+                                    </h3>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">
+                                        {{ __('Google Drive, Brandbook, logos maestros y catálogos. Soporta URLs y rutas de red/servidor.') }}
+                                    </p>
+                                </div>
                             </div>
-                            <button 
-                                type="button" 
-                                wire:click="addLink"
-                                class="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold hover:text-emerald-700 transition cursor-pointer"
-                            >
-                                <x-lucide-plus class="w-3.5 h-3.5" />
-                                <span>{{ __('Agregar Enlace') }}</span>
-                            </button>
-                        </div>
 
-                        <div class="space-y-4">
-                            @foreach($links as $index => $link)
-                                <div class="{{ $index > 0 ? 'pt-4 border-t border-zinc-200/60' : '' }} space-y-3">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                                            <x-lucide-link class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                            <input 
-                                                type="text" 
-                                                wire:model="links.{{ $index }}.label" 
-                                                placeholder="{{ __('Nombre / Etiqueta del enlace') }}"
-                                                class="w-full bg-transparent border border-transparent hover:bg-zinc-100/60 hover:border-zinc-200/60 focus:bg-white focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs text-zinc-900 font-bold uppercase tracking-wider focus:outline-none transition"
-                                            />
-                                        </div>
+                            {{-- 4 Predefined Core Slots --}}
+                            <div class="space-y-2.5">
+                                {{-- 1. Google Drive / Carpeta Raíz --}}
+                                <div class="flex items-center gap-2 group/slot">
+                                    <span class="w-24 sm:w-28 text-[11px] font-bold text-zinc-600 uppercase tracking-tight flex items-center gap-1.5 shrink-0">
+                                        <x-lucide-hard-drive class="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{{ __('Drive / Raíz') }}</span>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        wire:model="brandKit.drive_url" 
+                                        placeholder="https://drive.google.com/... o ruta de servidor G:\..."
+                                        class="flex-1 bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-2 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition min-w-0"
+                                    />
+                                    @php
+                                        $driveVal = trim($brandKit['drive_url'] ?? '');
+                                        $isDriveUrl = Str::startsWith($driveVal, ['http://', 'https://']);
+                                    @endphp
+                                    @if($isDriveUrl)
+                                        <a 
+                                            href="{{ $driveVal }}" 
+                                            target="_blank" 
+                                            class="p-1 rounded-md text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition cursor-pointer shrink-0" 
+                                            title="{{ __('Abrir enlace en nueva pestaña') }}"
+                                        >
+                                            <x-lucide-external-link class="w-3.5 h-3.5" />
+                                        </a>
+                                    @endif
+                                    @if(!empty($driveVal))
                                         <button 
                                             type="button" 
-                                            wire:click="removeLink({{ $index }})"
-                                            class="text-[11px] text-zinc-400 hover:text-rose-600 transition cursor-pointer flex items-center gap-1 shrink-0"
+                                            @click="copyText({{ json_encode($driveVal) }}, 'drive_slot')" 
+                                            class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer shrink-0"
+                                            title="{{ __('Copiar') }}"
                                         >
-                                            <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                            <span>{{ __('Eliminar Enlace') }}</span>
+                                            <template x-if="copiedItem === 'drive_slot'">
+                                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                            </template>
+                                            <template x-if="copiedItem !== 'drive_slot'">
+                                                <x-lucide-copy class="w-3.5 h-3.5" />
+                                            </template>
                                         </button>
-                                    </div>
-
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        <input 
-                                            type="text" 
-                                            wire:model="links.{{ $index }}.department" 
-                                            placeholder="{{ __('Notas (ej. Producción, versión...)') }}"
-                                            class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition"
-                                        />
-                                        <input 
-                                            type="url" 
-                                            wire:model="links.{{ $index }}.url" 
-                                            placeholder="{{ __('URL Enlace (Drive/Web)') }}"
-                                            class="w-full bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-1 text-xs text-zinc-800 focus:outline-none transition font-mono"
-                                        />
-                                    </div>
+                                    @endif
                                 </div>
-                            @endforeach
+
+                                {{-- 2. Manual de Marca / Brandbook --}}
+                                <div class="flex items-center gap-2 group/slot">
+                                    <span class="w-24 sm:w-28 text-[11px] font-bold text-zinc-600 uppercase tracking-tight flex items-center gap-1.5 shrink-0">
+                                        <x-lucide-book-open class="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{{ __('Brandbook') }}</span>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        wire:model="brandKit.brandbook_url" 
+                                        placeholder="URL Figma, Canva, Drive o PDF..."
+                                        class="flex-1 bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-2 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition min-w-0"
+                                    />
+                                    @php
+                                        $bbVal = trim($brandKit['brandbook_url'] ?? '');
+                                        $isBbUrl = Str::startsWith($bbVal, ['http://', 'https://']);
+                                    @endphp
+                                    @if($isBbUrl)
+                                        <a 
+                                            href="{{ $bbVal }}" 
+                                            target="_blank" 
+                                            class="p-1 rounded-md text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition cursor-pointer shrink-0" 
+                                            title="{{ __('Abrir enlace en nueva pestaña') }}"
+                                        >
+                                            <x-lucide-external-link class="w-3.5 h-3.5" />
+                                        </a>
+                                    @endif
+                                    @if(!empty($bbVal))
+                                        <button 
+                                            type="button" 
+                                            @click="copyText({{ json_encode($bbVal) }}, 'bb_slot')" 
+                                            class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer shrink-0"
+                                            title="{{ __('Copiar') }}"
+                                        >
+                                            <template x-if="copiedItem === 'bb_slot'">
+                                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                            </template>
+                                            <template x-if="copiedItem !== 'bb_slot'">
+                                                <x-lucide-copy class="w-3.5 h-3.5" />
+                                            </template>
+                                        </button>
+                                    @endif
+                                </div>
+
+                                {{-- 3. Logos Oficiales --}}
+                                <div class="flex items-center gap-2 group/slot">
+                                    <span class="w-24 sm:w-28 text-[11px] font-bold text-zinc-600 uppercase tracking-tight flex items-center gap-1.5 shrink-0">
+                                        <x-lucide-image class="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{{ __('Logos / Arte') }}</span>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        wire:model="brandKit.logo_url" 
+                                        placeholder="Enlace o carpeta con vectores AI/EPS/SVG o PNG..."
+                                        class="flex-1 bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-2 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition min-w-0"
+                                    />
+                                    @php
+                                        $logoVal = trim($brandKit['logo_url'] ?? '');
+                                        $isLogoUrl = Str::startsWith($logoVal, ['http://', 'https://']);
+                                    @endphp
+                                    @if($isLogoUrl)
+                                        <a 
+                                            href="{{ $logoVal }}" 
+                                            target="_blank" 
+                                            class="p-1 rounded-md text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition cursor-pointer shrink-0" 
+                                            title="{{ __('Abrir enlace en nueva pestaña') }}"
+                                        >
+                                            <x-lucide-external-link class="w-3.5 h-3.5" />
+                                        </a>
+                                    @endif
+                                    @if(!empty($logoVal))
+                                        <button 
+                                            type="button" 
+                                            @click="copyText({{ json_encode($logoVal) }}, 'logo_slot')" 
+                                            class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer shrink-0"
+                                            title="{{ __('Copiar') }}"
+                                        >
+                                            <template x-if="copiedItem === 'logo_slot'">
+                                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                            </template>
+                                            <template x-if="copiedItem !== 'logo_slot'">
+                                                <x-lucide-copy class="w-3.5 h-3.5" />
+                                            </template>
+                                        </button>
+                                    @endif
+                                </div>
+
+                                {{-- 4. Catálogos de Productos / Uniformes --}}
+                                <div class="flex items-center gap-2 group/slot">
+                                    <span class="w-24 sm:w-28 text-[11px] font-bold text-zinc-600 uppercase tracking-tight flex items-center gap-1.5 shrink-0">
+                                        <x-lucide-layers class="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{{ __('Catálogos') }}</span>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        wire:model="brandKit.catalog_url" 
+                                        placeholder="Catálogo de productos, uniformes o muestras..."
+                                        class="flex-1 bg-transparent hover:bg-zinc-100/60 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-2 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition min-w-0"
+                                    />
+                                    @php
+                                        $catVal = trim($brandKit['catalog_url'] ?? '');
+                                        $isCatUrl = Str::startsWith($catVal, ['http://', 'https://']);
+                                    @endphp
+                                    @if($isCatUrl)
+                                        <a 
+                                            href="{{ $catVal }}" 
+                                            target="_blank" 
+                                            class="p-1 rounded-md text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 transition cursor-pointer shrink-0" 
+                                            title="{{ __('Abrir enlace en nueva pestaña') }}"
+                                        >
+                                            <x-lucide-external-link class="w-3.5 h-3.5" />
+                                        </a>
+                                    @endif
+                                    @if(!empty($catVal))
+                                        <button 
+                                            type="button" 
+                                            @click="copyText({{ json_encode($catVal) }}, 'cat_slot')" 
+                                            class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer shrink-0"
+                                            title="{{ __('Copiar') }}"
+                                        >
+                                            <template x-if="copiedItem === 'cat_slot'">
+                                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                            </template>
+                                            <template x-if="copiedItem !== 'cat_slot'">
+                                                <x-lucide-copy class="w-3.5 h-3.5" />
+                                            </template>
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
+
+                            {{-- Custom Additional Resources / Links --}}
+                            <div class="pt-2 space-y-2">
+                                @if(!empty($brandKit['custom_links']))
+                                    <div class="space-y-2 pt-1 border-t border-zinc-200/50">
+                                        <span class="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                                            {{ __('Otros Enlaces & Recursos Adicionales') }}
+                                        </span>
+                                        @foreach($brandKit['custom_links'] as $custIdx => $custLink)
+                                            <div class="p-2.5 rounded-lg bg-stone-50/70 border border-stone-200/70 space-y-2">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <input 
+                                                        type="text" 
+                                                        wire:model="brandKit.custom_links.{{ $custIdx }}.label" 
+                                                        placeholder="{{ __('Nombre / Etiqueta del recurso') }}" 
+                                                        class="flex-1 bg-transparent hover:bg-white focus:bg-white border border-transparent hover:border-zinc-200 focus:border-zinc-300 rounded px-1.5 py-0.5 text-xs font-bold text-zinc-900 uppercase focus:outline-none transition"
+                                                    />
+                                                    <button 
+                                                        type="button" 
+                                                        wire:click="removeCustomBrandLink({{ $custIdx }})" 
+                                                        class="text-zinc-400 hover:text-rose-600 p-1 transition cursor-pointer"
+                                                        title="{{ __('Eliminar recurso') }}"
+                                                    >
+                                                        <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div class="flex items-center gap-1 min-w-0">
+                                                        <input 
+                                                            type="text" 
+                                                            wire:model="brandKit.custom_links.{{ $custIdx }}.url" 
+                                                            placeholder="{{ __('URL o ruta local') }}" 
+                                                            class="flex-1 bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-800 font-mono focus:outline-none transition"
+                                                        />
+                                                        @php
+                                                            $cUrl = trim($custLink['url'] ?? '');
+                                                            $isCustomUrl = Str::startsWith($cUrl, ['http://', 'https://']);
+                                                        @endphp
+                                                        @if($isCustomUrl)
+                                                            <a href="{{ $cUrl }}" target="_blank" class="p-1 rounded text-emerald-600 hover:bg-emerald-50 shrink-0" title="Abrir">
+                                                                <x-lucide-external-link class="w-3.5 h-3.5" />
+                                                            </a>
+                                                        @endif
+                                                        @if(!empty($cUrl))
+                                                            <button type="button" @click="copyText({{ json_encode($cUrl) }}, 'cust_{{ $custIdx }}')" class="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 shrink-0" title="Copiar">
+                                                                <template x-if="copiedItem === 'cust_{{ $custIdx }}'">
+                                                                    <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                                                </template>
+                                                                <template x-if="copiedItem !== 'cust_{{ $custIdx }}'">
+                                                                    <x-lucide-copy class="w-3.5 h-3.5" />
+                                                                </template>
+                                                            </button>
+                                                        @endif
+                                                    </div>
+                                                    <input 
+                                                        type="text" 
+                                                        wire:model="brandKit.custom_links.{{ $custIdx }}.notes" 
+                                                        placeholder="{{ __('Notas / Versión / Ubicación') }}" 
+                                                        class="w-full bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-700 focus:outline-none transition"
+                                                    />
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+
+                                <div class="pt-1">
+                                    <button 
+                                        type="button" 
+                                        wire:click="addCustomBrandLink" 
+                                        class="inline-flex items-center gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 font-semibold transition cursor-pointer"
+                                    >
+                                        <x-lucide-plus class="w-3.5 h-3.5" />
+                                        <span>{{ __('Agregar otro recurso o enlace') }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Section 2: Paleta de Color Corporativa --}}
+                        <div class="pt-5 border-t border-zinc-200/70 space-y-3">
+                            <div class="flex items-center justify-between pb-1">
+                                <div>
+                                    <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <x-lucide-pipette class="w-3.5 h-3.5 text-amber-600" />
+                                        <span>{{ __('Paleta de Color') }}</span>
+                                    </h3>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">
+                                        {{ __('Colores oficiales del cliente. Haz clic en la muestra para cambiar el color y copia el HEX con 1 clic.') }}
+                                    </p>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    wire:click="addBrandColor" 
+                                    class="inline-flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 font-semibold transition cursor-pointer"
+                                >
+                                    <x-lucide-plus class="w-3.5 h-3.5" />
+                                    <span>{{ __('Agregar Color') }}</span>
+                                </button>
+                            </div>
+
+                            @if(!empty($brandKit['colors']))
+                                <div class="space-y-2">
+                                    @foreach($brandKit['colors'] as $cIdx => $color)
+                                        @php
+                                            $rawHex = trim($color['hex'] ?? '');
+                                            $validHex = !empty($rawHex) ? (str_starts_with($rawHex, '#') ? $rawHex : '#'.$rawHex) : '#E4E4E7';
+                                        @endphp
+                                        <div class="flex items-center gap-2 p-2 rounded-lg bg-stone-50/60 border border-stone-200/60 group/color">
+                                            {{-- Color Swatch Preview with native picker trigger --}}
+                                            <div 
+                                                class="relative w-8 h-8 rounded-lg border border-zinc-300/80 shadow-2xs overflow-hidden shrink-0 cursor-pointer flex items-center justify-center transition hover:scale-105"
+                                                style="background-color: {{ $validHex }};"
+                                                title="{{ __('Haz clic para seleccionar color') }}"
+                                            >
+                                                <input 
+                                                    type="color" 
+                                                    wire:model.live.debounce.150ms="brandKit.colors.{{ $cIdx }}.hex" 
+                                                    class="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                                />
+                                            </div>
+
+                                            {{-- HEX Input --}}
+                                            <div class="relative shrink-0">
+                                                <input 
+                                                    type="text" 
+                                                    wire:model.blur="brandKit.colors.{{ $cIdx }}.hex" 
+                                                    placeholder="#000000" 
+                                                    class="w-24 bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-900 font-mono font-bold uppercase focus:outline-none transition"
+                                                />
+                                            </div>
+
+                                            {{-- Name / Role --}}
+                                            <input 
+                                                type="text" 
+                                                wire:model="brandKit.colors.{{ $cIdx }}.name" 
+                                                placeholder="{{ __('Nombre (ej. Primario, Azul)') }}" 
+                                                class="flex-1 min-w-[100px] bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-800 font-medium focus:outline-none transition"
+                                            />
+
+                                            {{-- Pantone / Notes --}}
+                                            <input 
+                                                type="text" 
+                                                wire:model="brandKit.colors.{{ $cIdx }}.notes" 
+                                                placeholder="{{ __('Pantone / Vinil / Notas') }}" 
+                                                class="flex-1 min-w-[100px] bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-600 focus:outline-none transition"
+                                            />
+
+                                            {{-- Copy HEX Button --}}
+                                            @if(!empty($rawHex))
+                                                <button 
+                                                    type="button" 
+                                                    @click="copyText({{ json_encode($validHex) }}, 'col_{{ $cIdx }}')" 
+                                                    class="px-2 py-1 rounded bg-zinc-100 hover:bg-zinc-200 text-zinc-700 text-[11px] font-semibold transition cursor-pointer flex items-center gap-1 shrink-0 border border-zinc-200/80 shadow-2xs"
+                                                    title="{{ __('Copiar código HEX') }}"
+                                                >
+                                                    <template x-if="copiedItem === 'col_{{ $cIdx }}'">
+                                                        <span class="text-emerald-700 font-bold flex items-center gap-0.5">
+                                                            <x-lucide-check class="w-3 h-3 text-emerald-600" />
+                                                            <span>{{ __('Copiado') }}</span>
+                                                        </span>
+                                                    </template>
+                                                    <template x-if="copiedItem !== 'col_{{ $cIdx }}'">
+                                                        <span class="flex items-center gap-0.5">
+                                                            <x-lucide-copy class="w-3 h-3 text-zinc-400" />
+                                                            <span>HEX</span>
+                                                        </span>
+                                                    </template>
+                                                </button>
+                                            @endif
+
+                                            {{-- Remove Color --}}
+                                            <button 
+                                                type="button" 
+                                                wire:click="removeBrandColor({{ $cIdx }})" 
+                                                class="p-1 rounded text-zinc-400 hover:text-rose-600 transition cursor-pointer shrink-0"
+                                                title="{{ __('Eliminar color') }}"
+                                            >
+                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="p-3 rounded-lg bg-stone-50/60 border border-stone-200/60 text-center text-xs text-zinc-500">
+                                    {{ __('Sin colores registrados. Haz clic en "+ Agregar Color" para definir la paleta corporativa.') }}
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Section 3: Tipografía & Fuentes --}}
+                        <div class="pt-5 border-t border-zinc-200/70 space-y-3">
+                            <div class="flex items-center justify-between pb-1">
+                                <div>
+                                    <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                        <x-lucide-type class="w-3.5 h-3.5 text-indigo-600" />
+                                        <span>{{ __('Tipografía & Fuentes') }}</span>
+                                    </h3>
+                                    <p class="text-[11px] text-zinc-500 mt-0.5">
+                                        {{ __('Fuentes autorizadas, links de descarga o Google Fonts y notas de uso.') }}
+                                    </p>
+                                </div>
+                                <button 
+                                    type="button" 
+                                    wire:click="addBrandFont" 
+                                    class="inline-flex items-center gap-1 text-xs text-emerald-700 hover:text-emerald-800 font-semibold transition cursor-pointer"
+                                >
+                                    <x-lucide-plus class="w-3.5 h-3.5" />
+                                    <span>{{ __('Agregar Fuente') }}</span>
+                                </button>
+                            </div>
+
+                            @if(!empty($brandKit['fonts']))
+                                <div class="space-y-2">
+                                    @foreach($brandKit['fonts'] as $fIdx => $font)
+                                        @php
+                                            $fName = trim($font['name'] ?? '');
+                                            $fUrl = trim($font['url'] ?? '');
+                                            $isFontUrl = Str::startsWith($fUrl, ['http://', 'https://']);
+                                        @endphp
+                                        <div class="p-2.5 rounded-lg bg-stone-50/60 border border-stone-200/60 space-y-2 group/font">
+                                            <div class="flex items-center gap-2">
+                                                {{-- Role / Application --}}
+                                                <input 
+                                                    type="text" 
+                                                    wire:model="brandKit.fonts.{{ $fIdx }}.role" 
+                                                    placeholder="{{ __('Uso (ej. Titulares, Textos)') }}" 
+                                                    class="w-32 sm:w-36 bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-700 font-semibold uppercase tracking-tight focus:outline-none transition shrink-0"
+                                                />
+
+                                                {{-- Font Name --}}
+                                                <div class="flex-1 flex items-center gap-1 min-w-0">
+                                                    <input 
+                                                        type="text" 
+                                                        wire:model="brandKit.fonts.{{ $fIdx }}.name" 
+                                                        placeholder="{{ __('Nombre de la fuente (ej. Montserrat Black)') }}" 
+                                                        class="flex-1 bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-900 font-bold focus:outline-none transition min-w-0"
+                                                    />
+                                                    @if(!empty($fName))
+                                                        <button 
+                                                            type="button" 
+                                                            @click="copyText({{ json_encode($fName) }}, 'font_{{ $fIdx }}')" 
+                                                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition cursor-pointer shrink-0"
+                                                            title="{{ __('Copiar nombre de fuente') }}"
+                                                        >
+                                                            <template x-if="copiedItem === 'font_{{ $fIdx }}'">
+                                                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
+                                                            </template>
+                                                            <template x-if="copiedItem !== 'font_{{ $fIdx }}'">
+                                                                <x-lucide-copy class="w-3.5 h-3.5" />
+                                                            </template>
+                                                        </button>
+                                                    @endif
+                                                </div>
+
+                                                {{-- Remove Font --}}
+                                                <button 
+                                                    type="button" 
+                                                    wire:click="removeBrandFont({{ $fIdx }})" 
+                                                    class="p-1 rounded text-zinc-400 hover:text-rose-600 transition cursor-pointer shrink-0"
+                                                    title="{{ __('Eliminar fuente') }}"
+                                                >
+                                                    <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                <div class="flex items-center gap-1 min-w-0">
+                                                    <input 
+                                                        type="text" 
+                                                        wire:model="brandKit.fonts.{{ $fIdx }}.url" 
+                                                        placeholder="{{ __('URL de descarga o Google Fonts (opcional)') }}" 
+                                                        class="flex-1 bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-700 font-mono focus:outline-none transition min-w-0"
+                                                    />
+                                                    @if($isFontUrl)
+                                                        <a href="{{ $fUrl }}" target="_blank" class="p-1 rounded text-emerald-600 hover:bg-emerald-50 shrink-0" title="Abrir link">
+                                                            <x-lucide-external-link class="w-3.5 h-3.5" />
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                                <input 
+                                                    type="text" 
+                                                    wire:model="brandKit.fonts.{{ $fIdx }}.notes" 
+                                                    placeholder="{{ __('Notas (ej. Solo mayúsculas, tracking +50)') }}" 
+                                                    class="w-full bg-white border border-zinc-200/80 focus:border-zinc-300 rounded px-2 py-1 text-xs text-zinc-600 focus:outline-none transition"
+                                                />
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @else
+                                <div class="p-3 rounded-lg bg-stone-50/60 border border-stone-200/60 text-center text-xs text-zinc-500">
+                                    {{ __('Sin tipografías registradas. Haz clic en "+ Agregar Fuente" para indicar las fuentes que usa el cliente.') }}
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Section 4: Criterios de Diseño & Preferencias del Cliente --}}
+                        <div class="pt-5 border-t border-zinc-200/70 space-y-4">
+                            <div>
+                                <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
+                                    <x-lucide-message-square-quote class="w-3.5 h-3.5 text-amber-600" />
+                                    <span>{{ __('Criterios de Diseño & Preferencias del Cliente') }}</span>
+                                </h3>
+                                <p class="text-[11px] text-zinc-500 mt-0.5">
+                                    {{ __('Directrices de marca que todo diseñador debe considerar al preparar artes de este cliente.') }}
+                                </p>
+                            </div>
+
+                            <div class="space-y-3.5">
+                                {{-- 1. Do's & Don'ts --}}
+                                <div class="space-y-1">
+                                    <label class="text-[11px] font-bold text-zinc-700 uppercase tracking-tight flex items-center gap-1">
+                                        <x-lucide-shield-alert class="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{{ __('Reglas de Diseño (Do\'s & Don\'ts)') }}</span>
+                                    </label>
+                                    <textarea 
+                                        wire:model="brandKit.guidelines" 
+                                        rows="2" 
+                                        placeholder="{{ __('Ej: Siempre usar versión horizontal del logo en uniformes. No alterar colores corporativos. Dejar 1 pulgada de margen en letreros...') }}" 
+                                        class="w-full bg-stone-50/60 hover:bg-white focus:bg-white border border-stone-200/80 focus:border-zinc-300 rounded-lg p-2.5 text-xs text-zinc-800 focus:outline-none transition"
+                                    ></textarea>
+                                </div>
+
+                                {{-- 2. Client Feedback / Quirks --}}
+                                <div class="space-y-1">
+                                    <label class="text-[11px] font-bold text-zinc-700 uppercase tracking-tight flex items-center gap-1">
+                                        <x-lucide-message-circle class="w-3.5 h-3.5 text-zinc-400" />
+                                        <span>{{ __('Comentarios & Preferencias del Cliente') }}</span>
+                                    </label>
+                                    <textarea 
+                                        wire:model="brandKit.client_notes" 
+                                        rows="2" 
+                                        placeholder="{{ __('Ej: Don Carlos prefiere tipografías gruesas y fáciles de leer. Le gusta que le envíen 2 opciones de color en cada propuesta...') }}" 
+                                        class="w-full bg-stone-50/60 hover:bg-white focus:bg-white border border-stone-200/80 focus:border-zinc-300 rounded-lg p-2.5 text-xs text-zinc-800 focus:outline-none transition"
+                                    ></textarea>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 @endif

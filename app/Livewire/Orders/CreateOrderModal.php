@@ -7,6 +7,7 @@ use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
 use App\Models\Client;
+use App\Models\Contact;
 use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
@@ -40,6 +41,8 @@ class CreateOrderModal extends Component
     public $taskName = '';
 
     public $responsiblePerson = '';
+
+    public ?int $contactId = null;
 
     public $designerId = null;
 
@@ -84,6 +87,7 @@ class CreateOrderModal extends Component
         $this->locationName = '';
         $this->taskName = '';
         $this->responsiblePerson = '';
+        $this->contactId = null;
         $this->designerId = null;
         $this->designerIds = [];
         $this->substatus = '';
@@ -112,6 +116,7 @@ class CreateOrderModal extends Component
         $this->locationName = $original->location_name ?? '';
         $this->taskName = mb_strtoupper(($original->task_name ?? '').' (COPIA)', 'UTF-8');
         $this->responsiblePerson = $original->responsible_person ?? '';
+        $this->contactId = $original->contact_id ?? null;
         $this->designerId = $original->designer_id;
         $this->designerIds = $original->designers->pluck('id')->toArray();
         if (empty($this->designerIds) && $original->designer_id) {
@@ -269,6 +274,30 @@ class CreateOrderModal extends Component
         }
     }
 
+    public function updatedCompanyName($value): void
+    {
+        $clean = mb_strtoupper(trim($value ?? ''), 'UTF-8');
+        if (empty($clean)) {
+            return;
+        }
+
+        $client = Client::with('contacts')->where('name', $clean)->first();
+        if (! $client) {
+            return;
+        }
+
+        if (empty(trim($this->responsiblePerson)) || mb_strtoupper(trim($this->responsiblePerson), 'UTF-8') === 'MAIN') {
+            $primary = $client->primary_contact;
+            if ($primary) {
+                $this->contactId = $primary->id;
+                $this->responsiblePerson = $primary->name;
+            } else {
+                $this->contactId = null;
+                $this->responsiblePerson = 'MAIN';
+            }
+        }
+    }
+
     public function updatedCoreStatus($value)
     {
         $defaultSub = app(StatusTransitionService::class)->getDefaultSubstatus($value);
@@ -333,6 +362,32 @@ class CreateOrderModal extends Component
             ! empty($this->responsiblePerson) ? trim($this->responsiblePerson) : null
         );
 
+        $rawResp = trim($this->responsiblePerson ?? '');
+        $finalContactId = $this->contactId;
+        $finalRespName = null;
+
+        if (empty($rawResp) || mb_strtoupper($rawResp, 'UTF-8') === 'MAIN') {
+            if ($matched['client'] && $matched['client']->primary_contact) {
+                $finalContactId = $matched['client']->primary_contact->id;
+                $finalRespName = $matched['client']->primary_contact->name;
+            } else {
+                $finalContactId = null;
+                $finalRespName = 'MAIN';
+            }
+        } else {
+            $finalRespName = $rawResp;
+            if (! $finalContactId) {
+                $cleanResp = mb_strtoupper($rawResp, 'UTF-8');
+                $contact = Contact::where('name', $cleanResp)->first();
+                if ($contact) {
+                    $finalContactId = $contact->id;
+                    if ($matched['client'] && ! $matched['client']->contacts()->where('contacts.id', $contact->id)->exists()) {
+                        $matched['client']->contacts()->attach($contact->id, ['is_primary' => false]);
+                    }
+                }
+            }
+        }
+
         $order = Order::create([
             'wo_number' => ! empty($cleanWo) ? "WO {$cleanWo}" : null,
             'trello_card_id' => ! empty($cleanTrelloId) ? $cleanTrelloId : null,
@@ -340,8 +395,9 @@ class CreateOrderModal extends Component
             'location_name' => $cleanLocation,
             'client_id' => $matched['client']?->id,
             'client_location_id' => $matched['location']?->id,
+            'contact_id' => $finalContactId,
             'task_name' => mb_strtoupper(trim($this->taskName), 'UTF-8'),
-            'responsible_person' => ! empty($this->responsiblePerson) ? trim($this->responsiblePerson) : null,
+            'responsible_person' => $finalRespName,
             'designer_id' => ! empty($this->designerIds) ? reset($this->designerIds) : null,
             'core_status' => $statusEnum,
             'substatus' => $substatusEnum,
@@ -510,6 +566,10 @@ class CreateOrderModal extends Component
         $mostAvailableDesigner = $mostAvailableDesignerId ? $internalDesigners->firstWhere('id', $mostAvailableDesignerId) : null;
         $mostAvailableCount = $mostAvailableDesignerId ? ($designerWorkloads[$mostAvailableDesignerId] ?? 0) : 0;
 
+        $selectedContact = $this->contactId
+            ? Contact::find($this->contactId)
+            : (! empty($this->responsiblePerson) ? Contact::where('name', mb_strtoupper(trim($this->responsiblePerson), 'UTF-8'))->first() : null);
+
         return view('livewire.orders.create-order-modal', [
             'designers' => Designer::where('active', true)->get(),
             'mostAvailableDesigner' => $mostAvailableDesigner,
@@ -535,12 +595,37 @@ class CreateOrderModal extends Component
                 ->orderBy('location_name')
                 ->pluck('location_name'),
             'clientLocations' => $clientLocations,
-            'clientContacts' => $clientContacts,
+            'clientContacts' => $client ? $client->contacts : collect(),
+            'directoryContacts' => Contact::orderBy('name')->get(),
+            'selectedContact' => $selectedContact,
             'availableTrelloCards' => Order::whereNotNull('trello_card_id')
                 ->where('trello_card_id', '!=', '')
                 ->orderBy('trello_created_at', 'desc')
                 ->take(100)
                 ->get(['id', 'trello_card_id', 'company_name', 'task_name', 'trello_title', 'wo_number']),
         ]);
+    }
+
+    public function createContactForCompany(string $name): void
+    {
+        $cleanName = mb_strtoupper(trim($name), 'UTF-8');
+        if (empty($cleanName)) {
+            return;
+        }
+
+        $contact = Contact::firstOrCreate(['name' => $cleanName], [
+            'preferred_channel' => 'any',
+            'preferred_language' => 'es',
+        ]);
+
+        if (! empty(trim($this->companyName))) {
+            $client = Client::where('name', mb_strtoupper(trim($this->companyName), 'UTF-8'))->first();
+            if ($client && ! $client->contacts()->where('contacts.id', $contact->id)->exists()) {
+                $client->contacts()->attach($contact->id, ['is_primary' => false]);
+            }
+        }
+
+        $this->contactId = $contact->id;
+        $this->responsiblePerson = $contact->name;
     }
 }
