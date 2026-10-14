@@ -93,6 +93,11 @@ class WeeklyPlanner extends Component
         }
     }
 
+    public function updatedSelectedDesignerFilter(): void
+    {
+        $this->dispatch('planner-filter-changed');
+    }
+
     public function updatedPlannerSortBy($value)
     {
         if (in_array($value, ['custom', 'priority'])) {
@@ -125,15 +130,43 @@ class WeeklyPlanner extends Component
                 'sort_order' => $t->sort_order,
             ])->toArray();
 
+        $targetDate = ! empty($dateString) ? Carbon::parse($dateString) : null;
+
         foreach ($orderedTaskIds as $index => $taskId) {
+            $subtask = RelatedTask::with('order')->find($taskId);
+            if (! $subtask) {
+                continue;
+            }
+
             $updateData = ['sort_order' => $index];
-            if (! empty($dateString)) {
-                $updateData['scheduled_date'] = Carbon::parse($dateString)->toDateString();
+            if ($targetDate) {
+                $updateData['scheduled_date'] = $targetDate->toDateString();
             }
             if (! empty($designerId)) {
                 $updateData['assignee_id'] = $designerId;
             }
-            RelatedTask::where('id', $taskId)->update($updateData);
+            $subtask->update($updateData);
+
+            if ($targetDate && $subtask->is_work_task && $targetDate->isToday() && $subtask->order) {
+                $order = $subtask->order;
+                $orderUpdates = ['in_workspace' => true, 'scheduled_date' => $targetDate->toDateString()];
+                if ($designerId && ! $order->designer_id && $order->designers->isEmpty()) {
+                    $orderUpdates['designer_id'] = $designerId;
+                }
+                if ($order->core_status === CoreStatus::ARCHIVED) {
+                    $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
+                    $orderUpdates['substatus'] = Substatus::TICKET;
+                    $orderUpdates['archived_at'] = null;
+                } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                    $previousStatus = $order->core_status;
+                    $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
+                    if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
+                        $orderUpdates['origin_core_status'] = $previousStatus;
+                        $orderUpdates['origin_substatus'] = $order->substatus;
+                    }
+                }
+                $order->update($orderUpdates);
+            }
         }
 
         $this->recordAction('move', $previousStates, __('Subtareas reordenadas'));
@@ -204,6 +237,7 @@ class WeeklyPlanner extends Component
         if (in_array($mode, ['by_day', 'by_designer'])) {
             $this->viewMode = $mode;
             session(['weekly_planner_view_mode' => $mode]);
+            $this->dispatch('planner-filter-changed');
         }
     }
 
@@ -211,30 +245,35 @@ class WeeklyPlanner extends Component
     {
         $this->selectedWeekStart = Carbon::parse($this->selectedWeekStart)->subWeek()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->syncViewMonth();
+        $this->dispatch('planner-filter-changed');
     }
 
     public function nextWeek()
     {
         $this->selectedWeekStart = Carbon::parse($this->selectedWeekStart)->addWeek()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->syncViewMonth();
+        $this->dispatch('planner-filter-changed');
     }
 
     public function thisWeek()
     {
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->syncViewMonth();
+        $this->dispatch('planner-filter-changed');
     }
 
     public function jumpWeeks($weeks)
     {
         $this->selectedWeekStart = now()->addWeeks($weeks)->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->syncViewMonth();
+        $this->dispatch('planner-filter-changed');
     }
 
     public function selectWeekFromDate($dateString)
     {
         $this->selectedWeekStart = Carbon::parse($dateString)->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->syncViewMonth();
+        $this->dispatch('planner-filter-changed');
     }
 
     public function previousMonth()
@@ -257,6 +296,7 @@ class WeeklyPlanner extends Component
         if ($value) {
             $this->selectedWeekStart = Carbon::parse($value)->startOfWeek(Carbon::MONDAY)->toDateString();
             $this->syncViewMonth();
+            $this->dispatch('planner-filter-changed');
         }
     }
 

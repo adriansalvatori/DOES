@@ -22,6 +22,64 @@
             this.activeDragCardId = null;
             this.activeDragPosition = null;
         },
+        handleDayDrop(e, dayDateStr, designerId, targetCardId = null) {
+            this.clearDragState();
+            let rawData = e.dataTransfer ? e.dataTransfer.getData('text/plain') : '';
+            if (!rawData) return;
+
+            if (rawData.startsWith('order:')) {
+                let orderId = rawData.replace('order:', '');
+                $wire.scheduleOrder(orderId, dayDateStr);
+                return;
+            }
+
+            let movingIds = [];
+            if (rawData.startsWith('subtasks:')) {
+                movingIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
+            } else if (rawData.startsWith('subtask:')) {
+                let singleId = parseInt(rawData.replace('subtask:', ''), 10);
+                if (!isNaN(singleId)) movingIds = [singleId];
+            }
+
+            if (movingIds.length === 0) return;
+
+            const dayEl = e.currentTarget.closest('[data-day-container]') || e.currentTarget;
+            const allCardsInDay = Array.from(dayEl.querySelectorAll('[data-subtask-id]'));
+            
+            const remainingCards = allCardsInDay.filter(c => !movingIds.includes(parseInt(c.getAttribute('data-subtask-id'), 10)));
+            const remainingIds = remainingCards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10));
+
+            let insertIdx = remainingCards.length;
+            let targetEl = targetCardId ? allCardsInDay.find(c => parseInt(c.getAttribute('data-subtask-id'), 10) === parseInt(targetCardId, 10)) : (e.target ? e.target.closest('[data-subtask-id]') : null);
+
+            if (targetEl && remainingCards.includes(targetEl)) {
+                const rect = targetEl.getBoundingClientRect();
+                const targetIdx = remainingCards.indexOf(targetEl);
+                const isAbove = e.clientY < (rect.top + rect.height / 2);
+                insertIdx = isAbove ? targetIdx : targetIdx + 1;
+            } else if (remainingCards.length > 0) {
+                const mouseY = e.clientY;
+                let found = false;
+                for (let i = 0; i < remainingCards.length; i++) {
+                    const rect = remainingCards[i].getBoundingClientRect();
+                    const midY = rect.top + rect.height / 2;
+                    if (mouseY < midY) {
+                        insertIdx = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    insertIdx = remainingCards.length;
+                }
+            } else {
+                insertIdx = 0;
+            }
+
+            remainingIds.splice(insertIdx, 0, ...movingIds);
+            $wire.reorderSubtasks(remainingIds, dayDateStr, designerId);
+            this.selectedTaskIds = [];
+        },
         calendarOpen: false,
         subtaskModalOpen: false,
         subtaskOrderId: '',
@@ -181,6 +239,31 @@
         hideUndoToast() {
             this.undoToastOpen = false;
             if (this.undoToastTimer) clearTimeout(this.undoToastTimer);
+        },
+        scrollToFirstPending(smooth = false) {
+            const board = this.$refs.plannerBoard;
+            if (!board) return;
+
+            const column = board.querySelector('.designer-subtasks-column');
+            if (!column) return;
+
+            const firstPending = column.querySelector('[data-subtask-pending=1]');
+            const target = firstPending || column.querySelector('[data-is-today=1]');
+
+            if (target) {
+                const headerWrapper = document.getElementById('tour-planner-sticky-wrapper');
+                const headerH = headerWrapper ? headerWrapper.offsetHeight : 105;
+                const dayHeaderH = 34;
+                const targetRect = target.getBoundingClientRect();
+                const boardRect = board.getBoundingClientRect();
+
+                const targetScrollTop = board.scrollTop + (targetRect.top - boardRect.top) - headerH - dayHeaderH - 12;
+
+                board.scrollTo({
+                    top: Math.max(0, targetScrollTop),
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+            }
         },
         initDragAutoScroll() {
             let scrollInterval = null;
@@ -372,7 +455,8 @@
             window.addEventListener('mouseup', onMouseUp);
         }
     }" 
-    x-init="initDragAutoScroll(); initMarqueeSelection();"
+    x-init="initDragAutoScroll(); initMarqueeSelection(); setTimeout(() => scrollToFirstPending(false), 120);"
+    @planner-filter-changed.window="$nextTick(() => setTimeout(() => scrollToFirstPending(true), 60))"
     @subtask-deleted.window="triggerUndoToast($event.detail.message)"
     @subtask-restored.window="hideUndoToast()"
     @action-recorded.window="triggerUndoToast($event.detail.message)"
@@ -403,7 +487,19 @@
     </div>
 
     <!-- Top Sticky / Dynamic Toolbar Header -->
-    <div class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
+    <div 
+        id="tour-planner-sticky-wrapper"
+        x-init="
+            const updateH = () => {
+                const h = $el.offsetHeight;
+                $refs.plannerBoard?.style.setProperty('--planner-header-h', h + 'px');
+            };
+            updateH();
+            if (window.ResizeObserver) {
+                new ResizeObserver(updateH).observe($el);
+            }
+        "
+        class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
         <div id="tour-planner-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3 md:p-3.5 shadow-2xs space-y-2.5">
             
             <!-- ROW 1: Title & Main Date Navigation Controls -->
@@ -828,38 +924,17 @@
                                     };
                                 @endphp
                                 <div 
+                                    data-day-container
                                     wire:key="planner-byday-col-{{ $designer->id }}-{{ $day['date_string'] }}"
                                     x-data="{ 
                                         draggingOver: false,
                                         dragOverCardId: null,
                                         dragPosition: 'above'
                                     }"
-                                    @dragover.prevent="draggingOver = true"
+                                    @dragover.prevent="draggingOver = true; $event.dataTransfer.dropEffect = 'move'"
                                     @dragenter.prevent="draggingOver = true"
                                     @dragleave="if (!$el.contains($event.relatedTarget)) draggingOver = false"
-                                    @drop.prevent="
-                                        draggingOver = false;
-                                        let rawData = $event.dataTransfer.getData('text/plain');
-                                        if (rawData) {
-                                            if (rawData.startsWith('subtasks:')) {
-                                                let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
-                                                $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                selectedTaskIds = [];
-                                            } else if (rawData.startsWith('subtask:')) {
-                                                let taskId = parseInt(rawData.replace('subtask:', ''), 10);
-                                                let cards = Array.from($el.querySelectorAll('[data-subtask-id]'));
-                                                let orderedIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
-                                                if (!orderedIds.includes(taskId)) {
-                                                    orderedIds.push(taskId);
-                                                }
-                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                selectedTaskIds = [];
-                                            } else {
-                                                let id = rawData.replace('order:', '');
-                                                $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
-                                            }
-                                        }
-                                    "
+                                    @drop.prevent="draggingOver = false; handleDayDrop($event, '{{ $day['date_string'] }}', {{ $designer->id }})"
                                     :class="{ 'border-stone-400 ring-2 ring-stone-300/60 bg-stone-100': draggingOver }"
                                     class="bg-[#f7f7f5] border border-[#e9e9e7] rounded-xl flex flex-col min-h-[140px] overflow-hidden transition duration-150 shadow-2xs">
                                     
@@ -912,42 +987,24 @@
                                                         data-subtask-id="{{ $stask->id }}"
                                                         @dragstart="
                                                             if (selectedTaskIds.includes({{ $stask->id }})) {
-                                                                $event.dataTransfer.setData('text/plain', 'subtasks:' + selectedTaskIds.join(','));
+                                                                let allCards = Array.from(document.querySelectorAll('[data-subtask-id]'));
+                                                                let orderedSelected = allCards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => selectedTaskIds.includes(id));
+                                                                let finalIds = orderedSelected.length ? [...new Set(orderedSelected)] : selectedTaskIds;
+                                                                $event.dataTransfer.setData('text/plain', 'subtasks:' + finalIds.join(','));
                                                             } else {
                                                                 selectedTaskIds = [{{ $stask->id }}];
                                                                 $event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}');
                                                             }
+                                                            $event.dataTransfer.effectAllowed = 'move';
                                                         "
                                                         @dragover.prevent.stop="
-                                                             let rect = $el.getBoundingClientRect();
-                                                             activeDragCardId = {{ $stask->id }};
-                                                             activeDragPosition = ($event.clientY < rect.top + rect.height / 2) ? 'above' : 'below';
-                                                         "
-                                                         @dragleave.stop="if (activeDragCardId === {{ $stask->id }}) clearDragState()"
-                                                         @drop.prevent.stop="
-                                                            let rawData = $event.dataTransfer.getData('text/plain');
-                                                            if (rawData) {
-                                                                if (rawData.startsWith('subtasks:')) {
-                                                                    let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
-                                                                    $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                                    selectedTaskIds = [];
-                                                                } else if (rawData.startsWith('subtask:')) {
-                                                                    let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
-                                                                    let targetId = {{ $stask->id }};
-                                                                    let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
-                                                                    let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
-                                                                    let filtered = currentIds.filter(id => id !== draggedId);
-                                                                    let targetIdx = filtered.indexOf(targetId);
-                                                                    if (targetIdx !== -1) {
-                                                                        filtered.splice(targetIdx, 0, draggedId);
-                                                                    } else {
-                                                                        filtered.push(draggedId);
-                                                                    }
-                                                                    $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                                    selectedTaskIds = [];
-                                                                }
-                                                            }
+                                                            let rect = $el.getBoundingClientRect();
+                                                            activeDragCardId = {{ $stask->id }};
+                                                            activeDragPosition = ($event.clientY < rect.top + rect.height / 2) ? 'above' : 'below';
+                                                            $event.dataTransfer.dropEffect = 'move';
                                                         "
+                                                        @dragleave.stop="if (!$el.contains($event.relatedTarget) && activeDragCardId === {{ $stask->id }}) clearDragState()"
+                                                        @drop.prevent.stop="handleDayDrop($event, '{{ $day['date_string'] }}', {{ $designer->id }}, {{ $stask->id }})"
                                                         @click.stop="
                                                             if ($event.metaKey || $event.ctrlKey || $event.shiftKey) {
                                                                 $event.preventDefault();
@@ -969,12 +1026,16 @@
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
                                                         <div 
                                                             x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'above'"
+                                                            x-cloak
+                                                            style="display: none;"
                                                             class="absolute -top-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
                                                         </div>
 
                                                         <!-- Delicate Yellow Bottom Insertion Line Indicator -->
                                                         <div 
                                                             x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'below'"
+                                                            x-cloak
+                                                            style="display: none;"
                                                             class="absolute -bottom-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
                                                         </div>
                                                         
@@ -1122,7 +1183,7 @@
                     default => 'grid-cols-1 md:grid-cols-3 lg:grid-cols-5',
                 };
         @endphp
-        <div class="overflow-x-auto custom-horizontal-scrollbar pb-2 w-full min-h-0 flex-1">
+        <div class="{{ $isSingleDesignerFiltered ? '' : 'overflow-x-auto custom-horizontal-scrollbar' }} pb-2 w-full min-h-0 flex-1">
             <div class="grid {{ $gridColsClass }} {{ $isSingleDesignerFiltered ? 'gap-6' : 'gap-6 divide-x divide-stone-200/60' }} items-start w-full">
                 @foreach($designerGridList as $designer)
                     @php
@@ -1139,7 +1200,7 @@
                         $visibleDesignerSubtasks = $showSystemTasks ? $designerSubtasks : $designerSubtasks->filter(fn($st) => $st->isWorkTask());
                         $designerVisibleCount = $visibleDesignerSubtasks->count();
                     @endphp
-                    <div wire:key="planner-grid-designer-{{ $designer->id }}" class="flex flex-col min-w-0 {{ $isSingleDesignerFiltered ? 'lg:col-span-2' : 'pr-4' }} space-y-3">
+                    <div wire:key="planner-grid-designer-{{ $designer->id }}" class="flex flex-col min-w-0 {{ $isSingleDesignerFiltered ? 'lg:col-span-2 designer-subtasks-column' : 'pr-4' }} space-y-3">
                         
                         <!-- Designer Header -->
                         <div class="flex items-center justify-between border-b border-stone-200/60 pb-2">
@@ -1205,7 +1266,10 @@
                                 @endphp
 
                                 <div 
+                                    data-day-container
                                     wire:key="planner-grid-day-{{ $designer->id }}-{{ $day['date_string'] }}"
+                                    data-day-date="{{ $day['date_string'] }}"
+                                    data-is-today="{{ $isToday ? '1' : '0' }}"
                                     x-data="{ 
                                         draggingOver: false,
                                         inlineActive: false,
@@ -1366,32 +1430,10 @@
                                             this.presetHighlightedIndex = -1;
                                         }
                                     }"
-                                    @dragover.prevent="draggingOver = true"
+                                    @dragover.prevent="draggingOver = true; $event.dataTransfer.dropEffect = 'move'"
                                     @dragenter.prevent="draggingOver = true"
                                     @dragleave="if (!$el.contains($event.relatedTarget)) draggingOver = false"
-                                    @drop.prevent="
-                                        draggingOver = false;
-                                        let rawData = $event.dataTransfer.getData('text/plain');
-                                        if (rawData) {
-                                            if (rawData.startsWith('subtasks:')) {
-                                                let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
-                                                $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                selectedTaskIds = [];
-                                            } else if (rawData.startsWith('subtask:')) {
-                                                let taskId = parseInt(rawData.replace('subtask:', ''), 10);
-                                                let cards = Array.from($el.querySelectorAll('[data-subtask-id]'));
-                                                let orderedIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
-                                                if (!orderedIds.includes(taskId)) {
-                                                    orderedIds.push(taskId);
-                                                }
-                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                selectedTaskIds = [];
-                                            } else {
-                                                let id = rawData.replace('order:', '');
-                                                $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
-                                            }
-                                        }
-                                    "
+                                    @drop.prevent="draggingOver = false; handleDayDrop($event, '{{ $day['date_string'] }}', {{ $designer->id }})"
                                     :class="{ 
                                         'bg-indigo-50/70 rounded-md': draggingOver, 
                                         '{{ $isToday ? 'bg-amber-50/30 rounded-md px-1.5' : '' }}': !draggingOver 
@@ -1399,19 +1441,40 @@
                                     class="pt-3 pb-2 border-t border-stone-200/40 first:border-t-0 first:pt-0 space-y-1.5 min-h-[50px] flex flex-col justify-between min-w-0 transition-colors">
                                     
                                     <div class="min-w-0 space-y-1">
-                                        <!-- Day Subdivision Header -->
-                                        <div class="flex items-center justify-between pb-0.5">
+                                        <!-- Day Subdivision Header (Sticky in Single Designer Filtered View) -->
+                                        <div 
+                                            @if($isSingleDesignerFiltered)
+                                                class="sticky top-[var(--planner-header-h,105px)] z-10 -mx-1.5 px-2 py-1.5 bg-[#fbfbfa]/95 backdrop-blur-xs border-b border-stone-200/60 shadow-2xs flex items-center justify-between transition-all"
+                                            @else
+                                                class="flex items-center justify-between pb-0.5"
+                                            @endif
+                                        >
                                             <div class="flex items-center gap-1.5 min-w-0">
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold border uppercase tracking-wider {{ $dayColorClass }}">
+                                                <span class="px-1.5 py-0.5 rounded text-[9.5px] font-bold border uppercase tracking-wider {{ $dayColorClass }}">
                                                     {{ $day['day_name'] }}
                                                 </span>
                                                 @if($isToday)
-                                                    <span class="px-1.5 py-0.2 rounded bg-amber-500 text-white text-[8px] font-bold uppercase tracking-wider">
+                                                    <span class="px-1.5 py-0.5 rounded bg-amber-500 text-white text-[8px] font-bold uppercase tracking-wider">
                                                         HOY
                                                     </span>
                                                 @endif
+                                                @if($isSingleDesignerFiltered && $daySubtasks->isNotEmpty())
+                                                    @php
+                                                        $dayPendingCount = $daySubtasks->filter(fn($st) => ! $st->isDone())->count();
+                                                    @endphp
+                                                    <span class="text-[10px] font-mono font-medium {{ $dayPendingCount === 0 ? 'text-emerald-600' : 'text-stone-400' }}">
+                                                        @if($dayPendingCount === 0)
+                                                            <span class="flex items-center gap-0.5">
+                                                                <x-lucide-check class="w-3 h-3 text-emerald-600 inline" />
+                                                                <span>{{ __('al día') }}</span>
+                                                            </span>
+                                                        @else
+                                                            {{ $dayPendingCount }} {{ __('pend.') }}
+                                                        @endif
+                                                    </span>
+                                                @endif
                                             </div>
-                                            <span class="text-[9px] font-mono text-zinc-400">
+                                            <span class="text-[9.5px] font-mono text-zinc-400">
                                                 {{ $isNextWeek ? $day['range_label'] : $day['date']->format('d M') }}
                                             </span>
                                         </div>
@@ -1428,50 +1491,27 @@
                                                          wire:key="planner-grid-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
                                                          draggable="true" 
                                                          data-subtask-id="{{ $stask->id }}"
+                                                         data-subtask-pending="{{ $staskDone ? '0' : '1' }}"
                                                          @dragstart="
                                                              if (selectedTaskIds.includes({{ $stask->id }})) {
-                                                                 $event.dataTransfer.setData('text/plain', 'subtasks:' + selectedTaskIds.join(','));
+                                                                 let allCards = Array.from(document.querySelectorAll('[data-subtask-id]'));
+                                                                 let orderedSelected = allCards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => selectedTaskIds.includes(id));
+                                                                 let finalIds = orderedSelected.length ? [...new Set(orderedSelected)] : selectedTaskIds;
+                                                                 $event.dataTransfer.setData('text/plain', 'subtasks:' + finalIds.join(','));
                                                              } else {
                                                                  selectedTaskIds = [{{ $stask->id }}];
                                                                  $event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}');
                                                              }
+                                                             $event.dataTransfer.effectAllowed = 'move';
                                                          "
                                                          @dragover.prevent.stop="
                                                              let rect = $el.getBoundingClientRect();
                                                              activeDragCardId = {{ $stask->id }};
                                                              activeDragPosition = ($event.clientY < rect.top + rect.height / 2) ? 'above' : 'below';
+                                                             $event.dataTransfer.dropEffect = 'move';
                                                          "
-                                                         @dragleave.stop="if (activeDragCardId === {{ $stask->id }}) clearDragState()"
-                                                         @drop.prevent.stop="
-                                                             let rawData = $event.dataTransfer.getData('text/plain');
-                                                             let pos = activeDragPosition;
-                                                             clearDragState();
-                                                             if (rawData) {
-                                                                 if (rawData.startsWith('subtasks:')) {
-                                                                     let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
-                                                                     $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                                     selectedTaskIds = [];
-                                                                 } else if (rawData.startsWith('subtask:')) {
-                                                                     let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
-                                                                     let targetId = {{ $stask->id }};
-                                                                     let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
-                                                                     let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
-                                                                     let filtered = currentIds.filter(id => id !== draggedId);
-                                                                     let targetIdx = filtered.indexOf(targetId);
-                                                                     if (targetIdx !== -1) {
-                                                                         if (pos === 'below') {
-                                                                             filtered.splice(targetIdx + 1, 0, draggedId);
-                                                                         } else {
-                                                                             filtered.splice(targetIdx, 0, draggedId);
-                                                                         }
-                                                                     } else {
-                                                                         filtered.push(draggedId);
-                                                                     }
-                                                                     $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}', {{ $designer->id }});
-                                                                     selectedTaskIds = [];
-                                                                 }
-                                                             }
-                                                         "
+                                                         @dragleave.stop="if (!$el.contains($event.relatedTarget) && activeDragCardId === {{ $stask->id }}) clearDragState()"
+                                                         @drop.prevent.stop="handleDayDrop($event, '{{ $day['date_string'] }}', {{ $designer->id }}, {{ $stask->id }})"
                                                          @click.stop="
                                                              if ($event.metaKey || $event.ctrlKey || $event.shiftKey) {
                                                                  $event.preventDefault();
@@ -1495,12 +1535,16 @@
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
                                                         <div 
                                                             x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'above'"
+                                                            x-cloak
+                                                            style="display: none;"
                                                             class="absolute -top-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
                                                         </div>
 
                                                         <!-- Delicate Yellow Bottom Insertion Line Indicator -->
                                                         <div 
                                                             x-show="activeDragCardId === {{ $stask->id }} && activeDragPosition === 'below'"
+                                                            x-cloak
+                                                            style="display: none;"
                                                             class="absolute -bottom-0.5 left-1 right-1 h-[2px] bg-amber-400/90 rounded-full z-30 pointer-events-none transition-all duration-75">
                                                         </div>
 
@@ -2033,7 +2077,9 @@
                     @endphp
 
                     <!-- Right Column (33%): Today's Progress & ALTA Mirror -->
-                    <div class="lg:col-span-1 space-y-4 lg:sticky lg:top-4 transition-all w-full min-w-0">
+                    <div 
+                        class="lg:col-span-1 space-y-4 lg:sticky transition-all w-full min-w-0"
+                        style="top: calc(var(--planner-header-h, 105px) + 8px);">
 
                         <!-- Minimalist Dynamic Today's Progress Widget -->
                         <div 
