@@ -53,10 +53,29 @@ class WeeklyPlanner extends Component
 
     public array $recentlyDeletedSubtaskIds = [];
 
+    public array $actionHistory = [];
+
     public function closeSlaWarningModal()
     {
         $this->showSlaWarningModal = false;
         $this->slaWarningDetails = [];
+    }
+
+    public function recordAction(string $type, array $payload, string $message = ''): void
+    {
+        $this->actionHistory[] = [
+            'type' => $type,
+            'payload' => $payload,
+            'message' => $message,
+        ];
+
+        if (count($this->actionHistory) > 20) {
+            array_shift($this->actionHistory);
+        }
+
+        if (! empty($message)) {
+            $this->dispatch('action-recorded', message: $message);
+        }
     }
 
     public function mount()
@@ -89,7 +108,7 @@ class WeeklyPlanner extends Component
         }
     }
 
-    public function reorderSubtasks(array $orderedTaskIds, ?string $dateString = null)
+    public function reorderSubtasks(array $orderedTaskIds, ?string $dateString = null, ?int $designerId = null)
     {
         if (empty($orderedTaskIds)) {
             return;
@@ -97,14 +116,27 @@ class WeeklyPlanner extends Component
 
         $this->changePlannerSortBy('custom');
 
+        $previousStates = RelatedTask::whereIn('id', $orderedTaskIds)
+            ->get(['id', 'scheduled_date', 'assignee_id', 'sort_order'])
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'scheduled_date' => $t->scheduled_date?->toDateString(),
+                'assignee_id' => $t->assignee_id,
+                'sort_order' => $t->sort_order,
+            ])->toArray();
+
         foreach ($orderedTaskIds as $index => $taskId) {
             $updateData = ['sort_order' => $index];
             if (! empty($dateString)) {
                 $updateData['scheduled_date'] = Carbon::parse($dateString)->toDateString();
             }
+            if (! empty($designerId)) {
+                $updateData['assignee_id'] = $designerId;
+            }
             RelatedTask::where('id', $taskId)->update($updateData);
         }
 
+        $this->recordAction('move', $previousStates, __('Subtareas reordenadas'));
         $this->dispatch('order-updated');
     }
 
@@ -503,21 +535,37 @@ class WeeklyPlanner extends Component
         $this->dispatch('order-updated');
     }
 
-    public function rescheduleSubtask($taskId, $dateString)
+    public function rescheduleSubtask($taskId, $dateString, ?int $designerId = null)
     {
         $subtask = RelatedTask::with('order')->findOrFail($taskId);
         $scheduledDate = Carbon::parse($dateString);
 
-        $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $subtask->assignee_id, (int) $taskId);
+        $previousStates = [[
+            'id' => $subtask->id,
+            'scheduled_date' => $subtask->scheduled_date?->toDateString(),
+            'assignee_id' => $subtask->assignee_id,
+            'sort_order' => $subtask->sort_order,
+        ]];
 
-        $subtask->update([
+        $targetAssigneeId = $designerId ?: $subtask->assignee_id;
+        $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $targetAssigneeId, (int) $taskId);
+
+        $updateTaskData = [
             'scheduled_date' => $scheduledDate->toDateString(),
             'sort_order' => $nextSortOrder,
-        ]);
+        ];
+        if (! empty($designerId)) {
+            $updateTaskData['assignee_id'] = $designerId;
+        }
+
+        $subtask->update($updateTaskData);
 
         if ($subtask->is_work_task && $scheduledDate->isToday() && $subtask->order) {
             $order = $subtask->order;
             $updateData = ['in_workspace' => true, 'scheduled_date' => $scheduledDate->toDateString()];
+            if ($designerId && ! $order->designer_id && $order->designers->isEmpty()) {
+                $updateData['designer_id'] = $designerId;
+            }
 
             if ($order->core_status === CoreStatus::ARCHIVED) {
                 $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
@@ -554,6 +602,8 @@ class WeeklyPlanner extends Component
             }
         }
 
+        $msg = __('Subtarea ":title" reprogramada para el :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]);
+
         if (! $subtask->isDone() && $subtask->order && ! $subtask->order->isSlaExempt() && ! $subtask->isFollowUp() && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
             $daysOverdue = (int) $subtask->order->current_due_date->diffInDays($scheduledDate);
             $this->slaWarningDetails = [
@@ -570,12 +620,129 @@ class WeeklyPlanner extends Component
                 'due' => $subtask->order->current_due_date->format('d M'),
             ]));
         } else {
-            session()->flash('message', __('Subtarea ":title" reprogramada para el :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]));
+            session()->flash('message', $msg);
         }
 
+        $this->recordAction('move', $previousStates, $msg);
         $this->changePlannerSortBy('custom');
 
         $this->dispatch('order-updated');
+    }
+
+    public function moveMultipleSubtasks(array $taskIds, ?string $dateString = null, ?int $designerId = null): void
+    {
+        if (empty($taskIds)) {
+            return;
+        }
+
+        $targetDate = ! empty($dateString) ? Carbon::parse($dateString) : null;
+
+        $previousStates = RelatedTask::whereIn('id', $taskIds)
+            ->get(['id', 'scheduled_date', 'assignee_id', 'sort_order'])
+            ->map(fn ($t) => [
+                'id' => $t->id,
+                'scheduled_date' => $t->scheduled_date?->toDateString(),
+                'assignee_id' => $t->assignee_id,
+                'sort_order' => $t->sort_order,
+            ])->toArray();
+
+        $nextSortOrder = $targetDate ? $this->getNextSortOrderForDay($targetDate, $designerId) : 0;
+
+        foreach ($taskIds as $index => $taskId) {
+            $subtask = RelatedTask::with('order')->find($taskId);
+            if (! $subtask) {
+                continue;
+            }
+
+            $updateData = [];
+            if ($targetDate) {
+                $updateData['scheduled_date'] = $targetDate->toDateString();
+                $updateData['sort_order'] = $nextSortOrder + $index;
+            }
+            if (! empty($designerId)) {
+                $updateData['assignee_id'] = $designerId;
+            }
+
+            if (! empty($updateData)) {
+                $subtask->update($updateData);
+            }
+
+            if ($targetDate && $subtask->is_work_task && $targetDate->isToday() && $subtask->order) {
+                $order = $subtask->order;
+                $orderUpdates = ['in_workspace' => true, 'scheduled_date' => $targetDate->toDateString()];
+                if ($designerId && ! $order->designer_id && $order->designers->isEmpty()) {
+                    $orderUpdates['designer_id'] = $designerId;
+                }
+                if ($order->core_status === CoreStatus::ARCHIVED) {
+                    $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
+                    $orderUpdates['substatus'] = Substatus::TICKET;
+                    $orderUpdates['archived_at'] = null;
+                } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                    $previousStatus = $order->core_status;
+                    $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
+                    if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
+                        $orderUpdates['origin_core_status'] = $previousStatus;
+                        $orderUpdates['origin_substatus'] = $order->substatus;
+                    }
+                }
+                $order->update($orderUpdates);
+            }
+        }
+
+        $count = count($taskIds);
+        $dateFormatted = $targetDate ? $targetDate->format('d M') : '';
+        $msg = $targetDate
+            ? ($count === 1 ? __('Subtarea movida al :date', ['date' => $dateFormatted]) : __(':count subtareas movidas al :date', ['count' => $count, 'date' => $dateFormatted]))
+            : ($count === 1 ? __('Subtarea reasignada') : __(':count subtareas reasignadas', ['count' => $count]));
+
+        $this->recordAction('move', $previousStates, $msg);
+        $this->changePlannerSortBy('custom');
+        $this->dispatch('order-updated');
+        session()->flash('message', $msg);
+    }
+
+    public function bulkToggleComplete(array $taskIds, bool $complete = true): void
+    {
+        if (empty($taskIds)) {
+            return;
+        }
+
+        $subtasks = RelatedTask::with('order')->whereIn('id', $taskIds)->get();
+        $newStatus = $complete ? 'done' : 'todo';
+        $completedAt = $complete ? now() : null;
+
+        foreach ($subtasks as $stask) {
+            if ($stask->isNote() && $complete) {
+                continue;
+            }
+
+            $stask->update([
+                'status' => $newStatus,
+                'completed_at' => $completedAt,
+            ]);
+
+            if ($complete && $stask->order) {
+                OrderEvent::create([
+                    'order_id' => $stask->order->id,
+                    'event_type' => 'SUBTASK_COMPLETED',
+                    'actor' => auth()->user()?->name ?? __('Diseñador'),
+                    'new_value' => $stask->title,
+                    'metadata' => [
+                        'task_id' => $stask->id,
+                        'task_title' => $stask->title,
+                        'date' => $stask->scheduled_date?->toDateString(),
+                    ],
+                ]);
+            }
+        }
+
+        $count = $subtasks->count();
+        $msg = $complete
+            ? __(':count subtareas marcadas como completadas.', ['count' => $count])
+            : __(':count subtareas marcadas como pendientes.', ['count' => $count]);
+
+        $this->dispatch('order-updated');
+        session()->flash('message', $msg);
     }
 
     public function toggleSubtaskComplete($taskId)
@@ -734,7 +901,10 @@ class WeeklyPlanner extends Component
         $subtask->delete();
         $this->recentlyDeletedSubtaskIds[] = (int) $taskId;
 
-        $this->dispatch('subtask-deleted', message: __('Subtarea eliminada'));
+        $msg = __('Subtarea eliminada');
+        $this->recordAction('delete', ['task_id' => (int) $taskId], $msg);
+
+        $this->dispatch('subtask-deleted', message: $msg);
         $this->dispatch('order-updated');
     }
 
@@ -749,13 +919,65 @@ class WeeklyPlanner extends Component
 
         if (! empty($this->recentlyDeletedSubtaskIds)) {
             $taskId = array_pop($this->recentlyDeletedSubtaskIds);
+
+            // Clean corresponding delete from actionHistory if present
+            $this->actionHistory = array_values(array_filter($this->actionHistory, function ($action) use ($taskId) {
+                return ! ($action['type'] === 'delete' && ($action['payload']['task_id'] ?? null) === $taskId);
+            }));
+
             $subtask = RelatedTask::onlyTrashed()->find($taskId);
 
             if ($subtask) {
                 $subtask->restore();
                 $this->dispatch('subtask-restored');
                 $this->dispatch('order-updated');
+                session()->flash('message', __('Subtarea restaurada.'));
             }
+        }
+    }
+
+    public function undoLastAction(): void
+    {
+        if (empty($this->actionHistory)) {
+            $this->undoDeleteSubtask();
+
+            return;
+        }
+
+        $lastAction = array_pop($this->actionHistory);
+
+        if ($lastAction['type'] === 'delete') {
+            $taskId = $lastAction['payload']['task_id'] ?? null;
+            if ($taskId) {
+                $this->recentlyDeletedSubtaskIds = array_values(array_filter($this->recentlyDeletedSubtaskIds, fn ($id) => $id !== $taskId));
+                $subtask = RelatedTask::onlyTrashed()->find($taskId);
+                if ($subtask) {
+                    $subtask->restore();
+                    $this->dispatch('subtask-restored');
+                    $this->dispatch('order-updated');
+                    session()->flash('message', __('Subtarea restaurada.'));
+
+                    return;
+                }
+            }
+            $this->undoDeleteSubtask();
+
+            return;
+        }
+
+        if ($lastAction['type'] === 'move') {
+            $previousStates = $lastAction['payload'] ?? [];
+            foreach ($previousStates as $state) {
+                RelatedTask::where('id', $state['id'])->update([
+                    'scheduled_date' => $state['scheduled_date'],
+                    'assignee_id' => $state['assignee_id'],
+                    'sort_order' => $state['sort_order'],
+                ]);
+            }
+
+            $this->dispatch('subtask-restored');
+            $this->dispatch('order-updated');
+            session()->flash('message', __('Movimiento deshecho.'));
         }
     }
 

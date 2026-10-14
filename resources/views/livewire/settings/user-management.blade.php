@@ -15,53 +15,139 @@
         </button>
     </div>
 
-    {{-- CS WhatsApp Phone Configuration Card (Admin Only) --}}
-    <div class="bg-gradient-to-r from-emerald-50/80 via-white to-emerald-50/40 border border-emerald-200/90 rounded-2xl p-4 shadow-xs space-y-2">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                    <x-lucide-message-circle class="w-5 h-5" />
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h2 class="text-sm font-bold text-zinc-900 tracking-tight">{{ __('WhatsApp de Atención al Cliente (CS)') }}</h2>
-                        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">{{ __('Admin Only') }}</span>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {{-- CS WhatsApp Phone Configuration Card (Admin Only) --}}
+        <div class="bg-gradient-to-r from-emerald-50/80 via-white to-emerald-50/40 border border-emerald-200/90 rounded-2xl p-4 shadow-xs space-y-3 flex flex-col justify-between">
+            <div class="space-y-2">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <x-lucide-message-circle class="w-5 h-5" />
                     </div>
-                    <p class="text-xs text-zinc-500 mt-0.5">
-                        {{ __('Este número se utiliza en el Portal del Cliente para las consultas dirigidas al equipo de Customer Service.') }}
-                    </p>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-sm font-bold text-zinc-900 tracking-tight">{{ __('WhatsApp de Atención al Cliente (CS)') }}</h2>
+                            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">{{ __('Admin Only') }}</span>
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-0.5">
+                            {{ __('Este número se utiliza en el Portal del Cliente para las consultas dirigidas al equipo de Customer Service.') }}
+                        </p>
+                    </div>
                 </div>
+
+                <form wire:submit="saveCsWhatsapp" class="flex items-center gap-2 w-full pt-1">
+                    <div class="relative flex-1">
+                        <x-lucide-phone class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
+                        <input 
+                            type="text" 
+                            wire:model="cs_whatsapp_phone" 
+                            placeholder="+16783580594"
+                            class="w-full pl-8 pr-3 py-1.5 text-xs font-mono border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        />
+                    </div>
+                    <button 
+                        type="submit" 
+                        class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-2xs transition cursor-pointer shrink-0 flex items-center gap-1.5"
+                    >
+                        <x-lucide-save class="w-3.5 h-3.5" />
+                        <span>{{ __('Guardar') }}</span>
+                    </button>
+                </form>
             </div>
 
-            <form wire:submit="saveCsWhatsapp" class="flex items-center gap-2 w-full sm:w-auto">
-                <div class="relative flex-1 sm:w-56">
-                    <x-lucide-phone class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
-                    <input 
-                        type="text" 
-                        wire:model="cs_whatsapp_phone" 
-                        placeholder="+16783580594"
-                        class="w-full pl-8 pr-3 py-1.5 text-xs font-mono border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                </div>
-                <button 
-                    type="submit" 
-                    class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-2xs transition cursor-pointer shrink-0 flex items-center gap-1.5"
-                >
-                    <x-lucide-save class="w-3.5 h-3.5" />
-                    <span>{{ __('Guardar') }}</span>
-                </button>
-            </form>
+            <div>
+                @if(session('success_cs'))
+                    <div class="p-2.5 bg-emerald-100/70 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-medium flex items-center gap-2">
+                        <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-700 shrink-0" />
+                        <span>{{ session('success_cs') }}</span>
+                    </div>
+                @endif
+                @error('cs_whatsapp_phone')
+                    <p class="text-xs text-rose-600 font-medium">{{ $message }}</p>
+                @enderror
+            </div>
         </div>
 
-        @if(session('success_cs'))
-            <div class="p-2.5 bg-emerald-100/70 border border-emerald-300 text-emerald-900 rounded-xl text-xs font-medium flex items-center gap-2">
-                <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-700 shrink-0" />
-                <span>{{ session('success_cs') }}</span>
+        {{-- Approval Manager Configuration Card (Admin Only) --}}
+        <div class="bg-gradient-to-r from-purple-50/80 via-white to-purple-50/40 border border-purple-200/90 rounded-2xl p-4 shadow-xs space-y-3 flex flex-col justify-between">
+            <div class="space-y-2">
+                <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <x-lucide-shield-check class="w-5 h-5" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-sm font-bold text-zinc-900 tracking-tight">{{ __('Manager de Aprobaciones') }}</h2>
+                            <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold border border-purple-200">{{ __('Admin Only') }}</span>
+                        </div>
+                        <p class="text-xs text-zinc-500 mt-0.5">
+                            {{ __('Selecciona el usuario que actúa como Manager para las aprobaciones de órdenes.') }}
+                        </p>
+                    </div>
+                </div>
+
+                <form wire:submit="saveManagerSettings" class="space-y-2 pt-1">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-zinc-700 mb-1">
+                                {{ __('Usuario Manager') }} <span class="text-rose-500">*</span>
+                            </label>
+                            <select 
+                                wire:model.live="manager_id" 
+                                class="w-full px-2.5 py-1.5 text-xs border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                                <option value="">-- {{ __('Seleccionar Usuario') }} --</option>
+                                @foreach($allUsers as $u)
+                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role->label() }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-semibold text-zinc-700 mb-1">
+                                {{ __('Nombre en Aprobación') }} <span class="text-rose-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <x-lucide-user-check class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2.5" />
+                                <input 
+                                    type="text" 
+                                    wire:model="manager_name" 
+                                    placeholder="Ej: Gabriela"
+                                    class="w-full pl-7 pr-2.5 py-1.5 text-xs border border-stone-300 rounded-xl bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 pt-1">
+                        <div class="text-[11px] text-zinc-500 truncate">
+                            {{ __('Opción:') }} <span class="font-bold text-purple-900">"{{ __('Aprobado por :name', ['name' => $manager_name ?: 'Manager']) }}"</span>
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            class="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-2xs transition cursor-pointer shrink-0 flex items-center gap-1.5"
+                        >
+                            <x-lucide-save class="w-3.5 h-3.5" />
+                            <span>{{ __('Guardar') }}</span>
+                        </button>
+                    </div>
+                </form>
             </div>
-        @endif
-        @error('cs_whatsapp_phone')
-            <p class="text-xs text-rose-600 font-medium">{{ $message }}</p>
-        @enderror
+
+            <div>
+                @if(session('success_manager'))
+                    <div class="p-2.5 bg-purple-100/70 border border-purple-300 text-purple-900 rounded-xl text-xs font-medium flex items-center gap-2">
+                        <x-lucide-check-circle-2 class="w-4 h-4 text-purple-700 shrink-0" />
+                        <span>{{ session('success_manager') }}</span>
+                    </div>
+                @endif
+                @error('manager_id')
+                    <p class="text-xs text-rose-600 font-medium">{{ $message }}</p>
+                @enderror
+                @error('manager_name')
+                    <p class="text-xs text-rose-600 font-medium">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
     </div>
 
     @if(session('success_user'))

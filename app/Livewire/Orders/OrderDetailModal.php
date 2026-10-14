@@ -13,6 +13,7 @@ use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Models\Setting;
 use App\Models\Substatus as SubstatusModel;
 use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
@@ -2186,7 +2187,7 @@ class OrderDetailModal extends Component
         }
 
         $this->validate([
-            'approvalType' => 'required|in:camila,cliente',
+            'approvalType' => 'required|in:camila,manager,gabriela,cliente',
             'approvalImage' => 'nullable|image|max:12288',
         ], [
             'approvalType.required' => __('Debes seleccionar quién aprobó el diseño.'),
@@ -2558,6 +2559,7 @@ class OrderDetailModal extends Component
                 'clientLocations' => [],
                 'clientContacts' => [],
                 'availableTrelloCards' => collect(),
+                'managerName' => Setting::getManagerName(),
             ]);
         }
 
@@ -2623,6 +2625,7 @@ class OrderDetailModal extends Component
                 ->orderBy('trello_created_at', 'desc')
                 ->take(100)
                 ->get(['id', 'trello_card_id', 'company_name', 'task_name', 'trello_title', 'wo_number']),
+            'managerName' => Setting::getManagerName(),
         ]);
     }
 

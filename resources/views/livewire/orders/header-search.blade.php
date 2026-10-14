@@ -133,13 +133,26 @@
             </div>
         </div>
 
+        <!-- Sync Only New Cards from Trello Button -->
+        <button 
+            type="button" 
+            wire:click="runTrelloSyncOnlyNew" 
+            wire:loading.attr="disabled"
+            class="h-7.5 px-2.5 rounded-lg bg-[#0079bf] hover:bg-[#026aa7] active:bg-[#055a8c] disabled:opacity-50 text-white font-medium text-xs transition shrink-0 flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            title="{{ __('Traer solo tareas nuevas de Trello') }}">
+            <x-lucide-kanban wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-blue-100 shrink-0" />
+            <x-lucide-refresh-cw wire:loading wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 animate-spin text-white shrink-0" />
+            <span class="hidden sm:inline" wire:loading.remove wire:target="runTrelloSyncOnlyNew">{{ __('Traer Nuevas') }}</span>
+            <span class="hidden sm:inline" wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando...') }}</span>
+        </button>
+
         <!-- Create Order Button -->
         <button 
             type="button" 
             @click="$dispatch('open-create-order')"
-            class="h-7.5 px-2.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs transition shrink-0 flex items-center gap-1.5 shadow-2xs cursor-pointer"
+            class="h-7.5 px-2.5 rounded-lg bg-[#eda622] hover:bg-[#d9941a] active:bg-[#c48415] text-zinc-950 font-semibold text-xs transition shrink-0 flex items-center gap-1.5 shadow-2xs cursor-pointer"
             title="{{ __('Nueva Orden') }}">
-            <x-lucide-plus class="w-3.5 h-3.5 text-stone-300" />
+            <x-lucide-plus class="w-3.5 h-3.5 text-zinc-900 stroke-[2.5]" />
             <span class="hidden sm:inline">{{ __('Nueva Orden') }}</span>
         </button>
     </div>

@@ -2242,7 +2242,11 @@
                                                     <div class="flex items-center justify-between gap-2">
                                                         <div class="flex items-center gap-1.5 font-bold text-emerald-900">
                                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                                            <span>{{ $event->metadata['approval_type_label'] ?? ((($event->metadata['approval_type'] ?? '') === 'camila') ? __('Aprobado por Camila') : __('Aprobado por Cliente')) }}</span>
+                                                            <span>{{ $event->metadata['approval_type_label'] ?? match($event->metadata['approval_type'] ?? '') {
+                                                                'camila' => __('Aprobado por Camila'),
+                                                                'manager', 'gabriela' => __('Aprobado por :name', ['name' => \App\Models\Setting::getManagerName()]),
+                                                                default => __('Aprobado por Cliente'),
+                                                            } }}</span>
                                                         </div>
                                                         @if(!empty($event->metadata['new_due_date']))
                                                             <div class="flex items-center gap-1.5 flex-wrap">
@@ -4427,7 +4431,7 @@
         <div 
             class="fixed inset-0 z-[350] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4"
             @keydown.window.escape.prevent="$wire.closeApprovalModal()">
-            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-2xl p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] flex flex-col">
                 <div class="shrink-0 flex items-start justify-between gap-3">
                     <div>
                         <h3 class="text-base font-semibold text-zinc-900">
@@ -4456,41 +4460,72 @@
 
                 <div class="overflow-y-auto pr-1 space-y-4 text-xs scrollbar-thin flex-1">
                     <!-- Validation Type Selection -->
-                    <div class="space-y-1.5">
+                    <div class="space-y-2">
                         <label class="block text-xs font-semibold text-zinc-800">
                             {{ __('¿Quién validó la aprobación?') }} <span class="text-rose-500">*</span>
                         </label>
-                        <div class="grid grid-cols-2 gap-2.5">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <button 
                                 type="button" 
                                 wire:click="$set('approvalType', 'camila')"
-                                class="p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer select-none {{ $approvalType === 'camila' ? 'border-emerald-500 bg-emerald-50/60 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 text-zinc-700' }}">
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition {{ $approvalType === 'camila' ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-zinc-500' }}">
-                                    <x-lucide-user-check class="w-4 h-4" />
+                                class="relative p-3.5 sm:p-4 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer select-none {{ $approvalType === 'camila' ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 hover:border-stone-300 text-zinc-700' }}">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-xs {{ $approvalType === 'camila' ? 'text-emerald-700 font-medium' : 'text-zinc-500 font-normal' }} block">{{ __('Aprobado por') }}</span>
+                                        <span class="text-sm sm:text-base font-bold {{ $approvalType === 'camila' ? 'text-emerald-950' : 'text-zinc-900' }} block tracking-tight mt-0.5 leading-snug">{{ __('Camila') }}</span>
+                                    </div>
+                                    @if($approvalType === 'camila')
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white shrink-0 shadow-2xs mt-0.5">
+                                            <x-lucide-check class="w-3 h-3 stroke-[3]" />
+                                        </span>
+                                    @endif
                                 </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="font-bold text-xs truncate">{{ __('Aprobado por Camila') }}</div>
-                                    <div class="text-[10px] {{ $approvalType === 'camila' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">{{ __('Validación interna') }}</div>
+                                <div class="text-[11px] {{ $approvalType === 'camila' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} leading-tight mt-2.5">
+                                    {{ __('Validación interna') }}
                                 </div>
-                                @if($approvalType === 'camila')
-                                    <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
-                                @endif
+                            </button>
+
+                            <button 
+                                type="button" 
+                                wire:click="$set('approvalType', 'manager')"
+                                class="relative p-3.5 sm:p-4 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer select-none {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 hover:border-stone-300 text-zinc-700' }}">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-xs {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-emerald-700 font-medium' : 'text-zinc-500 font-normal' }} block">{{ __('Aprobado por') }}</span>
+                                        <div class="flex items-baseline gap-1 mt-0.5 flex-wrap">
+                                            <span class="text-sm sm:text-base font-bold {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-emerald-950' : 'text-zinc-900' }} tracking-tight leading-snug">{{ $managerName ?? \App\Models\Setting::getManagerName() }}</span>
+                                            <span class="text-xs font-normal {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-emerald-700' : 'text-zinc-500' }}">({{ __('Manager') }})</span>
+                                        </div>
+                                    </div>
+                                    @if($approvalType === 'manager' || $approvalType === 'gabriela')
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white shrink-0 shadow-2xs mt-0.5">
+                                            <x-lucide-check class="w-3 h-3 stroke-[3]" />
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="text-[11px] {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} leading-tight mt-2.5">
+                                    {{ __('Validación Manager') }}
+                                </div>
                             </button>
 
                             <button 
                                 type="button" 
                                 wire:click="$set('approvalType', 'cliente')"
-                                class="p-3 rounded-xl border text-left transition flex items-center gap-3 cursor-pointer select-none {{ $approvalType === 'cliente' ? 'border-emerald-500 bg-emerald-50/60 text-emerald-950 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 text-zinc-700' }}">
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition {{ $approvalType === 'cliente' ? 'bg-emerald-600 text-white' : 'bg-stone-200 text-zinc-500' }}">
-                                    <x-lucide-check-circle-2 class="w-4 h-4" />
+                                class="relative p-3.5 sm:p-4 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer select-none {{ $approvalType === 'cliente' ? 'border-emerald-500 bg-emerald-50/70 ring-2 ring-emerald-500/20 shadow-xs' : 'border-[#e9e9e7] bg-[#fbfbfa] hover:bg-stone-50 hover:border-stone-300 text-zinc-700' }}">
+                                <div class="flex items-start justify-between w-full gap-2">
+                                    <div class="min-w-0 flex-1">
+                                        <span class="text-xs {{ $approvalType === 'cliente' ? 'text-emerald-700 font-medium' : 'text-zinc-500 font-normal' }} block">{{ __('Aprobado por') }}</span>
+                                        <span class="text-sm sm:text-base font-bold {{ $approvalType === 'cliente' ? 'text-emerald-950' : 'text-zinc-900' }} block tracking-tight mt-0.5 leading-snug">{{ __('Cliente') }}</span>
+                                    </div>
+                                    @if($approvalType === 'cliente')
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white shrink-0 shadow-2xs mt-0.5">
+                                            <x-lucide-check class="w-3 h-3 stroke-[3]" />
+                                        </span>
+                                    @endif
                                 </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="font-bold text-xs truncate">{{ __('Aprobado por Cliente') }}</div>
-                                    <div class="text-[10px] {{ $approvalType === 'cliente' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} truncate">{{ __('Confirmación directa') }}</div>
+                                <div class="text-[11px] {{ $approvalType === 'cliente' ? 'text-emerald-700 font-medium' : 'text-zinc-400' }} leading-tight mt-2.5">
+                                    {{ __('Confirmación directa') }}
                                 </div>
-                                @if($approvalType === 'cliente')
-                                    <x-lucide-check class="w-4 h-4 text-emerald-600 stroke-[3] shrink-0" />
-                                @endif
                             </button>
                         </div>
                     </div>

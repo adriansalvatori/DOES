@@ -1381,4 +1381,181 @@ class SubtaskWeeklyPlannerTest extends TestCase
             Carbon::setTestNow();
         }
     }
+
+    public function test_can_move_multiple_subtasks_to_new_date_and_designer(): void
+    {
+        $designer1 = Designer::create(['name' => 'Agustín', 'active' => true]);
+        $designer2 = Designer::create(['name' => 'Camila', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'BURGER HOUSE',
+            'task_name' => 'Menu Board',
+            'core_status' => CoreStatus::ENTRANTE,
+            'in_workspace' => true,
+            'designer_id' => $designer1->id,
+        ]);
+
+        $monday = now()->startOfWeek();
+        $wednesday = now()->startOfWeek()->addDays(2);
+
+        $task1 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Diseño menú frontal',
+            'scheduled_date' => $monday->toDateString(),
+            'assignee_id' => $designer1->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        $task2 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Diseño reverso',
+            'scheduled_date' => $monday->toDateString(),
+            'assignee_id' => $designer1->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('moveMultipleSubtasks', [$task1->id, $task2->id], $wednesday->toDateString(), $designer2->id);
+
+        $this->assertEquals($wednesday->toDateString(), $task1->fresh()->scheduled_date->toDateString());
+        $this->assertEquals($designer2->id, $task1->fresh()->assignee_id);
+
+        $this->assertEquals($wednesday->toDateString(), $task2->fresh()->scheduled_date->toDateString());
+        $this->assertEquals($designer2->id, $task2->fresh()->assignee_id);
+    }
+
+    public function test_reordering_subtasks_across_designers_updates_assignee_id(): void
+    {
+        $designer1 = Designer::create(['name' => 'Agustín', 'active' => true]);
+        $designer2 = Designer::create(['name' => 'Camila', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'PIZZA PLANET',
+            'task_name' => 'Banner',
+            'core_status' => CoreStatus::ENTRANTE,
+            'in_workspace' => true,
+        ]);
+
+        $task = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Ajustar logos',
+            'scheduled_date' => now()->startOfWeek()->toDateString(),
+            'assignee_id' => $designer1->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        $tuesday = now()->startOfWeek()->addDay()->toDateString();
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('reorderSubtasks', [$task->id], $tuesday, $designer2->id);
+
+        $this->assertEquals($designer2->id, $task->fresh()->assignee_id);
+        $this->assertEquals($tuesday, $task->fresh()->scheduled_date->toDateString());
+    }
+
+    public function test_undo_last_action_reverts_subtask_movement(): void
+    {
+        $designer1 = Designer::create(['name' => 'Agustín', 'active' => true]);
+        $designer2 = Designer::create(['name' => 'Camila', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'HOTEL CALIFORNIA',
+            'task_name' => 'Brochure',
+            'core_status' => CoreStatus::ENTRANTE,
+            'in_workspace' => true,
+        ]);
+
+        $monday = now()->startOfWeek()->toDateString();
+        $friday = now()->startOfWeek()->addDays(4)->toDateString();
+
+        $task = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Portada',
+            'scheduled_date' => $monday,
+            'assignee_id' => $designer1->id,
+            'sort_order' => 1,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        $component = Livewire::test(WeeklyPlanner::class);
+
+        // Move to Friday with Camila
+        $component->call('rescheduleSubtask', $task->id, $friday, $designer2->id);
+
+        $this->assertEquals($friday, $task->fresh()->scheduled_date->toDateString());
+        $this->assertEquals($designer2->id, $task->fresh()->assignee_id);
+
+        // Undo movement
+        $component->call('undoLastAction');
+
+        $this->assertEquals($monday, $task->fresh()->scheduled_date->toDateString());
+        $this->assertEquals($designer1->id, $task->fresh()->assignee_id);
+        $this->assertEquals(1, $task->fresh()->sort_order);
+    }
+
+    public function test_undo_last_action_reverts_subtask_deletion(): void
+    {
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $task = RelatedTask::create([
+            'title' => 'Nota temporal',
+            'scheduled_date' => now()->startOfWeek()->toDateString(),
+            'assignee_id' => $designer->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        $component = Livewire::test(WeeklyPlanner::class);
+
+        $component->call('deleteSubtask', $task->id);
+        $this->assertSoftDeleted('related_tasks', ['id' => $task->id]);
+
+        $component->call('undoLastAction');
+        $this->assertDatabaseHas('related_tasks', [
+            'id' => $task->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_bulk_toggle_complete_marks_multiple_subtasks_as_done(): void
+    {
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'COFFEE SHOP',
+            'task_name' => 'Labels',
+            'core_status' => CoreStatus::ENTRANTE,
+            'in_workspace' => true,
+        ]);
+
+        $task1 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Etiqueta 1',
+            'scheduled_date' => now()->startOfWeek()->toDateString(),
+            'assignee_id' => $designer->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        $task2 = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Etiqueta 2',
+            'scheduled_date' => now()->startOfWeek()->toDateString(),
+            'assignee_id' => $designer->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('bulkToggleComplete', [$task1->id, $task2->id], true);
+
+        $this->assertEquals('done', $task1->fresh()->status);
+        $this->assertEquals('done', $task2->fresh()->status);
+        $this->assertNotNull($task1->fresh()->completed_at);
+        $this->assertNotNull($task2->fresh()->completed_at);
+    }
 }

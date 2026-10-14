@@ -10,6 +10,7 @@ use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Models\Substatus as SubstatusModel;
 use App\Models\SubtaskPreset;
 use App\Models\User;
@@ -426,6 +427,47 @@ class OrderDetailModalTest extends TestCase
         $task = $order->relatedTasks()->where('title', 'Poner en alta')->first();
         $this->assertNotNull($task);
         $this->assertEquals(now()->addWeekdays(1)->toDateString(), $task->due_date?->toDateString());
+    }
+
+    public function test_approval_by_manager(): void
+    {
+        Setting::set('manager_id', 8);
+        Setting::set('manager_name', 'Gabriela');
+
+        $designer = Designer::create(['name' => 'Euralíz', 'active' => true, 'is_lead' => true]);
+
+        $order = Order::create([
+            'company_name' => 'EMPRESA APROBACION MANAGER',
+            'task_name' => 'Diseno Manager',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'designer_id' => $designer->id,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('openApprovalModal')
+            ->set('approvalType', 'manager')
+            ->set('approvalComment', 'Aprobado directamente por Gabriela según visto bueno gerencial.')
+            ->call('submitApproval')
+            ->assertHasNoErrors()
+            ->assertDispatched('order-updated');
+
+        $fresh = $order->fresh();
+        $this->assertTrue($fresh->approved);
+        $this->assertEquals('manager', $fresh->approval_type);
+        $this->assertEquals('Aprobado por Gabriela', $fresh->approval_type_label);
+        $this->assertEquals('Aprobado directamente por Gabriela según visto bueno gerencial.', $fresh->approval_note);
+
+        $event = $order->events()->where('event_type', 'ORDER_APPROVED')->first();
+        $this->assertNotNull($event);
+        $this->assertEquals('manager', $event->metadata['approval_type']);
+        $this->assertEquals('Aprobado por Gabriela', $event->metadata['approval_type_label']);
+        $this->assertEquals(__('Aprobación Recibida'), $event->getFormattedTitle());
+
+        // Dynamic change of manager name via settings updates label
+        Setting::set('manager_name', 'Gabriela Requena');
+        $this->assertEquals('Aprobado por Gabriela Requena', $fresh->fresh()->approval_type_label);
     }
 
     public function test_approval_for_urgent_order_assigns_today_to_task_and_sla(): void

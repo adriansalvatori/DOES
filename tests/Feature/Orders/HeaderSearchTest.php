@@ -3,10 +3,13 @@
 namespace Tests\Feature\Orders;
 
 use App\Enums\CoreStatus;
+use App\Enums\UserRole;
 use App\Livewire\Orders\HeaderSearch;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\User;
+use App\Services\TrelloSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -156,5 +159,91 @@ class HeaderSearchTest extends TestCase
             ->assertViewHas('results', function ($results) use ($order) {
                 return $results->count() === 1 && $results->first()->id === $order->id;
             });
+    }
+
+    public function test_can_run_trello_sync_only_new_from_header_search(): void
+    {
+        $existingOrder = Order::create([
+            'company_name' => 'EXISTING HEADER CLIENT',
+            'task_name' => 'Banner Old',
+            'trello_card_id' => 'card_header_old_1',
+            'in_workspace' => false,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        $this->mock(TrelloSyncService::class, function ($mock) {
+            $mock->shouldReceive('extractBoardId')->andReturn('test_board_id');
+            $mock->shouldReceive('getBoardLists')->andReturn([
+                'success' => true,
+                'data' => [
+                    ['id' => 'list_entrante', 'name' => 'ENTRANTE'],
+                ],
+            ]);
+            $mock->shouldReceive('getBoardCards')->andReturn([
+                'success' => true,
+                'data' => [
+                    [
+                        'id' => 'card_header_old_1',
+                        'name' => 'WO 111 - EXISTING HEADER CLIENT - Banner Old',
+                        'idList' => 'list_entrante',
+                    ],
+                    [
+                        'id' => 'card_header_new_2',
+                        'name' => 'WO 222 - FRESH HEADER CLIENT - Poster New',
+                        'idList' => 'list_entrante',
+                    ],
+                ],
+            ]);
+            $mock->shouldReceive('syncCardToOrder')
+                ->once()
+                ->withArgs(fn ($card) => $card['id'] === 'card_header_new_2')
+                ->andReturnUsing(function ($card) {
+                    $newOrder = Order::create([
+                        'company_name' => 'FRESH HEADER CLIENT',
+                        'task_name' => 'Poster New',
+                        'trello_card_id' => 'card_header_new_2',
+                        'in_workspace' => false,
+                        'is_new_from_trello' => true,
+                        'core_status' => CoreStatus::ENTRANTE,
+                    ]);
+
+                    return [
+                        'order' => $newOrder,
+                        'action' => 'created',
+                        'company_name' => 'FRESH HEADER CLIENT',
+                        'task_name' => 'Poster New',
+                        'previous_status' => null,
+                        'new_status' => 'ENTRANTE',
+                        'details' => ['Nueva tarjeta importada desde Trello'],
+                    ];
+                });
+        });
+
+        Livewire::test(HeaderSearch::class)
+            ->assertSeeHtml('bg-[#0079bf]')
+            ->assertSeeHtml('runTrelloSyncOnlyNew')
+            ->call('runTrelloSyncOnlyNew')
+            ->assertDispatched('order-updated')
+            ->assertDispatched('toast');
+
+        $this->assertDatabaseHas('orders', [
+            'company_name' => 'FRESH HEADER CLIENT',
+            'trello_card_id' => 'card_header_new_2',
+        ]);
+    }
+
+    public function test_header_search_trello_sync_available_for_all_user_roles(): void
+    {
+        $roles = [UserRole::ADMIN, UserRole::COORDINATOR, UserRole::DESIGNER, UserRole::SALES];
+
+        foreach ($roles as $role) {
+            $user = User::factory()->create(['role' => $role]);
+            $this->actingAs($user);
+
+            Livewire::test(HeaderSearch::class)
+                ->assertStatus(200)
+                ->assertSeeHtml('bg-[#0079bf]')
+                ->assertSeeHtml('runTrelloSyncOnlyNew');
+        }
     }
 }

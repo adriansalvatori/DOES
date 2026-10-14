@@ -68,8 +68,8 @@
                 id="tour-trello-sync-new-btn"
                 wire:click="runTrelloSyncOnlyNew" 
                 wire:loading.attr="disabled"
-                class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white cursor-pointer shadow-2xs font-semibold">
-                <x-lucide-sparkles wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-emerald-200" />
+                class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2 bg-[#0079bf] hover:bg-[#026aa7] active:bg-[#055a8c] disabled:opacity-50 text-white cursor-pointer shadow-2xs font-semibold">
+                <x-lucide-kanban wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-blue-100" />
                 <x-lucide-refresh-cw wire:loading wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 animate-spin" />
                 <span wire:loading.remove wire:target="runTrelloSyncOnlyNew">{{ __('Traer Solo Tarjetas Nuevas') }}</span>
                 <span wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando nuevas...') }}</span>

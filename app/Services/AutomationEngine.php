@@ -10,6 +10,7 @@ use App\Enums\SubtaskCategory;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
+use App\Models\Setting;
 use App\Models\SystemTaskConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -304,7 +305,11 @@ class AutomationEngine
     ): void {
         $isUrgente = $order->isUrgente();
         $targetDate = $isUrgente ? now() : now()->addWeekdays(1);
-        $approvalLabel = $approvalType === 'camila' ? 'Aprobado por Camila' : 'Aprobado por Cliente';
+        $approvalLabel = match ($approvalType) {
+            'camila' => 'Aprobado por Camila',
+            'manager', 'gabriela' => 'Aprobado por '.Setting::getManagerName(),
+            default => 'Aprobado por Cliente',
+        };
 
         if ($isUrgente) {
             $order->addFlag(Substatus::URGENTE);

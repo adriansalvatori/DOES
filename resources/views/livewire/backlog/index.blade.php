@@ -18,8 +18,8 @@
                 <button 
                     wire:click="runTrelloSyncOnlyNew" 
                     wire:loading.attr="disabled"
-                    class="px-3.5 py-1.5 h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 disabled:opacity-50 text-white font-medium text-xs shadow-2xs transition flex items-center gap-2 cursor-pointer shrink-0">
-                    <x-lucide-sparkles wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-emerald-200 shrink-0" />
+                    class="px-3.5 py-1.5 h-8 rounded-lg bg-[#0079bf] hover:bg-[#026aa7] active:bg-[#055a8c] disabled:opacity-50 text-white font-medium text-xs shadow-2xs transition flex items-center gap-2 cursor-pointer shrink-0">
+                    <x-lucide-kanban wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-blue-100 shrink-0" />
                     <x-lucide-refresh-cw wire:loading wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 animate-spin shrink-0" />
                     <span wire:loading.remove wire:target="runTrelloSyncOnlyNew">{{ __('Traer Solo Nuevas') }}</span>
                     <span wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando...') }}</span>

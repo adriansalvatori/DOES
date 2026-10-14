@@ -276,23 +276,131 @@
             window.addEventListener('dragover', handleDragOver, { passive: true });
             window.addEventListener('dragend', handleDragEnd, { passive: true });
             window.addEventListener('drop', handleDragEnd, { passive: true });
+        },
+        selectedTaskIds: [],
+        isSelecting: false,
+        selectionStart: { x: 0, y: 0 },
+        selectionBox: { left: 0, top: 0, width: 0, height: 0 },
+        toggleTaskSelection(id) {
+            id = parseInt(id, 10);
+            if (this.selectedTaskIds.includes(id)) {
+                this.selectedTaskIds = this.selectedTaskIds.filter(x => x !== id);
+            } else {
+                this.selectedTaskIds.push(id);
+            }
+        },
+        clearSelection() {
+            this.selectedTaskIds = [];
+        },
+        initMarqueeSelection() {
+            const board = this.$refs.plannerBoard;
+            if (!board) return;
+
+            const onMouseDown = (e) => {
+                if (e.button !== 0) return;
+
+                if (e.target.closest('input, textarea, button, select, a, [role=dialog], .no-marquee')) {
+                    return;
+                }
+
+                const clickedCard = e.target.closest('[data-subtask-id]');
+                if (clickedCard && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+                    return;
+                }
+
+                if (clickedCard && (e.shiftKey || e.metaKey || e.ctrlKey)) {
+                    return;
+                }
+
+                this.isSelecting = true;
+                this.selectionStart = { x: e.clientX, y: e.clientY };
+                this.selectionBox = { left: e.clientX, top: e.clientY, width: 0, height: 0 };
+
+                if (!e.shiftKey && !e.metaKey && !e.ctrlKey) {
+                    this.selectedTaskIds = [];
+                }
+            };
+
+            const onMouseMove = (e) => {
+                if (!this.isSelecting) return;
+
+                const currentX = e.clientX;
+                const currentY = e.clientY;
+
+                const left = Math.min(this.selectionStart.x, currentX);
+                const top = Math.min(this.selectionStart.y, currentY);
+                const width = Math.abs(currentX - this.selectionStart.x);
+                const height = Math.abs(currentY - this.selectionStart.y);
+
+                this.selectionBox = { left, top, width, height };
+
+                if (width > 6 || height > 6) {
+                    window.getSelection()?.removeAllRanges();
+
+                    const boxRect = {
+                        left: left,
+                        right: left + width,
+                        top: top,
+                        bottom: top + height
+                    };
+
+                    const cards = board.querySelectorAll('[data-subtask-id]');
+                    const hitIds = new Set(e.shiftKey || e.metaKey || e.ctrlKey ? this.selectedTaskIds : []);
+
+                    cards.forEach(card => {
+                        const r = card.getBoundingClientRect();
+                        const intersects = !(r.right < boxRect.left || r.left > boxRect.right || r.bottom < boxRect.top || r.top > boxRect.bottom);
+                        const id = parseInt(card.getAttribute('data-subtask-id'), 10);
+                        if (intersects && !isNaN(id)) {
+                            hitIds.add(id);
+                        }
+                    });
+
+                    this.selectedTaskIds = Array.from(hitIds);
+                }
+            };
+
+            const onMouseUp = () => {
+                if (this.isSelecting) {
+                    this.isSelecting = false;
+                    this.selectionBox = { left: 0, top: 0, width: 0, height: 0 };
+                }
+            };
+
+            board.addEventListener('mousedown', onMouseDown);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('mouseup', onMouseUp);
         }
     }" 
-    x-init="initDragAutoScroll()"
+    x-init="initDragAutoScroll(); initMarqueeSelection();"
     @subtask-deleted.window="triggerUndoToast($event.detail.message)"
     @subtask-restored.window="hideUndoToast()"
+    @action-recorded.window="triggerUndoToast($event.detail.message)"
     @keydown.window="(e) => {
+        if (e.key === 'Escape') {
+            clearSelection();
+        }
         if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
             const active = document.activeElement;
             const isInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable);
-            const hasModal = document.querySelector('[role=\'dialog\']');
-            if (!isInput && !hasModal && $wire.recentlyDeletedSubtaskIds.length > 0) {
+            const hasModal = document.querySelector('[role=dialog]');
+            if (!isInput && !hasModal && ($wire.recentlyDeletedSubtaskIds.length > 0 || $wire.actionHistory.length > 0)) {
                 e.preventDefault();
-                $wire.undoDeleteSubtask();
+                $wire.undoLastAction();
             }
         }
     }"
+    x-ref="plannerBoard"
     class="h-full flex flex-col space-y-4 text-xs font-sans bg-[#fbfbfa] min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-4 text-zinc-800">
+
+    <!-- Marquee Selection Rectangle Overlay -->
+    <div 
+        x-show="isSelecting && (selectionBox.width > 6 || selectionBox.height > 6)" 
+        x-cloak
+        :style="`left: ${selectionBox.left}px; top: ${selectionBox.top}px; width: ${selectionBox.width}px; height: ${selectionBox.height}px;`"
+        class="fixed pointer-events-none border-2 border-dashed border-amber-500 bg-amber-400/20 z-[999] rounded-sm transition-none shadow-xs"
+        style="display: none;">
+    </div>
 
     <!-- Top Sticky / Dynamic Toolbar Header -->
     <div class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
@@ -733,14 +841,19 @@
                                         draggingOver = false;
                                         let rawData = $event.dataTransfer.getData('text/plain');
                                         if (rawData) {
-                                            if (rawData.startsWith('subtask:')) {
+                                            if (rawData.startsWith('subtasks:')) {
+                                                let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
+                                                $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                selectedTaskIds = [];
+                                            } else if (rawData.startsWith('subtask:')) {
                                                 let taskId = parseInt(rawData.replace('subtask:', ''), 10);
                                                 let cards = Array.from($el.querySelectorAll('[data-subtask-id]'));
                                                 let orderedIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
                                                 if (!orderedIds.includes(taskId)) {
                                                     orderedIds.push(taskId);
                                                 }
-                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}');
+                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                selectedTaskIds = [];
                                             } else {
                                                 let id = rawData.replace('order:', '');
                                                 $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
@@ -797,7 +910,14 @@
                                                         wire:key="planner-byday-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
                                                         draggable="true" 
                                                         data-subtask-id="{{ $stask->id }}"
-                                                        @dragstart="$event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                        @dragstart="
+                                                            if (selectedTaskIds.includes({{ $stask->id }})) {
+                                                                $event.dataTransfer.setData('text/plain', 'subtasks:' + selectedTaskIds.join(','));
+                                                            } else {
+                                                                selectedTaskIds = [{{ $stask->id }}];
+                                                                $event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}');
+                                                            }
+                                                        "
                                                         @dragover.prevent.stop="
                                                              let rect = $el.getBoundingClientRect();
                                                              activeDragCardId = {{ $stask->id }};
@@ -806,25 +926,44 @@
                                                          @dragleave.stop="if (activeDragCardId === {{ $stask->id }}) clearDragState()"
                                                          @drop.prevent.stop="
                                                             let rawData = $event.dataTransfer.getData('text/plain');
-                                                            if (rawData && rawData.startsWith('subtask:')) {
-                                                                let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
-                                                                let targetId = {{ $stask->id }};
-                                                                let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
-                                                                let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
-                                                                let filtered = currentIds.filter(id => id !== draggedId);
-                                                                let targetIdx = filtered.indexOf(targetId);
-                                                                if (targetIdx !== -1) {
-                                                                    filtered.splice(targetIdx, 0, draggedId);
-                                                                } else {
-                                                                    filtered.push(draggedId);
+                                                            if (rawData) {
+                                                                if (rawData.startsWith('subtasks:')) {
+                                                                    let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
+                                                                    $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                                    selectedTaskIds = [];
+                                                                } else if (rawData.startsWith('subtask:')) {
+                                                                    let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
+                                                                    let targetId = {{ $stask->id }};
+                                                                    let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
+                                                                    let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
+                                                                    let filtered = currentIds.filter(id => id !== draggedId);
+                                                                    let targetIdx = filtered.indexOf(targetId);
+                                                                    if (targetIdx !== -1) {
+                                                                        filtered.splice(targetIdx, 0, draggedId);
+                                                                    } else {
+                                                                        filtered.push(draggedId);
+                                                                    }
+                                                                    $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                                    selectedTaskIds = [];
                                                                 }
-                                                                $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}');
                                                             }
                                                         "
-                                                        @if($staskIsNote)
-                                                            @click="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
-                                                        @endif
-                                                        :class="{ 'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }} }"
+                                                        @click.stop="
+                                                            if ($event.metaKey || $event.ctrlKey || $event.shiftKey) {
+                                                                $event.preventDefault();
+                                                                toggleTaskSelection({{ $stask->id }});
+                                                                return;
+                                                            }
+                                                            @if($staskIsNote)
+                                                                $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' });
+                                                            @else
+                                                                $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} });
+                                                            @endif
+                                                        "
+                                                        :class="{ 
+                                                            'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }},
+                                                            'ring-2 ring-amber-400 border-amber-400 bg-amber-50/80 shadow-xs': selectedTaskIds.includes({{ $stask->id }})
+                                                        }"
                                                         class="border rounded-lg p-2 flex flex-col gap-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
@@ -847,6 +986,15 @@
                                                                     type="button"
                                                                     class="w-3.5 h-3.5 rounded-md border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stask->isDone() ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}">
                                                                     <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                                                </button>
+
+                                                                <button 
+                                                                    type="button"
+                                                                    @click.stop="toggleTaskSelection({{ $stask->id }})"
+                                                                    :class="selectedTaskIds.includes({{ $stask->id }}) ? 'opacity-100 text-amber-700 bg-amber-200/90 border-amber-400' : 'opacity-0 group-hover:opacity-60 text-stone-400 border-stone-200 hover:opacity-100 hover:text-amber-700 hover:border-amber-300'"
+                                                                    class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer"
+                                                                    title="{{ __('Seleccionar subtarea para mover en lote') }}">
+                                                                    <x-lucide-check x-show="selectedTaskIds.includes({{ $stask->id }})" class="w-2.5 h-2.5 stroke-[3]" />
                                                                 </button>
                                                                 <div class="min-w-0 flex-1 flex items-center gap-1.5">
                                                                     @if($staskIsNote)
@@ -1225,14 +1373,19 @@
                                         draggingOver = false;
                                         let rawData = $event.dataTransfer.getData('text/plain');
                                         if (rawData) {
-                                            if (rawData.startsWith('subtask:')) {
+                                            if (rawData.startsWith('subtasks:')) {
+                                                let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
+                                                $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                selectedTaskIds = [];
+                                            } else if (rawData.startsWith('subtask:')) {
                                                 let taskId = parseInt(rawData.replace('subtask:', ''), 10);
                                                 let cards = Array.from($el.querySelectorAll('[data-subtask-id]'));
                                                 let orderedIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
                                                 if (!orderedIds.includes(taskId)) {
                                                     orderedIds.push(taskId);
                                                 }
-                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}');
+                                                $wire.reorderSubtasks(orderedIds, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                selectedTaskIds = [];
                                             } else {
                                                 let id = rawData.replace('order:', '');
                                                 $wire.scheduleOrder(id, '{{ $day['date_string'] }}');
@@ -1275,7 +1428,14 @@
                                                          wire:key="planner-grid-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
                                                          draggable="true" 
                                                          data-subtask-id="{{ $stask->id }}"
-                                                         @dragstart="$event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}')"
+                                                         @dragstart="
+                                                             if (selectedTaskIds.includes({{ $stask->id }})) {
+                                                                 $event.dataTransfer.setData('text/plain', 'subtasks:' + selectedTaskIds.join(','));
+                                                             } else {
+                                                                 selectedTaskIds = [{{ $stask->id }}];
+                                                                 $event.dataTransfer.setData('text/plain', 'subtask:{{ $stask->id }}');
+                                                             }
+                                                         "
                                                          @dragover.prevent.stop="
                                                              let rect = $el.getBoundingClientRect();
                                                              activeDragCardId = {{ $stask->id }};
@@ -1286,32 +1446,50 @@
                                                              let rawData = $event.dataTransfer.getData('text/plain');
                                                              let pos = activeDragPosition;
                                                              clearDragState();
-                                                             if (rawData && rawData.startsWith('subtask:')) {
-                                                                 let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
-                                                                 let targetId = {{ $stask->id }};
-                                                                 let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
-                                                                 let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
-                                                                 let filtered = currentIds.filter(id => id !== draggedId);
-                                                                 let targetIdx = filtered.indexOf(targetId);
-                                                                 if (targetIdx !== -1) {
-                                                                     if (pos === 'below') {
-                                                                         filtered.splice(targetIdx + 1, 0, draggedId);
+                                                             if (rawData) {
+                                                                 if (rawData.startsWith('subtasks:')) {
+                                                                     let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
+                                                                     $wire.moveMultipleSubtasks(taskIds, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                                     selectedTaskIds = [];
+                                                                 } else if (rawData.startsWith('subtask:')) {
+                                                                     let draggedId = parseInt(rawData.replace('subtask:', ''), 10);
+                                                                     let targetId = {{ $stask->id }};
+                                                                     let cards = Array.from($el.parentElement.querySelectorAll('[data-subtask-id]'));
+                                                                     let currentIds = cards.map(c => parseInt(c.getAttribute('data-subtask-id'), 10)).filter(id => !isNaN(id));
+                                                                     let filtered = currentIds.filter(id => id !== draggedId);
+                                                                     let targetIdx = filtered.indexOf(targetId);
+                                                                     if (targetIdx !== -1) {
+                                                                         if (pos === 'below') {
+                                                                             filtered.splice(targetIdx + 1, 0, draggedId);
+                                                                         } else {
+                                                                             filtered.splice(targetIdx, 0, draggedId);
+                                                                         }
                                                                      } else {
-                                                                         filtered.splice(targetIdx, 0, draggedId);
+                                                                         filtered.push(draggedId);
                                                                      }
-                                                                 } else {
-                                                                     filtered.push(draggedId);
+                                                                     $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}', {{ $designer->id }});
+                                                                     selectedTaskIds = [];
                                                                  }
-                                                                 $wire.reorderSubtasks(filtered, '{{ $day['date_string'] }}');
                                                              }
                                                          "
-                                                         @if($staskIsNote)
-                                                             @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' })"
-                                                         @else
-                                                             @click.stop="$dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} })"
-                                                         @endif
+                                                         @click.stop="
+                                                             if ($event.metaKey || $event.ctrlKey || $event.shiftKey) {
+                                                                 $event.preventDefault();
+                                                                 toggleTaskSelection({{ $stask->id }});
+                                                                 return;
+                                                             }
+                                                             @if($staskIsNote)
+                                                                 $dispatch('open-link-note-modal', { taskId: {{ $stask->id }}, noteTitle: '{{ addslashes($stask->title) }}' });
+                                                             @else
+                                                                 $dispatch('open-order-detail', { orderId: {{ $stask->order?->id ?? 0 }} });
+                                                             @endif
+                                                         "
                                                          x-data="{ openCategory: false, openType: false }"
-                                                         :class="{ 'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }}, 'z-30': openCategory || openType }"
+                                                         :class="{ 
+                                                             'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }}, 
+                                                             'ring-2 ring-amber-400 border-amber-400 bg-amber-50/80 shadow-xs': selectedTaskIds.includes({{ $stask->id }}),
+                                                             'z-30': openCategory || openType 
+                                                         }"
                                                          class="relative py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 border rounded-lg transition group select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $staskDone ? 'opacity-60 bg-stone-50/80' : '' }}">
                                                         
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
@@ -1333,6 +1511,15 @@
                                                                 class="w-3.5 h-3.5 mt-0.5 rounded-md border transition flex items-center justify-center shrink-0 cursor-pointer {{ $staskDone ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
                                                                 title="{{ $staskDone ? 'Subtarea completada' : 'Marcar subtarea como completada' }}">
                                                                 <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
+                                                            </button>
+
+                                                            <button 
+                                                                type="button"
+                                                                @click.stop="toggleTaskSelection({{ $stask->id }})"
+                                                                :class="selectedTaskIds.includes({{ $stask->id }}) ? 'opacity-100 text-amber-700 bg-amber-200/90 border-amber-400' : 'opacity-0 group-hover:opacity-60 text-stone-400 border-stone-200 hover:opacity-100 hover:text-amber-700 hover:border-amber-300'"
+                                                                class="w-3.5 h-3.5 mt-0.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer"
+                                                                title="{{ __('Seleccionar subtarea para mover en lote') }}">
+                                                                <x-lucide-check x-show="selectedTaskIds.includes({{ $stask->id }})" class="w-2.5 h-2.5 stroke-[3]" />
                                                             </button>
 
                                                             <div class="min-w-0 flex-1 flex flex-col gap-0.5 overflow-visible">
@@ -1858,9 +2045,14 @@
                                 draggingOverToday = false;
                                 let rawData = $event.dataTransfer.getData('text/plain');
                                 if (rawData) {
-                                    if (rawData.startsWith('subtask:')) {
+                                    if (rawData.startsWith('subtasks:')) {
+                                        let taskIds = rawData.replace('subtasks:', '').split(',').map(id => parseInt(id, 10)).filter(Boolean);
+                                        $wire.moveMultipleSubtasks(taskIds, '{{ $todayDateStr }}', {{ $singleDesigner->id }});
+                                        selectedTaskIds = [];
+                                    } else if (rawData.startsWith('subtask:')) {
                                         let taskId = parseInt(rawData.replace('subtask:', ''), 10);
-                                        $wire.rescheduleSubtask(taskId, '{{ $todayDateStr }}');
+                                        $wire.rescheduleSubtask(taskId, '{{ $todayDateStr }}', {{ $singleDesigner->id }});
+                                        selectedTaskIds = [];
                                     } else {
                                         let orderId = rawData.replace('order:', '');
                                         $wire.scheduleOrder(orderId, '{{ $todayDateStr }}');
@@ -1929,11 +2121,6 @@
 
                             <!-- Simple Inline Stats (sin cajas visibles, mucho más pequeñas) -->
                             <div class="flex items-center justify-between text-[11px] text-stone-500 pt-2 border-t border-stone-100">
-                                <div class="flex items-center gap-1">
-                                    <span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>
-                                    <span class="text-stone-500 font-medium">{{ __('Asignadas:') }}</span>
-                                    <span class="font-bold font-mono text-zinc-800">{{ $todayTotal }}</span>
-                                </div>
                                 <div class="flex items-center gap-1">
                                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                     <span class="text-stone-500 font-medium">{{ __('Completadas:') }}</span>
@@ -2589,7 +2776,7 @@
             <span class="text-stone-700 text-[11.5px] font-semibold truncate" x-text="undoToastMessage"></span>
         </div>
         <button 
-            wire:click="undoDeleteSubtask" 
+            wire:click="undoLastAction" 
             @click="hideUndoToast()"
             type="button" 
             class="px-2.5 py-1 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-[10.5px] flex items-center gap-1.5 shrink-0 transition cursor-pointer shadow-2xs">
@@ -2598,6 +2785,107 @@
             <kbd class="hidden sm:inline-block px-1.5 py-0.2 text-[8.5px] bg-stone-700 text-stone-200 rounded font-mono">⌘Z</kbd>
         </button>
         <button @click="hideUndoToast()" type="button" class="p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-md transition">
+            <x-lucide-x class="w-3.5 h-3.5" />
+        </button>
+    </div>
+
+    <!-- Floating Bottom-Center Bulk Actions Toolbar -->
+    <div 
+        x-show="selectedTaskIds.length > 0"
+        x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 translate-y-6 scale-95"
+        x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+        x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+        x-transition:leave-end="opacity-0 translate-y-6 scale-95"
+        x-cloak
+        style="display: none;"
+        class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-3 py-2 rounded-2xl bg-zinc-900/95 text-white text-xs shadow-2xl backdrop-blur-md border border-zinc-800">
+        
+        <div class="flex items-center gap-2 pr-2.5 border-r border-zinc-700/80">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+            <span class="font-bold text-[11.5px] whitespace-nowrap text-zinc-100">
+                <span x-text="selectedTaskIds.length"></span> {{ __('seleccionadas') }}
+            </span>
+        </div>
+
+        <!-- Quick Move Buttons -->
+        <div class="flex items-center gap-1">
+            <button 
+                type="button" 
+                @click="$wire.moveMultipleSubtasks(selectedTaskIds, '{{ now()->toDateString() }}'); clearSelection();"
+                class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white transition cursor-pointer text-[11px] font-medium flex items-center gap-1 shadow-2xs"
+                title="{{ __('Mover a Hoy') }}">
+                <x-lucide-calendar class="w-3.5 h-3.5 text-amber-400" />
+                <span>{{ __('Hoy') }}</span>
+            </button>
+
+            <button 
+                type="button" 
+                @click="$wire.moveMultipleSubtasks(selectedTaskIds, '{{ now()->addDay()->toDateString() }}'); clearSelection();"
+                class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white transition cursor-pointer text-[11px] font-medium flex items-center gap-1 shadow-2xs"
+                title="{{ __('Mover a Mañana') }}">
+                <span>{{ __('Mañana') }}</span>
+            </button>
+
+            <button 
+                type="button" 
+                @click="$wire.moveMultipleSubtasks(selectedTaskIds, '{{ now()->addWeek()->startOfWeek()->toDateString() }}'); clearSelection();"
+                class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white transition cursor-pointer text-[11px] font-medium flex items-center gap-1 shadow-2xs"
+                title="{{ __('Mover a Próxima Semana') }}">
+                <span>{{ __('Próx. Sem.') }}</span>
+            </button>
+        </div>
+
+        <!-- Reassign Designer Dropdown -->
+        <div class="relative" x-data="{ openDesDropdown: false }" @click.outside="openDesDropdown = false">
+            <button 
+                type="button" 
+                @click="openDesDropdown = !openDesDropdown"
+                class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white transition cursor-pointer text-[11px] font-medium flex items-center gap-1.5 shadow-2xs">
+                <x-lucide-user-check class="w-3.5 h-3.5 text-sky-400" />
+                <span>{{ __('Diseñador') }}</span>
+                <x-lucide-chevron-up class="w-3 h-3 text-zinc-400 transition-transform" x-bind:class="openDesDropdown ? 'rotate-180' : ''" />
+            </button>
+
+            <div 
+                x-show="openDesDropdown" 
+                x-cloak
+                style="display: none;"
+                class="absolute bottom-full left-0 mb-2 w-48 bg-white border border-stone-200 rounded-xl shadow-2xl overflow-hidden py-1 text-zinc-800 text-[11px] z-50">
+                <div class="px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-wider text-stone-400 border-b border-stone-100">
+                    {{ __('Reasignar a Diseñador') }}
+                </div>
+                <div class="max-h-48 overflow-y-auto">
+                    @foreach($allDesigners as $des)
+                        <button 
+                            type="button"
+                            @click="$wire.moveMultipleSubtasks(selectedTaskIds, '', {{ $des->id }}); openDesDropdown = false; clearSelection();"
+                            class="w-full text-left px-2.5 py-1.5 hover:bg-amber-50 hover:text-amber-950 flex items-center gap-2 cursor-pointer transition">
+                            <span class="w-2 h-2 rounded-full shrink-0 {{ $des->dot_color_class }}" style="{{ $des->dot_inline_style }}"></span>
+                            <span class="truncate font-medium">{{ $des->name }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Complete -->
+        <button 
+            type="button" 
+            @click="$wire.bulkToggleComplete(selectedTaskIds, true); clearSelection();"
+            class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition cursor-pointer text-[11px] font-semibold flex items-center gap-1 shadow-2xs"
+            title="{{ __('Marcar todas como completadas') }}">
+            <x-lucide-check class="w-3.5 h-3.5" />
+            <span>{{ __('Completar') }}</span>
+        </button>
+
+        <!-- Deselect All / Cancel -->
+        <button 
+            type="button" 
+            @click="clearSelection()" 
+            class="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition cursor-pointer ml-1"
+            title="{{ __('Deseleccionar todo (Esc)') }}">
             <x-lucide-x class="w-3.5 h-3.5" />
         </button>
     </div>

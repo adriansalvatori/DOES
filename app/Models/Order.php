@@ -245,6 +245,7 @@ class Order extends Model
     {
         return match ($this->approval_type) {
             'camila' => 'Aprobado por Camila',
+            'manager', 'gabriela' => 'Aprobado por '.Setting::getManagerName(),
             'cliente' => 'Aprobado por Cliente',
             default => $this->approval_type ? ucfirst((string) $this->approval_type) : null,
         };

@@ -34,4 +34,41 @@ class Setting extends Model
             ['value' => $value]
         );
     }
+
+    /**
+     * Retrieve the configured approval manager User.
+     */
+    public static function getManagerUser(): ?User
+    {
+        $managerId = static::get('manager_id');
+        if ($managerId) {
+            $user = User::find($managerId);
+            if ($user) {
+                return $user;
+            }
+        }
+
+        return User::where('name', 'like', '%Gabriela%')->first()
+            ?? User::find(8);
+    }
+
+    /**
+     * Retrieve the configured approval manager display name.
+     */
+    public static function getManagerName(): string
+    {
+        $customName = static::get('manager_name');
+        if (! empty($customName)) {
+            return trim((string) $customName);
+        }
+
+        $manager = static::getManagerUser();
+        if ($manager && ! empty($manager->name)) {
+            $parts = explode(' ', trim($manager->name));
+
+            return $parts[0] ?: 'Gabriela';
+        }
+
+        return 'Gabriela';
+    }
 }

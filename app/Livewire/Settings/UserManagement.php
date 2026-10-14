@@ -40,6 +40,10 @@ class UserManagement extends Component
 
     public string $cs_whatsapp_phone = '';
 
+    public ?int $manager_id = null;
+
+    public string $manager_name = '';
+
     public function mount()
     {
         $user = Auth::user();
@@ -48,6 +52,21 @@ class UserManagement extends Component
         }
 
         $this->cs_whatsapp_phone = Setting::get('cs_whatsapp_phone', '+16783580594');
+
+        $configuredManager = Setting::getManagerUser();
+        $this->manager_id = $configuredManager?->id ?? (int) Setting::get('manager_id', 8);
+        $this->manager_name = Setting::getManagerName();
+    }
+
+    public function updatedManagerId($value): void
+    {
+        if ($value) {
+            $user = User::find($value);
+            if ($user) {
+                $parts = explode(' ', trim($user->name));
+                $this->manager_name = $parts[0] ?: $user->name;
+            }
+        }
     }
 
     public function saveCsWhatsapp(): void
@@ -58,6 +77,22 @@ class UserManagement extends Component
 
         Setting::set('cs_whatsapp_phone', trim($this->cs_whatsapp_phone));
         session()->flash('success_cs', __('Número de WhatsApp de Atención al Cliente actualizado exitosamente.'));
+    }
+
+    public function saveManagerSettings(): void
+    {
+        $this->validate([
+            'manager_id' => 'nullable|integer|exists:users,id',
+            'manager_name' => 'required|string|max:100',
+        ], [
+            'manager_id.exists' => __('El usuario seleccionado como manager no existe.'),
+            'manager_name.required' => __('El nombre a mostrar para el manager es obligatorio.'),
+        ]);
+
+        Setting::set('manager_id', $this->manager_id);
+        Setting::set('manager_name', trim($this->manager_name));
+
+        session()->flash('success_manager', __('Configuración del Manager de Aprobaciones actualizada exitosamente.'));
     }
 
     public function openCreateModal()
@@ -163,6 +198,7 @@ class UserManagement extends Component
 
         return view('livewire.settings.user-management', [
             'users' => $users,
+            'allUsers' => User::orderBy('name')->get(),
             'designers' => $designers,
             'roles' => UserRole::cases(),
         ])->layout('components.layouts.app', ['title' => __('Gestión de Usuarios - ').config('app.name')]);

@@ -226,8 +226,7 @@ class OrderEvent extends Model
         if (
             str_contains($type, 'ORDER_APPROVED') ||
             str_contains($type, 'APPROVAL_SUBMITTED') ||
-            str_contains($newValLower, 'aprobado por cliente') ||
-            str_contains($newValLower, 'aprobado por camila') ||
+            str_contains($newValLower, 'aprobado por') ||
             str_contains($newValLower, 'aprobación recibida')
         ) {
             return __('Aprobación Recibida');
