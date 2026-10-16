@@ -274,6 +274,39 @@ class RelatedTask extends Model
         return str_contains($titleUpper, 'ALTA');
     }
 
+    public function isOrderUrgent(): bool
+    {
+        return (bool) ($this->order && $this->order->isUrgente());
+    }
+
+    public function isUrgent(): bool
+    {
+        return $this->isOrderUrgent()
+            || $this->priority === 'urgent'
+            || $this->colorCodingKey() === 'urgent';
+    }
+
+    public function getCardBgClass(): string
+    {
+        if ($this->isDone()) {
+            return 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0';
+        }
+
+        if ($this->order && ($this->order->isBlocked() || $this->order->core_status === CoreStatus::ENTRANTE)) {
+            return 'bg-stone-100/90 border border-stone-300 text-zinc-500 opacity-60 grayscale-[50%] shadow-none ring-0';
+        }
+
+        if ($this->isUrgent()) {
+            return 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40';
+        }
+
+        if (! $this->order_id) {
+            return 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer';
+        }
+
+        return 'bg-white border-stone-200/80 hover:border-stone-300';
+    }
+
     /**
      * Determine the matching ColorCoding key for this subtask.
      */

@@ -188,7 +188,7 @@ class WeeklyPlanner extends Component
             'priority' => $subtasksCollection->sortBy(function ($st) {
                 $isDone = $st->isDone() ? 1 : 0;
                 $order = $st->order;
-                $isUrgente = ($order && $order->isUrgente()) || $st->priority === 'high';
+                $isUrgente = $st->isUrgent() || $st->priority === 'high';
                 $isOverdue = $order && ($order->isOverdue() || ($st->scheduled_date && $order->current_due_date && $st->scheduled_date->gt($order->current_due_date)));
 
                 $rank = match (true) {

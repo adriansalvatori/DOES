@@ -993,6 +993,9 @@
                                                 @foreach($daySubtasks as $stask)
                                                     @php
                                                         $staskIsNote = ! $stask->order;
+                                                        $staskDone = $stask->isDone();
+                                                        $isUrgentTask = $stask->isUrgent();
+                                                        $isOrderUrgent = $stask->isOrderUrgent();
                                                     @endphp
                                                     <div 
                                                         wire:key="planner-byday-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
@@ -1034,7 +1037,7 @@
                                                             'border-amber-300 bg-amber-50/20': activeDragCardId === {{ $stask->id }},
                                                             'ring-2 ring-amber-400 border-amber-400 bg-amber-50/80 shadow-xs': selectedTaskIds.includes({{ $stask->id }})
                                                         }"
-                                                        class="border rounded-lg p-2 flex flex-col gap-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $stask->isDone() ? 'opacity-60 bg-stone-50/80' : '' }}">
+                                                        class="border rounded-lg p-2 flex flex-col gap-1 shadow-2xs transition group relative select-none cursor-grab active:cursor-grabbing {{ $isUrgentTask ? $stask->getCardBgClass() : ($staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' . ($staskDone ? ' opacity-60 bg-stone-50/80' : '')) }}">
                                                         
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
                                                         <div 
@@ -1071,6 +1074,9 @@
                                                                     <x-lucide-check x-show="selectedTaskIds.includes({{ $stask->id }})" class="w-2.5 h-2.5 stroke-[3]" />
                                                                 </button>
                                                                 <div class="min-w-0 flex-1 flex items-center gap-1.5">
+                                                                    @if($isUrgentTask && ! $stask->order)
+                                                                        <x-urgent-badge :done="$staskDone" compact />
+                                                                    @endif
                                                                     @if($staskIsNote)
                                                                         <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
                                                                     @elseif($stask->isSystemTask())
@@ -1097,6 +1103,11 @@
                                                                     type="button"
                                                                     class="text-left min-w-0 flex-1 hover:underline group/link">
                                                                     <div class="flex items-center gap-1 min-w-0">
+                                                                        @if($isOrderUrgent)
+                                                                            <x-urgent-badge :done="$staskDone" :blocked="$stask->order?->isBlocked()" compact />
+                                                                        @elseif($isUrgentTask)
+                                                                            <x-urgent-badge :done="$staskDone" compact />
+                                                                        @endif
                                                                         <x-lucide-link class="w-2.5 h-2.5 text-indigo-500 shrink-0 group-hover/link:text-indigo-600" />
                                                                         <span class="font-semibold text-[10px] truncate leading-tight uppercase {{ $stask->isSystemTask() ? '' : 'text-zinc-800' }}"
                                                                               @if($stask->isSystemTask()) style="{{ $stask->systemTextStyle() }}" @endif>{{ $stask->order->company_name }}</span>
@@ -1500,6 +1511,8 @@
                                                     @php
                                                         $staskIsNote = ! $stask->order;
                                                         $staskDone = $stask->isDone();
+                                                        $isUrgentTask = $stask->isUrgent();
+                                                        $isOrderUrgent = $stask->isOrderUrgent();
                                                     @endphp
                                                     <div 
                                                          wire:key="planner-grid-stask-{{ $stask->id }}-{{ $stask->status }}-{{ $stask->updated_at?->timestamp ?? '' }}"
@@ -1544,7 +1557,7 @@
                                                              'ring-2 ring-amber-400 border-amber-400 bg-amber-50/80 shadow-xs': selectedTaskIds.includes({{ $stask->id }}),
                                                              'z-30': openCategory || openType 
                                                          }"
-                                                         class="relative py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 border rounded-lg transition group select-none cursor-grab active:cursor-grabbing {{ $staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' }} {{ $staskDone ? 'opacity-60 bg-stone-50/80' : '' }}">
+                                                         class="relative py-1.5 px-2 flex items-start justify-between gap-2 min-w-0 border rounded-lg transition group select-none cursor-grab active:cursor-grabbing {{ $isUrgentTask ? $stask->getCardBgClass() : ($staskIsNote ? 'bg-amber-50/90 border-amber-200/90 hover:border-amber-300 cursor-pointer' : 'bg-white border-stone-200/80 hover:border-stone-300' . ($staskDone ? ' opacity-60 bg-stone-50/80' : '')) }}">
                                                         
                                                         <!-- Delicate Yellow Top Insertion Line Indicator -->
                                                         <div 
@@ -1584,6 +1597,11 @@
                                                                 @if($stask->order)
                                                                     <!-- Row 1: Order Details (Company, Location, Task Name) -->
                                                                     <div class="flex items-center gap-1 text-[10.5px] leading-tight min-w-0">
+                                                                         @if($isOrderUrgent)
+                                                                             <x-urgent-badge :done="$staskDone" :blocked="$stask->order?->isBlocked()" compact />
+                                                                         @elseif($isUrgentTask)
+                                                                             <x-urgent-badge :done="$staskDone" compact />
+                                                                         @endif
                                                                          <!-- Company Name with Instant Tooltip -->
                                                                          <div class="relative group/tip min-w-0 shrink">
                                                                             <span class="uppercase tracking-tight block truncate {{ $staskDone ? 'line-through text-zinc-400' : ($stask->isSystemTask() ? 'font-semibold' : 'text-zinc-900 font-semibold') }}"
@@ -1687,6 +1705,9 @@
                                                                     <!-- Standalone subtask / Note (without order) -->
                                                                     <div class="flex flex-col gap-1 min-w-0">
                                                                         <div class="flex items-center gap-1.5 min-w-0">
+                                                                            @if($isUrgentTask)
+                                                                                <x-urgent-badge :done="$staskDone" compact />
+                                                                            @endif
                                                                             <x-lucide-sticky-note class="w-3 h-3 text-amber-600 shrink-0" />
                                                                             <span class="font-semibold text-[10.5px] truncate leading-tight {{ $staskDone ? 'line-through text-zinc-400' : 'text-amber-950' }}">
                                                                                 {{ $stask->title }}
@@ -2244,6 +2265,9 @@
                                             <!-- Content: Company & Task -->
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex items-center gap-1.5 min-w-0">
+                                                    @if($stask->isUrgent())
+                                                        <x-urgent-badge :done="$stDone" :blocked="$stask->order?->isBlocked()" compact />
+                                                    @endif
                                                     <span class="text-[11px] font-bold uppercase tracking-tight truncate {{ $stDone ? 'line-through text-stone-400' : 'text-zinc-900 group-hover:text-zinc-950' }}" title="{{ $stask->order->company_name }}">
                                                         {{ $stask->order->company_name }}
                                                     </span>

@@ -1558,4 +1558,38 @@ class SubtaskWeeklyPlannerTest extends TestCase
         $this->assertNotNull($task1->fresh()->completed_at);
         $this->assertNotNull($task2->fresh()->completed_at);
     }
+
+    public function test_weekly_planner_renders_urgent_card_style_and_badge_for_urgent_order(): void
+    {
+        $designer = Designer::create(['name' => 'Valeria', 'active' => true]);
+
+        $urgentOrder = Order::create([
+            'company_name' => 'SUPER URGENTE CO',
+            'task_name' => 'Campaña Hoy',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'substatus' => Substatus::URGENTE,
+            'in_workspace' => true,
+        ]);
+
+        $dateStr = now()->startOfWeek()->toDateString();
+
+        $task = RelatedTask::create([
+            'order_id' => $urgentOrder->id,
+            'title' => 'Diseño banner principal',
+            'scheduled_date' => $dateStr,
+            'assignee_id' => $designer->id,
+            'type' => RelatedTaskType::SUBTASK->value,
+            'status' => 'todo',
+        ]);
+
+        $this->assertTrue($task->isUrgent());
+        $this->assertTrue($task->isOrderUrgent());
+        $this->assertStringContainsString('border-red-500', $task->getCardBgClass());
+        $this->assertStringContainsString('ring-red-300', $task->getCardBgClass());
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSee('SUPER URGENTE CO')
+            ->assertSee('URGENTE')
+            ->assertSeeHtml('border-red-500');
+    }
 }

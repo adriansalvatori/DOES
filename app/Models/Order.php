@@ -593,7 +593,22 @@ class Order extends Model
 
     public function scopePrioritizeUrgente(Builder $query): Builder
     {
-        return $query->orderByRaw("CASE WHEN substatus = 'URGENTE' THEN 0 ELSE 1 END");
+        return $query->orderByRaw("CASE WHEN substatus = 'URGENTE' OR flags LIKE '%\"URGENTE\"%' THEN 0 ELSE 1 END");
+    }
+
+    public function getUrgentCardClasses(?bool $isDone = null): string
+    {
+        $done = $isDone ?? (bool) $this->done_today;
+
+        if ($done) {
+            return 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0';
+        }
+
+        if ($this->isBlocked() || $this->core_status === CoreStatus::ENTRANTE) {
+            return 'bg-stone-100/90 border border-stone-300 text-zinc-500 opacity-60 grayscale-[50%] shadow-none ring-0';
+        }
+
+        return 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40';
     }
 
     public function isBlocked(): bool

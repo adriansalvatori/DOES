@@ -9,7 +9,7 @@
     @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
     draggable="true"
     @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-    class="kanban-card p-3 space-y-2 transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-md {{ $isUrgent ? 'rounded-xl hover:shadow-lg ' . ($isBlocked ? 'bg-stone-100/90 border border-stone-300 text-zinc-500 opacity-60 grayscale-[50%] shadow-none ring-0' : ($order->done_today ? 'bg-[#fafaf9] border border-stone-200/90 shadow-2xs opacity-75 ring-0' : 'bg-gradient-to-br from-rose-50/90 via-white to-red-50/70 border-2 border-red-500/90 shadow-md ring-2 ring-red-300/40')) : 'rounded-lg shadow-2xs ' . $order->getCardBgClass() }}"
+    class="kanban-card p-3 space-y-2 transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-md {{ $isUrgent ? 'rounded-xl hover:shadow-lg ' . $order->getUrgentCardClasses() : 'rounded-lg shadow-2xs ' . $order->getCardBgClass() }}"
     @if(!$isUrgent)
         @if($isBlocked) style="border: 1px solid #d6d3d1 !important; background-color: #f5f5f4 !important;" 
         @elseif($order->is_missing_from_trello) style="border: 1.5px dashed #a8a29e !important; background-color: #f5f5f4 !important; opacity: 0.75 !important;" 
@@ -34,19 +34,7 @@
             @endif
 
             @if($isUrgent)
-                @if($order->done_today || $isBlocked)
-                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-stone-200 text-stone-600 border border-stone-300 flex items-center gap-1 shrink-0 opacity-80" title="{{ __('Urgente') }}">
-                        @if($order->done_today)
-                            <x-lucide-check class="w-2.5 h-2.5 text-stone-500" />
-                        @endif
-                        <span>{{ __('URGENTE') }}</span>
-                    </span>
-                @else
-                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-600 text-white shadow-2xs shadow-red-500/30 flex items-center gap-1.5 shrink-0">
-                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                        <span>{{ __('URGENTE') }}</span>
-                    </span>
-                @endif
+                <x-urgent-badge :done="$order->done_today" :blocked="$isBlocked" />
             @elseif($order->approved && $order->substatus !== \App\Enums\Substatus::PONER_EN_ALTA)
                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-0.5 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-100 text-pink-800 border border-pink-300' }}">
                     <x-lucide-check-circle-2 class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : 'text-pink-600' }}" />
