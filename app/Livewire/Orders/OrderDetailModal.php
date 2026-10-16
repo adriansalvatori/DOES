@@ -3,6 +3,7 @@
 namespace App\Livewire\Orders;
 
 use App\Contracts\WorkOrderNumberGenerator;
+use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
@@ -51,6 +52,14 @@ class OrderDetailModal extends Component
     public $unblockReason = '';
 
     public $showBlockModal = false;
+
+    public bool $showSubtaskWarningModal = false;
+
+    public array $pendingSubtaskData = [];
+
+    public string $subtaskBlockResolution = 'unblock';
+
+    public string $subtaskApprovalImpact = 'keep';
 
     public $blockReason = 'FALTAN MEDIDAS';
 
@@ -2267,6 +2276,104 @@ class OrderDetailModal extends Component
             $isWork = false;
         }
 
+        $isOrderBlocked = $order->isBlocked();
+        $isOrderApproved = (bool) $order->approved;
+        $isDesignWork = $isWork && in_array($category, [
+            SubtaskCategory::CLIENT_ADJUSTMENTS,
+            SubtaskCategory::CAMILA_ADJUSTMENTS,
+            SubtaskCategory::NEW_DESIGN,
+        ], true);
+
+        if ($isOrderBlocked || ($isOrderApproved && $isDesignWork)) {
+            $this->pendingSubtaskData = [
+                'title' => $rawTitle,
+                'date' => $taskDate->toDateString(),
+                'category' => $category->value,
+                'isWork' => $isWork,
+                'isOrderBlocked' => $isOrderBlocked,
+                'isOrderApproved' => $isOrderApproved,
+                'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Bloqueada')),
+                'approvalType' => $order->approval_type ?? __('Cliente'),
+                'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previamente'),
+            ];
+            $this->subtaskBlockResolution = ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS) ? 'unblock' : 'keep_blocked';
+            $this->subtaskApprovalImpact = ($category === SubtaskCategory::CLIENT_ADJUSTMENTS) ? 'invalidate' : 'keep';
+            $this->showSubtaskWarningModal = true;
+
+            return;
+        }
+
+        $this->executeAddTask($rawTitle, $taskDate, $category, $isWork, 'unblock', 'keep');
+    }
+
+    public function confirmSubtaskWarning()
+    {
+        if (empty($this->pendingSubtaskData) || ! $this->orderId) {
+            $this->showSubtaskWarningModal = false;
+
+            return;
+        }
+
+        $rawTitle = $this->pendingSubtaskData['title'];
+        $taskDate = Carbon::parse($this->pendingSubtaskData['date']);
+        $category = SubtaskCategory::tryFrom($this->pendingSubtaskData['category']) ?? SubtaskCategory::NEW_DESIGN;
+        $isWork = (bool) $this->pendingSubtaskData['isWork'];
+
+        $blockResolution = $this->subtaskBlockResolution;
+        $approvalImpact = $this->subtaskApprovalImpact;
+
+        $this->showSubtaskWarningModal = false;
+        $this->pendingSubtaskData = [];
+
+        $this->executeAddTask($rawTitle, $taskDate, $category, $isWork, $blockResolution, $approvalImpact);
+    }
+
+    public function cancelSubtaskWarning()
+    {
+        $this->showSubtaskWarningModal = false;
+        $this->pendingSubtaskData = [];
+    }
+
+    protected function executeAddTask(string $rawTitle, Carbon $taskDate, SubtaskCategory $category, bool $isWork, string $blockResolution = 'unblock', string $approvalImpact = 'keep')
+    {
+        $order = Order::findOrFail($this->orderId);
+
+        if ($order->approved && $approvalImpact === 'invalidate') {
+            $order->update([
+                'approved' => false,
+                'measures_confirmed' => false,
+            ]);
+
+            OrderEvent::create([
+                'order_id' => $order->id,
+                'event_type' => 'APPROVAL_RESET',
+                'actor' => auth()->user()?->name ?? 'Usuario',
+                'previous_value' => 'approved: true',
+                'new_value' => 'approved: false (Anulada por nueva subtarea: '.$rawTitle.')',
+                'metadata' => [
+                    'timestamp' => now()->toIso8601String(),
+                    'reason' => 'Subtarea creada invalida aprobación previa',
+                ],
+            ]);
+
+            $order->relatedTasks()->where('type', RelatedTaskType::PONER_ALTA->value)->where('status', '!=', 'done')->forceDelete();
+            $order->refresh();
+        }
+
+        $isOrderBlocked = $order->isBlocked();
+        if ($isOrderBlocked) {
+            if ($blockResolution === 'unblock') {
+                if ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS || str_contains(mb_strtolower($rawTitle, 'UTF-8'), 'medida')) {
+                    $order->update(['measures_confirmed' => true]);
+                }
+                $order->unblock(__('Medidas/información confirmadas al programar subtarea: :title', ['title' => $rawTitle]));
+                $order->refresh();
+            } else {
+                $isWork = false;
+                $category = SubtaskCategory::MANAGEMENT;
+            }
+        }
+
         $returnStatus = $category->defaultReturnCoreStatus() ?? ($order->core_status !== CoreStatus::TO_DO_TODAY ? $order->core_status : null);
 
         $subtask = $order->relatedTasks()->create([
@@ -2478,6 +2585,22 @@ class OrderDetailModal extends Component
                 if (! $order->approved) {
                     $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
                     session()->flash('warning', __('La orden requiere aprobación antes de ser enviada a producción.'));
+
+                    return;
+                }
+
+                $hasWorkAfterApproval = $order->approved_at && $order->relatedTasks()
+                    ->where('id', '!=', $task->id)
+                    ->where('completed_at', '>', $order->approved_at)
+                    ->where(function ($q) {
+                        $q->whereNull('is_work_task')->orWhere('is_work_task', true);
+                    })
+                    ->where('type', '!=', RelatedTaskType::PONER_ALTA->value)
+                    ->exists();
+
+                if ($hasWorkAfterApproval) {
+                    $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
+                    session()->flash('warning', __('Se detectaron cambios o tareas completadas después de la última aprobación. Se requiere confirmar una nueva aprobación antes de enviar a producción.'));
 
                     return;
                 }

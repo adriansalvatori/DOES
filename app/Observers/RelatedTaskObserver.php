@@ -48,11 +48,15 @@ class RelatedTaskObserver
     {
         $statusChanged = $task->wasChanged('status');
         $completedAtChanged = $task->wasChanged('completed_at');
+        $dateChanged = $task->wasChanged('scheduled_date');
 
-        if ($statusChanged || $completedAtChanged) {
+        if ($statusChanged || $completedAtChanged || $dateChanged) {
             if ($task->order) {
                 app(AutomationEngine::class)->evaluateSubtaskCompletionAutoDone($task->order);
             }
+        }
+
+        if ($statusChanged || $completedAtChanged) {
 
             if ($task->isDone()) {
                 $this->logCompletionEvent($task);

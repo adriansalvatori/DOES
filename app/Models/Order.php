@@ -8,6 +8,7 @@ use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
+use App\Enums\SubtaskCategory;
 use App\Services\AutomationEngine;
 use App\Services\TrelloSyncService;
 use Illuminate\Database\Eloquent\Builder;
@@ -697,6 +698,14 @@ class Order extends Model
 
         $newSubstatus = ($this->substatus === Substatus::BLOQUEADA || $this->substatus === Substatus::FALTA_APROBACION_ESTIMADO) ? null : $this->substatus;
 
+        if ($this->approved) {
+            if ($this->measures_confirmed && $this->estimate_approved) {
+                $newSubstatus = Substatus::PONER_EN_ALTA;
+            } elseif ($this->measures_confirmed && ! $this->estimate_approved) {
+                $newSubstatus = Substatus::FALTA_APROBACION_ESTIMADO;
+            }
+        }
+
         $this->update([
             'core_status' => $targetStatus,
             'substatus' => $newSubstatus,
@@ -712,6 +721,48 @@ class Order extends Model
 
         foreach ($tasksToComplete as $blockedTask) {
             $blockedTask->update(['status' => 'done']);
+        }
+
+        if ($newSubstatus === Substatus::PONER_EN_ALTA) {
+            $existingAltaTask = $this->relatedTasks()
+                ->where(function ($q) {
+                    $q->where('type', RelatedTaskType::PONER_ALTA->value)
+                        ->orWhere('category', SubtaskCategory::PRODUCTION_ADJUSTMENTS->value)
+                        ->orWhere('title', 'like', '%poner en alta%');
+                })
+                ->where('status', '!=', 'done')
+                ->first();
+
+            if (! $existingAltaTask) {
+                $targetDate = $this->isUrgente() ? now() : now()->addWeekdays(1);
+                RelatedTask::create([
+                    'order_id' => $this->id,
+                    'title' => 'Poner en alta',
+                    'type' => RelatedTaskType::PONER_ALTA,
+                    'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                    'return_core_status' => CoreStatus::EN_PRODUCCION,
+                    'status' => 'todo',
+                    'assignee_id' => $this->getPrimaryDesignerId(),
+                    'scheduled_date' => $targetDate->toDateString(),
+                    'due_date' => $targetDate->toDateString(),
+                    'trigger_type' => 'ORDER_APPROVED',
+                    'priority' => $this->isUrgente() ? 'urgent' : 'normal',
+                    'is_work_task' => true,
+                ]);
+
+                OrderEvent::create([
+                    'order_id' => $this->id,
+                    'event_type' => 'AUTOMATIC_TASK_TRIGGERED',
+                    'actor' => $actor ?? auth()->user()?->name ?? 'Usuario',
+                    'new_value' => 'Poner en alta',
+                    'metadata' => [
+                        'task_title' => 'Poner en alta',
+                        'task_type' => RelatedTaskType::PONER_ALTA->value,
+                        'trigger_type' => 'ORDER_APPROVED',
+                        'priority' => $this->isUrgente() ? 'urgent' : 'normal',
+                    ],
+                ]);
+            }
         }
 
         OrderEvent::create([

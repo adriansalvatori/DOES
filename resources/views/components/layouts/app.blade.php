@@ -26,6 +26,9 @@
     @fluxAppearance
     
     <style>
+        :root {
+            --planner-header-h: 148px;
+        }
         [x-cloak] {
             display: none !important;
         }

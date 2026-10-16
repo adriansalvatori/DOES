@@ -240,6 +240,20 @@
             this.undoToastOpen = false;
             if (this.undoToastTimer) clearTimeout(this.undoToastTimer);
         },
+        headerHeight: 148,
+        updateHeaderHeight() {
+            const wrapper = document.getElementById('tour-planner-sticky-wrapper');
+            if (wrapper) {
+                const h = wrapper.offsetHeight;
+                if (h > 40) {
+                    this.headerHeight = h;
+                    document.documentElement.style.setProperty('--planner-header-h', h + 'px');
+                    if (this.$refs.plannerBoard) {
+                        this.$refs.plannerBoard.style.setProperty('--planner-header-h', h + 'px');
+                    }
+                }
+            }
+        },
         scrollToFirstPending(smooth = false) {
             const board = this.$refs.plannerBoard;
             if (!board) return;
@@ -252,7 +266,7 @@
 
             if (target) {
                 const headerWrapper = document.getElementById('tour-planner-sticky-wrapper');
-                const headerH = headerWrapper ? headerWrapper.offsetHeight : 105;
+                const headerH = headerWrapper ? headerWrapper.offsetHeight : (this.headerHeight || 148);
                 const dayHeaderH = 34;
                 const targetRect = target.getBoundingClientRect();
                 const boardRect = board.getBoundingClientRect();
@@ -455,8 +469,8 @@
             window.addEventListener('mouseup', onMouseUp);
         }
     }" 
-    x-init="initDragAutoScroll(); initMarqueeSelection(); setTimeout(() => scrollToFirstPending(false), 120);"
-    @planner-filter-changed.window="$nextTick(() => setTimeout(() => scrollToFirstPending(true), 60))"
+    x-init="initDragAutoScroll(); initMarqueeSelection(); updateHeaderHeight(); $nextTick(() => updateHeaderHeight()); window.addEventListener('resize', () => updateHeaderHeight(), { passive: true }); if (document.fonts && document.fonts.ready) { document.fonts.ready.then(() => updateHeaderHeight()); } if (window.Livewire) { Livewire.hook('morph.updated', () => updateHeaderHeight()); } setTimeout(() => scrollToFirstPending(false), 120);"
+    @planner-filter-changed.window="$nextTick(() => { updateHeaderHeight(); setTimeout(() => scrollToFirstPending(true), 60); })"
     @subtask-deleted.window="triggerUndoToast($event.detail.message)"
     @subtask-restored.window="hideUndoToast()"
     @action-recorded.window="triggerUndoToast($event.detail.message)"
@@ -475,12 +489,15 @@
         }
     }"
     x-ref="plannerBoard"
+    style="--planner-header-h: 148px;"
+    :style="{ '--planner-header-h': headerHeight + 'px' }"
     class="h-full flex flex-col space-y-4 text-xs font-sans bg-[#fbfbfa] min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-4 text-zinc-800">
 
     <!-- Marquee Selection Rectangle Overlay -->
     <div 
         x-show="isSelecting && (selectionBox.width > 6 || selectionBox.height > 6)" 
         x-cloak
+        hidden
         :style="`left: ${selectionBox.left}px; top: ${selectionBox.top}px; width: ${selectionBox.width}px; height: ${selectionBox.height}px;`"
         class="fixed pointer-events-none border-2 border-dashed border-amber-500 bg-amber-400/20 z-[999] rounded-sm transition-none shadow-xs"
         style="display: none;">
@@ -490,13 +507,9 @@
     <div 
         id="tour-planner-sticky-wrapper"
         x-init="
-            const updateH = () => {
-                const h = $el.offsetHeight;
-                $refs.plannerBoard?.style.setProperty('--planner-header-h', h + 'px');
-            };
-            updateH();
+            $nextTick(() => updateHeaderHeight());
             if (window.ResizeObserver) {
-                new ResizeObserver(updateH).observe($el);
+                new ResizeObserver(() => updateHeaderHeight()).observe($el);
             }
         "
         class="sticky top-0 z-20 bg-[#fbfbfa] pt-0.5 pb-2">
@@ -686,8 +699,8 @@
 
                 <!-- Center: Designer Filter Tabs -->
                 <div class="flex items-center gap-1 overflow-x-auto custom-horizontal-scrollbar py-0.5 text-xs shrink min-w-0">
-                    <button wire:click="$set('selectedDesignerFilter', 'all')" class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-zinc-900 text-white font-medium shadow-2xs' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
-                        <x-lucide-users class="w-3 h-3 text-zinc-400" />
+                    <button wire:click="$set('selectedDesignerFilter', 'all')" class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
+                        <x-lucide-users class="w-3 h-3 {{ $selectedDesignerFilter === 'all' ? 'text-zinc-600' : 'text-zinc-400' }}" />
                         <span>{{ __('Todos los diseñadores') }}</span>
                     </button>
 
@@ -1444,7 +1457,8 @@
                                         <!-- Day Subdivision Header (Sticky in Single Designer Filtered View) -->
                                         <div 
                                             @if($isSingleDesignerFiltered)
-                                                class="sticky top-[var(--planner-header-h,105px)] z-10 -mx-1.5 px-2 py-1.5 bg-[#fbfbfa]/95 backdrop-blur-xs border-b border-stone-200/60 shadow-2xs flex items-center justify-between transition-all"
+                                                class="sticky z-10 -mx-1.5 px-2 py-1.5 bg-[#fbfbfa]/95 backdrop-blur-xs border-b border-stone-200/60 shadow-2xs flex items-center justify-between transition-all"
+                                                style="top: var(--planner-header-h, 148px);"
                                             @else
                                                 class="flex items-center justify-between pb-0.5"
                                             @endif
@@ -2079,7 +2093,7 @@
                     <!-- Right Column (33%): Today's Progress & ALTA Mirror -->
                     <div 
                         class="lg:col-span-1 space-y-4 lg:sticky transition-all w-full min-w-0"
-                        style="top: calc(var(--planner-header-h, 105px) + 8px);">
+                        style="top: calc(var(--planner-header-h, 148px) + 8px);">
 
                         <!-- Minimalist Dynamic Today's Progress Widget -->
                         <div 
@@ -2709,6 +2723,121 @@
             </div>
         </template>
     </div>
+
+    <!-- SUBTASK IMPACT & BLOCKING WARNING MODAL -->
+    @if($showSubtaskWarningModal)
+        <div 
+            class="fixed inset-0 z-[120] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4"
+            @keydown.window.escape.prevent="$wire.cancelSubtaskWarning()">
+            <div class="bg-white border border-[#e9e9e7] rounded-2xl w-full max-w-lg p-5 sm:p-6 space-y-4 shadow-2xl max-h-[92vh] flex flex-col">
+                <div class="shrink-0 flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                            <x-lucide-alert-triangle class="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-zinc-900">
+                                {{ __('Verificación de Subtarea') }}
+                            </h3>
+                            <p class="text-xs text-zinc-500 mt-0.5">
+                                {{ __('Nueva tarea: ":title"', ['title' => $pendingSubtaskData['title'] ?? '']) }}
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="cancelSubtaskWarning" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 hover:bg-stone-100 transition cursor-pointer">
+                        <x-lucide-x class="w-4 h-4" />
+                    </button>
+                </div>
+
+                <div class="overflow-y-auto pr-1 space-y-4 text-xs scrollbar-thin flex-1">
+                    @if(!empty($pendingSubtaskData['isOrderBlocked']))
+                        <div class="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 space-y-3">
+                            <div class="flex items-start gap-2">
+                                <x-lucide-ban class="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <span class="font-bold text-rose-950 block">{{ __('Orden Bloqueada') }}</span>
+                                    <p class="text-rose-800 text-xs mt-0.5">
+                                        {{ __('Actualmente bloqueada por:') }} <span class="font-semibold">{{ $pendingSubtaskData['blockingReason'] ?? __('Faltan Medidas') }}</span>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 pt-1 border-t border-rose-200/60">
+                                <label class="font-semibold text-rose-950 block text-xs">
+                                    {{ __('¿Esta subtarea resuelve el motivo de bloqueo?') }}
+                                </label>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskBlockResolution === 'unblock' ? 'bg-white border-rose-400 ring-1 ring-rose-400 shadow-2xs font-medium text-zinc-900' : 'bg-rose-50/50 border-rose-200 text-zinc-700 hover:bg-white' }}">
+                                        <input type="radio" wire:model.live="subtaskBlockResolution" value="unblock" class="mt-0.5 text-rose-600 focus:ring-rose-500">
+                                        <div>
+                                            <span class="block font-semibold">{{ __('Sí, datos/medidas confirmados (Desbloquear orden)') }}</span>
+                                            <span class="block text-[11px] text-zinc-500">{{ __('Marca las medidas como confirmadas y desbloquea la orden para avanzar.') }}</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskBlockResolution === 'keep_blocked' ? 'bg-white border-rose-400 ring-1 ring-rose-400 shadow-2xs font-medium text-zinc-900' : 'bg-rose-50/50 border-rose-200 text-zinc-700 hover:bg-white' }}">
+                                        <input type="radio" wire:model.live="subtaskBlockResolution" value="keep_blocked" class="mt-0.5 text-rose-600 focus:ring-rose-500">
+                                        <div>
+                                            <span class="block font-semibold">{{ __('No, es solo seguimiento (Mantener bloqueada)') }}</span>
+                                            <span class="block text-[11px] text-zinc-500">{{ __('Crea la tarea de consulta/llamada sin alterar el estado de bloqueo.') }}</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if(!empty($pendingSubtaskData['isOrderApproved']))
+                        <div class="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 space-y-3">
+                            <div class="flex items-start gap-2">
+                                <x-lucide-check-circle-2 class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <span class="font-bold text-amber-950 block">{{ __('Orden ya Aprobada') }}</span>
+                                    <p class="text-amber-800 text-xs mt-0.5">
+                                        {{ __('Aprobada por') }} <span class="font-semibold">{{ $pendingSubtaskData['approvalType'] ?? __('Cliente') }}</span> ({{ $pendingSubtaskData['approvedAt'] ?? '' }}).
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 pt-1 border-t border-amber-200/60">
+                                <label class="font-semibold text-amber-950 block text-xs">
+                                    {{ __('¿Esta subtarea altera el arte o requiere re-aprobación?') }}
+                                </label>
+                                <div class="grid grid-cols-1 gap-2">
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskApprovalImpact === 'invalidate' ? 'bg-white border-amber-400 ring-1 ring-amber-400 shadow-2xs font-medium text-zinc-900' : 'bg-amber-50/50 border-amber-200 text-zinc-700 hover:bg-white' }}">
+                                        <input type="radio" wire:model.live="subtaskApprovalImpact" value="invalidate" class="mt-0.5 text-amber-600 focus:ring-amber-500">
+                                        <div>
+                                            <span class="block font-semibold text-rose-700">{{ __('Anular aprobación previa (Requiere nuevo visto bueno)') }}</span>
+                                            <span class="block text-[11px] text-zinc-500">{{ __('El diseño cambió. Se anula la aprobación para prevenir que se envíe a producción por error.') }}</span>
+                                        </div>
+                                    </label>
+                                    <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskApprovalImpact === 'keep' ? 'bg-white border-amber-400 ring-1 ring-amber-400 shadow-2xs font-medium text-zinc-900' : 'bg-amber-50/50 border-amber-200 text-zinc-700 hover:bg-white' }}">
+                                        <input type="radio" wire:model.live="subtaskApprovalImpact" value="keep" class="mt-0.5 text-amber-600 focus:ring-amber-500">
+                                        <div>
+                                            <span class="block font-semibold text-emerald-800">{{ __('Conservar aprobación (Solo ajuste técnico/interno)') }}</span>
+                                            <span class="block text-[11px] text-zinc-500">{{ __('El arte aprobado no cambia visualmente; no requiere aprobación adicional del cliente.') }}</span>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <div class="shrink-0 flex items-center justify-end gap-2.5 pt-3 border-t border-stone-200">
+                    <button 
+                        type="button" 
+                        wire:click="cancelSubtaskWarning" 
+                        class="px-4 py-2 rounded-xl border border-stone-300 text-zinc-700 hover:bg-stone-50 text-xs font-semibold transition cursor-pointer">
+                        {{ __('Cancelar') }}
+                    </button>
+                    <button 
+                        type="button" 
+                        wire:click="confirmSubtaskWarning" 
+                        class="px-5 py-2 rounded-xl bg-zinc-900 hover:bg-black text-white text-xs font-semibold shadow-xs transition cursor-pointer">
+                        {{ __('Confirmar y Crear Subtarea') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Modal Alerta SLA -->
     @if($showSlaWarningModal)

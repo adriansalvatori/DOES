@@ -121,6 +121,17 @@ class AutomationEngine
                 ->forceDelete();
 
             $this->dismissTriggeredSubtasks($order);
+
+            if (in_array($newStatus, [CoreStatus::ENVIADO_A_CAMILA, CoreStatus::ENVIADO_AL_CLIENTE], true)) {
+                RelatedTask::where('order_id', $order->id)
+                    ->where(function ($q) {
+                        $q->where('type', RelatedTaskType::PONER_ALTA->value)
+                            ->orWhere('title', 'like', '%poner en alta%');
+                    })
+                    ->where('status', '!=', 'done')
+                    ->whereNull('completed_at')
+                    ->forceDelete();
+            }
         }
 
         // Handle transitions to ARCHIVED
@@ -983,6 +994,38 @@ class AutomationEngine
                         'previous_value' => CoreStatus::TO_DO_TODAY->value,
                         'new_value' => $targetStatus->value,
                         'metadata' => ['reason' => 'Today subtasks completed, pending work subtasks scheduled for future dates'],
+                    ]);
+                }
+            } elseif ($totalTodayCount === 0) {
+                $hasFuturePendingWorkSubtasks = RelatedTask::where('order_id', $order->id)
+                    ->where('scheduled_date', '>', today())
+                    ->where(function ($q) {
+                        $q->whereNull('is_work_task')->orWhere('is_work_task', true);
+                    })
+                    ->whereNull('completed_at')
+                    ->where('status', '!=', 'done')
+                    ->exists();
+
+                if ($hasFuturePendingWorkSubtasks) {
+                    $targetStatus = $order->origin_core_status ?? $order->getDesignerOrdersReceivedStatus();
+                    $targetSubstatus = $order->origin_substatus;
+                    $prevStatus = $order->core_status;
+
+                    $order->update([
+                        'core_status' => $targetStatus,
+                        'substatus' => $targetSubstatus,
+                        'done_today' => false,
+                        'origin_core_status' => null,
+                        'origin_substatus' => null,
+                    ]);
+
+                    OrderEvent::create([
+                        'order_id' => $order->id,
+                        'event_type' => 'ROUTED_TO_DESIGNER_FUTURE_SUBTASKS',
+                        'actor' => 'AutomationEngine',
+                        'previous_value' => $prevStatus->value,
+                        'new_value' => $targetStatus->value,
+                        'metadata' => ['reason' => 'Subtareas reprogramadas a fechas futuras; sin subtareas pendientes hoy'],
                     ]);
                 }
             } else {

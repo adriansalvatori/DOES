@@ -52,7 +52,7 @@ class ActionRequiredAutoResolutionTest extends TestCase
         $task->refresh();
 
         $this->assertEquals(CoreStatus::ADRIAN_ORDERS_RECEIVED, $order->core_status);
-        $this->assertNull($order->substatus);
+        $this->assertEquals(Substatus::PONER_EN_ALTA, $order->substatus);
         $this->assertEquals('done', $task->status);
     }
 

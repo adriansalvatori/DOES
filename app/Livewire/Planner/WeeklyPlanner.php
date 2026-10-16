@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Planner;
 
+use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
@@ -46,6 +47,14 @@ class WeeklyPlanner extends Component
     public string $backlogSearch = '';
 
     public bool $showSlaWarningModal = false;
+
+    public bool $showSubtaskWarningModal = false;
+
+    public array $pendingSubtaskData = [];
+
+    public string $subtaskBlockResolution = 'unblock';
+
+    public string $subtaskApprovalImpact = 'keep';
 
     public bool $showSystemTasks = true;
 
@@ -422,7 +431,7 @@ class WeeklyPlanner extends Component
         $this->scheduleSubtask($orderId, $order->task_name ?: __('Trabajo programado'), $dateString);
     }
 
-    public function scheduleSubtask($orderId = null, $title = '', $dateString = '', $designerId = null, $isWorkTask = true)
+    public function scheduleSubtask($orderId = null, $title = '', $dateString = '', $designerId = null, $isWorkTask = true, ?string $blockResolution = null, ?string $approvalImpact = null)
     {
         $scheduledDate = Carbon::parse($dateString);
 
@@ -437,6 +446,69 @@ class WeeklyPlanner extends Component
             $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
             if ($category === SubtaskCategory::MANAGEMENT || str_contains(strtolower($rawTitle), 'follow up') || str_contains(strtolower($taskTitle), 'follow up')) {
                 $isWorkTask = false;
+            }
+
+            $isOrderBlocked = $order->isBlocked();
+            $isOrderApproved = (bool) $order->approved;
+            $isDesignWork = $isWorkTask && in_array($category, [
+                SubtaskCategory::CLIENT_ADJUSTMENTS,
+                SubtaskCategory::CAMILA_ADJUSTMENTS,
+                SubtaskCategory::NEW_DESIGN,
+            ], true);
+
+            if (($isOrderBlocked || ($isOrderApproved && $isDesignWork)) && $blockResolution === null && $approvalImpact === null) {
+                $this->pendingSubtaskData = [
+                    'orderId' => $orderId,
+                    'title' => $rawTitle,
+                    'dateString' => $dateString,
+                    'designerId' => $designerId,
+                    'isWorkTask' => $isWorkTask,
+                    'isOrderBlocked' => $isOrderBlocked,
+                    'isOrderApproved' => $isOrderApproved,
+                    'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Bloqueada')),
+                    'approvalType' => $order->approval_type ?? __('Cliente'),
+                    'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previamente'),
+                ];
+                $this->subtaskBlockResolution = ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS) ? 'unblock' : 'keep_blocked';
+                $this->subtaskApprovalImpact = ($category === SubtaskCategory::CLIENT_ADJUSTMENTS) ? 'invalidate' : 'keep';
+                $this->showSubtaskWarningModal = true;
+
+                return;
+            }
+
+            if ($order->approved && $approvalImpact === 'invalidate') {
+                $order->update([
+                    'approved' => false,
+                    'measures_confirmed' => false,
+                ]);
+
+                OrderEvent::create([
+                    'order_id' => $order->id,
+                    'event_type' => 'APPROVAL_RESET',
+                    'actor' => auth()->user()?->name ?? __('Diseñador'),
+                    'previous_value' => 'approved: true',
+                    'new_value' => 'approved: false (Anulada por nueva subtarea: '.$taskTitle.')',
+                    'metadata' => [
+                        'timestamp' => now()->toIso8601String(),
+                        'reason' => 'Subtarea creada invalida aprobación previa',
+                    ],
+                ]);
+
+                $order->relatedTasks()->where('type', RelatedTaskType::PONER_ALTA->value)->where('status', '!=', 'done')->forceDelete();
+                $order->refresh();
+            }
+
+            if ($isOrderBlocked) {
+                if ($blockResolution === 'unblock') {
+                    if ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS || str_contains(mb_strtolower($taskTitle, 'UTF-8'), 'medida')) {
+                        $order->update(['measures_confirmed' => true]);
+                    }
+                    $order->unblock(__('Medidas/información confirmadas al programar subtarea: :title', ['title' => $taskTitle]));
+                    $order->refresh();
+                } else {
+                    $isWorkTask = false;
+                    $category = SubtaskCategory::MANAGEMENT;
+                }
             }
 
             $nextSortOrder = $this->getNextSortOrderForDay($scheduledDate, $assigneeId);
@@ -804,6 +876,22 @@ class WeeklyPlanner extends Component
             if (! $order->approved) {
                 $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
                 session()->flash('warning', __('La orden requiere aprobación antes de ser enviada a producción.'));
+
+                return;
+            }
+
+            $hasWorkAfterApproval = $order->approved_at && $order->relatedTasks()
+                ->where('id', '!=', $subtask->id)
+                ->where('completed_at', '>', $order->approved_at)
+                ->where(function ($q) {
+                    $q->whereNull('is_work_task')->orWhere('is_work_task', true);
+                })
+                ->where('type', '!=', RelatedTaskType::PONER_ALTA->value)
+                ->exists();
+
+            if ($hasWorkAfterApproval) {
+                $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
+                session()->flash('warning', __('Se detectaron cambios o tareas completadas después de la última aprobación. Se requiere confirmar una nueva aprobación antes de enviar a producción.'));
 
                 return;
             }
@@ -1248,6 +1336,35 @@ class WeeklyPlanner extends Component
             'slaBreachedList' => $slaBreachedList,
             'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
         ])->layout('components.layouts.app', ['title' => __('Planificador Semanal - ').config('app.name')]);
+    }
+
+    public function confirmSubtaskWarning()
+    {
+        if (empty($this->pendingSubtaskData)) {
+            $this->showSubtaskWarningModal = false;
+
+            return;
+        }
+
+        $orderId = $this->pendingSubtaskData['orderId'];
+        $title = $this->pendingSubtaskData['title'];
+        $dateString = $this->pendingSubtaskData['dateString'];
+        $designerId = $this->pendingSubtaskData['designerId'];
+        $isWorkTask = $this->pendingSubtaskData['isWorkTask'];
+
+        $blockResolution = $this->subtaskBlockResolution;
+        $approvalImpact = $this->subtaskApprovalImpact;
+
+        $this->showSubtaskWarningModal = false;
+        $this->pendingSubtaskData = [];
+
+        $this->scheduleSubtask($orderId, $title, $dateString, $designerId, $isWorkTask, $blockResolution, $approvalImpact);
+    }
+
+    public function cancelSubtaskWarning()
+    {
+        $this->showSubtaskWarningModal = false;
+        $this->pendingSubtaskData = [];
     }
 
     public function openAllSlaWarningsModal()

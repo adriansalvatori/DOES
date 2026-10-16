@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\Substatus;
@@ -124,6 +125,11 @@ class ActionRequiredResolverService
         ], true);
 
         if ($isResolverTask && ($order->substatus === Substatus::BLOQUEADA || $order->substatus === Substatus::FALTA_APROBACION_ESTIMADO || $order->customer_service_required)) {
+            if ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS || str_contains(mb_strtolower($task->title, 'UTF-8'), 'medida')) {
+                $order->update(['measures_confirmed' => true]);
+                $order->refresh();
+            }
+
             $otherOpenResolverTasks = $order->relatedTasks()
                 ->where('id', '!=', $task->id)
                 ->where('status', '!=', 'done')
