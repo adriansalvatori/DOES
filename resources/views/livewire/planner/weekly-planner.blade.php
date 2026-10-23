@@ -2866,9 +2866,16 @@
     <!-- Modal Alerta SLA -->
     @if($showSlaWarningModal)
         <div 
-            class="fixed inset-0 z-[100] overflow-y-auto bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4"
-            @keydown.window.escape.prevent="$wire.closeSlaWarningModal()"
-            @keydown.window.enter.prevent="$wire.closeSlaWarningModal()"
+            x-data
+            x-init="
+                window.KudosModalStack?.register('sla-warning-modal', $el, () => $wire.closeSlaWarningModal());
+                $cleanup(() => window.KudosModalStack?.unregister('sla-warning-modal'));
+            "
+            @pointerdown="window.KudosModalStack?.bringToFront('sla-warning-modal')"
+            class="fixed inset-0 overflow-y-auto bg-stone-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+            style="z-index: 250;"
+            @keydown.window.escape.prevent="if (window.KudosModalStack ? window.KudosModalStack.isTop('sla-warning-modal') : !document.querySelector('[data-modal=\'order-detail\']')) $wire.closeSlaWarningModal()"
+            @keydown.window.enter.prevent="if ((window.KudosModalStack ? window.KudosModalStack.isTop('sla-warning-modal') : !document.querySelector('[data-modal=\'order-detail\']')) && !['INPUT', 'TEXTAREA', 'SELECT'].includes($event.target.tagName)) $wire.closeSlaWarningModal()"
             wire:keydown.escape="closeSlaWarningModal">
             
             <div 
@@ -2896,9 +2903,29 @@
 
                 <div class="p-5 space-y-3.5 text-xs text-zinc-700 max-h-96 overflow-y-auto custom-vertical-scrollbar">
                     @if(!empty($slaWarningDetails))
-                        <div class="p-3 bg-amber-50/90 border border-amber-200 rounded-lg space-y-1">
-                            <span class="font-bold text-zinc-900 block text-xs uppercase">{{ $slaWarningDetails['company_name'] ?? '' }}</span>
-                            <span class="text-[11px] text-zinc-600 block uppercase">{{ $slaWarningDetails['task_name'] ?? '' }}</span>
+                        <div 
+                            @if(!empty($slaWarningDetails['order_id']))
+                                wire:click="$dispatch('open-order-detail', { orderId: {{ $slaWarningDetails['order_id'] }} })"
+                                role="button"
+                                tabindex="0"
+                                @keydown.enter.stop="$dispatch('open-order-detail', { orderId: {{ $slaWarningDetails['order_id'] }} })"
+                                title="{{ __('Abrir orden :company para gestionar SLA', ['company' => $slaWarningDetails['company_name'] ?? '']) }}"
+                                class="p-3 bg-amber-50/90 border border-amber-200 rounded-lg space-y-1 hover:bg-amber-100/90 hover:border-amber-300 transition cursor-pointer group select-none"
+                            @else
+                                class="p-3 bg-amber-50/90 border border-amber-200 rounded-lg space-y-1"
+                            @endif
+                        >
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <span class="font-bold text-zinc-900 block text-xs uppercase group-hover:text-amber-950 truncate">{{ $slaWarningDetails['company_name'] ?? '' }}</span>
+                                    <span class="text-[11px] text-zinc-600 block uppercase truncate">{{ $slaWarningDetails['task_name'] ?? '' }}</span>
+                                </div>
+                                @if(!empty($slaWarningDetails['order_id']))
+                                    <div class="text-amber-500 group-hover:text-amber-700 transition-colors shrink-0">
+                                        <x-lucide-chevron-right class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                    </div>
+                                @endif
+                            </div>
                         </div>
 
                         <p class="leading-relaxed">
@@ -2906,28 +2933,42 @@
                         </p>
                     @elseif(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
                         <div class="space-y-2">
-                            <p class="font-medium text-zinc-600">
-                                {{ __('Las siguientes :count tareas en la agenda semanal superan su fecha límite de SLA:', ['count' => $slaBreachedList->count()]) }}
+                            <p class="font-medium text-zinc-600 flex items-center justify-between">
+                                <span>{{ __('Las siguientes :count tareas en la agenda semanal superan su fecha límite de SLA:', ['count' => $slaBreachedList->count()]) }}</span>
                             </p>
                             <div class="divide-y divide-stone-100 border border-stone-200 rounded-lg overflow-hidden">
                                 @foreach($slaBreachedList as $item)
-                                    <div wire:key="sla-breached-{{ $loop->index }}-{{ $item['company_name'] }}" class="p-3 bg-rose-50/40 hover:bg-rose-50/80 transition flex items-start justify-between gap-3">
+                                    <div 
+                                        wire:key="sla-breached-{{ $loop->index }}-{{ $item['order_id'] ?? $loop->index }}"
+                                        @if(!empty($item['order_id']))
+                                            wire:click="$dispatch('open-order-detail', { orderId: {{ $item['order_id'] }} })"
+                                            role="button"
+                                            tabindex="0"
+                                            @keydown.enter.stop="$dispatch('open-order-detail', { orderId: {{ $item['order_id'] }} })"
+                                            title="{{ __('Abrir orden :company para gestionar SLA', ['company' => $item['company_name']]) }}"
+                                        @endif
+                                        class="p-3 bg-rose-50/40 hover:bg-rose-100/70 transition-colors flex items-center justify-between gap-3 cursor-pointer group select-none">
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-bold uppercase {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? 'bg-violet-600 text-white border border-violet-700' : 'bg-violet-100 text-violet-800 border border-violet-200') : 'bg-stone-200 text-zinc-800 border border-stone-300' }}">
                                                     {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? __('Sistema') : __('Subtarea')) : __('Orden') }}
                                                 </span>
-                                                <h4 class="font-bold text-xs text-zinc-900 truncate uppercase">{{ $item['company_name'] }}</h4>
+                                                <h4 class="font-bold text-xs text-zinc-900 truncate uppercase group-hover:text-rose-950 transition-colors">{{ $item['company_name'] }}</h4>
                                             </div>
-                                            <p class="text-[11px] text-zinc-600 truncate uppercase">{{ $item['task_name'] }}</p>
+                                            <p class="text-[11px] text-zinc-600 truncate uppercase group-hover:text-zinc-800 transition-colors">{{ $item['task_name'] }}</p>
                                         </div>
-                                        <div class="text-right shrink-0">
-                                            <span class="text-rose-600 font-bold text-xs block">
-                                                +{{ $item['days_overdue'] }}d {{ __('Atraso') }}
-                                            </span>
-                                            <span class="text-[10px] text-zinc-400 block mt-0.5">
-                                                SLA: {{ $item['current_due_date'] }}
-                                            </span>
+                                        <div class="flex items-center gap-2.5 shrink-0">
+                                            <div class="text-right">
+                                                <span class="text-rose-600 font-bold text-xs block">
+                                                    +{{ $item['days_overdue'] }}d {{ __('Atraso') }}
+                                                </span>
+                                                <span class="text-[10px] text-zinc-400 block mt-0.5">
+                                                    SLA: {{ $item['current_due_date'] }}
+                                                </span>
+                                            </div>
+                                            <div class="text-rose-400 group-hover:text-rose-700 transition-colors">
+                                                <x-lucide-chevron-right class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                            </div>
                                         </div>
                                     </div>
                                 @endforeach
@@ -2941,7 +2982,7 @@
 
                     <div class="p-2.5 bg-stone-50 border border-stone-200 rounded-lg text-[11px] text-zinc-500 flex items-start gap-2">
                         <x-lucide-info class="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
-                        <span>{{ __('La fecha límite oficial del trabajo (SLA) se mantiene bloqueada e intacta para fines de control de atrasos.') }}</span>
+                        <span>{{ __('Haz clic en cualquier tarea para abrir su orden en el panel lateral y gestionar su SLA sin cerrar esta lista.') }}</span>
                     </div>
                 </div>
 

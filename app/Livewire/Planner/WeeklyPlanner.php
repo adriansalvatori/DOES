@@ -645,6 +645,7 @@ class WeeklyPlanner extends Component
             if (! $order->isSlaExempt() && $order->current_due_date && $scheduledDate->isAfter($order->current_due_date)) {
                 $daysOverdue = (int) $order->current_due_date->diffInDays($scheduledDate);
                 $this->slaWarningDetails = [
+                    'order_id' => $order->id,
                     'company_name' => $order->company_name,
                     'task_name' => $taskTitle,
                     'scheduled_date' => $scheduledDate->format('d M, Y'),
@@ -770,6 +771,7 @@ class WeeklyPlanner extends Component
         if (! $subtask->isDone() && $subtask->order && ! $subtask->order->isSlaExempt() && ! $subtask->isFollowUp() && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
             $daysOverdue = (int) $subtask->order->current_due_date->diffInDays($scheduledDate);
             $this->slaWarningDetails = [
+                'order_id' => $subtask->order->id,
                 'company_name' => $subtask->order->company_name,
                 'task_name' => $subtask->title,
                 'scheduled_date' => $scheduledDate->format('d M, Y'),
@@ -1326,6 +1328,7 @@ class WeeklyPlanner extends Component
                     $daysOverdue = (int) max(1, $st->order->current_due_date->diffInDays($st->scheduled_date));
                     $slaBreachedList->push([
                         'type' => 'subtask',
+                        'order_id' => $st->order->id,
                         'company_name' => $st->order->company_name,
                         'task_name' => $st->title,
                         'scheduled_date' => $st->scheduled_date->format('d M, Y'),
@@ -1350,6 +1353,7 @@ class WeeklyPlanner extends Component
                             $daysOverdue = (int) max(1, $ord->current_due_date->diffInDays($ord->scheduled_date));
                             $slaBreachedList->push([
                                 'type' => 'order',
+                                'order_id' => $ord->id,
                                 'company_name' => $ord->company_name,
                                 'task_name' => $ord->task_name ?? __('Orden Principal'),
                                 'scheduled_date' => $ord->scheduled_date->format('d M, Y'),

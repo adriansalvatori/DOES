@@ -1322,7 +1322,45 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->call('scheduleSubtask', $order->id, 'Ajustes de cliente', $farFutureDate, $designer->id)
-            ->assertSet('showSlaWarningModal', true);
+            ->assertSet('showSlaWarningModal', true)
+            ->assertSet('slaWarningDetails.order_id', $order->id)
+            ->assertSeeHtml("\$dispatch('open-order-detail', { orderId: {$order->id} })");
+    }
+
+    public function test_sla_breached_list_includes_order_id_and_renders_dispatch(): void
+    {
+        $this->travelTo(Carbon::parse('2026-10-08 10:00:00')); // Thursday
+        $designer = Designer::create(['name' => 'Agustín', 'active' => true]);
+
+        $order = Order::create([
+            'company_name' => 'OVERDUE SLA CORP',
+            'task_name' => 'PENDON GIGANTE',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'current_due_date' => Carbon::parse('2026-10-05'), // Overdue
+            'scheduled_date' => Carbon::parse('2026-10-08'),
+            'in_workspace' => true,
+            'designer_id' => $designer->id,
+        ]);
+
+        $subtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Subtarea atrasada',
+            'type' => RelatedTaskType::SUBTASK,
+            'status' => 'todo',
+            'scheduled_date' => Carbon::parse('2026-10-08'),
+            'assignee_id' => $designer->id,
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('openAllSlaWarningsModal')
+            ->assertSet('showSlaWarningModal', true)
+            ->assertViewHas('slaBreachedList', function ($list) use ($order) {
+                return $list->contains(function ($item) use ($order) {
+                    return isset($item['order_id']) && $item['order_id'] === $order->id;
+                });
+            })
+            ->assertSeeHtml("\$dispatch('open-order-detail', { orderId: {$order->id} })");
     }
 
     public function test_today_progress_widget_rendered_and_calculates_progress_correctly(): void
