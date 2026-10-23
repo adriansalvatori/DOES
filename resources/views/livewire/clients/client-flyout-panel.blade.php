@@ -1,38 +1,38 @@
 <div 
     x-data="{
+        isOpen: @js((bool) $isOpen),
         initialSnapshot: null,
         init() {
-            this.snapshot();
+            if (this.isOpen) {
+                this.snapshot();
+                window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
+                window.KudosModalStack?.register('client-flyout-panel', this.$el, () => this.confirmClose(() => $wire.close()));
+            }
             this.$watch('$wire.isOpen', (open) => {
+                this.isOpen = Boolean(open);
                 if (open) {
-                    window.KudosLoader?.hide();
                     this.snapshot();
                     window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
-                    this.$nextTick(() => {
-                        const container = document.getElementById('client-flyout-container') || this.$el;
-                        window.KudosModalStack?.register('client-flyout-panel', container, () => this.confirmClose(() => $wire.close()));
-                    });
+                    window.KudosModalStack?.register('client-flyout-panel', this.$el, () => this.confirmClose(() => $wire.close()));
+                    window.KudosModalStack?.bringToFront('client-flyout-panel');
                 } else {
                     window.KudosDirtyGuard.unregister('client-flyout-panel');
                     window.KudosModalStack?.unregister('client-flyout-panel');
                 }
             });
             this.$watch('$wire.clientId', () => {
-                if ($wire.isOpen) {
+                if (this.isOpen) {
                     window.KudosModalStack?.bringToFront('client-flyout-panel');
                 }
             });
-            if ($wire.isOpen) {
-                window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
-                this.$nextTick(() => {
-                    const container = document.getElementById('client-flyout-container') || this.$el;
-                    window.KudosModalStack?.register('client-flyout-panel', container, () => this.confirmClose(() => $wire.close()));
-                });
-            }
             this.$cleanup(() => {
                 window.KudosDirtyGuard.unregister('client-flyout-panel');
                 window.KudosModalStack?.unregister('client-flyout-panel');
             });
+        },
+        openImmediate() {
+            this.isOpen = true;
+            window.KudosModalStack?.bringToFront('client-flyout-panel');
         },
         snapshot() {
             this.initialSnapshot = JSON.stringify({
@@ -115,41 +115,44 @@
                     saveText: 'Guardar',
                     onCancel: () => {},
                     onDiscard: () => {
+                        this.isOpen = false;
                         window.KudosDirtyGuard.unregister('client-flyout-panel');
                         window.KudosModalStack?.unregister('client-flyout-panel');
                         action();
                     },
                     onSave: () => {
+                        this.isOpen = false;
                         window.KudosDirtyGuard.unregister('client-flyout-panel');
                         window.KudosModalStack?.unregister('client-flyout-panel');
                         $wire.save();
                     }
                 });
             } else {
+                this.isOpen = false;
                 window.KudosDirtyGuard.unregister('client-flyout-panel');
                 window.KudosModalStack?.unregister('client-flyout-panel');
                 action();
             }
         }
     }"
-    @open-client-flyout.window="window.KudosModalStack?.bringToFront('client-flyout-panel')"
-    @keydown.window.escape.stop="if (window.KudosModalStack ? window.KudosModalStack.isTop('client-flyout-panel') : ($wire.isOpen && !window.KudosDirtyGuard.isConfirmModalOpen)) confirmClose(() => $wire.close())"
+    x-show="isOpen"
+    x-cloak
+    @open-client-flyout.window="openImmediate()"
+    @keydown.window.escape.stop="if (window.KudosModalStack ? window.KudosModalStack.isTop('client-flyout-panel') : (isOpen && !window.KudosDirtyGuard.isConfirmModalOpen)) confirmClose(() => $wire.close())"
+    id="client-flyout-container" 
+    class="fixed inset-0 flex justify-end" 
+    style="z-index: 300;"
+    @pointerdown="window.KudosModalStack?.bringToFront('client-flyout-panel')"
 >
-    @if($isOpen)
-        <div 
-            id="client-flyout-container" 
-            class="fixed inset-0 flex justify-end" 
-            style="z-index: 300;"
-            @pointerdown="window.KudosModalStack?.bringToFront('client-flyout-panel')"
-        >
-            {{-- Backdrop --}}
-            <div 
-                class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs transition-opacity"
-                @click="confirmClose(() => $wire.close())"
-            ></div>
+    {{-- Backdrop --}}
+    <div 
+        class="fixed inset-0 bg-stone-900/30 backdrop-blur-2xs transition-opacity"
+        @click="confirmClose(() => $wire.close())"
+    ></div>
 
-            {{-- Slide-over Flyout Panel (Proportioned max-w-2xl ~ 672px width) --}}
-            <div id="client-flyout-panel" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col border-l border-zinc-200 transform transition-transform duration-200">
+    {{-- Slide-over Flyout Panel (Proportioned max-w-2xl ~ 672px width) --}}
+    <div id="client-flyout-panel" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl flex flex-col border-l border-zinc-200 transform transition-transform duration-200">
+        @if($isOpen)
             
             {{-- Panel Header --}}
             <div class="px-6 py-4 border-b border-zinc-100 bg-white flex items-center justify-between shrink-0">
@@ -1978,9 +1981,10 @@
                     </button>
                 </div>
             </div>
-        </div>
-        </div>
-    @endif
+        @else
+            @include('livewire.clients.partials.client-flyout-skeleton')
+        @endif
+    </div>
 </div>
 
 

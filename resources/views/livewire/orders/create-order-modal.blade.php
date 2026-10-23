@@ -1,118 +1,127 @@
 <div>
-    @if($showModal)
-        <div 
-            id="create-order-modal-container"
-            @click.self="confirmClose(() => $wire.closeModal())" 
-            class="fixed inset-0 overflow-y-auto bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4"
-            style="z-index: 300;"
-            @pointerdown="window.KudosModalStack?.bringToFront('create-order-modal')"
-        >
-            <div 
-                x-data="{
-                    initialForm: null,
-                    init() {
+    <div 
+        id="create-order-modal-container"
+        x-data="{
+            isOpen: @js((bool) $showModal),
+            initialForm: null,
+            init() {
+                if (this.isOpen) {
+                    this.snapshot();
+                    window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
+                    window.KudosModalStack?.register('create-order-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
+                }
+                this.$watch('$wire.showModal', (show) => {
+                    this.isOpen = Boolean(show);
+                    if (!show) {
+                        window.KudosDirtyGuard.unregister('create-order-modal');
+                        window.KudosModalStack?.unregister('create-order-modal');
+                    } else {
                         this.snapshot();
-                        this.$watch('$wire.showModal', (show) => {
-                            if (!show) {
-                                window.KudosDirtyGuard.unregister('create-order-modal');
-                                window.KudosModalStack?.unregister('create-order-modal');
-                            } else {
-                                this.snapshot();
-                                window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
-                                this.$nextTick(() => {
-                                    const container = document.getElementById('create-order-modal-container') || this.$el;
-                                    window.KudosModalStack?.register('create-order-modal', container, () => this.confirmClose(() => $wire.closeModal()));
-                                });
-                            }
-                        });
                         window.KudosDirtyGuard.register('create-order-modal', () => this.isDirty(), this.$el);
-                        this.$nextTick(() => {
-                            const container = document.getElementById('create-order-modal-container') || this.$el;
-                            window.KudosModalStack?.register('create-order-modal', container, () => this.confirmClose(() => $wire.closeModal()));
-                        });
-                        this.$cleanup(() => {
-                            window.KudosDirtyGuard.unregister('create-order-modal');
-                            window.KudosModalStack?.unregister('create-order-modal');
-                        });
-                    },
-                    snapshot() {
-                        this.initialForm = JSON.stringify({
-                            company: ($wire.companyName || '').toString().trim(),
-                            task: ($wire.taskName || '').toString().trim(),
-                            wo: ($wire.woNumber || '').toString().trim(),
-                            trelloId: ($wire.trelloCardId || '').toString().trim(),
-                            resp: ($wire.responsiblePerson || '').toString().trim(),
-                            location: ($wire.locationName || '').toString().trim(),
-                            substatus: ($wire.substatus || '').toString().trim(),
-                            flags: Array.from($wire.flags || []).map(String).sort(),
-                            due: ($wire.dueDate || '').toString().trim(),
-                            createOnTrello: Boolean($wire.createOnTrello),
-                            designers: Array.from($wire.designerIds || []).map(String).sort(),
-                            pieces: Array.from($wire.pieces || []).map(p => ({
-                                name: (p.name || '').trim(),
-                                dimensions: (p.dimensions || '').trim(),
-                                material: (p.material || '').trim(),
-                                quantity: Number(p.quantity) || 1
-                            })),
-                            newPieceName: ($wire.newPieceName || '').toString().trim()
-                        });
-                    },
-                    isDirty() {
-                        if (!$wire.showModal || !this.initialForm) return false;
-                        const current = JSON.stringify({
-                            company: ($wire.companyName || '').toString().trim(),
-                            task: ($wire.taskName || '').toString().trim(),
-                            wo: ($wire.woNumber || '').toString().trim(),
-                            trelloId: ($wire.trelloCardId || '').toString().trim(),
-                            resp: ($wire.responsiblePerson || '').toString().trim(),
-                            location: ($wire.locationName || '').toString().trim(),
-                            substatus: ($wire.substatus || '').toString().trim(),
-                            flags: Array.from($wire.flags || []).map(String).sort(),
-                            due: ($wire.dueDate || '').toString().trim(),
-                            createOnTrello: Boolean($wire.createOnTrello),
-                            designers: Array.from($wire.designerIds || []).map(String).sort(),
-                            pieces: Array.from($wire.pieces || []).map(p => ({
-                                name: (p.name || '').trim(),
-                                dimensions: (p.dimensions || '').trim(),
-                                material: (p.material || '').trim(),
-                                quantity: Number(p.quantity) || 1
-                            })),
-                            newPieceName: ($wire.newPieceName || '').toString().trim()
-                        });
-                        return current !== this.initialForm;
-                    },
-                    confirmClose(action) {
-                        if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
-                            return;
-                        }
-                        if (this.isDirty()) {
-                            window.KudosDirtyGuard.openConfirmModal({
-                                title: '¿Guardar nueva orden?',
-                                description: 'Has ingresado datos para crear una nueva orden.',
-                                cancelText: 'Cancelar',
-                                discardText: 'No guardar',
-                                saveText: 'Guardar',
-                                onCancel: () => {},
-                                onDiscard: () => {
-                                    window.KudosDirtyGuard.unregister('create-order-modal');
-                                    window.KudosModalStack?.unregister('create-order-modal');
-                                    action();
-                                },
-                                onSave: () => {
-                                    window.KudosDirtyGuard.unregister('create-order-modal');
-                                    window.KudosModalStack?.unregister('create-order-modal');
-                                    $wire.save();
-                                }
-                            });
-                        } else {
+                        window.KudosModalStack?.register('create-order-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
+                        window.KudosModalStack?.bringToFront('create-order-modal');
+                    }
+                });
+                this.$cleanup(() => {
+                    window.KudosDirtyGuard.unregister('create-order-modal');
+                    window.KudosModalStack?.unregister('create-order-modal');
+                });
+            },
+            openImmediate() {
+                this.isOpen = true;
+                window.KudosModalStack?.bringToFront('create-order-modal');
+            },
+            snapshot() {
+                this.initialForm = JSON.stringify({
+                    company: ($wire.companyName || '').toString().trim(),
+                    task: ($wire.taskName || '').toString().trim(),
+                    wo: ($wire.woNumber || '').toString().trim(),
+                    trelloId: ($wire.trelloCardId || '').toString().trim(),
+                    resp: ($wire.responsiblePerson || '').toString().trim(),
+                    location: ($wire.locationName || '').toString().trim(),
+                    substatus: ($wire.substatus || '').toString().trim(),
+                    flags: Array.from($wire.flags || []).map(String).sort(),
+                    due: ($wire.dueDate || '').toString().trim(),
+                    createOnTrello: Boolean($wire.createOnTrello),
+                    designers: Array.from($wire.designerIds || []).map(String).sort(),
+                    pieces: Array.from($wire.pieces || []).map(p => ({
+                        name: (p.name || '').trim(),
+                        dimensions: (p.dimensions || '').trim(),
+                        material: (p.material || '').trim(),
+                        quantity: Number(p.quantity) || 1
+                    })),
+                    newPieceName: ($wire.newPieceName || '').toString().trim()
+                });
+            },
+            isDirty() {
+                if (!$wire.showModal || !this.initialForm) return false;
+                const current = JSON.stringify({
+                    company: ($wire.companyName || '').toString().trim(),
+                    task: ($wire.taskName || '').toString().trim(),
+                    wo: ($wire.woNumber || '').toString().trim(),
+                    trelloId: ($wire.trelloCardId || '').toString().trim(),
+                    resp: ($wire.responsiblePerson || '').toString().trim(),
+                    location: ($wire.locationName || '').toString().trim(),
+                    substatus: ($wire.substatus || '').toString().trim(),
+                    flags: Array.from($wire.flags || []).map(String).sort(),
+                    due: ($wire.dueDate || '').toString().trim(),
+                    createOnTrello: Boolean($wire.createOnTrello),
+                    designers: Array.from($wire.designerIds || []).map(String).sort(),
+                    pieces: Array.from($wire.pieces || []).map(p => ({
+                        name: (p.name || '').trim(),
+                        dimensions: (p.dimensions || '').trim(),
+                        material: (p.material || '').trim(),
+                        quantity: Number(p.quantity) || 1
+                    })),
+                    newPieceName: ($wire.newPieceName || '').toString().trim()
+                });
+                return current !== this.initialForm;
+            },
+            confirmClose(action) {
+                if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
+                    return;
+                }
+                if (this.isDirty()) {
+                    window.KudosDirtyGuard.openConfirmModal({
+                        title: '¿Guardar nueva orden?',
+                        description: 'Has ingresado datos para crear una nueva orden.',
+                        cancelText: 'Cancelar',
+                        discardText: 'No guardar',
+                        saveText: 'Guardar',
+                        onCancel: () => {},
+                        onDiscard: () => {
+                            this.isOpen = false;
                             window.KudosDirtyGuard.unregister('create-order-modal');
                             window.KudosModalStack?.unregister('create-order-modal');
                             action();
+                        },
+                        onSave: () => {
+                            this.isOpen = false;
+                            window.KudosDirtyGuard.unregister('create-order-modal');
+                            window.KudosModalStack?.unregister('create-order-modal');
+                            $wire.save();
                         }
-                    }
-                }"
-                @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('create-order-modal') : true) confirmClose(() => $wire.closeModal())"
-                class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-2xl w-full flex flex-col transition duration-200">
+                    });
+                } else {
+                    this.isOpen = false;
+                    window.KudosDirtyGuard.unregister('create-order-modal');
+                    window.KudosModalStack?.unregister('create-order-modal');
+                    action();
+                }
+            }
+        }"
+        x-show="isOpen"
+        x-cloak
+        @open-create-order.window="openImmediate()"
+        @open-duplicate-order.window="openImmediate()"
+        @click.self="confirmClose(() => $wire.closeModal())" 
+        class="fixed inset-0 overflow-y-auto bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4"
+        style="z-index: 300;"
+        @pointerdown="window.KudosModalStack?.bringToFront('create-order-modal')"
+        @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('create-order-modal') : true) confirmClose(() => $wire.closeModal())"
+    >
+        <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-2xl w-full flex flex-col transition duration-200 overflow-hidden">
+            @if($showModal)
                 
                 <!-- Modal Header -->
                 <div class="px-6 py-4 border-b border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-between">
@@ -831,9 +840,11 @@
                     </div>
 
                 </form>
-            </div>
+            @else
+                @include('livewire.orders.partials.create-order-skeleton')
+            @endif
         </div>
-    @endif
+    </div>
 
     <!-- ON HOLD REASON MODAL -->
     @if($showOnHoldModal)

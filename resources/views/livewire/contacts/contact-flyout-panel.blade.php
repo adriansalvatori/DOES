@@ -1,30 +1,37 @@
-<div>
-    @if($isOpen)
-        {{-- Backdrop --}}
-        <div 
-            x-data
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            wire:click="close"
-            class="fixed inset-0 bg-stone-900/30 backdrop-blur-xs z-50"
-        ></div>
+<div 
+    x-data="{
+        isOpen: @js((bool) $isOpen),
+        init() {
+            this.$watch('$wire.isOpen', (val) => {
+                this.isOpen = Boolean(val);
+            });
+        },
+        openImmediate() {
+            this.isOpen = true;
+        },
+        closeModal() {
+            this.isOpen = false;
+            $wire.close();
+        }
+    }"
+    x-show="isOpen"
+    x-cloak
+    @open-contact-flyout.window="openImmediate()"
+    @keydown.escape.window="closeModal()"
+    class="fixed inset-0 flex justify-end"
+    style="z-index: 300;"
+>
+    {{-- Backdrop --}}
+    <div 
+        @click="closeModal()"
+        class="fixed inset-0 bg-stone-900/30 backdrop-blur-xs transition-opacity"
+    ></div>
 
-        {{-- Slide-over Panel --}}
-        <div 
-            x-data
-            x-transition:enter="transition ease-out duration-250"
-            x-transition:enter-start="translate-x-full"
-            x-transition:enter-end="translate-x-0"
-            x-transition:leave="transition ease-in duration-200"
-            x-transition:leave-start="translate-x-0"
-            x-transition:leave-end="translate-x-full"
-            class="fixed inset-y-0 right-0 w-full max-w-2xl bg-[#fafafa] border-l border-[#e9e9e7] shadow-2xl z-50 flex flex-col overflow-hidden"
-            @keydown.escape.window="$wire.close()"
-        >
+    {{-- Slide-over Panel --}}
+    <div 
+        class="fixed inset-y-0 right-0 w-full max-w-2xl bg-[#fafafa] border-l border-[#e9e9e7] shadow-2xl flex flex-col overflow-hidden"
+    >
+        @if($isOpen)
             {{-- Header --}}
             <div class="p-4 bg-white border-b border-[#e9e9e7] flex items-center justify-between gap-3 shrink-0">
                 <div class="flex items-center gap-2.5 min-w-0">
@@ -594,7 +601,8 @@
                     </div>
                 @endif
 
-            </div>
-        </div>
-    @endif
+        @else
+            @include('livewire.contacts.partials.contact-flyout-skeleton')
+        @endif
+    </div>
 </div>
