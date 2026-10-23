@@ -135,11 +135,15 @@ class OrderObserver
         ];
 
         if ($order->wasChanged($syncableFields)) {
-            $syncCallback = function () use ($order) {
+            $orderId = $order->id;
+            $syncCallback = function () use ($orderId) {
                 try {
-                    app(TrelloSyncService::class)->updateCardOnTrello($order);
+                    $freshOrder = Order::find($orderId);
+                    if ($freshOrder && $freshOrder->in_workspace && $freshOrder->trello_card_id) {
+                        app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
+                    }
                 } catch (\Throwable $e) {
-                    Log::warning("OrderObserver failed to sync order #{$order->id} to Trello: ".$e->getMessage());
+                    Log::warning("OrderObserver failed to sync order #{$orderId} to Trello: ".$e->getMessage());
                 }
             };
 

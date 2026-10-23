@@ -60,6 +60,18 @@ class CreateOrderModal extends Component
 
     public string $onHoldReason = '';
 
+    public array $pieces = [];
+
+    public string $newPieceName = '';
+
+    public string $newPieceDimensions = '';
+
+    public string $newPieceMaterial = '';
+
+    public int $newPieceQuantity = 1;
+
+    public bool $showPieceSpecs = false;
+
     protected $rules = [
         'companyName' => 'required|string|max:255',
         'taskName' => 'required|string|max:255',
@@ -71,6 +83,11 @@ class CreateOrderModal extends Component
         'substatus' => 'nullable|string',
         'flags' => 'nullable|array',
         'dueDate' => 'nullable|date',
+        'pieces' => 'nullable|array',
+        'pieces.*.name' => 'required|string|max:255',
+        'pieces.*.dimensions' => 'nullable|string|max:255',
+        'pieces.*.material' => 'nullable|string|max:255',
+        'pieces.*.quantity' => 'nullable|integer|min:1',
     ];
 
     #[On('open-create-order')]
@@ -94,6 +111,12 @@ class CreateOrderModal extends Component
         $this->flags = [];
         $this->coreStatus = $this->determineCoreStatus()->value;
         $this->dueDate = now()->addWeekdays(2)->toDateString();
+        $this->pieces = [];
+        $this->newPieceName = '';
+        $this->newPieceDimensions = '';
+        $this->newPieceMaterial = '';
+        $this->newPieceQuantity = 1;
+        $this->showPieceSpecs = false;
 
         $this->showModal = true;
     }
@@ -102,7 +125,7 @@ class CreateOrderModal extends Component
     public function openDuplicateModal($orderId)
     {
         $this->resetValidation();
-        $original = Order::with('designers')->find($orderId);
+        $original = Order::with(['designers', 'elements'])->find($orderId);
         if (! $original) {
             return;
         }
@@ -126,6 +149,18 @@ class CreateOrderModal extends Component
         $this->flags = is_array($original->flags) ? $original->flags : [];
         $this->coreStatus = $this->determineCoreStatus()->value;
         $this->dueDate = $original->current_due_date ? $original->current_due_date->toDateString() : now()->addWeekdays(2)->toDateString();
+
+        $this->pieces = $original->elements->map(fn ($el) => [
+            'name' => $el->name,
+            'dimensions' => $el->dimensions ?? '',
+            'material' => $el->material ?? '',
+            'quantity' => $el->quantity ?? 1,
+        ])->toArray();
+        $this->newPieceName = '';
+        $this->newPieceDimensions = '';
+        $this->newPieceMaterial = '';
+        $this->newPieceQuantity = 1;
+        $this->showPieceSpecs = false;
 
         $this->showModal = true;
     }
@@ -205,6 +240,62 @@ class CreateOrderModal extends Component
         $this->originalOrderId = null;
         $this->designerIds = [];
         $this->flags = [];
+        $this->pieces = [];
+        $this->newPieceName = '';
+        $this->newPieceDimensions = '';
+        $this->newPieceMaterial = '';
+        $this->newPieceQuantity = 1;
+        $this->showPieceSpecs = false;
+    }
+
+    public function addPiece(): void
+    {
+        $name = trim($this->newPieceName);
+        if (empty($name)) {
+            $this->addError('newPieceName', 'El nombre de la pieza es obligatorio.');
+
+            return;
+        }
+
+        $this->resetErrorBag('newPieceName');
+
+        $this->pieces[] = [
+            'name' => $name,
+            'dimensions' => trim($this->newPieceDimensions),
+            'material' => trim($this->newPieceMaterial),
+            'quantity' => max(1, (int) $this->newPieceQuantity),
+        ];
+
+        $this->newPieceName = '';
+        $this->newPieceDimensions = '';
+        $this->newPieceMaterial = '';
+        $this->newPieceQuantity = 1;
+    }
+
+    public function editPiece(int $index): void
+    {
+        if (isset($this->pieces[$index])) {
+            $piece = $this->pieces[$index];
+            $this->newPieceName = $piece['name'] ?? '';
+            $this->newPieceDimensions = $piece['dimensions'] ?? '';
+            $this->newPieceMaterial = $piece['material'] ?? '';
+            $this->newPieceQuantity = max(1, (int) ($piece['quantity'] ?? 1));
+
+            if (! empty($this->newPieceDimensions) || ! empty($this->newPieceMaterial)) {
+                $this->showPieceSpecs = true;
+            }
+
+            unset($this->pieces[$index]);
+            $this->pieces = array_values($this->pieces);
+        }
+    }
+
+    public function removePiece(int $index): void
+    {
+        if (isset($this->pieces[$index])) {
+            unset($this->pieces[$index]);
+            $this->pieces = array_values($this->pieces);
+        }
     }
 
     public function generateWoNumber(?WorkOrderNumberGenerator $generator = null): void
@@ -407,6 +498,36 @@ class CreateOrderModal extends Component
         ]);
 
         $order->syncDesigners($this->designerIds);
+
+        // Save order pieces / elements
+        if (! empty(trim($this->newPieceName))) {
+            $this->pieces[] = [
+                'name' => trim($this->newPieceName),
+                'dimensions' => trim($this->newPieceDimensions),
+                'material' => trim($this->newPieceMaterial),
+                'quantity' => max(1, (int) $this->newPieceQuantity),
+            ];
+            $this->newPieceName = '';
+            $this->newPieceDimensions = '';
+            $this->newPieceMaterial = '';
+            $this->newPieceQuantity = 1;
+        }
+
+        foreach ($this->pieces as $index => $pieceData) {
+            $pieceName = trim($pieceData['name'] ?? '');
+            if (empty($pieceName)) {
+                continue;
+            }
+
+            $order->elements()->create([
+                'name' => $pieceName,
+                'dimensions' => ! empty(trim($pieceData['dimensions'] ?? '')) ? trim($pieceData['dimensions']) : null,
+                'material' => ! empty(trim($pieceData['material'] ?? '')) ? trim($pieceData['material']) : null,
+                'quantity' => max(1, (int) ($pieceData['quantity'] ?? 1)),
+                'sort_order' => $index + 1,
+                'status' => 'draft',
+            ]);
+        }
 
         if ($this->isDuplicating && $this->originalOrderId) {
             OrderEvent::create([

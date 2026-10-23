@@ -418,7 +418,16 @@ class Index extends Component
 
         $overdueOrders = $allOrders->filter(fn ($o) => $o->isOverdue());
 
-        $toDoTodayOrders = $allOrders->filter(fn ($o) => $o->core_status === CoreStatus::TO_DO_TODAY || $o->scheduled_date?->isToday());
+        $toDoTodayOrders = $allOrders->filter(fn ($o) => $o->core_status === CoreStatus::TO_DO_TODAY || (
+            $o->scheduled_date?->isToday()
+            && ! in_array($o->core_status, [
+                CoreStatus::EN_PRODUCCION,
+                CoreStatus::ENVIADO_AL_CLIENTE,
+                CoreStatus::ENVIADO_A_CAMILA,
+                CoreStatus::ON_HOLD,
+                CoreStatus::ARCHIVED,
+            ], true)
+        ));
 
         $tasksQuery = RelatedTask::with(['order', 'assignee'])
             ->whereHas('order', fn ($q) => $q->inWorkspace())

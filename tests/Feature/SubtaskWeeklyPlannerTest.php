@@ -1592,4 +1592,207 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->assertSee('URGENTE')
             ->assertSeeHtml('border-red-500');
     }
+
+    public function test_weekly_planner_persists_designer_filter_in_session(): void
+    {
+        $designer = Designer::create(['name' => 'Catalina', 'active' => true]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('changeDesignerFilter', (string) $designer->id)
+            ->assertSet('selectedDesignerFilter', (string) $designer->id);
+
+        $this->assertEquals((string) $designer->id, session('weekly_planner_selected_designer_filter'));
+
+        Livewire::test(WeeklyPlanner::class)
+            ->call('changeDesignerFilter', 'all')
+            ->assertSet('selectedDesignerFilter', 'all');
+
+        $this->assertEquals('all', session('weekly_planner_selected_designer_filter'));
+    }
+
+    public function test_weekly_planner_restores_designer_filter_from_session_on_subsequent_mount(): void
+    {
+        $designer = Designer::create(['name' => 'Felipe', 'active' => true]);
+
+        session(['weekly_planner_selected_designer_filter' => (string) $designer->id]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSet('selectedDesignerFilter', (string) $designer->id);
+    }
+
+    public function test_weekly_planner_prioritizes_url_query_parameter_over_session(): void
+    {
+        $designerA = Designer::create(['name' => 'Designer Alpha', 'active' => true]);
+        $designerB = Designer::create(['name' => 'Designer Beta', 'active' => true]);
+
+        session(['weekly_planner_selected_designer_filter' => (string) $designerA->id]);
+
+        Livewire::withQueryParams(['designer' => (string) $designerB->id])
+            ->test(WeeklyPlanner::class)
+            ->assertSet('selectedDesignerFilter', (string) $designerB->id);
+
+        $this->assertEquals((string) $designerB->id, session('weekly_planner_selected_designer_filter'));
+    }
+
+    public function test_weekly_planner_falls_back_to_all_if_persisted_designer_no_longer_exists_or_inactive(): void
+    {
+        session(['weekly_planner_selected_designer_filter' => '99999']);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSet('selectedDesignerFilter', 'all');
+
+        $this->assertEquals('all', session('weekly_planner_selected_designer_filter'));
+
+        $inactiveDesigner = Designer::create(['name' => 'Inactive Guy', 'active' => false]);
+        session(['weekly_planner_selected_designer_filter' => (string) $inactiveDesigner->id]);
+
+        Livewire::test(WeeklyPlanner::class)
+            ->assertSet('selectedDesignerFilter', 'all');
+
+        $this->assertEquals('all', session('weekly_planner_selected_designer_filter'));
+    }
+
+    public function test_reordering_subtasks_in_today_column_does_not_revert_completed_orders_back_to_working_today(): void
+    {
+        $designer = Designer::create(['name' => 'Euraliz', 'active' => true]);
+        $todayStr = now()->toDateString();
+
+        $productionOrder = Order::create([
+            'company_name' => 'MAXIMUS CONSTRUCTION SERVICES',
+            'task_name' => 'SIGNS CUADROS',
+            'wo_number' => 'WO 16332',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => true,
+            'approved_at' => now()->subDay(),
+            'in_workspace' => true,
+            'scheduled_date' => $todayStr,
+            'designer_id' => $designer->id,
+        ]);
+
+        $altaSubtask = RelatedTask::create([
+            'order_id' => $productionOrder->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+            'return_core_status' => CoreStatus::EN_PRODUCCION,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => $todayStr,
+            'due_date' => $todayStr,
+            'is_work_task' => true,
+        ]);
+
+        $clientOrder = Order::create([
+            'company_name' => 'CLIENT RETURN CORP',
+            'task_name' => 'LOGO PROOF',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'scheduled_date' => $todayStr,
+            'designer_id' => $designer->id,
+        ]);
+
+        $clientSubtask = RelatedTask::create([
+            'order_id' => $clientOrder->id,
+            'title' => 'Enviar proof al cliente',
+            'type' => RelatedTaskType::SUBTASK,
+            'category' => SubtaskCategory::CLIENT_ADJUSTMENTS,
+            'return_core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => $todayStr,
+            'due_date' => $todayStr,
+            'is_work_task' => true,
+        ]);
+
+        $otherPendingOrder = Order::create([
+            'company_name' => 'OTHER PENDING CORP',
+            'task_name' => 'FLYER',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'in_workspace' => true,
+            'scheduled_date' => $todayStr,
+            'designer_id' => $designer->id,
+        ]);
+
+        $pendingSubtask = RelatedTask::create([
+            'order_id' => $otherPendingOrder->id,
+            'title' => 'Diseñar portada',
+            'type' => RelatedTaskType::SUBTASK,
+            'category' => SubtaskCategory::NEW_DESIGN,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => $todayStr,
+            'due_date' => $todayStr,
+            'is_work_task' => true,
+        ]);
+
+        $planner = Livewire::test(WeeklyPlanner::class);
+
+        // Complete both subtasks so their parent orders transition to EN_PRODUCCION and ENVIADO_AL_CLIENTE
+        $planner->call('toggleSubtaskComplete', $altaSubtask->id);
+        $planner->call('toggleSubtaskComplete', $clientSubtask->id);
+
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $productionOrder->fresh()->core_status);
+        $this->assertEquals(CoreStatus::ENVIADO_AL_CLIENTE, $clientOrder->fresh()->core_status);
+
+        // Now reorder all subtasks in Today's column (simulating handleDayDrop sending all DOM task IDs)
+        $planner->call('reorderSubtasks', [$pendingSubtask->id, $altaSubtask->id, $clientSubtask->id], $todayStr, $designer->id);
+
+        // Neither completed order should be reverted back to TO_DO_TODAY
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $productionOrder->fresh()->core_status);
+        $this->assertEquals(CoreStatus::ENVIADO_AL_CLIENTE, $clientOrder->fresh()->core_status);
+        $this->assertEquals(CoreStatus::TO_DO_TODAY, $otherPendingOrder->fresh()->core_status);
+
+        // Dashboard should not list completed EN_PRODUCCION or ENVIADO_AL_CLIENTE orders in toDoTodayOrders
+        Livewire::test(DashboardIndex::class)
+            ->assertViewHas('toDoTodayOrders', function ($orders) use ($productionOrder, $clientOrder, $otherPendingOrder) {
+                $ids = $orders->pluck('id');
+
+                return ! $ids->contains($productionOrder->id)
+                    && ! $ids->contains($clientOrder->id)
+                    && $ids->contains($otherPendingOrder->id);
+            });
+    }
+
+    public function test_completing_poner_en_alta_in_order_detail_modal_syncs_edit_core_status_so_save_does_not_revert(): void
+    {
+        $designer = Designer::create(['name' => 'Euraliz', 'active' => true]);
+        $todayStr = now()->toDateString();
+
+        $order = Order::create([
+            'company_name' => 'MAXIMUS CONSTRUCTION SERVICES',
+            'task_name' => 'SIGNS CUADROS',
+            'wo_number' => 'WO 16332',
+            'core_status' => CoreStatus::TO_DO_TODAY,
+            'approved' => true,
+            'approved_at' => now()->subDay(),
+            'in_workspace' => true,
+            'scheduled_date' => $todayStr,
+            'designer_id' => $designer->id,
+        ]);
+
+        $altaSubtask = RelatedTask::create([
+            'order_id' => $order->id,
+            'title' => 'Poner en alta',
+            'type' => RelatedTaskType::PONER_ALTA,
+            'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+            'return_core_status' => CoreStatus::EN_PRODUCCION,
+            'status' => 'todo',
+            'assignee_id' => $designer->id,
+            'scheduled_date' => $todayStr,
+            'due_date' => $todayStr,
+            'is_work_task' => true,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->call('startEditing')
+            ->assertSet('editCoreStatus', CoreStatus::TO_DO_TODAY->value)
+            ->call('toggleTaskStatus', $altaSubtask->id)
+            ->assertSet('editCoreStatus', CoreStatus::EN_PRODUCCION->value)
+            ->assertSet('editSubstatus', Substatus::ENVIADO_EN_ALTA->value)
+            ->call('saveOrder', false);
+
+        $this->assertEquals(CoreStatus::EN_PRODUCCION, $order->fresh()->core_status);
+        $this->assertEquals(Substatus::ENVIADO_EN_ALTA, $order->fresh()->substatus);
+    }
 }

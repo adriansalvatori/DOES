@@ -16,6 +16,7 @@
             x-data="{
                 initialForm: null,
                 init() {
+                    window.KudosLoader?.hide();
                     this.snapshot();
                     this.$watch('$wire.isEditing', (val) => {
                         if (val) {
@@ -125,7 +126,7 @@
                                     $wire.saveOrder(false);
                                 }
                                 if (this.isCommentDirty()) {
-                                    $wire.postComment();
+                                    $wire.addTrelloComment();
                                 }
                                 action();
                             }
@@ -141,17 +142,17 @@
             @pointerdown="window.KudosModalStack?.bringToFront('order-detail-modal')"
             @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('order-detail-modal') : !document.getElementById('client-flyout-panel')) confirmClose(() => $wire.closeModal())"
             data-modal="order-detail"
-            class="fixed inset-0 flex"
+            class="fixed inset-0 flex justify-end"
             style="z-index: 300;"
         >
             <!-- Backdrop Overlay -->
             <div @click="confirmClose(() => $wire.closeModal())" class="fixed inset-0 bg-black/30 backdrop-blur-xs transition-opacity"></div>
 
             <!-- Slide-over Right Panel (Fully Responsive Width) -->
-            <div class="fixed inset-y-0 right-0 w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col animate-in slide-in-from-right duration-200 overflow-x-hidden">
+            <div class="fixed inset-y-0 right-0 w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col h-full max-h-screen animate-in slide-in-from-right duration-200 overflow-hidden">
             
             <!-- Flyout Header (Notion Page Header) -->
-            <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white sticky top-0 z-20 space-y-3">
+            <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white shrink-0 z-20 space-y-3">
                           <!-- TOP UTILITY ACTION BAR (Horizontally aligned) -->
                 <div class="flex items-center justify-between gap-3 min-w-0">
                     <!-- Left: Clean WO & Creation Timestamp Tag -->
@@ -401,6 +402,16 @@
                                 @endif
                             </div>
                         </div>
+
+                        <!-- Close Flyout Button (Header) -->
+                        <button 
+                            type="button" 
+                            @click="confirmClose(() => $wire.closeModal())" 
+                            class="h-8 w-8 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition flex items-center justify-center shrink-0 cursor-pointer ml-0.5" 
+                            title="{{ __('Cerrar panel (Esc)') }}"
+                            aria-label="{{ __('Cerrar panel') }}">
+                            <x-lucide-x class="w-4 h-4 shrink-0" />
+                        </button>
                     </div>
                 </div>
 
@@ -561,9 +572,12 @@
             @endif
 
             <!-- Flyout Body (Scrollable Notion Page Content) -->
-            <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-5 scrollbar-thin">
+            <div class="overflow-y-auto flex-1 min-h-0 scrollbar-thin [scrollbar-gutter:stable]">
 
-                <!-- Pending WO Update Alert Banner -->
+                <!-- Top Properties / Edit Form Section -->
+                <div class="px-4 sm:px-6 pt-4 sm:pt-5 space-y-5 {{ $isEditing ? 'pb-24' : 'pb-5' }}">
+
+                    <!-- Pending WO Update Alert Banner -->
                 @if($order->pending_wo_number)
                     <div class="bg-amber-50/90 border-2 border-amber-400 rounded-xl p-4 shadow-sm space-y-3 shrink-0 ring-2 ring-amber-200/50 animate-in fade-in zoom-in duration-150">
                         <div class="flex items-start gap-3">
@@ -1192,9 +1206,9 @@
                     <!-- READ MODE -->
 
                     <!-- Metadata Property Grid (Fluid Grid & Prevent Text Collisions) -->
-                    <div class="grid grid-cols-2 sm:grid-cols-12 gap-3.5 bg-[#fbfbfa] p-3.5 rounded-xl border border-[#e9e9e7] text-xs">
-                        <div class="min-w-0 col-span-1 sm:col-span-3">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold tracking-wider whitespace-nowrap">{{ __('Diseñadores:') }}</span>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 text-xs py-1">
+                        <div class="min-w-0">
+                            <span class="text-zinc-400 block text-[10px] uppercase font-bold tracking-wider whitespace-nowrap">{{ __('Diseñadores:') }}</span>
                             <div class="flex flex-wrap items-center gap-1 mt-1">
                                 @forelse($order->assigned_designers as $des)
                                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border truncate max-w-full {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
@@ -1207,10 +1221,10 @@
                             </div>
                         </div>
 
-                        <div class="min-w-0 {{ !$order->trello_card_id ? 'col-span-2 sm:col-span-4' : 'col-span-1 sm:col-span-4' }}">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold tracking-wider whitespace-nowrap">{{ __('ID Tarjeta Trello:') }}</span>
+                        <div class="min-w-0">
+                            <span class="text-zinc-400 block text-[10px] uppercase font-bold tracking-wider whitespace-nowrap">{{ __('ID Tarjeta Trello:') }}</span>
                             @if($order->trello_card_id)
-                                <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition max-w-full min-w-0 whitespace-nowrap group" title="{{ $order->trello_card_id }}">
+                                <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition max-w-full min-w-0 truncate group" title="{{ $order->trello_card_id }}">
                                     <x-lucide-external-link class="w-3 h-3 text-blue-500 shrink-0 group-hover:translate-x-0.5 transition-transform" />
                                     <span class="truncate">{{ $order->trello_card_id }}</span>
                                 </a>
@@ -1238,8 +1252,8 @@
                             @endif
                         </div>
 
-                        <div class="min-w-0 col-span-1 sm:col-span-2">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold tracking-wider whitespace-nowrap">{{ __('Fecha Límite:') }}</span>
+                        <div class="min-w-0">
+                            <span class="text-zinc-400 block text-[10px] uppercase font-bold tracking-wider whitespace-nowrap">{{ __('Fecha Límite:') }}</span>
                             <div class="flex items-center gap-1.5 mt-1 min-w-0">
                                 <span class="font-mono font-semibold text-xs flex items-center gap-1 truncate {{ $order->isOverdue() ? 'text-red-600' : 'text-zinc-800' }}">
                                     <x-lucide-calendar class="w-3 h-3 shrink-0" />
@@ -1248,8 +1262,8 @@
                             </div>
                         </div>
 
-                        <div class="min-w-0 col-span-1 sm:col-span-3">
-                            <span class="text-zinc-500 block text-[10px] uppercase font-semibold tracking-wider whitespace-nowrap">{{ __('Revisiones Cliente:') }}</span>
+                        <div class="min-w-0">
+                            <span class="text-zinc-400 block text-[10px] uppercase font-bold tracking-wider whitespace-nowrap">{{ __('Revisiones Cliente:') }}</span>
                             <span class="font-medium text-sky-800 text-xs mt-1 flex items-center gap-1">
                                 <x-lucide-history class="w-3 h-3 text-sky-600 shrink-0" />
                                 <span>{{ $order->client_revision_count }}</span>
@@ -1271,182 +1285,91 @@
                             </button>
                         </div>
                     @endif
+                @endif
+                </div>
 
-                    <!-- Client Other Active Orders Section (Collapsible) -->
-                    @if(isset($clientOtherActiveOrders) && $clientOtherActiveOrders->isNotEmpty())
-                        <div x-data="{ expanded: false }" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl p-3.5 space-y-3">
-                            <div class="flex items-center justify-between gap-2 flex-wrap cursor-pointer select-none" @click="expanded = !expanded">
-                                <div class="flex items-center gap-2">
-                                    <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                        <x-lucide-layers class="w-4 h-4 text-emerald-600 shrink-0" />
-                                        <span>{{ __('Otras Órdenes Activas del Cliente') }}</span>
-                                        <span class="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 font-mono text-[10px] font-bold">({{ $clientOtherActiveOrders->count() }})</span>
-                                    </h4>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button 
-                                        type="button" 
-                                        wire:click.stop="openClientDetail" 
-                                        class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-800 transition flex items-center gap-1 cursor-pointer"
-                                        title="{{ __('Ver ficha completa del cliente') }}"
-                                    >
-                                        <span>{{ __('Ficha Cliente') }}</span>
-                                        <x-lucide-external-link class="w-3 h-3" />
-                                    </button>
-                                    <button type="button" class="text-zinc-400 hover:text-zinc-600 p-0.5">
-                                        <x-lucide-chevron-down class="w-3.5 h-3.5 transition-transform" ::class="{ 'rotate-180': expanded }" />
-                                    </button>
-                                </div>
-                            </div>
+                @if(!$isEditing)
+                    <!-- 3-TAB SYSTEM: PIEZAS+SUBTASKS | COMMENTS + ADJUNTOS | TIMELINE -->
+                    <div x-data="{ activeTab: @js($activeTab) }">
+                        <!-- Tab Navigation Bar -->
+                        <div class="border-b border-[#e9e9e7] bg-white sticky top-0 z-20 px-4 sm:px-6">
+                            <nav class="flex items-center gap-1 sm:gap-2 -mb-px overflow-x-auto scrollbar-none" aria-label="Tabs">
+                                <!-- Tab 1: PIEZAS+SUBTASKS -->
+                                <button 
+                                    type="button" 
+                                    @click="activeTab = 'pieces'"
+                                    :class="activeTab === 'pieces' 
+                                        ? 'border-zinc-900 text-zinc-900 font-bold border-b-2 bg-stone-50/80 shadow-2xs' 
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-stone-300 font-medium'"
+                                    class="py-2.5 px-3.5 text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer rounded-t-lg shrink-0 group select-none"
+                                >
+                                    <x-lucide-layers class="w-4 h-4 transition-colors" ::class="activeTab === 'pieces' ? 'text-pink-600' : 'text-zinc-400 group-hover:text-zinc-600'" />
+                                    <span>{{ __('PIEZAS+SUBTASKS') }}</span>
+                                    @php
+                                        $tabPiecesCount = $order->elements->count();
+                                        $tabSubtasks = $order->relatedTasks;
+                                        $tabTotalSubtasks = $tabSubtasks->count();
+                                        $tabDoneSubtasks = $tabSubtasks->filter(fn($t) => $t->isDone())->count();
+                                    @endphp
+                                    @if($tabPiecesCount > 0 || $tabTotalSubtasks > 0)
+                                        <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-stone-100 text-zinc-600 border border-stone-200/60">
+                                            {{ $tabPiecesCount }}p @if($tabTotalSubtasks > 0)· {{ $tabDoneSubtasks }}/{{ $tabTotalSubtasks }}@endif
+                                        </span>
+                                    @endif
+                                </button>
 
-                            <div x-show="expanded" x-collapse>
-                                <div class="space-y-2 pt-2 border-t border-[#e9e9e7]">
-                                    <!-- Sorting Toolbar -->
-                                    <div class="flex items-center gap-1.5 flex-wrap bg-white p-2 rounded-lg border border-[#e9e9e7] text-xs">
-                                        <span class="text-[10px] uppercase font-bold tracking-wider text-zinc-400 mr-1">{{ __('Ordenar:') }}</span>
+                                <!-- Tab 2: COMMENTS + ADJUNTOS -->
+                                <button 
+                                    type="button" 
+                                    @click="activeTab = 'comments'"
+                                    :class="activeTab === 'comments' 
+                                        ? 'border-zinc-900 text-zinc-900 font-bold border-b-2 bg-stone-50/80 shadow-2xs' 
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-stone-300 font-medium'"
+                                    class="py-2.5 px-3.5 text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer rounded-t-lg shrink-0 group select-none"
+                                >
+                                    <x-lucide-message-square class="w-4 h-4 transition-colors" ::class="activeTab === 'comments' ? 'text-sky-600' : 'text-zinc-400 group-hover:text-zinc-600'" />
+                                    <span>{{ __('COMMENTS + ADJUNTOS') }}</span>
+                                    @php
+                                        $tabCommentsCount = is_countable($trelloComments ?? null) ? count($trelloComments) : 0;
+                                        $tabAttachmentsCount = is_countable($trelloAttachments ?? null) ? count($trelloAttachments) : 0;
+                                    @endphp
+                                    @if($tabCommentsCount > 0 || $tabAttachmentsCount > 0)
+                                        <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-stone-100 text-zinc-600 border border-stone-200/60">
+                                            {{ $tabCommentsCount }} @if($tabAttachmentsCount > 0)· {{ $tabAttachmentsCount }}📎@endif
+                                        </span>
+                                    @endif
+                                </button>
 
-                                        <button type="button" wire:click="sortByActiveOrders('wo')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'wo' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por WO') }}">
-                                            <span>WO</span>
-                                            @if($activeOrdersSortField === 'wo')
-                                                @if($activeOrdersSortDirection === 'asc')
-                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @else
-                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @endif
-                                            @endif
-                                        </button>
-
-                                        <button type="button" wire:click="sortByActiveOrders('designer')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'designer' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Diseñador') }}">
-                                            <span>{{ __('Diseñador') }}</span>
-                                            @if($activeOrdersSortField === 'designer')
-                                                @if($activeOrdersSortDirection === 'asc')
-                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @else
-                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @endif
-                                            @endif
-                                        </button>
-
-                                        <button type="button" wire:click="sortByActiveOrders('location')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'location' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Locación') }}">
-                                            <span>{{ __('Locación') }}</span>
-                                            @if($activeOrdersSortField === 'location')
-                                                @if($activeOrdersSortDirection === 'asc')
-                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @else
-                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @endif
-                                            @endif
-                                        </button>
-
-                                        <button type="button" wire:click="sortByActiveOrders('core_status')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'core_status' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Estado') }}">
-                                            <span>{{ __('Estado') }}</span>
-                                            @if($activeOrdersSortField === 'core_status')
-                                                @if($activeOrdersSortDirection === 'asc')
-                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @else
-                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @endif
-                                            @endif
-                                        </button>
-
-                                        <button type="button" wire:click="sortByActiveOrders('task')" class="px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 {{ $activeOrdersSortField === 'task' ? 'bg-zinc-900 text-white font-semibold shadow-2xs' : 'bg-stone-100 hover:bg-stone-200 text-zinc-700' }}" title="{{ __('Ordenar por Tarea') }}">
-                                            <span>{{ __('Tarea') }}</span>
-                                            @if($activeOrdersSortField === 'task')
-                                                @if($activeOrdersSortDirection === 'asc')
-                                                    <x-lucide-arrow-up class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @else
-                                                    <x-lucide-arrow-down class="w-3 h-3 text-white stroke-[2.5]" />
-                                                @endif
-                                            @endif
-                                        </button>
-                                    </div>
-
-                                    <!-- Orders List -->
-                                    <div class="divide-y divide-[#e9e9e7] bg-white rounded-lg border border-[#e9e9e7] overflow-hidden">
-                                        @php $modalPreviousGroup = null; @endphp
-                                        @foreach($clientOtherActiveOrders as $otherOrd)
-                                            @php
-                                                $mCurrentGroup = match($activeOrdersSortField) {
-                                                    'designer' => $otherOrd->designer?->name ?: __('Sin Diseñador Asignado'),
-                                                    'location' => $otherOrd->location_name ?: ($otherOrd->clientLocation?->name ?: __('Sin Locación')),
-                                                    'core_status' => $otherOrd->core_status?->label() ?: __('Sin Estado'),
-                                                    default => null,
-                                                };
-                                            @endphp
-
-                                            @if($mCurrentGroup !== null && $mCurrentGroup !== $modalPreviousGroup)
-                                                @php 
-                                                    $modalPreviousGroup = $mCurrentGroup; 
-                                                    $mGroupCount = match($activeOrdersSortField) {
-                                                        'designer' => $clientOtherActiveOrders->filter(fn($o) => ($o->designer?->name ?: __('Sin Diseñador Asignado')) === $mCurrentGroup)->count(),
-                                                        'location' => $clientOtherActiveOrders->filter(fn($o) => ($o->location_name ?: ($o->clientLocation?->name ?: __('Sin Locación'))) === $mCurrentGroup)->count(),
-                                                        'core_status' => $clientOtherActiveOrders->filter(fn($o) => ($o->core_status?->label() ?: __('Sin Estado')) === $mCurrentGroup)->count(),
-                                                        default => 0,
-                                                    };
-                                                @endphp
-                                                <div class="px-3 py-1.5 bg-[#f7f7f5] text-[10px] font-bold text-zinc-600 uppercase tracking-wider flex items-center justify-between border-y border-[#e9e9e7] first:border-t-0 select-none">
-                                                    <div class="flex items-center gap-1.5">
-                                                        @if($activeOrdersSortField === 'designer')
-                                                            <x-lucide-user class="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                                                        @elseif($activeOrdersSortField === 'location')
-                                                            <x-lucide-map-pin class="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                                                        @elseif($activeOrdersSortField === 'core_status')
-                                                            <x-lucide-layers class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                                        @endif
-                                                        <span>{{ $mCurrentGroup }}</span>
-                                                    </div>
-                                                    <span class="text-[9px] font-mono text-zinc-400 font-semibold">({{ $mGroupCount }})</span>
-                                                </div>
-                                            @endif
-
-                                            <div 
-                                                wire:click="openModal({{ $otherOrd->id }})"
-                                                class="p-2.5 hover:bg-stone-50 flex items-center justify-between text-xs cursor-pointer transition group"
-                                            >
-                                                <div class="min-w-0 pr-2 space-y-1">
-                                                    <div class="font-semibold text-zinc-900 flex items-center gap-2 truncate">
-                                                        @if($otherOrd->wo_number)
-                                                            <x-wo-badge :number="$otherOrd->wo_number" variant="dark" />
-                                                        @endif
-                                                        @if($otherOrd->designer)
-                                                            <span class="px-1.5 py-0.2 rounded text-[9px] border font-medium shrink-0 {{ $otherOrd->getDesignerBadgeStyle() }}" style="{{ $otherOrd->getDesignerBadgeInlineStyle() }}">
-                                                                {{ $otherOrd->designer->name }}
-                                                            </span>
-                                                        @endif
-                                                        @php
-                                                            $oLocName = $otherOrd->location_name ?: $otherOrd->clientLocation?->name;
-                                                            $oCleanTask = $otherOrd->clean_task_name;
-                                                            $oShowLocBadge = $oLocName && mb_strtolower(trim($oLocName), 'UTF-8') !== mb_strtolower(trim($oCleanTask), 'UTF-8');
-                                                        @endphp
-                                                        @if($oShowLocBadge)
-                                                            <span class="inline-flex items-center gap-1 font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded text-[10px] shrink-0">
-                                                                <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
-                                                                <span>{{ $oLocName }}</span>
-                                                            </span>
-                                                        @endif
-                                                        <span class="group-hover:text-emerald-700 transition truncate">{{ $oCleanTask }}</span>
-                                                    </div>
-                                                </div>
-                                                <div class="flex items-center gap-1.5 shrink-0">
-                                                    @if($otherOrd->substatus)
-                                                        <span class="px-2 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $otherOrd->substatus->badgeStyle() }}" style="{{ $otherOrd->substatus->getInlineBadgeStyle() }}">
-                                                            {{ $otherOrd->substatus->label() }}
-                                                        </span>
-                                                    @endif
-                                                    @if($otherOrd->core_status)
-                                                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold border shrink-0 {{ $otherOrd->core_status->badgeStyle() }}" style="{{ $otherOrd->core_status->badgeInlineStyle() }}">
-                                                            {{ $otherOrd->core_status->label() }}
-                                                        </span>
-                                                    @endif
-                                                    <x-lucide-arrow-right class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 transition shrink-0 ml-1" />
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
+                                <!-- Tab 3: TIMELINE -->
+                                <button 
+                                    type="button" 
+                                    @click="activeTab = 'timeline'"
+                                    :class="activeTab === 'timeline' 
+                                        ? 'border-zinc-900 text-zinc-900 font-bold border-b-2 bg-stone-50/80 shadow-2xs' 
+                                        : 'border-transparent text-zinc-500 hover:text-zinc-800 hover:border-stone-300 font-medium'"
+                                    class="py-2.5 px-3.5 text-xs uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer rounded-t-lg shrink-0 group select-none"
+                                >
+                                    <x-lucide-git-commit-vertical class="w-4 h-4 transition-colors" ::class="activeTab === 'timeline' ? 'text-indigo-600' : 'text-zinc-400 group-hover:text-zinc-600'" />
+                                    <span>{{ __('TIMELINE') }}</span>
+                                    @php
+                                        $tabTimelineCount = $order->getTimelineEvents()->count();
+                                    @endphp
+                                    @if($tabTimelineCount > 0)
+                                        <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-stone-100 text-zinc-600 border border-stone-200/60">
+                                            {{ $tabTimelineCount }}
+                                        </span>
+                                    @endif
+                                </button>
+                            </nav>
                         </div>
-                    @endif
+
+                        <!-- RECYCLED UNIFIED TAB PANELS CONTAINER (Guarantees identical separation across all tabs) -->
+                        <div class="px-4 sm:px-6 pt-5 pb-24">
+                            <!-- TAB 1: PIEZAS+SUBTASKS -->
+                            <div x-show="activeTab === 'pieces'" class="space-y-6">
+
+                    <!-- Piezas & Elementos en Alta Section -->
+                    @include('livewire.orders.partials.alta-elements-section')
 
                     <!-- Related Subtasks Section -->
                     @php
@@ -1456,12 +1379,12 @@
                         $progressPercent = $totalSubtasks > 0 ? (int) round(($doneSubtasks / $totalSubtasks) * 100) : 0;
                     @endphp
 
-                    <div class="space-y-3">
+                    <div class="space-y-3 pt-6 border-t border-[#e9e9e7]">
                         <!-- Subtasks Header & Progress Bar -->
                         <div class="space-y-1.5 border-b border-[#e9e9e7] pb-2.5">
                             <div class="flex items-center justify-between">
-                                <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                    <x-lucide-check-square class="w-4 h-4 text-zinc-700 shrink-0" /> 
+                                <h4 class="font-bold text-sm text-zinc-900 uppercase tracking-wider flex items-center gap-2">
+                                    <x-lucide-check-square class="w-4.5 h-4.5 text-zinc-700 shrink-0" /> 
                                     <span>{{ __('Subtareas') }}</span>
                                     <span class="text-zinc-500 font-mono text-[11px] font-normal">({{ $doneSubtasks }}/{{ $totalSubtasks }})</span>
                                 </h4>
@@ -1507,7 +1430,7 @@
                                             this.editing = false;
                                         }
                                     }" 
-                                    class="bg-[#fbfbfa] hover:bg-stone-50/90 border border-[#e9e9e7] hover:border-stone-300 rounded-xl p-2.5 flex items-center justify-between text-xs gap-3 transition shadow-2xs group relative"
+                                    class="hover:bg-stone-100/70 rounded-lg px-2.5 py-2 flex items-center justify-between text-xs gap-3 transition group relative"
                                     :class="{ 'z-30': openType || openCategory || openDate || openAssignee }"
                                 >
                                     <!-- Read Mode View -->
@@ -1793,7 +1716,7 @@
                                             <button 
                                                 type="button"
                                                 @click="editing = true; $nextTick(() => $refs.editInput.focus())"
-                                                class="p-1.5 rounded-lg bg-white hover:bg-stone-100 text-zinc-400 hover:text-zinc-700 border border-stone-200 transition cursor-pointer" 
+                                                class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-stone-200/60 transition cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100" 
                                                 title="{{ __('Editar nombre de subtarea') }}">
                                                 <x-lucide-pencil class="w-3.5 h-3.5" />
                                             </button>
@@ -1802,7 +1725,7 @@
                                             <button 
                                                 wire:click="deleteTask({{ $task->id }})" 
                                                 wire:confirm="{{ __('¿Estás seguro de eliminar la subtarea') }} '{{ addslashes($task->title) }}'?" 
-                                                class="p-1.5 rounded-lg bg-white hover:bg-rose-50 text-zinc-400 hover:text-rose-600 border border-stone-200 hover:border-rose-200 transition cursor-pointer" 
+                                                class="p-1 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100" 
                                                 title="{{ __('Eliminar subtarea') }}">
                                                 <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                             </button>
@@ -2061,69 +1984,22 @@
                             </div>
                         </div>
                     </div>
+                </div> <!-- Closes TAB 1: PIEZAS+SUBTASKS -->
 
-                    <!-- Timeline / Event Log (Color-Coded Vertical Timeline with Expand & Clean Cards) -->
-                    <div 
-                        x-data="{ 
-                            timelineExpanded: false,
-                            toggleTimeline() {
-                                this.timelineExpanded = !this.timelineExpanded;
-                                if (this.timelineExpanded) {
-                                    this.$nextTick(() => {
-                                        this.$refs.timelineSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                        if (this.$refs.timelineList) {
-                                            this.$refs.timelineList.scrollTop = 0;
-                                        }
-                                    });
-                                    setTimeout(() => {
-                                        this.$refs.timelineSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                    }, 120);
-                                }
-                            }
-                        }" 
-                        x-ref="timelineSection"
-                        class="space-y-2.5 pt-2 scroll-mt-2"
-                    >
-                        <!-- Clickable Header that Expands Timeline -->
-                        <div 
-                            @click="toggleTimeline()" 
-                            class="flex items-center justify-between border-b border-[#e9e9e7] pb-2 cursor-pointer select-none group transition"
-                            :title="timelineExpanded ? '{{ __('Clic para contraer vista del historial') }}' : '{{ __('Clic para expandir vista completa del historial') }}'"
-                        >
-                            <div class="flex items-center gap-2">
-                                <div class="w-6 h-6 rounded-lg bg-indigo-50 border border-indigo-200/60 flex items-center justify-center text-indigo-600 transition group-hover:scale-105 group-hover:bg-indigo-100">
-                                    <x-lucide-git-commit-vertical class="w-3.5 h-3.5 stroke-[2.5]" />
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider group-hover:text-indigo-600 transition flex items-center gap-1.5">
-                                        <span>{{ __('LÍNEA DE TIEMPO / HISTORIAL') }}</span>
-                                    </h4>
-                                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition flex items-center gap-1"
-                                          :class="timelineExpanded ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-stone-100 text-zinc-500 border-stone-200 group-hover:bg-stone-200'">
-                                        <span x-text="timelineExpanded ? '{{ __('Expandido') }}' : '{{ __('Compacto') }}'"></span>
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="flex items-center gap-2">
-                                <span class="text-[10px] text-zinc-400 font-mono font-medium">{{ $order->getTimelineEvents()->count() }} {{ __('registro(s)') }}</span>
-                                <button 
-                                    type="button" 
-                                    class="p-1 rounded-md text-zinc-400 group-hover:text-zinc-700 group-hover:bg-stone-100 transition cursor-pointer"
-                                    :title="timelineExpanded ? '{{ __('Contraer') }}' : '{{ __('Expandir') }}'"
-                                >
-                                    <x-lucide-maximize-2 class="w-3.5 h-3.5" x-show="!timelineExpanded" />
-                                    <x-lucide-minimize-2 class="w-3.5 h-3.5" x-show="timelineExpanded" x-cloak />
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
-                            <div 
-                                x-ref="timelineList"
-                                class="relative pl-6 space-y-4 overflow-y-auto pr-2 timeline-scrollbar transition-all duration-300 ease-in-out"
-                                :class="timelineExpanded ? 'max-h-[580px]' : 'max-h-60'"
-                            >
+                <!-- TAB 3: TIMELINE -->
+                <div x-show="activeTab === 'timeline'" class="space-y-4" x-cloak>
+                    <!-- Timeline Section Header -->
+                    <x-orders.tab-section-header :title="__('LÍNEA DE TIEMPO / HISTORIAL')">
+                        <x-slot:icon>
+                            <x-lucide-git-commit-vertical class="w-4.5 h-4.5 text-indigo-600 shrink-0" />
+                        </x-slot:icon>
+                        <x-slot:actions>
+                            <span class="text-[10px] text-zinc-400 font-mono font-medium">{{ $order->getTimelineEvents()->count() }} {{ __('registro(s)') }}</span>
+                        </x-slot:actions>
+                    </x-orders.tab-section-header>
+                    
+                    <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                        <div class="relative pl-6 space-y-4 pr-2 timeline-scrollbar">
                                 @forelse($order->getTimelineEvents() as $index => $event)
                                     @php
                                         $isCrucial = str_contains(strtoupper((string) $event->new_value), 'PRODUCCI')
@@ -2156,7 +2032,7 @@
                                                     {!! $event->getFormattedTitleHtml() !!}
                                                 </h5>
                                                 <div class="flex items-center gap-1.5 shrink-0 text-[10px] text-zinc-400 font-mono">
-                                                    @if($event->actor)
+                                                    @if($event->actor && !str_contains(strtoupper((string)$event->event_type), 'COMMENT'))
                                                         @if($isAuto)
                                                             <span class="inline-flex items-center gap-0.5 text-zinc-400 font-sans text-[10px]">
                                                                 <x-lucide-bot class="w-3 h-3 text-zinc-400 shrink-0" />
@@ -2213,15 +2089,66 @@
                                             </div>
 
                                             @if(is_array($event->metadata) && (isset($event->metadata['reason']) || isset($event->metadata['comment'])) && $event->event_type !== 'ORDER_APPROVED')
-                                                <div class="mt-1 pl-2 border-l-2 border-amber-300 text-[11px] text-zinc-600 py-0.5 space-y-0.5">
-                                                    <span class="font-semibold text-amber-900 text-[10px] uppercase tracking-wider block">{{ __('Motivo:') }}</span>
-                                                    <p class="italic text-zinc-700 leading-snug">{{ $event->metadata['reason'] ?? $event->metadata['comment'] }}</p>
-                                                    @if(isset($event->metadata['blocked_duration']))
-                                                        <span class="block text-[10px] text-emerald-700 font-medium pt-0.5">
-                                                            {{ __('Bloqueada por :duration', ['duration' => $event->metadata['blocked_duration']]) }}
-                                                        </span>
-                                                    @endif
-                                                </div>
+                                                @php
+                                                    $isCommentEvent = str_contains(strtoupper((string) $event->event_type), 'COMMENT');
+                                                    $eventText = $event->metadata['comment'] ?? $event->metadata['reason'] ?? null;
+                                                @endphp
+
+                                                @if($isCommentEvent)
+                                                    @php
+                                                        $previewText = trim(preg_replace('/[*_#`~>\[\]]/', '', strip_tags((string) $eventText)));
+                                                        $previewText = preg_replace('/\s+/', ' ', $previewText);
+                                                    @endphp
+                                                    <div x-data="{ expanded: false }" class="mt-1.5 rounded-xl bg-stone-50/90 border border-stone-200/90 shadow-2xs hover:border-stone-300 transition-all overflow-hidden">
+                                                        <!-- Clickable Header / Toggle -->
+                                                        <div 
+                                                            @click="expanded = !expanded" 
+                                                            class="flex items-center justify-between gap-2 p-2.5 hover:bg-stone-100/70 transition-colors cursor-pointer select-none group"
+                                                            :title="expanded ? '{{ __('Clic para contraer comentario') }}' : '{{ __('Clic para expandir comentario') }}'">
+                                                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                                                <x-lucide-message-square class="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                                                <span class="text-xs text-zinc-600 truncate font-normal" x-show="!expanded">
+                                                                    {{ Str::limit($previewText, 80) }}
+                                                                </span>
+                                                                <span class="text-[11px] font-semibold text-zinc-800" x-show="expanded" x-cloak>
+                                                                    {{ __('Comentario completo') }}
+                                                                </span>
+                                                            </div>
+                                                            <div class="flex items-center gap-1 shrink-0">
+                                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200/80 group-hover:bg-sky-100 transition-colors">
+                                                                    <span x-text="expanded ? '{{ __('Contraer') }}' : '{{ __('Expandir') }}'"></span>
+                                                                    <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" ::class="expanded ? 'rotate-180' : ''" />
+                                                                </span>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Collapsible Content -->
+                                                        <div x-show="expanded" x-cloak class="px-3 pb-3 pt-1 border-t border-stone-200/70 space-y-2">
+                                                            <div class="text-xs text-zinc-700 leading-relaxed break-words prose prose-xs prose-stone max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_ul.task-list]:list-none [&_ul.task-list]:pl-0 [&_li.task-list-item]:list-none [&_h1]:text-sm [&_h1]:font-bold [&_h1]:text-zinc-900 [&_h1]:mt-2.5 [&_h1]:mb-1 [&_h2]:text-xs [&_h2]:font-bold [&_h2]:text-zinc-900 [&_h2]:mt-2 [&_h2]:mb-0.5 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-zinc-800 [&_h3]:mt-1.5 [&_h3]:mb-0.5 [&_hr]:my-2.5 [&_hr]:border-stone-200 [&_p]:my-1">
+                                                                {!! $this->renderCommentMarkdown($eventText) !!}
+                                                            </div>
+                                                            <div class="pt-1 flex justify-end">
+                                                                <button 
+                                                                    type="button" 
+                                                                    @click.stop="expanded = false" 
+                                                                    class="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 hover:text-zinc-700 transition cursor-pointer">
+                                                                    <x-lucide-chevron-up class="w-3 h-3" />
+                                                                    <span>{{ __('Contraer') }}</span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="mt-1 pl-2.5 border-l-2 {{ str_contains(strtoupper((string) $event->event_type), 'HOLD') || str_contains(strtoupper((string) $event->event_type), 'BLOCK') ? 'border-amber-300 bg-amber-50/30' : 'border-stone-300 bg-stone-50/40' }} rounded-r-md py-1 px-2 text-xs text-zinc-700 space-y-1">
+                                                        <p class="leading-relaxed select-text">{{ $eventText }}</p>
+                                                        @if(isset($event->metadata['blocked_duration']))
+                                                            <span class="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/80 font-medium">
+                                                                <x-lucide-clock class="w-3 h-3 text-emerald-600 shrink-0" />
+                                                                {{ __('Bloqueada por :duration', ['duration' => $event->metadata['blocked_duration']]) }}
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             @endif
 
                                             @php
@@ -2331,22 +2258,25 @@
                             </div>
                         </div>
                     </div>
-                @endif
 
-                <!-- TRELLO INTEGRATION SECTION (DESCRIPTION, ATTACHMENTS & COMMENTS) -->
-                <div class="space-y-4 pt-3 border-t border-[#e9e9e7]">
-                    <div class="flex items-center justify-between">
-                        <h4 class="font-bold text-xs text-zinc-900 uppercase tracking-wider flex items-center gap-2">
-                            <span class="w-5 h-5 rounded bg-sky-600 text-white flex items-center justify-center font-bold text-[10px] shadow-2xs">T</span>
-                            <span>{{ __('INFORMACIÓN & ARCHIVOS DE TRELLO') }}</span>
-                        </h4>
-                        @if($order->trello_card_id)
-                            <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="{{ __('Actualizar datos de Trello') }}">
-                                <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshTrelloData,loadTrelloComments,loadTrelloDetails" class="w-3.5 h-3.5" />
-                                <span>{{ __('Actualizar Trello') }}</span>
-                            </button>
-                        @endif
-                    </div>
+                <!-- TAB 2: COMMENTS + ADJUNTOS -->
+                <div x-show="activeTab === 'comments'" class="space-y-6" x-cloak>
+                    <!-- TRELLO INTEGRATION SECTION (DESCRIPTION, ATTACHMENTS & COMMENTS) -->
+                    <div class="space-y-4">
+                        <!-- Recycled Section Header -->
+                        <x-orders.tab-section-header :title="__('INFORMACIÓN & ARCHIVOS DE TRELLO')">
+                            <x-slot:icon>
+                                <x-lucide-message-square class="w-4.5 h-4.5 text-sky-600 shrink-0" />
+                            </x-slot:icon>
+                            @if($order->trello_card_id)
+                                <x-slot:actions>
+                                    <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="{{ __('Actualizar datos de Trello') }}">
+                                        <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshTrelloData,loadTrelloComments,loadTrelloDetails" class="w-3.5 h-3.5" />
+                                        <span>{{ __('Actualizar Trello') }}</span>
+                                    </button>
+                                </x-slot:actions>
+                            @endif
+                        </x-orders.tab-section-header>
 
                     @if(!$order->trello_card_id)
                         <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs text-blue-900 flex items-center justify-between gap-3 shadow-2xs">
@@ -2370,7 +2300,7 @@
                         <!-- TRELLO DESCRIPTION BLOCK -->
                         <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-2 shadow-2xs">
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                                <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                <h5 class="font-bold text-[13px] text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-align-left class="w-4 h-4 text-sky-600 shrink-0" />
                                     <span>{{ __('Descripción de la Tarjeta') }}</span>
                                 </h5>
@@ -2495,7 +2425,7 @@
                             </div>
 
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                                <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                <h5 class="font-bold text-[13px] text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-paperclip class="w-4 h-4 text-sky-600 shrink-0" />
                                     <span>{{ __('Archivos Adjuntos') }}</span>
                                     @if(!empty($trelloAttachments))
@@ -2790,7 +2720,7 @@
                         <!-- TRELLO COMMENTS BLOCK -->
                         <div class="bg-[#fafaf9] border border-[#e9e9e7] rounded-xl p-4 space-y-4 shadow-2xs">
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
-                                <h5 class="font-bold text-xs text-zinc-900 flex items-center gap-1.5">
+                                <h5 class="font-bold text-[13px] text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-message-square class="w-4 h-4 text-sky-600 shrink-0" />
                                     <span>{{ __('Comentarios') }}</span>
                                     @if(!empty($trelloComments))
@@ -2819,6 +2749,7 @@
                                     isSubmitting: false,
                                     isDraggingPhotos: false,
                                     isUploadingPhotos: false,
+                                    activePhotoUploads: 0,
                                     stagedPhotos: [],
 
                                     init() {
@@ -2827,19 +2758,39 @@
 
                                         this.$watch('$wire.newTrelloComment', (val) => {
                                             if (!val || val.trim() === '') {
-                                                if (this.$refs.editor && this.$refs.editor.innerHTML !== '') {
+                                                if (this.$refs.editor && this.$refs.editor.innerHTML !== '' && document.activeElement !== this.$refs.editor) {
                                                     this.$refs.editor.innerHTML = '';
                                                     this.updateEmptyState();
                                                     this.updateActiveFormatting();
                                                 }
-                                                this.clearStagedPhotos();
                                             }
                                         });
+
+                                        this.$watch('$wire.orderId', () => {
+                                            if (this.$refs.editor) {
+                                                this.$refs.editor.innerHTML = '';
+                                                this.updateEmptyState();
+                                                this.updateActiveFormatting();
+                                            }
+                                            this.clearStagedPhotos(false);
+                                        });
+
+                                        if (window.ResizeObserver) {
+                                            const ro = new ResizeObserver(() => {
+                                                if (this.$el.contains(document.activeElement)) {
+                                                    this.keepBottomInView();
+                                                }
+                                            });
+                                            ro.observe(this.$el);
+                                        }
                                     },
 
                                     focusEditor() {
                                         if (this.$refs.editor) {
                                             this.$refs.editor.focus();
+                                            this.$nextTick(() => {
+                                                this.keepBottomInView();
+                                            });
                                         }
                                     },
 
@@ -3613,6 +3564,9 @@
                                     handleKeyup(e) {
                                         this.updateActiveFormatting();
                                         this.updateEmptyState();
+                                        if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'PageUp' || e.key === 'PageDown') {
+                                            this.keepBottomInView();
+                                        }
                                     },
 
                                     handleInput() {
@@ -3676,17 +3630,42 @@
                                         this.updateActiveFormatting();
                                         this.syncToLivewire();
                                         this.$nextTick(() => {
-                                            this.scrollCursorIntoView();
+                                            this.keepBottomInView();
                                         });
                                     },
 
-                                    scrollCursorIntoView() {
+                                    keepBottomInView() {
+                                        const scrollContainer = this.$el.closest('.overflow-y-auto');
+                                        if (!scrollContainer) return;
+
+                                        const containerRect = scrollContainer.getBoundingClientRect();
+                                        const boxRect = this.$el.getBoundingClientRect();
+
+                                        // Margen inferior deseado para que la caja quede pegada al fondo visible,
+                                        // dejando espacio para la barra de acciones y el botón flotante de Cerrar (Esc).
+                                        const desiredBottom = containerRect.bottom - 75;
+
+                                        // Si la caja sobrepasa o toca el fondo deseado del viewport:
+                                        const overflowBottom = boxRect.bottom - desiredBottom;
+                                        if (overflowBottom > 0) {
+                                            scrollContainer.scrollTop += overflowBottom;
+                                            return;
+                                        }
+
+                                        // Si el usuario navega hacia arriba con las flechas o selecciona texto en los párrafos de arriba,
+                                        // evitar que quede tapado por las pestañas fijas de arriba (top + 50px).
                                         const sel = window.getSelection();
-                                        if (sel && sel.anchorNode) {
-                                            const el = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
-                                            if (el && typeof el.scrollIntoView === 'function') {
-                                                el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                                            }
+                                        if (sel && sel.rangeCount > 0 && sel.anchorNode) {
+                                            try {
+                                                const range = sel.getRangeAt(0);
+                                                const rRect = range.getBoundingClientRect();
+                                                if (rRect && rRect.top > 0) {
+                                                    const overflowTop = (containerRect.top + 50) - rRect.top;
+                                                    if (overflowTop > 0) {
+                                                        scrollContainer.scrollTop -= overflowTop;
+                                                    }
+                                                }
+                                            } catch (e) {}
                                         }
                                     },
 
@@ -3728,7 +3707,12 @@
                                         $wire.set('newTrelloComment', md);
                                         $wire.addTrelloComment().then(() => {
                                             this.isSubmitting = false;
-                                            this.clearStagedPhotos();
+                                            if (this.$refs.editor) {
+                                                this.$refs.editor.innerHTML = '';
+                                                this.updateEmptyState();
+                                                this.updateActiveFormatting();
+                                            }
+                                            this.clearStagedPhotos(false);
                                         }).catch(() => {
                                             this.isSubmitting = false;
                                         });
@@ -3738,6 +3722,7 @@
                                         if (!fileList || fileList.length === 0) return;
                                         const maxBytes = 10 * 1024 * 1024;
                                         let oversized = [];
+                                        let validFiles = [];
 
                                         for (let i = 0; i < fileList.length; i++) {
                                             const file = fileList[i];
@@ -3762,58 +3747,66 @@
                                                 name: file.name,
                                                 size: sizeFormatted
                                             });
+                                            validFiles.push(file);
                                         }
 
                                         if (oversized.length > 0) {
                                             $wire.dispatch('toast', { message: '{{ __('Una o más fotos superan los 10 MB (límite de Trello): ') }}' + oversized.join(', ') });
                                         }
 
-                                        this.syncPhotosToInput();
+                                        if (validFiles.length > 0) {
+                                            this.activePhotoUploads++;
+                                            this.isUploadingPhotos = true;
+                                            $wire.uploadMultiple(
+                                                'commentPhotos',
+                                                validFiles,
+                                                () => {
+                                                    this.activePhotoUploads = Math.max(0, this.activePhotoUploads - 1);
+                                                    this.isUploadingPhotos = this.activePhotoUploads > 0;
+                                                },
+                                                () => {
+                                                    this.activePhotoUploads = Math.max(0, this.activePhotoUploads - 1);
+                                                    this.isUploadingPhotos = this.activePhotoUploads > 0;
+                                                    $wire.dispatch('toast', { message: '{{ __('Error al cargar una o más fotos. Inténtalo de nuevo.') }}' });
+                                                }
+                                            );
+                                        }
                                     },
 
                                     removePhoto(index) {
                                         if (this.stagedPhotos[index]) {
                                             try { URL.revokeObjectURL(this.stagedPhotos[index].url); } catch(e) {}
                                             this.stagedPhotos.splice(index, 1);
-                                            this.syncPhotosToInput();
                                             $wire.call('removeCommentPhoto', index);
                                         }
                                     },
 
-                                    clearStagedPhotos() {
+                                    clearStagedPhotos(syncServer = true) {
                                         this.stagedPhotos.forEach(p => {
                                             try { URL.revokeObjectURL(p.url); } catch(e) {}
                                         });
                                         this.stagedPhotos = [];
+                                        this.activePhotoUploads = 0;
+                                        this.isUploadingPhotos = false;
                                         const input = this.$refs.photoInput;
                                         if (input) {
                                             input.value = '';
                                         }
-                                        $wire.call('clearCommentPhotos');
-                                    },
-
-                                    syncPhotosToInput() {
-                                        const input = this.$refs.photoInput;
-                                        if (!input) return;
-                                        try {
-                                            const dt = new DataTransfer();
-                                            this.stagedPhotos.forEach(p => dt.items.add(p.file));
-                                            input.files = dt.files;
-                                            input.dispatchEvent(new Event('change', { bubbles: true }));
-                                        } catch (e) {
-                                            console.error('Error syncing photos to input:', e);
+                                        if (syncServer) {
+                                            $wire.call('clearCommentPhotos');
                                         }
                                     },
 
                                     handleFileSelect(event) {
-                                        const files = event.target.files;
-                                        if (files && files.length > 0) {
+                                        const files = Array.from(event.target.files || []);
+                                        if (files.length > 0) {
                                             this.addFiles(files);
                                         }
+                                        event.target.value = '';
                                     },
 
                                     handlePaste(event) {
-                                        const clipboard = event.clipboardData;
+                                        const clipboard = event.clipboardData || window.clipboardData;
                                         if (!clipboard) return;
 
                                         const items = clipboard.items;
@@ -3826,9 +3819,18 @@
                                                     if (file) {
                                                         const ext = (file.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
                                                         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                                                        const namedFile = new File([file], 'captura_' + timestamp + '.' + ext, { type: file.type });
+                                                        const namedFile = new File([file], 'captura_' + timestamp + '_' + (i + 1) + '.' + ext, { type: file.type });
                                                         imageFiles.push(namedFile);
                                                     }
+                                                }
+                                            }
+                                        }
+
+                                        if (imageFiles.length === 0 && clipboard.files && clipboard.files.length > 0) {
+                                            for (let i = 0; i < clipboard.files.length; i++) {
+                                                const file = clipboard.files[i];
+                                                if (file.type && file.type.startsWith('image/')) {
+                                                    imageFiles.push(file);
                                                 }
                                             }
                                         }
@@ -4194,7 +4196,7 @@
                                     @dragover.prevent="isDraggingPhotos = true"
                                     @dragleave.prevent="isDraggingPhotos = false"
                                     @drop.prevent="handleEditorDrop($event)"
-                                    class="p-3 min-h-[90px] max-h-[220px] overflow-y-auto cursor-text bg-white"
+                                    class="p-3 min-h-[90px] cursor-text bg-white"
                                 >
                                     <div 
                                         x-ref="editor"
@@ -4299,13 +4301,11 @@
                                         <button 
                                             @click="submit()"
                                             :disabled="isSubmitting || isUploadingPhotos || (isEmpty && stagedPhotos.length === 0)"
-                                            wire:loading.attr="disabled"
-                                            wire:target="addTrelloComment, commentPhotos"
                                             type="button" 
                                             class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs transition flex items-center gap-1.5 shadow-2xs cursor-pointer shrink-0"
                                         >
-                                            <x-lucide-send x-show="!isSubmitting && !isUploadingPhotos" wire:loading.remove wire:target="addTrelloComment, commentPhotos" class="w-3.5 h-3.5" />
-                                            <x-lucide-loader-2 x-show="isSubmitting || isUploadingPhotos" wire:loading wire:target="addTrelloComment, commentPhotos" class="w-3.5 h-3.5 animate-spin" />
+                                            <x-lucide-send x-show="!isSubmitting && !isUploadingPhotos" class="w-3.5 h-3.5" />
+                                            <x-lucide-loader-2 x-show="isSubmitting || isUploadingPhotos" x-cloak class="w-3.5 h-3.5 animate-spin" />
                                             <span x-text="isSubmitting ? '{{ __('Publicando...') }}' : (isUploadingPhotos ? '{{ __('Cargando fotos...') }}' : '{{ __('Publicar en Trello') }}')">{{ __('Publicar en Trello') }}</span>
                                         </button>
                                     </div>
@@ -4314,7 +4314,6 @@
                                 <!-- Hidden File Input for Comment Photos -->
                                 <input 
                                     type="file" 
-                                    wire:model="commentPhotos" 
                                     x-ref="photoInput" 
                                     @change="handleFileSelect($event)" 
                                     accept="image/*" 
@@ -4402,14 +4401,25 @@
 
                     @endif
                 </div>
+            </div> <!-- Closes Tab 2: COMMENTS + ADJUNTOS -->
+        </div> <!-- Closes Recycled Tab Panels Container -->
+    </div> <!-- Closes 3-Tab System -->
+    @endif
 
-            </div>
+    </div>
 
 
-            <!-- Flyout Footer -->
-            <div class="p-4 border-t border-[#e9e9e7] bg-[#f7f7f5] flex justify-end">
-                <button wire:click="closeModal" class="px-4 py-1.5 rounded-md bg-stone-200 hover:bg-stone-300 text-zinc-800 text-xs font-medium transition">
-                    {{ __('Cerrar Panel') }}
+            <!-- Floating Close Button (Fixed over content, always in position, zero scroll required) -->
+            <div class="absolute bottom-5 right-6 z-40 pointer-events-none select-none">
+                <button 
+                    type="button"
+                    @click="confirmClose(() => $wire.closeModal())" 
+                    class="pointer-events-auto px-4 py-2 rounded-xl bg-white/95 hover:bg-stone-50 active:bg-stone-100 text-zinc-800 text-xs font-semibold shadow-lg hover:shadow-xl backdrop-blur-md transition-all duration-150 flex items-center gap-2 cursor-pointer group border border-[#e9e9e7] shadow-stone-900/10 hover:scale-[1.02] active:scale-[0.98]"
+                    title="{{ __('Cerrar panel (Esc)') }}"
+                >
+                    <x-lucide-x class="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-800 transition-colors" />
+                    <span>{{ __('Cerrar Panel') }}</span>
+                    <kbd class="px-1.5 py-0.5 text-[9.5px] font-mono font-semibold bg-stone-100 text-zinc-500 rounded border border-stone-200">Esc</kbd>
                 </button>
             </div>
 
@@ -4637,11 +4647,126 @@
                         </div>
                     </div>
 
+                    @if($order && $order->hasElements())
+                        <!-- Scope of Approval (Uno / Varios / Todos) -->
+                        <div class="space-y-3 p-3.5 bg-[#fbfbfa] border border-stone-200 rounded-2xl">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                                    <x-lucide-check-square class="w-4 h-4 text-pink-600" />
+                                    <span>{{ __('¿Qué deseas aprobar?') }}</span>
+                                </label>
+                                <span class="text-[10px] text-zinc-400 font-medium">{{ __('Selecciona el alcance') }}</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                <button 
+                                    type="button" 
+                                    wire:click="$set('approvalScope', 'all')" 
+                                    class="flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer select-none text-left {{ $approvalScope === 'all' ? 'border-pink-500 bg-pink-50/70 text-pink-950 font-bold ring-2 ring-pink-500/20 shadow-2xs' : 'border-stone-200 bg-white hover:bg-stone-50 text-zinc-700' }}">
+                                    <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 {{ $approvalScope === 'all' ? 'border-pink-600 bg-pink-600' : 'border-stone-300 bg-white' }}">
+                                        @if($approvalScope === 'all')
+                                            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                        @endif
+                                    </div>
+                                    <span>{{ __('Toda la orden') }}</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    wire:click="$set('approvalScope', 'stage')" 
+                                    class="flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer select-none text-left {{ $approvalScope === 'stage' ? 'border-pink-500 bg-pink-50/70 text-pink-950 font-bold ring-2 ring-pink-500/20 shadow-2xs' : 'border-stone-200 bg-white hover:bg-stone-50 text-zinc-700' }}">
+                                    <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 {{ $approvalScope === 'stage' ? 'border-pink-600 bg-pink-600' : 'border-stone-300 bg-white' }}">
+                                        @if($approvalScope === 'stage')
+                                            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                        @endif
+                                    </div>
+                                    <span>{{ __('Por Etapa') }}</span>
+                                </button>
+                                <button 
+                                    type="button" 
+                                    wire:click="$set('approvalScope', 'elements')" 
+                                    class="flex items-center gap-2.5 p-2.5 rounded-xl border text-xs font-medium transition cursor-pointer select-none text-left {{ $approvalScope === 'elements' ? 'border-pink-500 bg-pink-50/70 text-pink-950 font-bold ring-2 ring-pink-500/20 shadow-2xs' : 'border-stone-200 bg-white hover:bg-stone-50 text-zinc-700' }}">
+                                    <div class="w-4 h-4 rounded-full border flex items-center justify-center shrink-0 {{ $approvalScope === 'elements' ? 'border-pink-600 bg-pink-600' : 'border-stone-300 bg-white' }}">
+                                        @if($approvalScope === 'elements')
+                                            <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                        @endif
+                                    </div>
+                                    <span>{{ __('Piezas específicas') }}</span>
+                                </button>
+                            </div>
+
+                            @if($approvalScope === 'stage')
+                                <div class="pt-1 space-y-1">
+                                    <label class="block text-[11px] font-semibold text-zinc-700">{{ __('Selecciona la etapa a aprobar:') }}</label>
+                                    <select wire:model.live="selectedApprovalStageId" class="w-full bg-white border border-stone-200 rounded-xl p-2.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 shadow-2xs">
+                                        <option value="">{{ __('Selecciona una etapa...') }}</option>
+                                        @foreach($order->stages as $stg)
+                                            <option value="{{ $stg->id }}">{{ $stg->name }} ({{ $stg->elements->count() }} piezas)</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @elseif($approvalScope === 'elements')
+                                <div class="pt-1 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-[11px] font-bold text-zinc-700">{{ __('Selecciona las piezas aprobadas:') }}</label>
+                                        <div class="flex items-center gap-2 text-[10px]">
+                                            <button type="button" wire:click="selectAllApprovalElements" class="text-pink-600 hover:text-pink-800 font-bold hover:underline cursor-pointer">
+                                                {{ __('Marcar todas') }}
+                                            </button>
+                                            <span class="text-stone-300">•</span>
+                                            <button type="button" wire:click="deselectAllApprovalElements" class="text-zinc-500 hover:text-zinc-700 font-medium hover:underline cursor-pointer">
+                                                {{ __('Desmarcar') }}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="border border-stone-200 rounded-xl bg-white divide-y divide-stone-100 max-h-52 overflow-y-auto shadow-2xs">
+                                        @forelse($order->elements as $el)
+                                            @php
+                                                $isElSelected = in_array((string)$el->id, array_map('strval', $selectedApprovalElementIds), true) || in_array($el->id, $selectedApprovalElementIds, true);
+                                            @endphp
+                                            <label class="flex items-center gap-2.5 p-2.5 cursor-pointer hover:bg-stone-50/80 transition text-xs select-none {{ $isElSelected ? 'bg-pink-50/40' : '' }}">
+                                                <input 
+                                                    type="checkbox" 
+                                                    wire:model.live="selectedApprovalElementIds" 
+                                                    value="{{ $el->id }}" 
+                                                    class="w-4 h-4 rounded border-stone-300 text-pink-600 focus:ring-pink-500 cursor-pointer" 
+                                                />
+                                                <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
+                                                    <span class="font-medium text-zinc-900 {{ $el->is_approved ? 'text-zinc-700' : '' }}">{{ $el->name }}</span>
+                                                    @if($el->dimensions)
+                                                        <span class="text-[9.5px] font-mono text-zinc-500 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200">
+                                                            {{ $el->dimensions }}
+                                                        </span>
+                                                    @endif
+                                                    @if($el->is_approved)
+                                                        <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-1.5 py-0.2 rounded">
+                                                            <x-lucide-check class="w-2.5 h-2.5" />
+                                                            <span>{{ __('Aprobada') }}</span>
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                @if($el->stage)
+                                                    <span class="text-[9.5px] font-semibold text-pink-700 bg-pink-50 px-2 py-0.5 rounded-full border border-pink-200 shrink-0">
+                                                        {{ $el->stage->name }}
+                                                    </span>
+                                                @endif
+                                            </label>
+                                        @empty
+                                            <div class="p-4 text-center text-xs text-zinc-400">
+                                                {{ __('No hay piezas registradas en esta orden.') }}
+                                            </div>
+                                        @endforelse
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
                     <!-- Soporte de Aprobación Field (Texto o Imagen con Paste y Drag&Drop) -->
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
                             <label class="block text-xs font-semibold text-zinc-800">
-                                {{ __('Soporte de aprobación') }} <span class="text-rose-500">*</span>
+                                {{ __('Soporte de aprobación y notas adicionales') }} <span class="text-rose-500">*</span>
                             </label>
                             <span class="text-[10px] text-zinc-400">{{ __('Texto o Imagen (al menos uno)') }}</span>
                         </div>

@@ -291,7 +291,13 @@ class OrderEvent extends Model
             return __('Archivo adjuntado a Trello (:file)', ['file' => $this->new_value ?? __('Archivo')]);
         }
         if (str_contains($type, 'COMMENT')) {
-            return __('Comentario de Trello agregado');
+            $author = ! empty($this->actor)
+                ? $this->actor
+                : ($this->metadata['author_name'] ?? $this->metadata['user'] ?? $this->order?->designer?->name ?? null);
+
+            return $author
+                ? __('Comentario de :user', ['user' => $author])
+                : __('Comentario');
         }
         if (str_contains($type, 'STATUS_CHANGED_VIA_TRELLO')) {
             $statusLabel = $this->formatValueIfDate($this->new_value);

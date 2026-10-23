@@ -429,6 +429,55 @@ class Order extends Model
         return $this->hasMany(RelatedTask::class);
     }
 
+    public function stages(): HasMany
+    {
+        return $this->hasMany(OrderStage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function elements(): HasMany
+    {
+        return $this->hasMany(OrderElement::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function hasElements(): bool
+    {
+        return $this->elements()->exists();
+    }
+
+    public function getActiveStage(): ?OrderStage
+    {
+        return $this->stages->first(fn (OrderStage $s) => ! $s->isCompleted());
+    }
+
+    /**
+     * @return array{total: int, approved: int, in_alta: int, ready_for_production: int, percentage: int}
+     */
+    public function getAltaProgressAttribute(): array
+    {
+        $total = $this->elements->count();
+        if ($total === 0) {
+            return [
+                'total' => 0,
+                'approved' => 0,
+                'in_alta' => 0,
+                'ready_for_production' => 0,
+                'percentage' => 0,
+            ];
+        }
+
+        $approved = $this->elements->filter(fn (OrderElement $e) => $e->is_approved)->count();
+        $inAlta = $this->elements->filter(fn (OrderElement $e) => $e->isInAlta())->count();
+        $ready = $this->elements->filter(fn (OrderElement $e) => $e->isReadyForProduction())->count();
+
+        return [
+            'total' => $total,
+            'approved' => $approved,
+            'in_alta' => $inAlta,
+            'ready_for_production' => $ready,
+            'percentage' => (int) round(($ready / $total) * 100),
+        ];
+    }
+
     public function events(): HasMany
     {
         return $this->hasMany(OrderEvent::class)->orderBy('created_at', 'desc')->orderBy('id', 'desc');
@@ -557,7 +606,7 @@ class Order extends Model
             return $designer->getQueueStatus();
         }
 
-        return Designer::getLeadDesigner()->getQueueStatus();
+        return Designer::getLeadDesigner()?->getQueueStatus() ?? CoreStatus::CESAR_ORDERS_RECEIVED;
     }
 
     public function getPrimaryDesignerId(): ?int

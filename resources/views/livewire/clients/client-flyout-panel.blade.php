@@ -5,6 +5,7 @@
             this.snapshot();
             this.$watch('$wire.isOpen', (open) => {
                 if (open) {
+                    window.KudosLoader?.hide();
                     this.snapshot();
                     window.KudosDirtyGuard.register('client-flyout-panel', () => this.isDirty());
                     this.$nextTick(() => {

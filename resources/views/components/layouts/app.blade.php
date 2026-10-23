@@ -822,6 +822,9 @@
         <span x-text="message"></span>
     </div>
 
+    <!-- Global Loading Overlay -->
+    <x-global-loading-overlay />
+
     @livewireScripts
     @fluxScripts
 </body>

@@ -141,17 +141,33 @@
             @endif
         </div>
 
-        @if($order->relatedTasks->count() > 0)
-            <button 
-                @click.stop="showTasks = !showTasks"
-                type="button"
-                class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
-                title="{{ __('Ver subtareas de la orden') }}">
-                <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
-                <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} {{ __('Tareas') }}</span>
-                <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
-            </button>
-        @endif
+        <div class="flex items-center gap-1 shrink-0">
+            @php
+                $elemCount = $order->elements->count();
+            @endphp
+            @if($elemCount > 0)
+                @php
+                    $readyCount = $order->elements->filter(fn($e) => $e->isReadyForProduction())->count();
+                    $activeStage = $order->getActiveStage();
+                @endphp
+                <span class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] {{ $readyCount === $elemCount ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-pink-50 text-pink-800 border-pink-200' }}" title="{{ __('Piezas en Alta') }}: {{ $readyCount }}/{{ $elemCount }} {{ __('listas para producción') }} {{ $activeStage ? '• ' . $activeStage->name : '' }}">
+                    <x-lucide-layers class="w-3 h-3 text-pink-600 shrink-0" />
+                    <span>{{ $readyCount }}/{{ $elemCount }}</span>
+                </span>
+            @endif
+
+            @if($order->relatedTasks->count() > 0)
+                <button 
+                    @click.stop="showTasks = !showTasks"
+                    type="button"
+                    class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
+                    title="{{ __('Ver subtareas de la orden') }}">
+                    <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
+                    <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} {{ __('Tareas') }}</span>
+                    <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
+                </button>
+            @endif
+        </div>
     </div>
 
     <!-- Expandable Subtasks List -->

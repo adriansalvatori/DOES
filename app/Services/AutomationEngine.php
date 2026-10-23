@@ -978,7 +978,7 @@ class AutomationEngine
                     ->where('status', '!=', 'done')
                     ->exists();
 
-                if ($hasFuturePendingWorkSubtasks) {
+                if ($hasFuturePendingWorkSubtasks && ! $order->isUrgente()) {
                     $targetStatus = $order->getDesignerOrdersReceivedStatus();
                     $order->update([
                         'core_status' => $targetStatus,
@@ -1006,7 +1006,7 @@ class AutomationEngine
                     ->where('status', '!=', 'done')
                     ->exists();
 
-                if ($hasFuturePendingWorkSubtasks) {
+                if ($hasFuturePendingWorkSubtasks && ! $order->isUrgente()) {
                     $targetStatus = $order->origin_core_status ?? $order->getDesignerOrdersReceivedStatus();
                     $targetSubstatus = $order->origin_substatus;
                     $prevStatus = $order->core_status;

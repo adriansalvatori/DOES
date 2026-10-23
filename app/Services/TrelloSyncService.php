@@ -31,12 +31,26 @@ class TrelloSyncService
             return true;
         }
 
-        return (bool) Cache::get(self::PAUSE_CACHE_KEY, false);
+        if (config('services.trello.paused', false)) {
+            return true;
+        }
+
+        $cached = Cache::get(self::PAUSE_CACHE_KEY);
+        if ($cached !== null) {
+            return (bool) $cached;
+        }
+
+        return filter_var(Setting::get(self::PAUSE_CACHE_KEY, false), FILTER_VALIDATE_BOOLEAN);
     }
 
     public function setPaused(bool $paused): void
     {
         Cache::forever(self::PAUSE_CACHE_KEY, $paused);
+        try {
+            Setting::set(self::PAUSE_CACHE_KEY, $paused ? '1' : '0');
+        } catch (\Throwable) {
+            // Ignore if setting table is unavailable (e.g. before migrations)
+        }
         Log::info('Trello sync pause status set to: '.($paused ? 'PAUSED' : 'ACTIVE'));
     }
 
@@ -99,8 +113,8 @@ class TrelloSyncService
      */
     public function getBoardLists(string $boardId, string $apiKey, ?string $apiToken = null): array
     {
-        if ($this->isDemoMode()) {
-            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.'];
+        if ($this->isDemoMode() || $this->isPaused()) {
+            return ['success' => false, 'paused' => true, 'error' => 'Trello API está desconectado o pausado.'];
         }
 
         $boardId = $this->extractBoardId($boardId);
@@ -129,8 +143,8 @@ class TrelloSyncService
      */
     public function getBoardCards(string $boardId, string $apiKey, ?string $apiToken = null): array
     {
-        if ($this->isDemoMode()) {
-            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.'];
+        if ($this->isDemoMode() || $this->isPaused()) {
+            return ['success' => false, 'paused' => true, 'error' => 'Trello API está desconectado o pausado.'];
         }
 
         $boardId = $this->extractBoardId($boardId);

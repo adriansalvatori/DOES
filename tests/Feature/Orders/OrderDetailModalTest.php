@@ -314,8 +314,8 @@ class OrderDetailModalTest extends TestCase
             ->call('sortByActiveOrders', 'designer')
             ->assertSet('activeOrdersSortField', 'designer')
             ->assertSet('activeOrdersSortDirection', 'asc')
-            ->assertSee('César')
-            ->assertSee('WO 10000');
+            ->assertDontSee('OTHER ACTIVE ORDERS FOR THIS CLIENT')
+            ->assertDontSee('Otras Órdenes Activas del Cliente');
     }
 
     public function test_approval_validation_requires_support(): void

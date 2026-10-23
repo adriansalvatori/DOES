@@ -510,7 +510,7 @@ class Board extends Component
     #[Computed]
     public function orders(): Collection
     {
-        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee', 'clientLocation']);
+        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee', 'clientLocation', 'stages', 'elements']);
 
         if (! empty($this->search)) {
             $query->search($this->search);

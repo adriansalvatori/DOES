@@ -699,14 +699,14 @@
 
                 <!-- Center: Designer Filter Tabs -->
                 <div class="flex items-center gap-1 overflow-x-auto custom-horizontal-scrollbar py-0.5 text-xs shrink min-w-0">
-                    <button wire:click="$set('selectedDesignerFilter', 'all')" class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
+                    <button wire:click="changeDesignerFilter('all')" class="px-2.5 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter === 'all' ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
                         <x-lucide-users class="w-3 h-3 {{ $selectedDesignerFilter === 'all' ? 'text-zinc-600' : 'text-zinc-400' }}" />
                         <span>{{ __('Todos los diseñadores') }}</span>
                     </button>
 
                     @foreach($allDesigners as $des)
                         <button 
-                            wire:click="$set('selectedDesignerFilter', '{{ $des->id }}')" 
+                            wire:click="changeDesignerFilter('{{ $des->id }}')" 
                             class="px-2 py-1 rounded-md font-medium transition flex items-center gap-1.5 shrink-0 {{ $selectedDesignerFilter == $des->id ? 'bg-white text-zinc-900 border border-[#d0d0ce] shadow-2xs font-semibold' : 'text-zinc-500 hover:text-zinc-800 hover:bg-stone-100' }}">
                             <span class="w-2 h-2 rounded-full {{ $des->dot_color_class }}" style="{{ $des->dot_inline_style }}"></span>
                             <span>{{ $des->name }}</span>

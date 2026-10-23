@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\CoreStatus;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Models\Order;
+use App\Models\OrderEvent;
 use App\Models\User;
 use App\Services\TrelloSyncService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -141,6 +142,37 @@ class TrelloCardCommentsTest extends TestCase
             ->assertCount('trelloComments', 1)
             ->set('newTrelloComment', 'Comentario publicado desde el modal')
             ->call('addTrelloComment')
+            ->assertSet('newTrelloComment', '');
+
+        $this->assertDatabaseHas('order_events', [
+            'order_id' => $order->id,
+            'event_type' => 'TRELLO_COMMENT_ADDED',
+        ]);
+    }
+
+    public function test_calling_post_comment_acts_as_alias_for_add_trello_comment(): void
+    {
+        Http::fake([
+            'https://api.trello.com/1/cards/card_alias_test/actions/comments*' => Http::response([
+                'id' => 'comm_alias_posted',
+                'date' => '2026-08-23T15:35:00.000Z',
+                'data' => ['text' => 'Comentario via postComment alias'],
+                'memberCreator' => ['fullName' => 'Usuario App'],
+            ], 200),
+        ]);
+
+        $order = Order::create([
+            'company_name' => 'Alias Co',
+            'task_name' => 'Alias Task',
+            'trello_card_id' => 'card_alias_test',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->set('newTrelloComment', 'Comentario via postComment alias')
+            ->call('postComment')
             ->assertSet('newTrelloComment', '');
 
         $this->assertDatabaseHas('order_events', [
@@ -374,6 +406,20 @@ class TrelloCardCommentsTest extends TestCase
         $this->assertStringContainsString('<h2>Subtítulo Secundario</h2>', $rendered);
         $this->assertStringContainsString('<hr', $rendered);
         $this->assertStringContainsString('Contenido normal de comentario.', $rendered);
+    }
+
+    public function test_comment_markdown_rendering_supports_inline_checklists_and_tasks(): void
+    {
+        $component = new OrderDetailModal;
+
+        $input = '**FRONT** - [ ] Fachada blanca - [x] PUERTAS NEGRAS';
+        $rendered = $component->renderCommentMarkdown($input);
+
+        $this->assertStringContainsString('<strong>FRONT</strong>', $rendered);
+        $this->assertStringContainsString('task-list-item', $rendered);
+        $this->assertStringContainsString('Fachada blanca', $rendered);
+        $this->assertStringContainsString('PUERTAS NEGRAS', $rendered);
+        $this->assertStringContainsString('line-through', $rendered);
     }
 
     public function test_posting_comment_with_attached_photo(): void
@@ -638,5 +684,48 @@ class TrelloCardCommentsTest extends TestCase
 
         $this->assertTrue($res['success']);
         $this->assertEquals('action_999', $res['data']['id']);
+    }
+
+    public function test_comment_editor_photo_paste_uses_upload_multiple_without_recursive_change_event(): void
+    {
+        $order = Order::create([
+            'company_name' => 'PASTE TEST CO',
+            'task_name' => 'Test Copy Paste',
+            'trello_card_id' => 'card_paste_test',
+            'in_workspace' => true,
+            'core_status' => CoreStatus::ENTRANTE,
+        ]);
+
+        Http::fake([
+            'https://api.trello.com/1/cards/card_paste_test/*' => Http::response([], 200),
+            'https://api.trello.com/1/cards/card_paste_test*' => Http::response(['id' => 'card_paste_test', 'desc' => ''], 200),
+        ]);
+
+        Livewire::test(OrderDetailModal::class)
+            ->call('openModal', $order->id)
+            ->assertSee("\$wire.uploadMultiple(\n                                                'commentPhotos'", false)
+            ->assertDontSee('syncPhotosToInput', false);
+    }
+
+    public function test_comment_event_title_includes_actor_user_name(): void
+    {
+        $eventWithActor = new OrderEvent([
+            'event_type' => 'TRELLO_COMMENT_ADDED',
+            'actor' => 'Euraliz Bravo',
+        ]);
+        $this->assertEquals('Comentario de Euraliz Bravo', $eventWithActor->getFormattedTitle());
+
+        $eventWithMeta = new OrderEvent([
+            'event_type' => 'COMMENT_ADDED',
+            'actor' => null,
+            'metadata' => ['author_name' => 'Adrian Salvatori'],
+        ]);
+        $this->assertEquals('Comentario de Adrian Salvatori', $eventWithMeta->getFormattedTitle());
+
+        $eventAnonymous = new OrderEvent([
+            'event_type' => 'COMMENT_ADDED',
+            'actor' => null,
+        ]);
+        $this->assertEquals('Comentario', $eventAnonymous->getFormattedTitle());
     }
 }

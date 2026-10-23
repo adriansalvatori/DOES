@@ -18,6 +18,8 @@ class RelatedTask extends Model
 
     protected $fillable = [
         'order_id',
+        'order_element_id',
+        'order_stage_id',
         'title',
         'type',
         'category',
@@ -75,6 +77,16 @@ class RelatedTask extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function element(): BelongsTo
+    {
+        return $this->belongsTo(OrderElement::class, 'order_element_id');
+    }
+
+    public function stage(): BelongsTo
+    {
+        return $this->belongsTo(OrderStage::class, 'order_stage_id');
     }
 
     public function assignee(): BelongsTo

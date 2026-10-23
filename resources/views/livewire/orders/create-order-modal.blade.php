@@ -47,7 +47,14 @@
                             flags: Array.from($wire.flags || []).map(String).sort(),
                             due: ($wire.dueDate || '').toString().trim(),
                             createOnTrello: Boolean($wire.createOnTrello),
-                            designers: Array.from($wire.designerIds || []).map(String).sort()
+                            designers: Array.from($wire.designerIds || []).map(String).sort(),
+                            pieces: Array.from($wire.pieces || []).map(p => ({
+                                name: (p.name || '').trim(),
+                                dimensions: (p.dimensions || '').trim(),
+                                material: (p.material || '').trim(),
+                                quantity: Number(p.quantity) || 1
+                            })),
+                            newPieceName: ($wire.newPieceName || '').toString().trim()
                         });
                     },
                     isDirty() {
@@ -63,7 +70,14 @@
                             flags: Array.from($wire.flags || []).map(String).sort(),
                             due: ($wire.dueDate || '').toString().trim(),
                             createOnTrello: Boolean($wire.createOnTrello),
-                            designers: Array.from($wire.designerIds || []).map(String).sort()
+                            designers: Array.from($wire.designerIds || []).map(String).sort(),
+                            pieces: Array.from($wire.pieces || []).map(p => ({
+                                name: (p.name || '').trim(),
+                                dimensions: (p.dimensions || '').trim(),
+                                material: (p.material || '').trim(),
+                                quantity: Number(p.quantity) || 1
+                            })),
+                            newPieceName: ($wire.newPieceName || '').toString().trim()
                         });
                         return current !== this.initialForm;
                     },
@@ -489,6 +503,152 @@
                         </label>
                         <input type="text" wire:model="taskName" placeholder="Ej. MENÚ EXTERIOR ACRÍLICO & ROTULACIÓN" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                         @error('taskName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <!-- Row 3.5: Piezas de la Orden (Opcional) -->
+                    <div class="p-3 bg-stone-50/80 border border-[#e9e9e7] rounded-lg space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <label class="font-medium text-zinc-700 flex items-center gap-1.5">
+                                <x-lucide-layers class="w-3.5 h-3.5 text-pink-600" />
+                                <span class="font-semibold text-zinc-800">Piezas de la Orden</span>
+                                <span class="text-zinc-400 font-normal text-[11px]">(Opcional{{ count($pieces) > 0 ? ': ' . count($pieces) : '' }})</span>
+                            </label>
+                            <button 
+                                type="button" 
+                                wire:click="$toggle('showPieceSpecs')" 
+                                class="text-[11px] text-zinc-500 hover:text-zinc-800 flex items-center gap-1 cursor-pointer font-medium transition">
+                                <x-lucide-sliders-horizontal class="w-3 h-3 text-zinc-400" />
+                                <span>{{ $showPieceSpecs ? 'Ocultar detalles' : 'Medidas / Material / Cantidad' }}</span>
+                            </button>
+                        </div>
+
+                        <!-- Input row to add a piece -->
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-2">
+                                <div class="relative flex-1">
+                                    <input 
+                                        type="text" 
+                                        x-ref="pieceInput"
+                                        wire:model="newPieceName" 
+                                        wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
+                                        placeholder="Nombre de la pieza (ej. Lona Front 3x2m, Aviso 3D)..." 
+                                        class="w-full bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 text-xs focus:border-stone-400 focus:outline-none font-medium placeholder-zinc-400">
+                                </div>
+                                <button 
+                                    type="button" 
+                                    wire:click="addPiece"
+                                    class="px-3 py-1.5 rounded-md bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1 shrink-0 shadow-2xs select-none">
+                                    <x-lucide-plus class="w-3.5 h-3.5 stroke-[2.5]" />
+                                    <span>Añadir Pieza</span>
+                                </button>
+                            </div>
+                            @error('newPieceName') <span class="text-red-500 text-[10px] block">{{ $message }}</span> @enderror
+
+                            <!-- Optional Specs Collapsible -->
+                            @if($showPieceSpecs)
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-[#e9e9e7]/80 text-xs">
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-500 font-medium mb-0.5 flex items-center gap-1">
+                                            <x-lucide-ruler class="w-2.5 h-2.5 text-zinc-400" />
+                                            <span>Medidas:</span>
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            wire:model="newPieceDimensions" 
+                                            wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
+                                            placeholder="ej. 3.5m x 2.2m"
+                                            class="w-full bg-white border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-500 font-medium mb-0.5 flex items-center gap-1">
+                                            <x-lucide-box class="w-2.5 h-2.5 text-zinc-400" />
+                                            <span>Material / Sustrato:</span>
+                                        </label>
+                                        <input 
+                                            type="text" 
+                                            wire:model="newPieceMaterial" 
+                                            wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
+                                            placeholder="ej. Acrílico 3mm, Vinilo"
+                                            class="w-full bg-white border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label class="block text-[10px] text-zinc-500 font-medium mb-0.5 flex items-center gap-1">
+                                            <x-lucide-hash class="w-2.5 h-2.5 text-zinc-400" />
+                                            <span>Cantidad:</span>
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            min="1" 
+                                            wire:model="newPieceQuantity" 
+                                            wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
+                                            class="w-full bg-white border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 font-semibold"
+                                        />
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Pieces list -->
+                        @if(!empty($pieces))
+                            <div class="space-y-1.5 pt-1 max-h-48 overflow-y-auto divide-y divide-stone-100">
+                                @foreach($pieces as $idx => $piece)
+                                    <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-md border border-[#e9e9e7] text-xs group hover:border-stone-300 transition">
+                                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                                            <span class="flex items-center justify-center w-5 h-5 rounded-full bg-pink-50 text-pink-700 font-bold text-[10px] shrink-0 border border-pink-200">
+                                                {{ $idx + 1 }}
+                                            </span>
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-semibold text-zinc-800 truncate">{{ $piece['name'] }}</span>
+                                                    @if(!empty($piece['quantity']) && $piece['quantity'] > 1)
+                                                        <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-stone-100 text-zinc-600 border border-stone-200 shrink-0">
+                                                            x{{ $piece['quantity'] }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                                @if(!empty($piece['dimensions']) || !empty($piece['material']))
+                                                    <div class="flex items-center gap-2 text-[10px] text-zinc-500 mt-0.5 truncate">
+                                                        @if(!empty($piece['dimensions']))
+                                                            <span class="flex items-center gap-0.5">
+                                                                <x-lucide-ruler class="w-2.5 h-2.5 text-zinc-400 shrink-0" />
+                                                                <span>{{ $piece['dimensions'] }}</span>
+                                                            </span>
+                                                        @endif
+                                                        @if(!empty($piece['dimensions']) && !empty($piece['material']))
+                                                            <span>•</span>
+                                                        @endif
+                                                        @if(!empty($piece['material']))
+                                                            <span class="flex items-center gap-0.5">
+                                                                <x-lucide-box class="w-2.5 h-2.5 text-zinc-400 shrink-0" />
+                                                                <span>{{ $piece['material'] }}</span>
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-1 shrink-0">
+                                            <button 
+                                                type="button" 
+                                                wire:click="editPiece({{ $idx }})" 
+                                                class="text-zinc-400 hover:text-indigo-600 p-1 rounded hover:bg-stone-100 transition cursor-pointer"
+                                                title="Editar pieza">
+                                                <x-lucide-pencil class="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                wire:click="removePiece({{ $idx }})" 
+                                                class="text-zinc-400 hover:text-red-500 p-1 rounded hover:bg-stone-100 transition cursor-pointer"
+                                                title="Eliminar pieza">
+                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
 
                     <!-- Row 4: Substatus & Designer -->

@@ -243,22 +243,191 @@ window.addEventListener('keydown', (e) => {
     }
 }, true);
 
-// Listen to Livewire lifecycle hooks to re-apply z-indexes after Livewire DOM morphs
+// Kudos Design Ops - Global Loading Overlay Manager with Debounce and Zero-lag Animation
+let lastUserInteractionTime = 0;
+const registerUserInteraction = () => {
+    lastUserInteractionTime = Date.now();
+};
+window.addEventListener('pointerdown', registerUserInteraction, { capture: true, passive: true });
+window.addEventListener('keydown', registerUserInteraction, { capture: true, passive: true });
+window.addEventListener('drop', registerUserInteraction, { capture: true, passive: true });
+
+function isUserTyping() {
+    const active = document.activeElement;
+    if (!active) return false;
+    return ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName) || active.isContentEditable;
+}
+
+function isBackgroundCommit(commit) {
+    const calls = commit?.calls || [];
+    // If every method called is $refresh or empty, it's a wire:poll or background refresh
+    if (calls.length > 0 && calls.every(c => c.method === '$refresh')) {
+        return true;
+    }
+    // If no calls and no updates (heartbeat/passive commit)
+    if (calls.length === 0 && Object.keys(commit?.updates || {}).length === 0) {
+        return true;
+    }
+    return false;
+}
+
+const activeCommits = new Set();
+
+window.KudosLoader = {
+    timer: null,
+    safetyTimer: null,
+    element: null,
+
+    getEl() {
+        if (!this.element || !document.body.contains(this.element)) {
+            this.element = document.getElementById('kudos-global-loader');
+        }
+        return this.element;
+    },
+
+    show() {
+        const el = this.getEl();
+        if (!el) return;
+
+        el.classList.remove('opacity-0', 'pointer-events-none', 'invisible');
+        el.classList.add('opacity-100', 'pointer-events-auto');
+
+        const card = el.querySelector('[data-loader-card]');
+        if (card) {
+            card.classList.remove('scale-95');
+            card.classList.add('scale-100');
+        }
+    },
+
+    hide() {
+        clearTimeout(this.timer);
+        this.timer = null;
+        clearTimeout(this.safetyTimer);
+        this.safetyTimer = null;
+        activeCommits.clear();
+
+        const el = this.getEl();
+        if (!el) return;
+
+        el.classList.remove('opacity-100', 'pointer-events-auto');
+        el.classList.add('opacity-0', 'pointer-events-none');
+
+        const card = el.querySelector('[data-loader-card]');
+        if (card) {
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+        }
+
+        setTimeout(() => {
+            if (activeCommits.size === 0 && el.classList.contains('opacity-0')) {
+                el.classList.add('invisible');
+            }
+        }, 150);
+    },
+
+    syncState(debounceMs = 120) {
+        if (activeCommits.size === 0) {
+            this.hide();
+            return;
+        }
+
+        if (isUserTyping()) {
+            return;
+        }
+
+        if (!this.timer && !this.isVisible()) {
+            this.timer = setTimeout(() => {
+                if (activeCommits.size > 0) {
+                    this.show();
+                }
+            }, debounceMs);
+
+            clearTimeout(this.safetyTimer);
+            this.safetyTimer = setTimeout(() => {
+                this.hide();
+            }, 8000);
+        }
+    },
+
+    isVisible() {
+        const el = this.getEl();
+        return el && el.classList.contains('opacity-100');
+    }
+};
+
+window.addEventListener('kudos:loading-start', () => {
+    const id = Symbol('manual');
+    activeCommits.add(id);
+    window.KudosLoader.syncState(0);
+});
+
+window.addEventListener('kudos:loading-stop', () => {
+    window.KudosLoader.hide();
+});
+
+// Update user interaction timestamp when opening an order detail modal
+window.addEventListener('open-order-detail', () => {
+    lastUserInteractionTime = Date.now();
+});
+
+// Listen to Livewire lifecycle hooks to re-apply z-indexes after Livewire DOM morphs and manage global loading
 const attachLivewireModalHooks = () => {
     if (!window.Livewire) return;
 
     if (typeof window.Livewire.hook === 'function') {
-        window.Livewire.hook('commit', ({ succeed }) => {
+        window.Livewire.hook('commit', ({ commit, succeed, fail }) => {
+            // 1. Ignore background polling (wire:poll) and $refresh completely
+            if (isBackgroundCommit(commit)) {
+                return;
+            }
+
+            // 2. Must be tied to a recent human interaction (within 1.5s of click, keydown, or drop)
+            const timeSinceInteraction = Date.now() - lastUserInteractionTime;
+            if (timeSinceInteraction > 1500) {
+                return;
+            }
+
+            // 3. Ignore if user is actively typing in an input
+            if (isUserTyping()) {
+                return;
+            }
+
+            // Valid user-triggered action: track this commit
+            const commitId = Symbol('commit');
+            activeCommits.add(commitId);
+            window.KudosLoader.syncState(100);
+
+            const complete = () => {
+                activeCommits.delete(commitId);
+                window.KudosLoader.syncState();
+            };
+
             if (typeof succeed === 'function') {
                 succeed(() => {
+                    complete();
                     window.KudosModalStack?.recalculateZIndices();
                 });
             }
+
+            if (typeof fail === 'function') {
+                fail(complete);
+            }
         });
+
         window.Livewire.hook('morph.updated', () => {
             window.KudosModalStack?.recalculateZIndices();
         });
     }
+
+    document.addEventListener('livewire:navigating', () => {
+        const navId = Symbol('nav');
+        activeCommits.add(navId);
+        window.KudosLoader.syncState(100);
+    });
+
+    document.addEventListener('livewire:navigated', () => {
+        window.KudosLoader.hide();
+    });
 };
 
 if (window.Livewire) {

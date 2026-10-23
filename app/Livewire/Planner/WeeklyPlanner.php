@@ -16,6 +16,7 @@ use App\Services\AutomationEngine;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class WeeklyPlanner extends Component
@@ -34,8 +35,10 @@ class WeeklyPlanner extends Component
 
     public $selectedWeekStart;
 
+    #[Url(as: 'designer')]
     public $selectedDesignerFilter = 'all';
 
+    #[Url(as: 'view')]
     public string $viewMode = 'by_designer';
 
     public string $plannerSortBy = 'priority';
@@ -91,19 +94,67 @@ class WeeklyPlanner extends Component
     {
         $this->selectedWeekStart = now()->startOfWeek(Carbon::MONDAY)->toDateString();
         $this->viewMonth = now()->format('Y-m');
-        $this->viewMode = session('weekly_planner_view_mode', 'by_designer');
+
+        if (request()->filled('view') && in_array(request()->query('view'), ['by_day', 'by_designer'])) {
+            $this->viewMode = (string) request()->query('view');
+            session(['weekly_planner_view_mode' => $this->viewMode]);
+        } else {
+            $this->viewMode = session('weekly_planner_view_mode', 'by_designer');
+        }
+
         $sessionSort = session('weekly_planner_sort_by', 'priority');
         $this->plannerSortBy = in_array($sessionSort, ['custom', 'priority']) ? $sessionSort : 'priority';
         $this->showSystemTasks = (bool) session('weekly_planner_show_system_tasks', true);
 
-        $user = Auth::user();
-        if ($user && $user->isDesigner() && $user->designer) {
-            $this->selectedDesignerFilter = (string) $user->designer->id;
+        if (request()->filled('designer')) {
+            $rawDesigner = (string) request()->query('designer');
+            if ($rawDesigner !== 'all' && ! Designer::where('active', true)->internal()->where('id', $rawDesigner)->exists()) {
+                $rawDesigner = 'all';
+            }
+            $this->selectedDesignerFilter = $rawDesigner;
+            session(['weekly_planner_selected_designer_filter' => $this->selectedDesignerFilter]);
+        } else {
+            $savedDesigner = session('weekly_planner_selected_designer_filter');
+            if ($savedDesigner !== null) {
+                $rawDesigner = (string) $savedDesigner;
+                if ($rawDesigner !== 'all' && ! Designer::where('active', true)->internal()->where('id', $rawDesigner)->exists()) {
+                    $rawDesigner = 'all';
+                }
+                $this->selectedDesignerFilter = $rawDesigner;
+                session(['weekly_planner_selected_designer_filter' => $this->selectedDesignerFilter]);
+            } else {
+                $user = Auth::user();
+                if ($user && $user->isDesigner() && $user->designer && $user->designer->active) {
+                    $this->selectedDesignerFilter = (string) $user->designer->id;
+                } else {
+                    $this->selectedDesignerFilter = 'all';
+                }
+                session(['weekly_planner_selected_designer_filter' => $this->selectedDesignerFilter]);
+            }
         }
     }
 
-    public function updatedSelectedDesignerFilter(): void
+    public function updatedSelectedDesignerFilter($value = null): void
     {
+        $val = (string) ($value ?? $this->selectedDesignerFilter);
+        if ($val !== 'all' && ! Designer::where('active', true)->internal()->where('id', $val)->exists()) {
+            $val = 'all';
+            $this->selectedDesignerFilter = 'all';
+        }
+
+        session(['weekly_planner_selected_designer_filter' => $val]);
+        $this->dispatch('planner-filter-changed');
+    }
+
+    public function changeDesignerFilter(string|int $filter): void
+    {
+        $filterStr = (string) $filter;
+        if ($filterStr !== 'all' && ! Designer::where('active', true)->internal()->where('id', $filterStr)->exists()) {
+            $filterStr = 'all';
+        }
+
+        $this->selectedDesignerFilter = $filterStr;
+        session(['weekly_planner_selected_designer_filter' => $filterStr]);
         $this->dispatch('planner-filter-changed');
     }
 
@@ -156,8 +207,8 @@ class WeeklyPlanner extends Component
             }
             $subtask->update($updateData);
 
-            if ($targetDate && $subtask->is_work_task && $targetDate->isToday() && $subtask->order) {
-                $order = $subtask->order;
+            if ($targetDate && ! $subtask->isDone() && $subtask->is_work_task && $targetDate->isToday() && $subtask->order) {
+                $order = $subtask->order->fresh() ?? $subtask->order;
                 $orderUpdates = ['in_workspace' => true, 'scheduled_date' => $targetDate->toDateString()];
                 if ($designerId && ! $order->designer_id && $order->designers->isEmpty()) {
                     $orderUpdates['designer_id'] = $designerId;
@@ -166,7 +217,7 @@ class WeeklyPlanner extends Component
                     $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
                     $orderUpdates['substatus'] = Substatus::TICKET;
                     $orderUpdates['archived_at'] = null;
-                } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ON_HOLD) {
                     $previousStatus = $order->core_status;
                     $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
                     if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
@@ -672,8 +723,8 @@ class WeeklyPlanner extends Component
 
         $subtask->update($updateTaskData);
 
-        if ($subtask->is_work_task && $scheduledDate->isToday() && $subtask->order) {
-            $order = $subtask->order;
+        if (! $subtask->isDone() && $subtask->is_work_task && $scheduledDate->isToday() && $subtask->order) {
+            $order = $subtask->order->fresh() ?? $subtask->order;
             $updateData = ['in_workspace' => true, 'scheduled_date' => $scheduledDate->toDateString()];
             if ($designerId && ! $order->designer_id && $order->designers->isEmpty()) {
                 $updateData['designer_id'] = $designerId;
@@ -683,7 +734,7 @@ class WeeklyPlanner extends Component
                 $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
                 $updateData['substatus'] = Substatus::TICKET;
                 $updateData['archived_at'] = null;
-            } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+            } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ON_HOLD) {
                 $previousStatus = $order->core_status;
                 $updateData['core_status'] = CoreStatus::TO_DO_TODAY;
                 if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
@@ -779,8 +830,8 @@ class WeeklyPlanner extends Component
                 $subtask->update($updateData);
             }
 
-            if ($targetDate && $subtask->is_work_task && $targetDate->isToday() && $subtask->order) {
-                $order = $subtask->order;
+            if ($targetDate && ! $subtask->isDone() && $subtask->is_work_task && $targetDate->isToday() && $subtask->order) {
+                $order = $subtask->order->fresh() ?? $subtask->order;
                 $orderUpdates = ['in_workspace' => true, 'scheduled_date' => $targetDate->toDateString()];
                 if ($designerId && ! $order->designer_id && $order->designers->isEmpty()) {
                     $orderUpdates['designer_id'] = $designerId;
@@ -789,7 +840,7 @@ class WeeklyPlanner extends Component
                     $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
                     $orderUpdates['substatus'] = Substatus::TICKET;
                     $orderUpdates['archived_at'] = null;
-                } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                } elseif ($order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ON_HOLD) {
                     $previousStatus = $order->core_status;
                     $orderUpdates['core_status'] = CoreStatus::TO_DO_TODAY;
                     if (! $order->origin_core_status && $previousStatus !== CoreStatus::TO_DO_TODAY) {
@@ -898,6 +949,7 @@ class WeeklyPlanner extends Component
         }
 
         $newStatus = $willBeDone ? 'done' : 'todo';
+        $previousOrderStatus = $order?->core_status;
 
         $subtask->update([
             'status' => $newStatus,
@@ -905,38 +957,29 @@ class WeeklyPlanner extends Component
         ]);
 
         if ($order && $newStatus === 'done') {
-            OrderEvent::create([
-                'order_id' => $order->id,
-                'event_type' => 'SUBTASK_COMPLETED',
-                'actor' => auth()->user()?->name ?? __('Diseñador'),
-                'new_value' => $subtask->title,
-                'metadata' => [
-                    'task_id' => $subtask->id,
-                    'task_title' => $subtask->title,
-                    'date' => $subtask->scheduled_date?->toDateString(),
-                ],
-            ]);
+            $order = $order->fresh() ?? $order;
 
-            if ($subtask->isPonerEnAlta() && $order->approved && $order->core_status !== CoreStatus::EN_PRODUCCION) {
-                $previousStatus = $order->core_status;
-                app(AutomationEngine::class)->handleStatusChanged(
-                    $order,
-                    $previousStatus,
-                    CoreStatus::EN_PRODUCCION,
-                    auth()->user()?->name ?? __('Diseñador')
-                );
-                $order->update([
-                    'substatus' => Substatus::ENVIADO_EN_ALTA,
-                    'done_today' => true,
-                    'origin_core_status' => null,
-                    'origin_substatus' => null,
-                ]);
+            if ($subtask->isPonerEnAlta() && $order->approved && $previousOrderStatus !== CoreStatus::EN_PRODUCCION) {
+                if ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                    app(AutomationEngine::class)->handleStatusChanged(
+                        $order,
+                        $previousOrderStatus,
+                        CoreStatus::EN_PRODUCCION,
+                        auth()->user()?->name ?? __('Diseñador')
+                    );
+                    $order->update([
+                        'substatus' => Substatus::ENVIADO_EN_ALTA,
+                        'done_today' => true,
+                        'origin_core_status' => null,
+                        'origin_substatus' => null,
+                    ]);
+                }
 
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'MOVED_TO_PRODUCTION',
                     'actor' => auth()->user()?->name ?? __('Diseñador'),
-                    'previous_value' => $previousStatus?->value,
+                    'previous_value' => $previousOrderStatus?->value,
                     'new_value' => CoreStatus::EN_PRODUCCION->value,
                     'metadata' => [
                         'trigger' => 'Subtarea Poner en Alta completada en Weekly Planner',

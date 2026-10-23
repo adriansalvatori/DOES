@@ -12,7 +12,9 @@ use App\Models\Client;
 use App\Models\Contact;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\OrderElement;
 use App\Models\OrderEvent;
+use App\Models\OrderStage;
 use App\Models\RelatedTask;
 use App\Models\Setting;
 use App\Models\Substatus as SubstatusModel;
@@ -85,6 +87,8 @@ class OrderDetailModal extends Component
 
     public bool $archiveConfirmed = false;
 
+    public string $activeTab = 'pieces';
+
     // Edit Mode state
     public $isEditing = false;
 
@@ -126,6 +130,47 @@ class OrderDetailModal extends Component
     public string $approvalComment = '';
 
     public $approvalImage = null;
+
+    // Granular approval fields
+    public string $approvalScope = 'all'; // 'all', 'stage', 'elements'
+
+    public ?int $selectedApprovalStageId = null;
+
+    public array $selectedApprovalElementIds = [];
+
+    // Alta Stages and Elements state
+    public string $newStageName = '';
+
+    public ?string $newStageDueDate = null;
+
+    public ?int $selectedStageFilter = null; // null = all
+
+    public bool $showNewStageForm = false;
+
+    public string $newElementName = '';
+
+    public ?int $newElementStageId = null;
+
+    public string $newElementDimensions = '';
+
+    public string $newElementMaterial = '';
+
+    public int $newElementQuantity = 1;
+
+    // Piece Approval Modal state
+    public bool $showPieceApprovalModal = false;
+
+    public ?int $pieceApprovalElementId = null;
+
+    public string $pieceApprovalType = 'cliente';
+
+    public string $pieceApprovalDatePreset = 'today';
+
+    public ?string $pieceApprovalCustomDate = null;
+
+    public string $pieceApprovalNote = '';
+
+    public bool $pieceApprovalDirectToAlta = false;
 
     // Delay fields
     public $clientPromisedDate;
@@ -229,6 +274,7 @@ class OrderDetailModal extends Component
             $this->orderId = $orderId;
         }
         $this->showModal = true;
+        $this->activeTab = 'pieces';
         $this->newTaskDate = now()->toDateString();
         $this->newTaskIsWork = true;
         $this->newTrelloComment = '';
@@ -849,6 +895,14 @@ class OrderDetailModal extends Component
         }
     }
 
+    /**
+     * Alias for addTrelloComment to support dirty guard prompt or external callers.
+     */
+    public function postComment(): void
+    {
+        $this->addTrelloComment();
+    }
+
     public function deleteTrelloComment(string $actionId): void
     {
         if (! $this->orderId || empty($actionId)) {
@@ -904,6 +958,13 @@ class OrderDetailModal extends Component
 
         // Ensure dividers (---, ***, ___) have a blank line before them so they don't turn into Setext headings
         $clean = preg_replace('/(?<!\n)\n(---|---|\*\*\*|___)\n/u', "\n\n$1\n\n", $clean);
+
+        // Break inline checklist items onto separate lines if they appear consecutively or inline
+        $clean = preg_replace_callback('/(?<!\n)(?<!^)\s+-\s*\[([ xX]?)\]/u', function ($m) {
+            $marker = (strtolower(trim($m[1])) === 'x') ? 'x' : ' ';
+
+            return "\n- [{$marker}]";
+        }, $clean);
 
         // Normalize any checklist syntax:
         // Handles: "[]", "[ ]", "[x]", "[X]", "- []", "- [ ]", "* []", "* [ ]", etc.
@@ -2161,6 +2222,9 @@ class OrderDetailModal extends Component
         $this->approvalImage = null;
         $this->measuresConfirmed = true;
         $this->estimateApproved = true;
+        $this->approvalScope = 'all';
+        $this->selectedApprovalStageId = null;
+        $this->selectedApprovalElementIds = [];
         $this->showApprovalModal = true;
     }
 
@@ -2170,6 +2234,9 @@ class OrderDetailModal extends Component
         $this->pendingProductionStatus = null;
         $this->approvalComment = '';
         $this->approvalImage = null;
+        $this->approvalScope = 'all';
+        $this->selectedApprovalStageId = null;
+        $this->selectedApprovalElementIds = [];
         $this->resetErrorBag();
     }
 
@@ -2205,6 +2272,85 @@ class OrderDetailModal extends Component
         ]);
 
         $order = Order::findOrFail($this->orderId);
+
+        // Process granular element approval and subtask dispatch if order has elements
+        if ($order->hasElements()) {
+            $targetDate = $order->isUrgente() ? today() : today()->addWeekdays(1);
+
+            if ($this->approvalScope === 'stage' && $this->selectedApprovalStageId) {
+                // Entire stage approved! Grouped subtask for the whole stage ("a no ser que sea la etapa entera")
+                $stage = OrderStage::find($this->selectedApprovalStageId);
+                $elementsToApprove = $order->elements()->where('order_stage_id', $this->selectedApprovalStageId)->get();
+
+                foreach ($elementsToApprove as $element) {
+                    $element->markApproved($this->approvalType, trim((string) $this->approvalComment) ?: null);
+                }
+
+                if ($stage) {
+                    $allStageInAlta = $elementsToApprove->every(fn ($e) => $e->isReadyForProduction());
+
+                    $existingStageTask = RelatedTask::where('order_id', $order->id)
+                        ->where('order_stage_id', $stage->id)
+                        ->where('status', '!=', 'done')
+                        ->first();
+
+                    if (! $existingStageTask) {
+                        RelatedTask::create([
+                            'order_id' => $order->id,
+                            'order_stage_id' => $stage->id,
+                            'title' => 'Poner en alta: '.$stage->name.' ('.$elementsToApprove->count().' piezas)',
+                            'type' => RelatedTaskType::PONER_ALTA,
+                            'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                            'return_core_status' => CoreStatus::EN_PRODUCCION,
+                            'status' => $allStageInAlta ? 'done' : 'todo',
+                            'completed_at' => $allStageInAlta ? now() : null,
+                            'assignee_id' => $order->getPrimaryDesignerId(),
+                            'scheduled_date' => $targetDate->toDateString(),
+                            'due_date' => $targetDate->toDateString(),
+                            'trigger_type' => 'STAGE_APPROVED',
+                            'priority' => $order->isUrgente() ? 'urgent' : 'normal',
+                            'is_work_task' => true,
+                        ]);
+                    }
+                }
+            } else {
+                // Individual pieces or all pieces approved! Subtask per piece individually ("no, no agrupemos subtareas de piezas aprobadas")
+                if ($this->approvalScope === 'elements' && ! empty($this->selectedApprovalElementIds)) {
+                    $elementsToApprove = $order->elements()->whereIn('id', $this->selectedApprovalElementIds)->get();
+                } else {
+                    $elementsToApprove = $order->elements;
+                }
+
+                foreach ($elementsToApprove as $element) {
+                    $element->markApproved($this->approvalType, trim((string) $this->approvalComment) ?: null);
+
+                    $existingTask = RelatedTask::where('order_id', $order->id)
+                        ->where('order_element_id', $element->id)
+                        ->where('status', '!=', 'done')
+                        ->first();
+
+                    if (! $existingTask) {
+                        $isReady = $element->isReadyForProduction();
+                        RelatedTask::create([
+                            'order_id' => $order->id,
+                            'order_element_id' => $element->id,
+                            'title' => 'Poner en alta: '.$element->name,
+                            'type' => RelatedTaskType::PONER_ALTA,
+                            'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                            'return_core_status' => CoreStatus::EN_PRODUCCION,
+                            'status' => $isReady ? 'done' : 'todo',
+                            'completed_at' => $isReady ? now() : null,
+                            'assignee_id' => $order->getPrimaryDesignerId(),
+                            'scheduled_date' => $targetDate->toDateString(),
+                            'due_date' => $targetDate->toDateString(),
+                            'trigger_type' => 'PIECE_APPROVED',
+                            'priority' => $order->isUrgente() ? 'urgent' : 'normal',
+                            'is_work_task' => true,
+                        ]);
+                    }
+                }
+            }
+        }
 
         $imagePath = null;
         if ($this->approvalImage) {
@@ -2436,6 +2582,12 @@ class OrderDetailModal extends Component
             app(AutomationEngine::class)->handleClientResponse($order);
         }
 
+        $freshOrder = $order->fresh();
+        if ($freshOrder) {
+            $this->editCoreStatus = $freshOrder->core_status ? $freshOrder->core_status->value : CoreStatus::ENTRANTE->value;
+            $this->editSubstatus = $freshOrder->substatus ? $freshOrder->substatus->value : '';
+        }
+
         $this->newTaskTitle = '';
         $this->newTaskCategory = '';
         $this->dispatch('order-updated');
@@ -2501,8 +2653,8 @@ class OrderDetailModal extends Component
                 'due_date' => $parsedDate ?? $task->due_date,
             ]);
 
-            if ($parsedDate && $task->is_work_task && Carbon::parse($parsedDate)->isToday() && $task->order) {
-                $order = $task->order;
+            if ($parsedDate && ! $task->isDone() && $task->is_work_task && Carbon::parse($parsedDate)->isToday() && $task->order) {
+                $order = $task->order->fresh() ?? $task->order;
                 if ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION && $order->core_status !== CoreStatus::ARCHIVED) {
                     $previousStatus = $order->core_status;
                     $updateData = [
@@ -2531,6 +2683,14 @@ class OrderDetailModal extends Component
                             auth()->user()?->name ?? 'Usuario'
                         );
                     }
+                }
+            }
+
+            if ($task->order_id) {
+                $freshOrder = Order::find($task->order_id);
+                if ($freshOrder) {
+                    $this->editCoreStatus = $freshOrder->core_status ? $freshOrder->core_status->value : CoreStatus::ENTRANTE->value;
+                    $this->editSubstatus = $freshOrder->substatus ? $freshOrder->substatus->value : '';
                 }
             }
 
@@ -2581,7 +2741,7 @@ class OrderDetailModal extends Component
             $order = $task->order;
             $willBeDone = ! $task->isDone();
 
-            if ($order && $willBeDone && $task->isPonerEnAlta()) {
+            if ($order && $willBeDone && $task->isPonerEnAlta() && ! $task->order_element_id && ! $task->order_stage_id) {
                 if (! $order->approved) {
                     $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
                     session()->flash('warning', __('La orden requiere aprobación antes de ser enviada a producción.'));
@@ -2608,6 +2768,20 @@ class OrderDetailModal extends Component
 
             if ($task->isDone()) {
                 $task->update(['status' => 'todo', 'completed_at' => null]);
+
+                // Reverse sync with piece or stage
+                if ($task->order_element_id) {
+                    $element = OrderElement::find($task->order_element_id);
+                    if ($element && $element->isReadyForProduction()) {
+                        $element->update(['status' => $element->is_approved ? 'approved' : 'draft', 'completed_at' => null]);
+                    }
+                } elseif ($task->order_stage_id) {
+                    $stage = OrderStage::find($task->order_stage_id);
+                    if ($stage) {
+                        $stage->elements()->where('status', 'ready_for_production')->update(['status' => 'approved', 'completed_at' => null]);
+                    }
+                }
+
                 if ($task->order_id) {
                     OrderEvent::where('order_id', $task->order_id)
                         ->where('event_type', 'SUBTASK_COMPLETED')
@@ -2618,50 +2792,73 @@ class OrderDetailModal extends Component
                         ->delete();
                 }
             } else {
+                $previousOrderStatus = $order?->core_status;
                 $task->update(['status' => 'done', 'completed_at' => now()]);
+
+                // Forward sync with piece or stage
+                if ($task->order_element_id) {
+                    $element = OrderElement::find($task->order_element_id);
+                    if ($element && ! $element->isReadyForProduction()) {
+                        $element->markReadyForProduction();
+                    }
+                } elseif ($task->order_stage_id) {
+                    $stage = OrderStage::find($task->order_stage_id);
+                    if ($stage) {
+                        foreach ($stage->elements as $stgElem) {
+                            if (! $stgElem->isReadyForProduction()) {
+                                $stgElem->markReadyForProduction();
+                            }
+                        }
+                    }
+                }
+
                 if ($task->order_id) {
-                    OrderEvent::create([
-                        'order_id' => $task->order_id,
-                        'event_type' => 'SUBTASK_COMPLETED',
-                        'actor' => auth()->user()?->name ?? 'Usuario',
-                        'new_value' => $task->title,
-                        'metadata' => [
-                            'task_id' => $task->id,
-                            'task_title' => $task->title,
-                            'date' => $task->scheduled_date?->toDateString(),
-                        ],
-                    ]);
+                    $order = $order?->fresh();
 
-                    if ($task->isPonerEnAlta() && $order && $order->approved && $order->core_status !== CoreStatus::EN_PRODUCCION) {
-                        $previousStatus = $order->core_status;
-                        app(AutomationEngine::class)->handleStatusChanged(
-                            $order,
-                            $previousStatus,
-                            CoreStatus::EN_PRODUCCION,
-                            auth()->user()?->name ?? 'Usuario'
-                        );
-                        $order->update([
-                            'substatus' => Substatus::ENVIADO_EN_ALTA,
-                            'done_today' => true,
-                            'origin_core_status' => null,
-                            'origin_substatus' => null,
-                        ]);
+                    if ($task->isPonerEnAlta() && $order && $order->approved && $previousOrderStatus !== CoreStatus::EN_PRODUCCION) {
+                        $canMoveOrder = ! $order->hasElements() || $order->alta_progress['percentage'] === 100;
 
-                        OrderEvent::create([
-                            'order_id' => $order->id,
-                            'event_type' => 'MOVED_TO_PRODUCTION',
-                            'actor' => auth()->user()?->name ?? 'Usuario',
-                            'previous_value' => $previousStatus?->value,
-                            'new_value' => CoreStatus::EN_PRODUCCION->value,
-                            'metadata' => [
-                                'trigger' => 'Subtarea Poner en Alta completada',
-                                'task_id' => $task->id,
-                                'task_title' => $task->title,
-                            ],
-                        ]);
+                        if ($canMoveOrder) {
+                            if ($order->core_status !== CoreStatus::EN_PRODUCCION) {
+                                app(AutomationEngine::class)->handleStatusChanged(
+                                    $order,
+                                    $previousOrderStatus,
+                                    CoreStatus::EN_PRODUCCION,
+                                    auth()->user()?->name ?? 'Usuario'
+                                );
+                                $order->update([
+                                    'substatus' => Substatus::ENVIADO_EN_ALTA,
+                                    'done_today' => true,
+                                    'origin_core_status' => null,
+                                    'origin_substatus' => null,
+                                ]);
+                            }
+
+                            OrderEvent::create([
+                                'order_id' => $order->id,
+                                'event_type' => 'MOVED_TO_PRODUCTION',
+                                'actor' => auth()->user()?->name ?? 'Usuario',
+                                'previous_value' => $previousOrderStatus?->value,
+                                'new_value' => CoreStatus::EN_PRODUCCION->value,
+                                'metadata' => [
+                                    'trigger' => 'Subtarea Poner en Alta completada',
+                                    'task_id' => $task->id,
+                                    'task_title' => $task->title,
+                                ],
+                            ]);
+                        }
                     }
                 }
             }
+
+            if ($task->order_id) {
+                $freshOrder = Order::find($task->order_id);
+                if ($freshOrder) {
+                    $this->editCoreStatus = $freshOrder->core_status ? $freshOrder->core_status->value : CoreStatus::ENTRANTE->value;
+                    $this->editSubstatus = $freshOrder->substatus ? $freshOrder->substatus->value : '';
+                }
+            }
+
             $this->dispatch('order-updated');
         }
     }
@@ -2773,5 +2970,369 @@ class OrderDetailModal extends Component
 
         $this->editContactId = $contact->id;
         $this->editResponsiblePerson = $contact->name;
+    }
+
+    public function addStage(): void
+    {
+        if (empty(trim($this->newStageName)) || ! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        $nextSort = ($order->stages()->max('sort_order') ?? 0) + 1;
+
+        $order->stages()->create([
+            'name' => trim($this->newStageName),
+            'due_date' => ! empty($this->newStageDueDate) ? Carbon::parse($this->newStageDueDate)->toDateString() : null,
+            'sort_order' => $nextSort,
+            'status' => 'pending',
+        ]);
+
+        $this->newStageName = '';
+        $this->newStageDueDate = null;
+        $this->showNewStageForm = false;
+        $this->dispatch('order-updated');
+    }
+
+    public function updateStage(int $stageId, string $name, ?string $dueDate = null): void
+    {
+        $stage = OrderStage::where('order_id', $this->orderId)->find($stageId);
+        if (! $stage) {
+            return;
+        }
+
+        $stage->update([
+            'name' => trim($name),
+            'due_date' => ! empty($dueDate) ? Carbon::parse($dueDate)->toDateString() : null,
+        ]);
+
+        $this->dispatch('order-updated');
+    }
+
+    public function deleteStage(int $stageId): void
+    {
+        $stage = OrderStage::where('order_id', $this->orderId)->find($stageId);
+        if ($stage) {
+            $stage->delete();
+            $this->dispatch('order-updated');
+        }
+    }
+
+    public function addElement(): void
+    {
+        if (empty(trim($this->newElementName)) || ! $this->orderId) {
+            return;
+        }
+
+        $order = Order::findOrFail($this->orderId);
+        $nextSort = ($order->elements()->max('sort_order') ?? 0) + 1;
+
+        $stageId = $this->newElementStageId ?? $this->selectedStageFilter;
+
+        $order->elements()->create([
+            'order_stage_id' => $stageId,
+            'name' => trim($this->newElementName),
+            'dimensions' => trim($this->newElementDimensions) ?: null,
+            'material' => trim($this->newElementMaterial) ?: null,
+            'quantity' => max(1, (int) $this->newElementQuantity),
+            'sort_order' => $nextSort,
+            'status' => 'draft',
+        ]);
+
+        $this->newElementName = '';
+        $this->newElementDimensions = '';
+        $this->newElementMaterial = '';
+        $this->newElementQuantity = 1;
+
+        $this->dispatch('order-updated');
+    }
+
+    public function updateElementTitle(int $elementId, string $name): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if ($element && ! empty(trim($name))) {
+            $element->update(['name' => trim($name)]);
+            $this->dispatch('order-updated');
+        }
+    }
+
+    public function updateElementSpecs(int $elementId, ?string $dimensions, ?string $material, int $quantity = 1): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if ($element) {
+            $element->update([
+                'dimensions' => trim((string) $dimensions) ?: null,
+                'material' => trim((string) $material) ?: null,
+                'quantity' => max(1, $quantity),
+            ]);
+            $this->dispatch('order-updated');
+        }
+    }
+
+    public function deleteElement(int $elementId): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if ($element) {
+            $element->delete();
+            $this->dispatch('order-updated');
+        }
+    }
+
+    public function moveElementStage(int $elementId, ?string $newStageId = null): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if ($element) {
+            $stageId = ! empty($newStageId) ? (int) $newStageId : null;
+            $element->update(['order_stage_id' => $stageId]);
+            $this->dispatch('order-updated');
+        }
+    }
+
+    public function selectAllApprovalElements(): void
+    {
+        if ($this->orderId) {
+            $order = Order::find($this->orderId);
+            if ($order) {
+                $this->selectedApprovalElementIds = $order->elements->pluck('id')->all();
+            }
+        }
+    }
+
+    public function deselectAllApprovalElements(): void
+    {
+        $this->selectedApprovalElementIds = [];
+    }
+
+    public function openPieceApprovalModal(int $elementId, bool $directToAlta = false): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if (! $element) {
+            return;
+        }
+
+        $this->pieceApprovalElementId = $elementId;
+        $this->pieceApprovalDirectToAlta = $directToAlta;
+        $this->pieceApprovalType = 'cliente';
+        $this->pieceApprovalDatePreset = 'today';
+        $this->pieceApprovalCustomDate = now()->toDateString();
+        $this->pieceApprovalNote = '';
+        $this->showPieceApprovalModal = true;
+    }
+
+    public function closePieceApprovalModal(): void
+    {
+        $this->showPieceApprovalModal = false;
+        $this->pieceApprovalElementId = null;
+        $this->pieceApprovalDirectToAlta = false;
+        $this->pieceApprovalType = 'cliente';
+        $this->pieceApprovalDatePreset = 'today';
+        $this->pieceApprovalCustomDate = null;
+        $this->pieceApprovalNote = '';
+    }
+
+    public function submitPieceApproval(): void
+    {
+        if (! $this->pieceApprovalElementId || ! $this->orderId) {
+            return;
+        }
+
+        $this->resetErrorBag();
+
+        if (empty(trim((string) $this->pieceApprovalNote))) {
+            $this->addError('pieceApprovalNote', __('Debes ingresar el soporte de aprobación y notas adicionales.'));
+
+            return;
+        }
+
+        $this->validate([
+            'pieceApprovalType' => 'required|in:camila,manager,gabriela,cliente',
+        ], [
+            'pieceApprovalType.required' => __('Debes seleccionar quién validó la aprobación.'),
+        ]);
+
+        $element = OrderElement::where('order_id', $this->orderId)->find($this->pieceApprovalElementId);
+        if (! $element) {
+            return;
+        }
+
+        $approvedAt = match ($this->pieceApprovalDatePreset) {
+            'today' => now(),
+            'yesterday' => now()->subDay(),
+            'custom' => ! empty($this->pieceApprovalCustomDate) ? Carbon::parse($this->pieceApprovalCustomDate) : now(),
+            'none' => null,
+            default => now(),
+        };
+
+        $element->update([
+            'is_approved' => true,
+            'approved_at' => $approvedAt,
+            'approval_type' => $this->pieceApprovalType ?: 'cliente',
+            'approval_note' => trim($this->pieceApprovalNote) ?: null,
+            'status' => $this->pieceApprovalDirectToAlta ? 'ready_for_production' : ($element->status === 'draft' ? 'approved' : $element->status),
+            'completed_at' => $this->pieceApprovalDirectToAlta ? now() : $element->completed_at,
+        ]);
+
+        $order = Order::find($this->orderId);
+        $targetDate = ($order && $order->isUrgente()) ? today() : today()->addWeekdays(1);
+
+        if ($this->pieceApprovalDirectToAlta) {
+            // "se crea y auto completa mejor" -> Creates task and auto-completes immediately for audit
+            $existingTask = RelatedTask::where('order_id', $this->orderId)
+                ->where('order_element_id', $element->id)
+                ->first();
+
+            if ($existingTask) {
+                $existingTask->update([
+                    'status' => 'done',
+                    'completed_at' => now(),
+                ]);
+            } else {
+                RelatedTask::create([
+                    'order_id' => $this->orderId,
+                    'order_element_id' => $element->id,
+                    'title' => 'Poner en alta: '.$element->name,
+                    'type' => RelatedTaskType::PONER_ALTA,
+                    'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                    'return_core_status' => CoreStatus::EN_PRODUCCION,
+                    'status' => 'done',
+                    'completed_at' => now(),
+                    'assignee_id' => $order?->getPrimaryDesignerId(),
+                    'scheduled_date' => today(),
+                    'due_date' => $targetDate->toDateString(),
+                    'trigger_type' => 'PIECE_APPROVED_AND_ALTA',
+                    'priority' => ($order && $order->isUrgente()) ? 'urgent' : 'normal',
+                    'is_work_task' => true,
+                ]);
+            }
+        } else {
+            // Approved without direct Alta -> Trigger subtask "Poner en alta: [Pieza]" in status 'todo'
+            $existingTask = RelatedTask::where('order_id', $this->orderId)
+                ->where('order_element_id', $element->id)
+                ->where('status', '!=', 'done')
+                ->first();
+
+            if (! $existingTask) {
+                RelatedTask::create([
+                    'order_id' => $this->orderId,
+                    'order_element_id' => $element->id,
+                    'title' => 'Poner en alta: '.$element->name,
+                    'type' => RelatedTaskType::PONER_ALTA,
+                    'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                    'return_core_status' => CoreStatus::EN_PRODUCCION,
+                    'status' => 'todo',
+                    'assignee_id' => $order?->getPrimaryDesignerId(),
+                    'scheduled_date' => $targetDate->toDateString(),
+                    'due_date' => $targetDate->toDateString(),
+                    'trigger_type' => 'PIECE_APPROVED',
+                    'priority' => ($order && $order->isUrgente()) ? 'urgent' : 'normal',
+                    'is_work_task' => true,
+                ]);
+            }
+        }
+
+        $this->closePieceApprovalModal();
+        $this->dispatch('order-updated');
+    }
+
+    public function toggleElementApproved(int $elementId): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if (! $element) {
+            return;
+        }
+
+        if ($element->is_approved) {
+            $element->update([
+                'is_approved' => false,
+                'approved_at' => null,
+                'approval_type' => null,
+                'status' => 'draft',
+                'completed_at' => null,
+            ]);
+
+            // Clean up uncompleted alta subtasks for this element
+            RelatedTask::where('order_id', $this->orderId)
+                ->where('order_element_id', $element->id)
+                ->where('status', '!=', 'done')
+                ->delete();
+
+            $this->dispatch('order-updated');
+        } else {
+            $this->openPieceApprovalModal($elementId, false);
+        }
+    }
+
+    public function toggleElementAlta(int $elementId): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if (! $element) {
+            return;
+        }
+
+        if ($element->isReadyForProduction()) {
+            $element->update([
+                'status' => $element->is_approved ? 'approved' : 'draft',
+                'completed_at' => null,
+            ]);
+
+            // Revert subtask if exists
+            $task = RelatedTask::where('order_id', $this->orderId)
+                ->where('order_element_id', $element->id)
+                ->first();
+            if ($task && $task->isDone()) {
+                $task->update(['status' => 'todo', 'completed_at' => null]);
+            }
+
+            $this->dispatch('order-updated');
+        } else {
+            if (! $element->is_approved) {
+                $this->openPieceApprovalModal($elementId, true);
+            } else {
+                $element->markReadyForProduction();
+
+                // Find pending subtask for this element and mark done, or create and auto-complete for audit
+                $task = RelatedTask::where('order_id', $this->orderId)
+                    ->where('order_element_id', $element->id)
+                    ->where('status', '!=', 'done')
+                    ->first();
+
+                if ($task) {
+                    $task->update(['status' => 'done', 'completed_at' => now()]);
+                } else {
+                    $order = Order::find($this->orderId);
+                    RelatedTask::create([
+                        'order_id' => $this->orderId,
+                        'order_element_id' => $element->id,
+                        'title' => 'Poner en alta: '.$element->name,
+                        'type' => RelatedTaskType::PONER_ALTA,
+                        'category' => SubtaskCategory::PRODUCTION_ADJUSTMENTS,
+                        'return_core_status' => CoreStatus::EN_PRODUCCION,
+                        'status' => 'done',
+                        'completed_at' => now(),
+                        'assignee_id' => $order?->getPrimaryDesignerId(),
+                        'scheduled_date' => today(),
+                        'due_date' => today(),
+                        'trigger_type' => 'PIECE_ALTA',
+                        'priority' => ($order && $order->isUrgente()) ? 'urgent' : 'normal',
+                        'is_work_task' => true,
+                    ]);
+                }
+
+                $this->dispatch('order-updated');
+            }
+        }
+    }
+
+    public function updateElementFileUrl(int $elementId, ?string $url, ?string $notes = null): void
+    {
+        $element = OrderElement::where('order_id', $this->orderId)->find($elementId);
+        if ($element) {
+            $data = ['file_url' => trim((string) $url) ?: null];
+            if ($notes !== null) {
+                $data['production_notes'] = trim($notes) ?: null;
+            }
+            $element->update($data);
+            $this->dispatch('order-updated');
+        }
     }
 }
