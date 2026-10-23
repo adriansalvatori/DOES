@@ -11,40 +11,48 @@
 @endphp
 <div>
     <!-- Notion Side Flyout Drawer (Light Mode Panel) -->
-    @if($showModal && $order)
-        <div 
-            x-data="{
-                initialForm: null,
-                init() {
-                    window.KudosLoader?.hide();
+    <div 
+        x-data="{
+            isOpen: @js((bool) $showModal),
+            initialForm: null,
+            init() {
+                if (this.isOpen) {
                     this.snapshot();
-                    this.$watch('$wire.isEditing', (val) => {
-                        if (val) {
-                            this.snapshot();
-                            window.KudosModalStack?.bringToFront('order-detail-modal');
-                        }
-                    });
-                    this.$watch('$wire.showModal', (show) => {
-                        if (!show) {
-                            window.KudosDirtyGuard.unregister('order-detail-modal');
-                            window.KudosModalStack?.unregister('order-detail-modal');
-                        } else {
-                            window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
-                            window.KudosModalStack?.register('order-detail-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
-                        }
-                    });
-                    this.$watch('$wire.orderId', () => {
-                        if ($wire.showModal) {
-                            window.KudosModalStack?.bringToFront('order-detail-modal');
-                        }
-                    });
                     window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
                     window.KudosModalStack?.register('order-detail-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
-                    this.$cleanup(() => {
+                }
+                this.$watch('$wire.isEditing', (val) => {
+                    if (val) {
+                        this.snapshot();
+                        window.KudosModalStack?.bringToFront('order-detail-modal');
+                    }
+                });
+                this.$watch('$wire.showModal', (show) => {
+                    this.isOpen = Boolean(show);
+                    if (!show) {
                         window.KudosDirtyGuard.unregister('order-detail-modal');
                         window.KudosModalStack?.unregister('order-detail-modal');
-                    });
-                },
+                    } else {
+                        this.snapshot();
+                        window.KudosDirtyGuard.register('order-detail-modal', () => this.isDirty(), this.$el);
+                        window.KudosModalStack?.register('order-detail-modal', this.$el, () => this.confirmClose(() => $wire.closeModal()));
+                        window.KudosModalStack?.bringToFront('order-detail-modal');
+                    }
+                });
+                this.$watch('$wire.orderId', () => {
+                    if (this.isOpen) {
+                        window.KudosModalStack?.bringToFront('order-detail-modal');
+                    }
+                });
+                this.$cleanup(() => {
+                    window.KudosDirtyGuard.unregister('order-detail-modal');
+                    window.KudosModalStack?.unregister('order-detail-modal');
+                });
+            },
+            openImmediate() {
+                this.isOpen = true;
+                window.KudosModalStack?.bringToFront('order-detail-modal');
+            },
                 snapshot() {
                     this.initialForm = JSON.stringify({
                         wo: ($wire.editWoNumber || '').toString().trim(),
@@ -115,11 +123,13 @@
                             saveText: @js(__('Guardar')),
                             onCancel: () => {},
                             onDiscard: () => {
+                                this.isOpen = false;
                                 window.KudosDirtyGuard.unregister('order-detail-modal');
                                 window.KudosModalStack?.unregister('order-detail-modal');
                                 action();
                             },
                             onSave: () => {
+                                this.isOpen = false;
                                 window.KudosDirtyGuard.unregister('order-detail-modal');
                                 window.KudosModalStack?.unregister('order-detail-modal');
                                 if (this.isEditDirty()) {
@@ -132,13 +142,16 @@
                             }
                         });
                     } else {
+                        this.isOpen = false;
                         window.KudosDirtyGuard.unregister('order-detail-modal');
                         window.KudosModalStack?.unregister('order-detail-modal');
                         action();
                     }
                 }
             }"
-            @open-order-detail.window="window.KudosModalStack?.bringToFront('order-detail-modal')"
+            x-show="isOpen"
+            x-cloak
+            @open-order-detail.window="openImmediate()"
             @pointerdown="window.KudosModalStack?.bringToFront('order-detail-modal')"
             @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('order-detail-modal') : !document.getElementById('client-flyout-panel')) confirmClose(() => $wire.closeModal())"
             data-modal="order-detail"
@@ -150,6 +163,7 @@
 
             <!-- Slide-over Right Panel (Fully Responsive Width) -->
             <div class="fixed inset-y-0 right-0 w-full sm:max-w-xl md:max-w-2xl lg:max-w-3xl bg-white border-l border-[#e9e9e7] shadow-2xl flex flex-col h-full max-h-screen animate-in slide-in-from-right duration-200 overflow-hidden">
+                @if($showModal && $order)
             
             <!-- Flyout Header (Notion Page Header) -->
             <div class="px-4 sm:px-6 py-4 border-b border-[#e9e9e7] bg-white shrink-0 z-20 space-y-3">
@@ -4422,11 +4436,12 @@
                     <kbd class="px-1.5 py-0.5 text-[9.5px] font-mono font-semibold bg-stone-100 text-zinc-500 rounded border border-stone-200">Esc</kbd>
                 </button>
             </div>
-
+            @else
+                @include('livewire.orders.partials.order-detail-skeleton')
+            @endif
         </div>
 
-        </div>
-    @endif
+    </div>
 
     <!-- SUBTASK IMPACT & BLOCKING WARNING MODAL -->
     @if($showSubtaskWarningModal)

@@ -45,8 +45,6 @@
 <body class="min-h-full flex flex-col justify-between overflow-x-hidden">
     {{ $slot }}
 
-    <x-global-loading-overlay />
-
     @livewireScripts
 </body>
 </html>
