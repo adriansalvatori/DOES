@@ -21,6 +21,7 @@ class WorkOrder extends Model
     protected $fillable = [
         'number',
         'client_id',
+        'company_name',
         'client_location_id',
         'contact_id',
         'description',
@@ -44,6 +45,14 @@ class WorkOrder extends Model
             'installation_types' => 'array',
             'in_backlog' => 'boolean',
         ];
+    }
+
+    /**
+     * The company shown for this work order, as stored (uppercase): the linked company, else the typed one.
+     */
+    public function displayName(): string
+    {
+        return $this->client?->name ?? $this->company_name ?? '';
     }
 
     public function client(): BelongsTo

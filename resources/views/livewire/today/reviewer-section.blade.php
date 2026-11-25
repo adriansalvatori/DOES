@@ -18,7 +18,7 @@
         <section class="ui-card" wire:key="review-{{ $key }}">
             <div class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
                 <x-wo-badge :number="$workOrder->number" />
-                <span class="truncate text-row font-medium text-ink">{{ \App\Support\TitleCase::from($workOrder->client?->name ?? $group->deliverables->first()->company_name) }}</span>
+                <span class="truncate text-row font-medium text-ink">{{ \App\Support\TitleCase::from($workOrder->displayName() ?: $group->deliverables->first()->company_name) }}</span>
                 @if($group->phase)<x-ui.tag>{{ $group->phase->name }}</x-ui.tag>@endif
                 <span class="flex-1"></span>
                 <span class="text-meta tabular-nums text-ink-3">{{ __(':approved / :total approved', ['approved' => $readiness->approved, 'total' => $readiness->total]) }}</span>

@@ -58,6 +58,7 @@ class HeaderSearch extends Component
                         $query->where(fn (Builder $inner) => $inner
                             ->where('number', 'like', "%{$term}%")
                             ->orWhere('description', 'like', "%{$term}%")
+                            ->orWhere('company_name', 'like', "%{$term}%")
                             ->orWhereHas('client', fn (Builder $clients) => $clients->where('name', 'like', "%{$term}%")));
                     }
                 })
@@ -66,7 +67,7 @@ class HeaderSearch extends Component
                 ->get();
 
             $deliverables = Deliverable::query()
-                ->with(['workOrder:id,number,client_id', 'workOrder.client:id,name'])
+                ->with(['workOrder:id,number,client_id,company_name', 'workOrder.client:id,name'])
                 ->where(function (Builder $query) use ($terms): void {
                     foreach ($terms as $term) {
                         $query->where('task_name', 'like', "%{$term}%");

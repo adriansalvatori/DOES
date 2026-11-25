@@ -18,6 +18,7 @@ class BackfillDomainCommand extends Command
     {
         if ($this->option('closed-at-only')) {
             $this->components->twoColumnDetail('closed_at corrected', (string) $backfill->correctClosedAt());
+            $this->components->twoColumnDetail('work order companies filled', (string) $backfill->fillWorkOrderCompanyNames());
 
             return self::SUCCESS;
         }

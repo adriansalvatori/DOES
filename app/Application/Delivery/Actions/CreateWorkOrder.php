@@ -42,6 +42,7 @@ class CreateWorkOrder
             $workOrder = WorkOrder::create([
                 'number' => $number,
                 'client_id' => $data->clientId,
+                'company_name' => $this->companyNameFor($data),
                 'client_location_id' => $data->clientLocationId,
                 'contact_id' => $data->contactId,
                 'description' => $data->description,
@@ -92,6 +93,14 @@ class CreateWorkOrder
         });
 
         return $workOrder->load('deliverables');
+    }
+
+    private function companyNameFor(CreateWorkOrderData $data): ?string
+    {
+        $linked = $data->clientId !== null ? Client::query()->find($data->clientId)?->name : null;
+        $typed = $data->companyName !== null ? mb_strtoupper(trim($data->companyName), 'UTF-8') : null;
+
+        return $linked ?? ($typed === '' ? null : $typed);
     }
 
     private function resolveNumber(CreateWorkOrderData $data): ?string

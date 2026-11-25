@@ -30,7 +30,7 @@
                 <section class="space-y-2" wire:key="wo-{{ $workOrderId }}">
                     <div class="flex items-center gap-1.5 min-w-0 px-0.5">
                         <x-wo-badge :number="$workOrder?->number" />
-                        <span class="text-meta font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder?->client?->name ?? $group->first()->company_name) }}</span>
+                        <span class="text-meta font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder?->displayName() ?: $group->first()->company_name) }}</span>
                         <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm ml-auto"
                                 @click="$dispatch('board-receive', { scope: 'work_order', id: {{ (int) $workOrderId }}, count: {{ $group->count() }} })">
                             {{ __('Confirm all received') }}

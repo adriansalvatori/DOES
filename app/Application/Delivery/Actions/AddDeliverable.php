@@ -51,7 +51,7 @@ class AddDeliverable
                 'work_order_id' => $workOrder->getKey(),
                 'phase_id' => $phase?->getKey(),
                 'status' => DeliverableStatus::INTAKE,
-                'company_name' => $workOrder->client?->name ?? __('No client'),
+                'company_name' => $workOrder->displayName(),
                 'task_name' => trim($name),
                 'size' => $size,
                 'material' => $material,

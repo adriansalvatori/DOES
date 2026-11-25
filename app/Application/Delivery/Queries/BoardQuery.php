@@ -77,6 +77,7 @@ class BoardQuery
                     ->orWhere('task_name', 'like', $term)
                     ->orWhereHas('workOrder', fn (Builder $workOrders) => $workOrders
                         ->where('number', 'like', $term)
+                        ->orWhere('company_name', 'like', $term)
                         ->orWhere('description', 'like', $term)));
             });
     }

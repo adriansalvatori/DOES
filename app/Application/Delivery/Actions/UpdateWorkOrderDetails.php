@@ -75,6 +75,10 @@ class UpdateWorkOrderDetails
                 }
             }
 
+            if (isset($diff['client_id']) && $diff['client_id']['new'] !== null) {
+                $workOrder->company_name = Client::query()->find($diff['client_id']['new'])?->name;
+            }
+
             if ($diff === []) {
                 return [];
             }

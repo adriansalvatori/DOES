@@ -130,7 +130,7 @@
                 $block = $deliverable->openBlock;
                 $hold = $deliverable->openHold;
                 $isClosed = $deliverable->status->isClosed();
-                $company = \App\Support\TitleCase::from($workOrder?->client?->name ?? $deliverable->company_name);
+                $company = \App\Support\TitleCase::from($workOrder?->displayName() ?: $deliverable->company_name);
                 $location = \App\Support\TitleCase::from($workOrder?->clientLocation?->name);
                 $workOrderUrl = $workOrder !== null && \Illuminate\Support\Facades\Route::has('work-orders.show') ? route('work-orders.show', $workOrder) : null;
             @endphp

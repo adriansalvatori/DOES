@@ -34,5 +34,6 @@ final readonly class CreateWorkOrderData
         public array $installationTypes = [],
         public ?string $estimateInvoiceNumber = null,
         public ?string $notes = null,
+        public ?string $companyName = null,
     ) {}
 }

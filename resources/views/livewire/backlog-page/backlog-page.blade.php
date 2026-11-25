@@ -65,7 +65,7 @@
                         <td><input type="checkbox" class="rounded border-line" value="{{ $workOrder->id }}" wire:model="selected" aria-label="{{ __('Select') }}"></td>
                         <td><x-wo-badge :number="$workOrder->number" /></td>
                         <td class="min-w-48">
-                            <p class="truncate font-medium text-ink">{{ \App\Support\TitleCase::from($workOrder->client?->name ?? $first?->company_name) }}</p>
+                            <p class="truncate font-medium text-ink">{{ \App\Support\TitleCase::from($workOrder->displayName() ?: $first?->company_name) }}</p>
                             <x-orders.location :location="\App\Support\TitleCase::from($workOrder->clientLocation?->name)" />
                         </td>
                         <td class="min-w-48 text-ink-2"><span class="line-clamp-2">{{ $workOrder->description ?: $first?->task_name }}</span></td>

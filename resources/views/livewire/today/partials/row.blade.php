@@ -5,7 +5,7 @@
     $chipTone ??= 'neutral';
     $showAssignee ??= false;
     $workOrder = $deliverable->workOrder;
-    $company = \App\Support\TitleCase::from($workOrder?->client?->name ?? $deliverable->company_name);
+    $company = \App\Support\TitleCase::from($workOrder?->displayName() ?: $deliverable->company_name);
     $location = \App\Support\TitleCase::from($workOrder?->clientLocation?->name);
 @endphp
 

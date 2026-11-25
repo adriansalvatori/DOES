@@ -132,7 +132,7 @@
                                         @if($workOrder->number)
                                             <x-wo-badge :number="$workOrder->number" />
                                         @endif
-                                        <span class="text-row font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder->client?->name) }}</span>
+                                        <span class="text-row font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder->displayName()) }}</span>
                                         <x-orders.location :location="\App\Support\TitleCase::from($workOrder->clientLocation?->name)" class="shrink-0" />
                                     </div>
                                     @if($workOrder->description)
@@ -167,7 +167,7 @@
                                         @endif
                                         <span class="text-row font-medium text-ink truncate">{{ $deliverable->task_name }}</span>
                                     </div>
-                                    <p class="text-body text-ink-2 truncate">{{ \App\Support\TitleCase::from($deliverable->workOrder?->client?->name) }}</p>
+                                    <p class="text-body text-ink-2 truncate">{{ \App\Support\TitleCase::from($deliverable->workOrder?->displayName() ?: $deliverable->company_name) }}</p>
                                 </div>
                                 <span class="text-meta text-ink-3 shrink-0">{{ $deliverable->status?->label() }}</span>
                             </div>

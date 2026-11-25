@@ -5,7 +5,7 @@
 @if($row)
     @php
         $workOrder = $row->workOrder;
-        $client = \App\Support\TitleCase::from($workOrder->client?->name ?? $row->deliverables->first()?->company_name);
+        $client = \App\Support\TitleCase::from($workOrder->displayName() ?: $row->deliverables->first()?->company_name);
         $location = \App\Support\TitleCase::from($workOrder->clientLocation?->name);
         $installed = $workOrder->installation_types ?? [];
         $name = $workOrder->description ?: ($row->deliverables->first()?->task_name ?? '');

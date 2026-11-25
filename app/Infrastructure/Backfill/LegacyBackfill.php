@@ -15,6 +15,7 @@ use App\Enums\UserRole;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 /**
@@ -69,6 +70,7 @@ class LegacyBackfill
             $this->mapTasks();
             $this->foldElements();
             $this->correctClosedAt();
+            $this->fillWorkOrderCompanyNames();
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -497,6 +499,65 @@ class LegacyBackfill
             }
 
             $this->report['closed_at_corrected'] = $changed;
+
+            return $changed;
+        });
+    }
+
+    /**
+     * Gives every work order the company it shows when no company record is linked: the linked company's name, else
+     * the most recent company name typed on one of its deliverables. Idempotent.
+     *
+     * @return int Work orders whose company_name changed.
+     */
+    public function fillWorkOrderCompanyNames(): int
+    {
+        if (! Schema::hasColumn('work_orders', 'company_name')) {
+            return 0;
+        }
+
+        return DB::transaction(function (): int {
+            $changed = 0;
+
+            DB::table('work_orders')
+                ->join('clients', 'clients.id', '=', 'work_orders.client_id')
+                ->whereRaw('(work_orders.company_name IS NULL OR work_orders.company_name != clients.name)')
+                ->select('work_orders.id', 'clients.name')
+                ->orderBy('work_orders.id')
+                ->get()
+                ->each(function (object $row) use (&$changed): void {
+                    DB::table('work_orders')->where('id', $row->id)->update(['company_name' => $row->name]);
+                    $changed++;
+                });
+
+            $unlinked = DB::table('work_orders')
+                ->whereNull('client_id')
+                ->where(fn ($query) => $query->whereNull('company_name')->orWhere('company_name', ''))
+                ->pluck('id')
+                ->flip();
+
+            if ($unlinked->isNotEmpty()) {
+                $seen = [];
+                DB::table('orders')
+                    ->whereNotNull('work_order_id')
+                    ->whereNotNull('company_name')
+                    ->where('company_name', '!=', '')
+                    ->where('company_name', '!=', 'No client')
+                    ->orderByDesc('updated_at')
+                    ->orderByDesc('id')
+                    ->select('work_order_id', 'company_name')
+                    ->each(function (object $order) use ($unlinked, &$seen, &$changed): void {
+                        if (! $unlinked->has($order->work_order_id) || isset($seen[$order->work_order_id])) {
+                            return;
+                        }
+
+                        $seen[$order->work_order_id] = true;
+                        DB::table('work_orders')->where('id', $order->work_order_id)->update(['company_name' => trim($order->company_name)]);
+                        $changed++;
+                    });
+            }
+
+            $this->report['work_order_company_names'] = $changed;
 
             return $changed;
         });

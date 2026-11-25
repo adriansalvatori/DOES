@@ -17,7 +17,7 @@
         <a href="{{ route('resolver') }}" wire:navigate wire:key="cs-{{ $group->workOrder->id }}" class="ui-card flex flex-wrap items-center gap-2 px-4 py-2.5 hover:bg-sunken/40">
             <x-ui.tag :tone="$group->oldestAgeInDays >= 7 ? 'danger' : ($group->oldestAgeInDays >= 3 ? 'warn' : 'neutral')" class="tabular-nums">{{ __(':days d', ['days' => $group->oldestAgeInDays]) }}</x-ui.tag>
             <x-wo-badge :number="$group->workOrder->number" />
-            <span class="truncate text-row font-medium text-ink">{{ \App\Support\TitleCase::from($group->workOrder->client?->name ?? $group->items[0]->deliverable->company_name) }}</span>
+            <span class="truncate text-row font-medium text-ink">{{ \App\Support\TitleCase::from($group->workOrder->displayName() ?: $group->items[0]->deliverable->company_name) }}</span>
             <x-orders.location :location="\App\Support\TitleCase::from($group->workOrder->clientLocation?->name)" />
             <span class="flex-1"></span>
             <span class="text-meta text-ink-3">{{ trans_choice('{1} :count item|[2,*] :count items', count($group->items)) }}</span>

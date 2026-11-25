@@ -67,7 +67,7 @@
                             <span class="flex min-w-0 flex-wrap items-center gap-x-2">
                                 <x-ui.tag tone="warn">{{ $silentDays ? __('Client silent :days days', ['days' => $silentDays]) : $alert->kind->label() }}</x-ui.tag>
                                 @if($deliverable?->workOrder?->number)<x-wo-badge :number="$deliverable->workOrder->number" />@endif
-                                <span class="truncate text-row font-medium text-ink">{{ \App\Support\TitleCase::from($deliverable?->workOrder?->client?->name ?? $deliverable?->company_name) }}</span>
+                                <span class="truncate text-row font-medium text-ink">{{ \App\Support\TitleCase::from($deliverable?->workOrder?->displayName() ?: $deliverable?->company_name) }}</span>
                             </span>
                             <span class="block truncate text-body text-ink-2">{{ $deliverable?->task_name }}</span>
                         </div>

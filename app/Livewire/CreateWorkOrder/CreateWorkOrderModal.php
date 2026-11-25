@@ -254,6 +254,7 @@ class CreateWorkOrderModal extends Component
             assigneeId: $this->assigneeId === '' ? null : (int) $this->assigneeId,
             promisedDate: $this->promisedDate === '' ? null : CarbonImmutable::parse($this->promisedDate),
             trelloLink: $this->blankToNull($this->trelloLink),
+            companyName: $parties['client']?->name ?? $this->companyQuery,
         );
 
         try {

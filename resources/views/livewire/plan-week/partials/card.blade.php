@@ -2,7 +2,7 @@
 @php
     $blocked = $deliverable->openBlock !== null;
     $canDrag = ($draggable ?? false) && ! $blocked;
-    $client = \App\Support\TitleCase::from($deliverable->company_name ?: $deliverable->workOrder?->client?->name);
+    $client = \App\Support\TitleCase::from($deliverable->workOrder?->displayName() ?: $deliverable->company_name);
     $promised = ($showPromised ?? false) ? $deliverable->workOrder?->promised_date : null;
 @endphp
 <div

@@ -116,6 +116,7 @@ class OverviewQuery
                     ->orWhere('description', 'like', $term)
                     ->orWhere('estimate_invoice_number', 'like', $term)
                     ->orWhere('notes', 'like', $term)
+                    ->orWhere('company_name', 'like', $term)
                     ->orWhereHas('client', fn (Builder $clients) => $clients->where('name', 'like', $term))
                     ->orWhereHas('deliverables', fn (Builder $deliverables) => $deliverables
                         ->where('company_name', 'like', $term)

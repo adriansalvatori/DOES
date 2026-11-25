@@ -10,7 +10,7 @@
     $block = $card->openBlock;
     $hold = $card->openHold;
     $isDone = $card->status === \App\Domain\Delivery\Enums\DeliverableStatus::DONE;
-    $company = \App\Support\TitleCase::from($card->company_name ?: $workOrder?->client?->name);
+    $company = \App\Support\TitleCase::from($workOrder?->displayName() ?: $card->company_name);
     $location = \App\Support\TitleCase::from($workOrder?->clientLocation?->name);
     $stuck = $block !== null || $hold !== null;
     $canProduce = ! $stuck && \Illuminate\Support\Facades\Gate::allows('moveInProduction', $card);

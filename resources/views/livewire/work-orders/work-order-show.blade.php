@@ -1,7 +1,7 @@
 @php
     $page = $this->page;
     $workOrder = $page->workOrder;
-    $clientName = \App\Support\TitleCase::from($workOrder->client?->name);
+    $clientName = \App\Support\TitleCase::from($workOrder->displayName());
     $locationName = \App\Support\TitleCase::from($workOrder->clientLocation?->name);
     $contactName = \App\Support\TitleCase::from($workOrder->contact?->name);
     $isPhased = $workOrder->phases->isNotEmpty();

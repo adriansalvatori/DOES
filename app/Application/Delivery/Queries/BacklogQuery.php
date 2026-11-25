@@ -24,6 +24,7 @@ class BacklogQuery
                 $inner->where(fn (Builder $any) => $any
                     ->where('number', 'like', $term)
                     ->orWhere('description', 'like', $term)
+                    ->orWhere('company_name', 'like', $term)
                     ->orWhereHas('client', fn (Builder $clients) => $clients->where('name', 'like', $term))
                     ->orWhereHas('contact', fn (Builder $contacts) => $contacts->where('name', 'like', $term))
                     ->orWhereHas('deliverables', fn (Builder $deliverables) => $deliverables

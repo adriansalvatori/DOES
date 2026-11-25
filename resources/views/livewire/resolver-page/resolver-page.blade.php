@@ -30,7 +30,7 @@
                     <div class="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5">
                         <x-ui.tag :tone="$ageTone" class="tabular-nums">{{ __(':days d', ['days' => $group->oldestAgeInDays]) }}</x-ui.tag>
                         <x-wo-badge :number="$workOrder->number" />
-                        <span class="text-row font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder->client?->name) }}</span>
+                        <span class="text-row font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder->displayName()) }}</span>
                         <x-orders.location :location="\App\Support\TitleCase::from($workOrder->clientLocation?->name)" />
                     </div>
                     <ul class="divide-y divide-line">

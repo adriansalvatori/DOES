@@ -284,7 +284,7 @@ class PlanWeekPage extends Component
             $deliverable->workOrder?->number,
             $deliverable->wo_number,
             $deliverable->company_name,
-            $deliverable->workOrder?->client?->name,
+            $deliverable->workOrder?->displayName(),
             $deliverable->task_name,
         ]));
 

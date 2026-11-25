@@ -89,6 +89,7 @@ class WorkOrderListQuery
                 $query->where(fn (Builder $inner) => $inner
                     ->where('number', 'like', $term)
                     ->orWhere('description', 'like', $term)
+                    ->orWhere('company_name', 'like', $term)
                     ->orWhereHas('client', fn (Builder $clients) => $clients->where('name', 'like', $term))
                     ->orWhereHas('deliverables', fn (Builder $deliverables) => $deliverables
                         ->where('company_name', 'like', $term)
