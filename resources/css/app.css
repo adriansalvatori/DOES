@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+/* The app is light-only: dark styles apply only under an explicit .dark class, which nothing sets. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 [x-cloak] {
     display: none !important;
@@ -27,18 +31,192 @@
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/*
+ * Kudos DOES design tokens.
+ * One warm gray ramp, four health tones, two fixed identifiers (black WO tag, red location pin)
+ * and five text sizes. Prefer these tokens over raw palette classes or hex values in new markup.
+ */
 @theme {
     --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
     --font-mono: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Zinc is remapped to stone so every view runs on the same warm gray ramp. */
+    --color-zinc-50: oklch(98.5% 0.001 106.423);
+    --color-zinc-100: oklch(97% 0.001 106.424);
+    --color-zinc-200: oklch(92.3% 0.003 48.717);
+    --color-zinc-300: oklch(86.9% 0.005 56.366);
+    --color-zinc-400: oklch(70.9% 0.01 56.259);
+    --color-zinc-500: oklch(55.3% 0.013 58.071);
+    --color-zinc-600: oklch(44.4% 0.011 73.639);
+    --color-zinc-700: oklch(37.4% 0.01 67.558);
+    --color-zinc-800: oklch(26.8% 0.007 34.298);
+    --color-zinc-900: oklch(21.6% 0.006 56.043);
+    --color-zinc-950: oklch(14.7% 0.004 49.25);
+
+    /* Surfaces, lines and text */
+    --color-canvas: #fbfbfa;
+    --color-surface: #ffffff;
+    --color-sunken: #f3f3f0;
+    --color-line: #e9e9e7;
+    --color-line-strong: #d6d6d1;
+    --color-ink: #1f1f1d;
+    --color-ink-2: #5c5c57;
+    --color-ink-3: #8a8a85;
+    --color-gold: #eda621;
+
+    /* Health tones: the only colors that carry meaning on an order */
+    --color-danger: #b42323;
+    --color-danger-soft: #fbecec;
+    --color-warn: #935700;
+    --color-warn-soft: #fbf2e1;
+    --color-info: #2152c4;
+    --color-info-soft: #eaf0fc;
+    --color-ok: #1b7442;
+    --color-ok-soft: #e6f3ea;
+
+    /* Fixed identifiers */
+    --color-wo: #1c1917;
+    --color-pin: #dc2626;
+
+    /* Flux accent: primary actions are ink, so gold and the health tones stay free */
+    --color-accent: #1f1f1d;
+    --color-accent-content: #1f1f1d;
+    --color-accent-foreground: #ffffff;
+
+    /* Type scale: nothing below 12px */
+    --text-meta: 12px;
+    --text-meta--line-height: 16px;
+    --text-body: 13px;
+    --text-body--line-height: 20px;
+    --text-row: 14px;
+    --text-row--line-height: 20px;
+    --text-section: 16px;
+    --text-section--line-height: 24px;
+    --text-title: 20px;
+    --text-title--line-height: 28px;
+
+    /* Shape and depth */
+    --radius-control: 6px;
+    --radius-card: 10px;
+    --radius-panel: 14px;
+    --shadow-menu: 0 4px 16px -2px rgb(28 25 23 / 0.1), 0 1px 3px rgb(28 25 23 / 0.06);
+    --shadow-panel: 0 16px 48px -8px rgb(28 25 23 / 0.18), 0 2px 6px rgb(28 25 23 / 0.06);
 }
 
 body {
     font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
+/*
+ * Kudos UI primitives. One look for every control, table and card, so pages stop inventing their own.
+ * Use these classes (or Flux components) instead of hand-rolled borders, heights and colors.
+ *   Controls (32px):  .ui-input  .ui-select  .ui-btn + .ui-btn-primary | .ui-btn-secondary | .ui-btn-ghost | .ui-btn-danger
+ *                     .ui-btn-sm (28px)  .ui-btn-icon (square)
+ *   Choice chips:     .ui-chip  (selected: aria-pressed="true" or .is-selected)
+ *   Surfaces:         .ui-card  .ui-section-title  .ui-label (form label)  .ui-kbd
+ *   Tables:           <table class="ui-table">  (sticky sentence-case header, 44px rows, hover tint)
+ *   Done work:        .ui-done  (dimmed, never struck through)
+ */
+@layer components {
+    .ui-input {
+        @apply h-8 w-full rounded-control border border-line bg-surface px-2.5 text-body text-ink placeholder:text-ink-3 transition-colors;
+        @apply hover:border-line-strong focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10;
+    }
+    textarea.ui-input {
+        @apply h-auto py-2;
+    }
+
+    .ui-select {
+        @apply h-8 w-full cursor-pointer appearance-none rounded-control border border-line bg-surface pl-2.5 pr-8 text-body text-ink transition-colors;
+        @apply hover:border-line-strong focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a85' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+        background-position: right 8px center;
+        background-repeat: no-repeat;
+        background-size: 16px 16px;
+    }
+
+    .ui-btn {
+        @apply inline-flex h-8 shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-control px-3 text-body font-medium transition-colors;
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/20 disabled:pointer-events-none disabled:opacity-50;
+    }
+    .ui-btn svg {
+        @apply h-4 w-4 shrink-0;
+    }
+    .ui-btn-sm {
+        @apply h-7 px-2.5 text-meta;
+    }
+    .ui-btn-sm svg {
+        @apply h-3.5 w-3.5;
+    }
+    .ui-btn-icon {
+        @apply w-8 px-0;
+    }
+    .ui-btn-sm.ui-btn-icon {
+        @apply w-7;
+    }
+    .ui-btn-primary {
+        @apply bg-ink text-white hover:bg-black;
+    }
+    .ui-btn-secondary {
+        @apply border border-line bg-surface text-ink shadow-[0_1px_0_rgb(28_25_23/0.04)] hover:border-line-strong hover:bg-sunken/60;
+    }
+    .ui-btn-ghost {
+        @apply text-ink-2 hover:bg-sunken hover:text-ink;
+    }
+    .ui-btn-danger {
+        @apply border border-line bg-surface text-danger hover:border-danger/40 hover:bg-danger-soft;
+    }
+
+    .ui-chip {
+        @apply inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 text-meta font-medium text-ink-2 transition-colors hover:border-line-strong hover:text-ink;
+    }
+    .ui-chip[aria-pressed='true'],
+    .ui-chip.is-selected {
+        @apply border-ink bg-ink text-white hover:text-white;
+    }
+
+    .ui-card {
+        @apply rounded-card border border-line bg-surface;
+    }
+    .ui-section-title {
+        @apply text-row font-semibold text-ink;
+    }
+    .ui-label {
+        @apply mb-1.5 block text-meta font-medium text-ink-2;
+    }
+    .ui-kbd {
+        @apply inline-flex h-5 items-center rounded border border-line px-1.5 font-sans text-meta text-ink-3;
+    }
+
+    .ui-table {
+        @apply w-full border-separate border-spacing-0 text-body text-ink;
+    }
+    .ui-table thead th {
+        @apply sticky top-0 z-10 h-9 whitespace-nowrap border-b border-line bg-canvas px-3 text-left align-middle text-meta font-medium normal-case tracking-normal text-ink-3;
+    }
+    .ui-table tbody td {
+        @apply h-11 border-b border-line px-3 py-2 align-middle;
+    }
+    .ui-table tbody tr {
+        @apply transition-colors;
+    }
+    .ui-table tbody tr:hover td {
+        @apply bg-sunken/50;
+    }
+    .ui-table .is-num {
+        @apply text-right tabular-nums;
+    }
+
+    .ui-done {
+        @apply text-ink-3;
+    }
+}
+
+/* Data keeps DM Sans for now (116 bold mono usages; DM Mono has no bold), with aligned digits. */
 code, pre, .font-mono {
     font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif !important;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Custom Always-Visible Horizontal Scrollbar for Kanban Board */

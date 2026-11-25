@@ -30,8 +30,8 @@
                 window.KudosNotifier.playChime();
                 if (this.permission === 'granted') {
                     window.KudosNotifier.showSystemNotification({
-                        title: '🔔 Kudos DOES (Prueba)',
-                        body: '{{ __('¡El sonido y las notificaciones del sistema están activos!') }}',
+                        title: 'Kudos DOES · ' + @js(__('Prueba')),
+                        body: @js(__('¡El sonido y las notificaciones del sistema están activos!')),
                     });
                 }
             }
@@ -40,11 +40,13 @@
     @click.outside="open = false" 
     wire:poll.30s>
     
-    <!-- Bell Icon Trigger Button -->
-    <button 
-        @click="open = !open" 
-        type="button" 
-        class="relative p-1.5 rounded-lg text-zinc-500 hover:text-zinc-800 hover:bg-[#efefed] transition cursor-pointer"
+    <!-- Bell trigger -->
+    <button
+        @click="open = !open"
+        type="button"
+        class="ui-btn ui-btn-ghost ui-btn-icon relative"
+        :aria-expanded="open.toString()"
+        aria-label="{{ __('Centro de Notificaciones') }}"
         title="{{ __('Centro de Notificaciones') }}">
         <x-lucide-bell class="w-4 h-4" />
 
@@ -62,83 +64,48 @@
                         }
                     }
                 }
-                $dotColor = $hasUnreadAssigned ? 'bg-rose-500' : 'bg-emerald-500';
-                $pingColor = $hasUnreadAssigned ? 'bg-rose-400' : 'bg-emerald-400';
             @endphp
-            <span class="absolute top-1 right-1 flex h-2.5 w-2.5">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full {{ $pingColor }} opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2.5 w-2.5 {{ $dotColor }}"></span>
-            </span>
+            <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full ring-2 ring-surface {{ $hasUnreadAssigned ? 'bg-danger' : 'bg-ink-3' }}"></span>
         @endif
     </button>
 
-    <!-- Notification Dropdown Popover -->
-    <div 
-        x-show="open" 
-        x-transition:enter="transition ease-out duration-150"
-        x-transition:enter-start="opacity-0 scale-95 translate-y-1"
-        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-        x-transition:leave="transition ease-in duration-100"
-        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-        x-transition:leave-end="opacity-0 scale-95 translate-y-1"
+    <!-- Dropdown -->
+    <div
+        x-show="open"
+        x-cloak
         style="display: none;"
-        class="absolute right-0 mt-2 w-80 sm:w-96 bg-white border border-stone-200/90 rounded-2xl shadow-xl z-50 overflow-hidden divide-y divide-stone-100">
-        
-        <!-- Header -->
-        <div class="px-3.5 py-2.5 bg-stone-50/80 flex items-center justify-between">
+        class="absolute right-0 mt-2 w-80 sm:w-96 bg-surface border border-line rounded-card shadow-menu z-50 overflow-hidden">
+
+        <div class="px-4 py-3 flex items-center justify-between border-b border-line">
             <div class="flex items-center gap-2">
-                <h3 class="font-semibold text-xs text-zinc-900">{{ __('Notificaciones') }}</h3>
+                <h3 class="text-row font-semibold text-ink">{{ __('Notificaciones') }}</h3>
                 @if($unreadCount > 0)
-                    <span class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700">
-                        {{ $unreadCount }} {{ __('nuevas') }}
-                    </span>
+                    <span class="text-meta text-ink-3">{{ trans_choice('{1} :count nueva|[2,*] :count nuevas', $unreadCount) }}</span>
                 @endif
             </div>
 
             @if($unreadCount > 0)
-                <button 
-                    wire:click="markAllAsRead" 
-                    type="button" 
-                    class="text-[11px] font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer">
+                <button wire:click="markAllAsRead" type="button" class="ui-btn ui-btn-ghost ui-btn-sm">
                     {{ __('Marcar leídas') }}
                 </button>
             @endif
         </div>
 
-        <!-- 1-Click Permission Incentive Card (Only visible if permission is 'default') -->
-        <div 
-            x-show="permission === 'default'" 
-            x-cloak
-            x-transition:enter="transition ease-out duration-150"
-            x-transition:enter-start="opacity-0 -translate-y-1"
-            x-transition:enter-end="opacity-100 translate-y-0"
-            class="px-3.5 py-2.5 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/5 border-b border-amber-200/80 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-800 flex items-center justify-center shrink-0 shadow-2xs">
-                    <x-lucide-bell-ring class="w-4 h-4 animate-bounce" />
-                </div>
-                <div class="min-w-0">
-                    <p class="text-xs font-bold text-zinc-900 leading-tight">{{ __('¿Activar alertas en tu equipo?') }}</p>
-                    <p class="text-[10px] text-zinc-600 leading-tight mt-0.5 truncate">{{ __('Recibe avisos con sonido de tus órdenes') }}</p>
-                </div>
+        <!-- Permission prompt (only when the browser has not been asked yet) -->
+        <div x-show="permission === 'default'" x-cloak class="px-4 py-3 flex items-center justify-between gap-3 border-b border-line bg-sunken">
+            <div class="min-w-0">
+                <p class="text-body font-medium text-ink">{{ __('¿Activar alertas en tu equipo?') }}</p>
+                <p class="text-meta text-ink-3 truncate">{{ __('Recibe avisos con sonido de tus órdenes') }}</p>
             </div>
-
-            <button 
-                @click="requestPerm()" 
-                type="button" 
-                class="shrink-0 px-3 py-1.5 rounded-lg bg-zinc-900 hover:bg-black text-white font-semibold text-xs shadow-xs hover:shadow transition-all duration-150 cursor-pointer flex items-center gap-1 active:scale-95">
-                <x-lucide-check class="w-3.5 h-3.5 text-amber-400" />
-                <span>{{ __('Activar') }}</span>
-            </button>
+            <button @click="requestPerm()" type="button" class="ui-btn ui-btn-secondary ui-btn-sm shrink-0">{{ __('Activar') }}</button>
         </div>
 
-        <!-- Notification Items List -->
-        <div class="max-h-80 overflow-y-auto divide-y divide-stone-100 text-xs">
+        <!-- Items -->
+        <div class="max-h-96 overflow-y-auto divide-y divide-line">
             @php
                 $currentUser = auth()->user();
                 $userDesignerId = $currentUser?->designer?->id;
                 $hasUnread = $notifications->contains(fn($item) => $item->unread());
-                $hasRead = $notifications->contains(fn($item) => !$item->unread());
                 $firstReadRendered = false;
             @endphp
 
@@ -166,201 +133,90 @@
 
                     $companyName = $n->data['company_name'] ?? null;
                     $taskName = $n->data['task_name'] ?? null;
-                    $orderId = $n->data['order_id'] ?? null;
                     $detailText = $n->data['detail_text'] ?? null;
                     $actorName = $n->data['actor_name'] ?? null;
                     $nDesignerId = $n->data['designer_id'] ?? null;
                     $nDesignerName = $n->data['designer_name'] ?? null;
-
                     $isAssignedToMe = $userDesignerId && $nDesignerId && (int) $userDesignerId === (int) $nDesignerId;
-                    $isUnassignedToMe = ! $isAssignedToMe;
 
                     if ($companyName && $taskName && trim(strtolower($companyName)) === trim(strtolower($taskName))) {
-                        $headlineParts = [$taskName];
+                        $headline = $taskName;
                     } else {
-                        $headlineParts = array_filter([$companyName, $taskName]);
-                    }
-                    $headline = implode(' • ', $headlineParts);
-                    if (empty($headline)) {
-                        $headline = __('General');
+                        $headline = implode(' · ', array_filter([$companyName, $taskName])) ?: __('General');
                     }
 
-                    if ($isRead) {
-                        $labelBadgeClass = 'bg-stone-100 text-stone-400 border-stone-200/60 font-medium';
-                        $containerClass = 'opacity-40 hover:opacity-85 bg-stone-50/20 text-zinc-500';
-                    } else {
-                        $labelBadgeClass = match(strtolower($label)) {
-                            'urgent', 'overdue', 'blocked' => 'bg-red-100 text-red-700 border-red-200',
-                            'new order', 'approved' => 'bg-emerald-100 text-emerald-800 border-emerald-200',
-                            'new file', 'new comment' => 'bg-sky-100 text-sky-800 border-sky-200',
-                            'status', 'unblocked' => 'bg-amber-100 text-amber-800 border-amber-200',
-                            'due today' => 'bg-orange-100 text-orange-800 border-orange-200',
-                            default => 'bg-stone-100 text-stone-700 border-stone-200',
-                        };
-                        $containerClass = $isUrgent 
-                            ? 'bg-red-50/60 hover:bg-red-50 border-l-2 border-l-red-500 font-medium opacity-100' 
-                            : 'bg-amber-50/30 hover:bg-amber-50/60 opacity-100 text-zinc-800 font-medium';
-                    }
+                    $labelTone = match(strtolower($label)) {
+                        'urgent', 'overdue', 'blocked' => 'danger',
+                        'due today', 'status', 'unblocked' => 'warn',
+                        'approved' => 'ok',
+                        default => 'neutral',
+                    };
                 @endphp
 
                 @if($isRead && $hasUnread && !$firstReadRendered)
                     @php $firstReadRendered = true; @endphp
-                    <div class="px-3.5 py-1 bg-stone-100/80 border-y border-stone-200/60 flex items-center gap-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider select-none">
-                        <span>{{ __('Leídas') }}</span>
-                        <div class="h-px bg-stone-200/80 flex-1"></div>
-                    </div>
+                    <div class="px-4 py-1.5 bg-sunken text-meta font-medium text-ink-3 select-none">{{ __('Leídas') }}</div>
                 @endif
 
-                <div 
-                    wire:click="markAsRead('{{ $n->id }}')" 
-                    class="px-3.5 py-2.5 transition duration-150 cursor-pointer flex items-start gap-2.5 {{ $containerClass }}">
-                    
-                    <div class="shrink-0 mt-0.5">
-                        @if($isUrgent && ! $isRead)
-                            <x-lucide-alert-triangle class="w-3.5 h-3.5 text-red-600 animate-pulse" />
-                        @elseif($n->unread())
-                            @if($isUnassignedToMe)
-                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block shadow-sm" title="{{ __('Orden no asignada a ti') }}"></span>
-                            @else
-                                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 inline-block shadow-sm" title="{{ __('Orden asignada a ti') }}"></span>
+                <div wire:click="markAsRead('{{ $n->id }}')" class="px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-sunken transition">
+                    <span class="mt-1.5 h-2 w-2 rounded-full shrink-0 {{ $isRead ? 'bg-transparent' : ($isAssignedToMe || $isUrgent ? 'bg-danger' : 'bg-ink-3') }}"
+                          @if(! $isRead) title="{{ $isAssignedToMe ? __('Orden asignada a ti') : __('Orden no asignada a ti') }}" @endif></span>
+
+                    <div class="flex-1 min-w-0 {{ $isRead ? 'ui-done' : '' }}">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <x-ui.tag :tone="$isRead ? 'neutral' : $labelTone">{{ __($label) }}</x-ui.tag>
+                            @if($nDesignerName && ! $isAssignedToMe)
+                                <span class="text-meta text-ink-3 truncate">{{ $nDesignerName }}</span>
                             @endif
-                        @else
-                            <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-zinc-300" />
+                        </div>
+                        <p class="mt-1 text-body truncate {{ $isRead ? '' : 'font-medium text-ink' }}">{{ $headline }}</p>
+                        @if($detailText)
+                            <p class="text-meta text-ink-3 mt-0.5">{{ $detailText }}</p>
                         @endif
-                    </div>
-
-                    <div class="flex-1 min-w-0">
-                        @if($isUnassignedToMe)
-                            <!-- Compact Layout for unassigned cards (no bold text) -->
-                            <div class="flex items-center gap-1.5 mb-1 min-w-0 flex-wrap">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium border leading-none shrink-0 {{ $nDesignerName ? 'bg-cyan-100 text-cyan-800 border-cyan-200' : 'bg-stone-100 text-stone-600 border-stone-200' }}">
-                                    {{ $nDesignerName ?: __('Sin asignar') }}
-                                </span>
-                                <span class="px-1.5 py-0.5 rounded-md text-[10px] font-medium border leading-none shrink-0 {{ $labelBadgeClass }}">
-                                    {{ __($label) }}
-                                </span>
-                                <span class="text-xs {{ $isRead ? 'font-normal text-zinc-500' : 'font-normal text-zinc-700' }} truncate min-w-0">
-                                    {{ $headline }}
-                                </span>
-                            </div>
-
-                            @if($detailText)
-                                <p class="text-[11px] {{ $isRead ? 'text-zinc-400' : 'text-zinc-500' }} leading-snug mb-1 font-normal">
-                                    {{ $detailText }}
-                                </p>
-                            @endif
-
-                            <div class="flex items-center justify-between text-[10px] {{ $isRead ? 'text-zinc-300' : 'text-zinc-400' }} mt-1 pt-1 border-t border-stone-100/60">
-                                <span>{{ $n->created_at->diffForHumans() }}</span>
-                                @if($actorName)
-                                    <span class="font-normal {{ $isRead ? 'text-zinc-400' : 'text-zinc-500' }}">{{ __('por') }} {{ $actorName }}</span>
-                                @endif
-                            </div>
-                        @else
-                            <!-- Standard Layout for assigned cards -->
-                            <div class="flex items-center gap-2 mb-1 min-w-0">
-                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold border leading-none shrink-0 {{ $labelBadgeClass }}">
-                                    {{ __($label) }}
-                                </span>
-                                @if($companyName)
-                                    <span class="text-[11px] {{ $isRead ? 'font-medium text-zinc-500' : 'font-bold text-zinc-700' }} truncate">
-                                        {{ $companyName }}
-                                    </span>
-                                @endif
-                            </div>
-
-                            <p class="text-xs {{ $isRead ? 'font-medium text-zinc-600' : 'font-semibold text-zinc-900' }} leading-snug truncate">
-                                {{ $taskName ?: ($companyName ?: __('Orden')) }}
-                            </p>
-
-                            @if($detailText)
-                                <p class="text-[11px] {{ $isRead ? 'text-zinc-400' : 'text-zinc-500' }} leading-snug mt-0.5 font-normal">
-                                    {{ $detailText }}
-                                </p>
-                            @endif
-
-                            <div class="flex items-center justify-between text-[10px] {{ $isRead ? 'text-zinc-300' : 'text-zinc-400' }} mt-1.5 pt-1 border-t border-stone-100/60">
-                                <span>{{ $n->created_at->diffForHumans() }}</span>
-                                @if($actorName)
-                                    <span class="font-medium {{ $isRead ? 'text-zinc-400' : 'text-zinc-500' }}">{{ __('por') }} {{ $actorName }}</span>
-                                @endif
-                            </div>
-                        @endif
+                        <p class="text-meta text-ink-3 mt-1">
+                            {{ $n->created_at->diffForHumans() }}@if($actorName) · {{ __('por') }} {{ $actorName }}@endif
+                        </p>
                     </div>
                 </div>
             @empty
-                <div class="p-6 text-center text-zinc-400">
-                    <x-lucide-bell-off class="w-5 h-5 mx-auto mb-1.5 text-zinc-300" />
-                    <p class="text-xs">{{ __('No tienes notificaciones pendientes') }}</p>
+                <div class="px-4 py-8 text-center">
+                    <x-lucide-bell-off class="w-5 h-5 mx-auto mb-2 text-ink-3" />
+                    <p class="text-body text-ink-3">{{ __('No tienes notificaciones pendientes') }}</p>
                 </div>
             @endforelse
         </div>
 
-        <!-- Footer: System Notification & Sound Controls -->
-        <div 
-            x-show="permission !== 'default'"
-            class="px-3.5 py-2 bg-stone-50/90 border-t border-stone-100 flex items-center justify-between text-[11px] text-zinc-500">
-
+        <!-- Footer: system notification and sound controls -->
+        <div x-show="permission !== 'default'" class="px-4 py-2 border-t border-line flex items-center justify-between text-meta text-ink-3">
             <template x-if="permission === 'granted'">
                 <div class="w-full flex items-center justify-between">
-                    <div class="flex items-center gap-1.5 text-emerald-700">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-2xs"></span>
-                        <span class="font-medium text-[10px] text-zinc-700">{{ __('Avisos activos') }}</span>
-                    </div>
-
-                    <div class="flex items-center gap-1.5">
-                        <button 
-                            @click="toggleSound()" 
-                            type="button" 
-                            class="p-1 rounded hover:bg-stone-200/70 text-zinc-600 transition cursor-pointer"
-                            :title="soundEnabled ? '{{ __('Silenciar sonido') }}' : '{{ __('Activar sonido') }}'">
-                            <span x-show="soundEnabled">
-                                <x-lucide-volume-2 class="w-3.5 h-3.5 text-zinc-600" />
-                            </span>
-                            <span x-show="!soundEnabled" x-cloak>
-                                <x-lucide-volume-x class="w-3.5 h-3.5 text-zinc-400" />
-                            </span>
+                    <span>{{ __('Avisos activos') }}</span>
+                    <div class="flex items-center gap-1">
+                        <button @click="toggleSound()" type="button" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"
+                                :title="soundEnabled ? @js(__('Silenciar sonido')) : @js(__('Activar sonido'))"
+                                :aria-label="soundEnabled ? @js(__('Silenciar sonido')) : @js(__('Activar sonido'))">
+                            <span x-show="soundEnabled"><x-lucide-volume-2 class="w-4 h-4" /></span>
+                            <span x-show="!soundEnabled" x-cloak><x-lucide-volume-x class="w-4 h-4" /></span>
                         </button>
-
-                        <button 
-                            @click="testNotification()" 
-                            type="button" 
-                            class="px-2 py-0.5 rounded text-[10px] font-medium bg-stone-200/80 hover:bg-stone-200 text-zinc-700 transition cursor-pointer"
-                            title="{{ __('Reproducir sonido de prueba y mostrar notificación') }}">
-                            {{ __('Probar') }}
-                        </button>
+                        <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm"
+                                title="{{ __('Reproducir sonido de prueba y mostrar notificación') }}">{{ __('Probar') }}</button>
                     </div>
                 </div>
             </template>
 
             <template x-if="permission === 'denied'">
-                <div class="w-full flex items-center justify-between gap-1 text-[10px] text-amber-800">
-                    <div class="flex items-center gap-1 min-w-0">
-                        <x-lucide-bell-off class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                        <span class="truncate">{{ __('Avisos bloqueados en navegador') }}</span>
-                    </div>
-                    <button 
-                        @click="testNotification()" 
-                        type="button" 
-                        class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-200 hover:bg-stone-300 text-zinc-700 transition cursor-pointer shrink-0">
-                        {{ __('Probar sonido') }}
-                    </button>
+                <div class="w-full flex items-center justify-between gap-2">
+                    <span class="truncate">{{ __('Avisos bloqueados en navegador') }}</span>
+                    <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm shrink-0">{{ __('Probar sonido') }}</button>
                 </div>
             </template>
 
             <template x-if="permission === 'unsupported'">
-                <div class="w-full flex items-center justify-between gap-1 text-[10px] text-zinc-400">
+                <div class="w-full flex items-center justify-between gap-2">
                     <span>{{ __('Avisos no soportados') }}</span>
-                    <button 
-                        @click="testNotification()" 
-                        type="button" 
-                        class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-stone-200 hover:bg-stone-300 text-zinc-700 transition cursor-pointer shrink-0">
-                        {{ __('Probar sonido') }}
-                    </button>
+                    <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm shrink-0">{{ __('Probar sonido') }}</button>
                 </div>
             </template>
         </div>
-
     </div>
-
 </div>

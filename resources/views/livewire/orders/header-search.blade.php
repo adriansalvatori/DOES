@@ -1,452 +1,238 @@
-<div 
-    x-data="{ 
-        open: false, 
-        selectedIndex: -1,
-        focusInput() {
+{{--
+    ⌘K command palette. The top bar shows a search-style trigger and "Nueva Orden".
+    ⌘K / Ctrl+K or a click opens the palette: live order and client search (server-side),
+    "Ir a" destinations from NavigationService (filtered in the browser) and quick actions.
+    Keyboard: ↑ ↓ move, Enter opens, Esc closes. Tab moves focus normally inside the dialog.
+--}}
+<div
+    x-data="{
+        open: false,
+        query: '',
+        selectedIndex: 0,
+        openPalette() {
             this.open = true;
-            $nextTick(() => {
-                this.$refs.searchInput.focus();
-                this.$refs.searchInput.select();
-            });
+            this.selectedIndex = 0;
+            this.$nextTick(() => this.$refs.input?.focus());
         },
-        closeSearch() {
+        closePalette() {
             this.open = false;
-            this.selectedIndex = -1;
+            this.query = '';
+            this.selectedIndex = 0;
             $wire.clearSearch();
         },
-        getItems() {
-            return this.$refs.resultsContainer ? Array.from(this.$refs.resultsContainer.querySelectorAll('.search-result-btn')) : [];
+        matches(label) {
+            const needle = this.query.trim().toLowerCase();
+            return needle === '' || label.includes(needle);
         },
-        selectNext() {
-            if (!this.open) {
-                this.open = true;
-                return;
-            }
-            const items = this.getItems();
-            if (items.length === 0) return;
-            if (this.selectedIndex < items.length - 1) {
-                this.selectedIndex++;
-            } else {
-                this.selectedIndex = 0;
-            }
-            this.scrollToSelected();
+        items() {
+            return this.$refs.list ? Array.from(this.$refs.list.querySelectorAll('[data-palette-item]')).filter((el) => el.offsetParent !== null) : [];
         },
-        selectPrev() {
-            if (!this.open) {
-                this.open = true;
-                return;
-            }
-            const items = this.getItems();
-            if (items.length === 0) return;
-            if (this.selectedIndex > 0) {
-                this.selectedIndex--;
-            } else if (this.selectedIndex === 0) {
-                this.selectedIndex = -1;
-            } else {
-                this.selectedIndex = items.length - 1;
-            }
-            this.scrollToSelected();
+        isSelected(el) {
+            return this.items()[this.selectedIndex] === el;
         },
-        scrollToSelected() {
-            this.$nextTick(() => {
-                if (this.selectedIndex < 0 || !this.$refs.resultsContainer) return;
-                const items = this.getItems();
-                const item = items[this.selectedIndex];
-                if (!item) return;
-                const targetEl = item.closest('.search-result-wrapper') || item;
-                const container = this.$refs.resultsContainer;
-
-                if (this.selectedIndex === 0) {
-                    container.scrollTop = 0;
-                    return;
-                }
-                if (this.selectedIndex === items.length - 1) {
-                    container.scrollTop = container.scrollHeight;
-                    return;
-                }
-
-                const containerRect = container.getBoundingClientRect();
-                const targetRect = targetEl.getBoundingClientRect();
-
-                if (targetRect.bottom > containerRect.bottom) {
-                    container.scrollTop += (targetRect.bottom - containerRect.bottom) + 8;
-                } else if (targetRect.top < containerRect.top) {
-                    container.scrollTop -= (containerRect.top - targetRect.top) + 8;
-                }
-            });
+        move(step) {
+            const total = this.items().length;
+            if (total === 0) return;
+            this.selectedIndex = (this.selectedIndex + step + total) % total;
+            this.$nextTick(() => this.items()[this.selectedIndex]?.scrollIntoView({ block: 'nearest' }));
         },
-        selectCurrent() {
-            if (!this.open) return;
-            const items = this.getItems();
-            if (items.length === 0) return;
-            const targetIdx = this.selectedIndex >= 0 ? this.selectedIndex : 0;
-            if (items[targetIdx]) {
-                items[targetIdx].click();
-            }
+        activate() {
+            this.items()[this.selectedIndex]?.click();
         }
     }"
-    @keydown.window.cmd.k.prevent="focusInput()"
-    @keydown.window.ctrl.k.prevent="focusInput()"
-    @click.outside="open = false"
-    @keydown.arrow-down.prevent="selectNext()"
-    @keydown.arrow-up.prevent="selectPrev()"
-    @keydown.enter.prevent="selectCurrent()"
-    @keydown.escape="closeSearch()"
-    class="relative flex-1 max-w-lg mx-2 sm:mx-4"
+    @keydown.window.cmd.k.prevent="open ? closePalette() : openPalette()"
+    @keydown.window.ctrl.k.prevent="open ? closePalette() : openPalette()"
+    @open-command-palette.window="openPalette()"
+    class="flex items-center gap-2 min-w-0"
 >
-    <!-- Search Bar Input Field & Create Task Button in Header -->
-    <div class="flex items-center gap-2">
-        <div class="relative flex-1 flex items-center">
-            <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 pointer-events-none shrink-0" />
-            
-            <input 
-                x-ref="searchInput"
-                type="text" 
-                wire:model.live.debounce.200ms="search" 
-                @focus="open = true"
-                @input="selectedIndex = -1; open = true;"
-                @keydown.escape.stop="closeSearch()"
-                @keydown.arrow-down.prevent.stop="selectNext()"
-                @keydown.arrow-up.prevent.stop="selectPrev()"
-                @keydown.enter.prevent.stop="selectCurrent()"
-                @keydown.tab="if (open && getItems().length > 0) { $event.preventDefault(); selectNext(); }"
-                @keydown.shift.tab="if (open && getItems().length > 0) { $event.preventDefault(); selectPrev(); }"
-                placeholder="{{ __('Buscar en DOES (WO#, cliente, empresa, trabajo...)...') }}" 
-                class="w-full bg-[#f4f4f2] hover:bg-[#eaeaea] focus:bg-white border border-[#e2e2df] focus:border-stone-400 rounded-lg pl-8 pr-12 py-1 h-7.5 text-xs text-zinc-800 placeholder-zinc-400 transition focus:outline-none focus:ring-1 focus:ring-stone-300 shadow-2xs"
-            />
+    <!-- Top bar trigger -->
+    <button
+        type="button"
+        @click="openPalette()"
+        class="w-44 md:w-64 lg:w-72 min-w-0 h-8 px-2.5 rounded-control border border-line bg-surface text-body text-ink-3 hover:border-line-strong transition flex items-center gap-2 cursor-pointer"
+        aria-haspopup="dialog">
+        <x-lucide-search class="w-4 h-4 shrink-0" aria-hidden="true" />
+        <span class="truncate">{{ __('Buscar o ir a…') }}</span>
+        <kbd class="ui-kbd ml-auto hidden sm:inline-flex">⌘K</kbd>
+    </button>
 
-            <div class="absolute right-2 flex items-center gap-1">
-                @if(trim($search) !== '')
-                    <button 
-                        type="button" 
-                        wire:click="clearSearch" 
-                        @click.stop="$refs.searchInput.focus()"
-                        class="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition cursor-pointer"
-                        title="{{ __('Limpiar búsqueda') }}">
-                        <x-lucide-x class="w-3 h-3" />
-                    </button>
-                @else
-                    <kbd class="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-medium text-zinc-400 bg-white border border-stone-200 shadow-2xs pointer-events-none">
-                        ⌘K
-                    </kbd>
+    <button
+        type="button"
+        @click="$dispatch('open-create-order')"
+        class="ui-btn ui-btn-primary"
+        title="{{ __('Nueva Orden') }}">
+        <x-lucide-plus aria-hidden="true" />
+        <span class="hidden sm:inline">{{ __('Nueva Orden') }}</span>
+    </button>
+
+    <!-- Palette dialog -->
+    <div
+        x-show="open"
+        x-cloak
+        style="display: none;"
+        class="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="{{ __('Buscar o ir a…') }}"
+        @keydown.escape.prevent.stop="closePalette()"
+    >
+        <div class="fixed inset-0 bg-stone-900/30" @click="closePalette()"></div>
+
+        <div
+            x-show="open"
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 -translate-y-1"
+            x-transition:enter-end="opacity-100 translate-y-0"
+            x-trap.noscroll="open"
+            class="relative w-full max-w-xl bg-surface border border-line rounded-panel shadow-panel overflow-hidden flex flex-col max-h-[70vh]"
+        >
+            <div class="flex items-center gap-2 px-3 border-b border-line">
+                <x-lucide-search class="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
+                <input
+                    x-ref="input"
+                    type="text"
+                    wire:model.live.debounce.200ms="search"
+                    @input="query = $event.target.value; selectedIndex = 0"
+                    @keydown.arrow-down.prevent="move(1)"
+                    @keydown.arrow-up.prevent="move(-1)"
+                    @keydown.enter.prevent="activate()"
+                    placeholder="{{ __('WO, cliente, contacto o sección…') }}"
+                    autocomplete="off"
+                    spellcheck="false"
+                    class="flex-1 h-12 bg-transparent text-row text-ink placeholder:text-ink-3 focus:outline-none"
+                    aria-label="{{ __('Buscar o ir a…') }}"
+                />
+                <span wire:loading wire:target="search" class="text-ink-3" aria-hidden="true">
+                    <x-lucide-loader-2 class="w-4 h-4 animate-spin" />
+                </span>
+            </div>
+
+            <div x-ref="list" class="overflow-y-auto p-1.5 space-y-3 custom-vertical-scrollbar" role="listbox">
+                @php $hasQuery = mb_strlen(trim($search)) >= 1; @endphp
+
+                @if($hasQuery && count($results) > 0)
+                    <div>
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Órdenes') }}</p>
+                        @foreach($results as $order)
+                            <div
+                                wire:key="palette-order-{{ $order->id }}"
+                                data-palette-item
+                                role="option"
+                                tabindex="-1"
+                                :aria-selected="isSelected($el).toString()"
+                                :class="isSelected($el) ? 'bg-sunken' : ''"
+                                @mouseenter="selectedIndex = items().indexOf($el)"
+                                @click="$wire.selectOrder({{ $order->id }}); open = false; query = ''"
+                                class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        @if($order->wo_number)
+                                            <x-wo-badge :number="$order->wo_number" />
+                                        @endif
+                                        <span class="text-row font-medium text-ink truncate">{{ $order->company_name }}</span>
+                                        <x-orders.location :location="$order->location_text" class="shrink-0" />
+                                    </div>
+                                    <p class="text-body text-ink-2 truncate">{{ $order->task_name }}</p>
+                                </div>
+                                <x-orders.stage :status="$order->core_status" :show-label="false" class="shrink-0" />
+                                @php $designer = $order->primary_designer; @endphp
+                                <x-ui.person :person="$designer" size="sm" class="shrink-0" />
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if($hasQuery && count($clientResults) > 0)
+                    <div>
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Clientes') }}</p>
+                        @foreach($clientResults as $client)
+                            <div
+                                wire:key="palette-client-{{ $client->id }}"
+                                data-palette-item
+                                role="option"
+                                tabindex="-1"
+                                :aria-selected="isSelected($el).toString()"
+                                :class="isSelected($el) ? 'bg-sunken' : ''"
+                                @mouseenter="selectedIndex = items().indexOf($el)"
+                                @click="$wire.selectClient({{ $client->id }}); open = false; query = ''"
+                                class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
+                            >
+                                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-sunken text-ink-2">
+                                    <x-lucide-building-2 class="w-4 h-4" aria-hidden="true" />
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-row font-medium text-ink truncate">{{ $client->name }}</p>
+                                    <p class="text-meta text-ink-3 truncate">
+                                        {{ trans_choice(':count orden activa|:count órdenes activas', $client->active_orders_count, ['count' => $client->active_orders_count]) }}
+                                        @if($client->primaryContact) · {{ $client->primaryContact->name }} @endif
+                                    </p>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                <!-- Quick actions -->
+                <div x-show="matches(@js(mb_strtolower(__('Nueva Orden') . ' crear')))">
+                    <p class="px-2 py-1 text-meta text-ink-3">{{ __('Acciones') }}</p>
+                    <div
+                        data-palette-item
+                        role="option"
+                        tabindex="-1"
+                        :aria-selected="isSelected($el).toString()"
+                        :class="isSelected($el) ? 'bg-sunken' : ''"
+                        @mouseenter="selectedIndex = items().indexOf($el)"
+                        @click="closePalette(); $dispatch('open-create-order')"
+                        class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
+                    >
+                        <span class="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-ink text-white">
+                            <x-lucide-plus class="w-4 h-4" aria-hidden="true" />
+                        </span>
+                        <span class="text-row text-ink">{{ __('Nueva Orden') }}</span>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                @php $destinationGroups = collect($destinations)->groupBy('section'); @endphp
+                @foreach($destinationGroups as $section => $items)
+                    <div x-show="@js($items->map(fn ($item) => mb_strtolower($item['label'] . ' ' . $item['title']))->values()).some((label) => matches(label))">
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ $section }}</p>
+                        @foreach($items as $item)
+                            <a
+                                href="{{ $item['href'] }}"
+                                wire:navigate
+                                data-palette-item
+                                role="option"
+                                tabindex="-1"
+                                x-show="matches(@js(mb_strtolower($item['label'] . ' ' . $item['title'])))"
+                                :aria-selected="isSelected($el).toString()"
+                                :class="isSelected($el) ? 'bg-sunken' : ''"
+                                @mouseenter="selectedIndex = items().indexOf($el)"
+                                @click="open = false"
+                                class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
+                            >
+                                <span class="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-sunken text-ink-2">
+                                    {{ svg('lucide-' . $item['icon'], 'w-4 h-4', ['aria-hidden' => 'true']) }}
+                                </span>
+                                <span class="text-row text-ink truncate">{{ $item['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endforeach
+
+                @if($hasQuery && count($results) === 0 && count($clientResults) === 0)
+                    <p class="px-2 py-6 text-center text-body text-ink-3" x-show="items().length === 0">
+                        {{ __('Sin resultados para «:query».', ['query' => trim($search)]) }}
+                    </p>
                 @endif
             </div>
-        </div>
 
-        <!-- Sync Only New Cards from Trello Button -->
-        <button 
-            type="button" 
-            wire:click="runTrelloSyncOnlyNew" 
-            wire:loading.attr="disabled"
-            class="h-7.5 px-2.5 rounded-lg bg-[#0079bf] hover:bg-[#026aa7] active:bg-[#055a8c] disabled:opacity-50 text-white font-medium text-xs transition shrink-0 flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            title="{{ __('Traer solo tareas nuevas de Trello') }}">
-            <x-lucide-kanban wire:loading.remove wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 text-blue-100 shrink-0" />
-            <x-lucide-refresh-cw wire:loading wire:target="runTrelloSyncOnlyNew" class="w-3.5 h-3.5 animate-spin text-white shrink-0" />
-            <span class="hidden sm:inline" wire:loading.remove wire:target="runTrelloSyncOnlyNew">{{ __('Traer Nuevas') }}</span>
-            <span class="hidden sm:inline" wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando...') }}</span>
-        </button>
-
-        <!-- Create Order Button -->
-        <button 
-            type="button" 
-            @click="$dispatch('open-create-order')"
-            class="h-7.5 px-2.5 rounded-lg bg-[#eda622] hover:bg-[#d9941a] active:bg-[#c48415] text-zinc-950 font-semibold text-xs transition shrink-0 flex items-center gap-1.5 shadow-2xs cursor-pointer"
-            title="{{ __('Nueva Orden') }}">
-            <x-lucide-plus class="w-3.5 h-3.5 text-zinc-900 stroke-[2.5]" />
-            <span class="hidden sm:inline">{{ __('Nueva Orden') }}</span>
-        </button>
-    </div>
-
-    <!-- Live Search Dropdown Popup / Spotlight Container -->
-    <div 
-        x-show="open && $wire.search.trim().length >= 1" 
-        x-transition:enter="transition ease-out duration-100"
-        x-transition:enter-start="opacity-0 scale-98 -translate-y-1"
-        x-transition:enter-end="opacity-100 scale-100 translate-y-0"
-        x-transition:leave="transition ease-in duration-75"
-        x-transition:leave-start="opacity-100 scale-100 translate-y-0"
-        x-transition:leave-end="opacity-0 scale-98 -translate-y-1"
-        class="absolute left-0 top-full mt-2 bg-white border border-stone-200 rounded-xl shadow-2xl z-[100] overflow-hidden text-xs max-h-[460px] flex flex-col w-full sm:w-[560px] max-w-[calc(100vw-2rem)]"
-        style="display: none;"
-    >
-        <!-- Header status bar inside search dropdown -->
-        <div class="px-3 py-1.5 bg-stone-50 border-b border-stone-200/80 flex items-center justify-between text-[11px] text-zinc-500 font-medium shrink-0">
-            <span class="flex items-center gap-1.5">
-                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400" />
-                {{ __('Resultados de búsqueda') }}
-            </span>
-            <span class="text-[10px] text-zinc-400 font-mono">
-                {{ count($results) + count($clientResults) }} {{ (count($results) + count($clientResults)) === 1 ? __('coincidencia') : __('coincidencias') }}
-            </span>
-        </div>
-
-        <!-- Compact Results List -->
-        <div x-ref="resultsContainer" class="overflow-y-auto flex-1 p-1 space-y-1.5">
-            @php $itemIndex = 0; @endphp
-
-            {{-- Client Results Section --}}
-            @if(count($clientResults) > 0)
-                <div class="space-y-1">
-                    <div class="px-2.5 py-1 bg-stone-100/70 text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 shrink-0 rounded">
-                        <x-lucide-building-2 class="w-3.5 h-3.5 text-zinc-400" />
-                        <span>{{ __('Base de Datos Clientes') }}</span>
-                        <span class="text-[9px] text-zinc-400 font-mono">({{ count($clientResults) }})</span>
-                    </div>
-
-                    @foreach($clientResults as $client)
-                        @php $idx = $itemIndex++; @endphp
-                        <div 
-                            :class="{ 'bg-stone-100/90': selectedIndex === {{ $idx }} }"
-                            @mouseenter="selectedIndex = {{ $idx }}"
-                            class="search-result-wrapper rounded-md transition"
-                        >
-                            <div 
-                                role="button"
-                                tabindex="-1"
-                                wire:click="selectClient({{ $client->id }})"
-                                @click="closeSearch()"
-                                class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex flex-nowrap items-center justify-between gap-2.5 group cursor-pointer min-w-0"
-                            >
-                                <!-- Left Info Column -->
-                                <div class="flex-1 min-w-0 space-y-0.5">
-                                    <!-- Row 1: CLIENTE Badge + Client Name + Active Orders -->
-                                    <div class="flex items-center gap-2 truncate min-w-0">
-                                        <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-50 text-amber-700 border border-amber-200/80 shrink-0">
-                                            CLIENTE
-                                        </span>
-
-                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none uppercase">
-                                            {{ $client->name }}
-                                        </span>
-
-                                        @if($client->active_orders_count > 0)
-                                            <span class="text-zinc-300 text-[10px] shrink-0">•</span>
-                                            <span class="truncate flex items-center gap-1 text-[10px] text-emerald-700 font-medium shrink-0">
-                                                <x-lucide-layers class="w-3 h-3 text-emerald-600 shrink-0" />
-                                                <span>{{ $client->active_orders_count }} {{ $client->active_orders_count === 1 ? __('orden activa') : __('órdenes activas') }}</span>
-                                            </span>
-                                        @endif
-                                    </div>
-
-                                    <!-- Row 2: Building icon + Contact / Website / Main Location Address -->
-                                    @php
-                                        $mainLoc = $client->locations->first(function ($loc) {
-                                            $addr = trim($loc->address ?? '');
-                                            return !empty($addr) && $addr !== 'Por definir' && !str_starts_with($addr, 'Por definir');
-                                        }) ?? $client->locations->first();
-
-                                        $mainAddress = $mainLoc?->address;
-                                        if ($mainAddress === 'Por definir' || str_starts_with($mainAddress ?? '', 'Por definir')) {
-                                            $mainAddress = null;
-                                        }
-                                    @endphp
-                                    <div class="flex items-center gap-2 text-[10px] text-zinc-500 truncate min-w-0">
-                                        <x-lucide-building-2 class="w-3 h-3 text-zinc-400 shrink-0" />
-
-                                        @if($client->primaryContact)
-                                            <span class="truncate flex items-center gap-1">
-                                                <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                <span class="truncate">{{ $client->primaryContact->name }}</span>
-                                            </span>
-                                        @endif
-
-                                        @if($client->website)
-                                            @if($client->primaryContact)
-                                                <span class="text-zinc-300 text-[10px] shrink-0">•</span>
-                                            @endif
-                                            <span class="truncate flex items-center gap-1">
-                                                <x-lucide-globe class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                <span class="truncate">{{ str_replace(['https://', 'http://', 'www.'], '', $client->website) }}</span>
-                                            </span>
-                                        @endif
-
-                                        @if($mainAddress)
-                                            @if($client->primaryContact || $client->website)
-                                                <span class="text-zinc-300 text-[10px] shrink-0">•</span>
-                                            @endif
-                                            <span 
-                                                x-data="{ 
-                                                    copied: false,
-                                                    copyAddress(e) {
-                                                        e.stopPropagation();
-                                                        e.preventDefault();
-                                                        const text = {{ json_encode($mainAddress) }};
-                                                        if (navigator.clipboard && window.isSecureContext) {
-                                                            navigator.clipboard.writeText(text).then(() => {
-                                                                this.copied = true;
-                                                                setTimeout(() => this.copied = false, 2000);
-                                                            });
-                                                        } else {
-                                                            const ta = document.createElement('textarea');
-                                                            ta.value = text;
-                                                            ta.style.position = 'fixed';
-                                                            ta.style.opacity = '0';
-                                                            document.body.appendChild(ta);
-                                                            ta.select();
-                                                            document.execCommand('copy');
-                                                            document.body.removeChild(ta);
-                                                            this.copied = true;
-                                                            setTimeout(() => this.copied = false, 2000);
-                                                        }
-                                                    }
-                                                }"
-                                                @click="copyAddress($event)"
-                                                title="{{ __('Clic para copiar dirección') }}"
-                                                class="inline-flex items-center gap-1 text-[10px] text-zinc-700 hover:text-zinc-900 bg-stone-100 hover:bg-stone-200 border border-stone-200/90 px-1.5 py-0.2 rounded cursor-pointer transition shrink-0 group/addr"
-                                            >
-                                                <template x-if="!copied">
-                                                    <span class="flex items-center gap-1 truncate max-w-[220px]">
-                                                        <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
-                                                        <span class="truncate font-medium">{{ $mainAddress }}</span>
-                                                        <x-lucide-copy class="w-2.5 h-2.5 text-zinc-400 group-hover/addr:text-zinc-600 shrink-0 ml-0.5" />
-                                                    </span>
-                                                </template>
-                                                <template x-if="copied">
-                                                    <span class="flex items-center gap-1 text-emerald-700 font-semibold">
-                                                        <x-lucide-check class="w-3 h-3 text-emerald-600 shrink-0" />
-                                                        <span>{{ __('¡Copiado!') }}</span>
-                                                    </span>
-                                                </template>
-                                            </span>
-                                        @endif
-
-                                        @if(!$client->primaryContact && !$client->website && !$mainAddress)
-                                            <span class="text-zinc-400 text-[11px] truncate italic">{{ __('Ficha de cliente') }}</span>
-                                        @endif
-                                    </div>
-                                </div>
-
-                                <!-- Right Action Badge -->
-                                <div class="shrink-0 flex items-center gap-1 ml-2">
-                                    <span class="px-2 py-0.5 rounded text-[9.5px] font-semibold bg-stone-100 text-zinc-700 border border-stone-200 uppercase tracking-tight shrink-0 flex items-center gap-1 group-hover:bg-stone-200">
-                                        {{ __('Ver Ficha') }}
-                                        <x-lucide-chevron-right class="w-3 h-3 text-zinc-400" />
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-
-            {{-- Active Orders Results Section --}}
-            @if(count($results) > 0)
-                <div class="space-y-1 pt-1">
-                    @if(count($clientResults) > 0)
-                        <div class="px-2.5 py-1 bg-stone-100/70 text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-1.5 shrink-0 rounded">
-                            <x-lucide-layers class="w-3.5 h-3.5 text-zinc-400" />
-                            <span>{{ __('Órdenes Activas') }}</span>
-                            <span class="text-[9px] text-zinc-400 font-mono">({{ count($results) }})</span>
-                        </div>
-                    @endif
-
-                    @foreach($results as $order)
-                        @php $idx = $itemIndex++; @endphp
-                        <div 
-                            :class="{ 'bg-stone-100/90': selectedIndex === {{ $idx }} }"
-                            @mouseenter="selectedIndex = {{ $idx }}"
-                            class="search-result-wrapper rounded-md transition"
-                        >
-                            <div 
-                                role="button"
-                                tabindex="-1"
-                                wire:click="selectOrder({{ $order->id }})"
-                                @click="closeSearch()"
-                                class="search-result-btn w-full text-left px-2.5 py-1.5 rounded-md hover:bg-stone-100/80 transition flex flex-nowrap items-center justify-between gap-2.5 group cursor-pointer min-w-0"
-                            >
-                                <!-- Left Info Column -->
-                                <div class="flex-1 min-w-0 space-y-0.5">
-                                    <!-- Row 1: WO Badge, Company Name, Responsible -->
-                                    <div class="flex items-center gap-2 truncate min-w-0">
-                                        @if($order->wo_number)
-                                            <x-wo-badge :number="$order->wo_number" variant="outline" prefix="#" tabindex="-1" />
-                                        @endif
-
-                                        <span class="font-bold text-zinc-900 truncate group-hover:text-stone-900 text-xs shrink-0 max-w-[220px] sm:max-w-none uppercase">
-                                            {{ $order->company_name }}
-                                        </span>
-
-                                        @php
-                                            $respBadge = $order->display_responsible_person;
-                                        @endphp
-                                        <span class="text-zinc-300 text-[10px] shrink-0">•</span>
-                                        <span class="truncate flex items-center gap-1 text-[10px] {{ $respBadge === 'MAIN' ? 'text-zinc-400' : 'text-zinc-500 font-medium' }} min-w-0">
-                                            <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
-                                            <span class="truncate">{{ $respBadge }}</span>
-                                        </span>
-                                    </div>
-
-                                    <!-- Row 2: Designer, Order name -->
-                                    <div class="flex items-center gap-2 truncate min-w-0">
-                                        @php
-                                            $assigned = $order->assigned_designers;
-                                        @endphp
-                                        @if($assigned->isNotEmpty())
-                                            <span class="truncate flex items-center gap-1 text-[10px] text-zinc-500 font-medium shrink-0 max-w-[110px]">
-                                                <x-lucide-palette class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                <span class="truncate">{{ $assigned->pluck('name')->join(', ') }}</span>
-                                            </span>
-                                            <span class="text-zinc-300 text-[10px] shrink-0">•</span>
-                                        @endif
-
-                                        <span class="text-zinc-600 text-[11px] truncate font-medium min-w-0 uppercase">
-                                            {{ $order->task_name ?: ($order->trello_title ?: __('Sin título')) }}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <!-- Right Badges Column -->
-                                <div class="shrink-0 flex items-center gap-1.5 min-w-0 ml-2">
-                                    @if($order->substatus === \App\Enums\Substatus::OVERDUE || $order->isOverdue())
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-200 shrink-0">
-                                            {{ __('ATRASADA') }}
-                                        </span>
-                                    @endif
-
-                                    @if($order->substatus && $order->substatus !== \App\Enums\Substatus::OVERDUE)
-                                        <span class="text-[10px] text-zinc-500 font-medium hidden sm:inline truncate max-w-[100px] shrink-0">
-                                            {{ $order->substatus->label() }}
-                                        </span>
-                                    @endif
-
-                                    @if($order->core_status)
-                                        <span class="px-2 py-0.5 rounded text-[9.5px] font-semibold bg-stone-100 text-zinc-700 border border-stone-200 uppercase tracking-tight shrink-0 max-w-[140px] truncate" title="{{ $order->core_status->label() }}">
-                                            {{ $order->core_status->label() }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            @endif
-
-            @if(count($results) === 0 && count($clientResults) === 0)
-                <div class="p-5 text-center text-zinc-500 space-y-1">
-                    <x-lucide-search-x class="w-5 h-5 text-zinc-300 mx-auto" />
-                    <p class="font-medium text-zinc-700 text-xs">{{ __('No se encontraron resultados') }}</p>
-                    <p class="text-[11px] text-zinc-400">{{ __('Intenta buscar con el nombre del cliente, WO#, trabajo o diseñador.') }}</p>
-                </div>
-            @endif
-        </div>
-
-        <!-- Footer keyboard shortcut hints -->
-        <div class="px-3 py-1.5 bg-stone-50 border-t border-stone-200/80 flex items-center justify-between text-[10px] text-zinc-400 shrink-0">
-            <div class="flex items-center gap-3">
-                <span class="flex items-center gap-1">
-                    <kbd class="px-1 py-0.2 rounded bg-white border border-stone-200 font-mono text-[9px]">↑</kbd>
-                    <kbd class="px-1 py-0.2 rounded bg-white border border-stone-200 font-mono text-[9px]">↓</kbd>
-                    {{ __('Navegar') }}
-                </span>
-                <span class="flex items-center gap-1">
-                    <kbd class="px-1 py-0.2 rounded bg-white border border-stone-200 font-mono text-[9px]">↵</kbd>
-                    {{ __('Seleccionar') }}
-                </span>
+            <div class="flex items-center gap-4 px-3 py-2 border-t border-line text-meta text-ink-3">
+                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">↑</kbd><kbd class="px-1 rounded border border-line font-sans">↓</kbd> {{ __('para moverte') }}</span>
+                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">↵</kbd> {{ __('para abrir') }}</span>
+                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">Esc</kbd> {{ __('para cerrar') }}</span>
             </div>
-            <span class="flex items-center gap-1">
-                <kbd class="px-1 py-0.2 rounded bg-white border border-stone-200 font-mono text-[9px]">ESC</kbd>
-                {{ __('Cerrar') }}
-            </span>
         </div>
     </div>
 </div>

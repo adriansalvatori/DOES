@@ -25,7 +25,7 @@ class TaskList extends Component
         ]);
 
         $this->dispatch('order-updated');
-        session()->flash('message', "Estado de tarea '{$task->title}' actualizado.");
+        session()->flash('message', __('Estado de tarea \':title\' actualizado.', ['title' => __($task->title)]));
     }
 
     public function render()
@@ -49,6 +49,6 @@ class TaskList extends Component
         return view('livewire.tasks.task-list', [
             'tasks' => $tasks,
             'taskTypes' => RelatedTaskType::cases(),
-        ])->layout('components.layouts.app', ['title' => __('Tareas Vinculadas - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Tareas vinculadas').' - '.config('app.name')]);
     }
 }

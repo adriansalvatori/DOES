@@ -78,7 +78,7 @@ class LanguageSettingsTest extends TestCase
         $responseTrash = $this->get('/trash');
         $responseTrash->assertStatus(200);
         $responseTrash->assertSee('Trash');
-        $responseTrash->assertSee(__('Volver al Kanban'));
+        $responseTrash->assertSee(__('Buscar en la papelera...'));
 
         $responsePlanner = $this->get('/planner');
         $responsePlanner->assertStatus(200);

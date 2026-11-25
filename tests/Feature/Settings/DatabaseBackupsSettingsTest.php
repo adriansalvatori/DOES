@@ -40,7 +40,7 @@ class DatabaseBackupsSettingsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSeeLivewire(Backups::class);
-        $response->assertSee('Respaldos de Base de Datos');
+        $response->assertSee(__('Respaldos de Base de Datos'));
     }
 
     public function test_can_create_backup_from_settings_component(): void
@@ -99,7 +99,7 @@ class DatabaseBackupsSettingsTest extends TestCase
         Livewire::test(Backups::class)
             ->set('perPage', 5)
             ->assertSee('backup_sqlite_2026-01-15_000000.sqlite')
-            ->assertSee('15 disponible(s)')
+            ->assertSee('15 available')
             ->call('nextPage')
             ->assertSee('backup_sqlite_2026-01-10_000000.sqlite')
             ->assertDontSee('backup_sqlite_2026-01-14_000000.sqlite')

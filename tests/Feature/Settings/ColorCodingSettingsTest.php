@@ -64,7 +64,7 @@ class ColorCodingSettingsTest extends TestCase
         $response = $this->actingAs($admin)->get('/settings/color-coding');
 
         $response->assertStatus(200);
-        $response->assertSee('Personalización del Color Coding');
+        $response->assertSee('Color coding');
         $response->assertSee('Camila (QA & Revisiones)');
         $response->assertSee('Producción (ALTA & Taller)');
         $response->assertSee('Euralíz (Lead Designer)');
@@ -90,7 +90,7 @@ class ColorCodingSettingsTest extends TestCase
             ->test(ColorCoding::class)
             ->call('selectPreset', 'camila', $newPurple)
             ->assertHasNoErrors()
-            ->assertSee('Color actualizado para');
+            ->assertSee('Color updated for');
 
         $service = app(ColorCodingService::class);
         $this->assertEquals($newPurple, $service->getHex('camila'));

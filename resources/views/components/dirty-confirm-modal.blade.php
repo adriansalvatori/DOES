@@ -83,7 +83,7 @@
         x-transition:leave="transition ease-in duration-100"
         x-transition:leave-start="opacity-100 scale-100 translate-y-0"
         x-transition:leave-end="opacity-0 scale-95 translate-y-2"
-        class="relative bg-white border border-[#e9e9e7] rounded-xl shadow-xl max-w-md w-full p-4 sm:p-5 space-y-4 z-10"
+        class="relative bg-white border border-line rounded-xl shadow-xl max-w-md w-full p-4 sm:p-5 space-y-4 z-10"
     >
         <!-- Compact Header with Warning Badge -->
         <div class="flex items-start gap-3">
@@ -91,7 +91,7 @@
                 <x-lucide-alert-triangle class="w-4 h-4" />
             </div>
             <div class="space-y-0.5 min-w-0 flex-1">
-                <h3 class="font-bold text-sm text-zinc-900 tracking-tight leading-snug" x-text="title"></h3>
+                <h3 class="font-semibold text-sm text-zinc-900  leading-snug" x-text="title"></h3>
                 <p class="text-xs text-zinc-500 leading-normal font-normal" x-text="description"></p>
             </div>
         </div>

@@ -44,7 +44,7 @@ class ClientPortalTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('FUERZA LATINA');
-        $response->assertSee('Seguimiento en Vivo');
+        $response->assertSee('Live tracking');
     }
 
     public function test_client_portal_shows_not_found_on_invalid_token(): void
@@ -52,7 +52,7 @@ class ClientPortalTest extends TestCase
         $response = $this->get('/c/invalid-random-token-xyz');
 
         $response->assertStatus(200);
-        $response->assertSee('Enlace o Código QR No Válido');
+        $response->assertSee('Invalid link or QR code');
     }
 
     public function test_client_portal_displays_active_orders_and_filters(): void
@@ -143,7 +143,7 @@ class ClientPortalTest extends TestCase
         Livewire::test(ClientPortal::class, ['token' => $client->portal_token])
             ->call('selectOrder', $order->id)
             ->assertSet('selectedOrderId', $order->id)
-            ->assertSee('Línea de Tiempo de la Orden')
+            ->assertSee('Order timeline')
             ->assertSee('Orden recibida e iniciada')
             ->assertSee('Diseño enviado para tu revisión')
             ->assertSee('Cambios / comentarios recibidos')
@@ -163,9 +163,9 @@ class ClientPortalTest extends TestCase
         Livewire::test(ClientFlyoutPanel::class)
             ->dispatch('open-client-flyout', clientId: $client->id)
             ->assertSet('isOpen', true)
-            ->assertSeeHtml('Portal de Seguimiento (QR)')
+            ->assertSeeHtml(e(__('Portal de seguimiento (QR)')))
             ->assertSee($client->portal_url)
-            ->assertSee('Descargar Card JPG')
+            ->assertSee(__('Descargar tarjeta JPG'))
             ->assertDontSeeHtml('<span>Portal QR</span>');
     }
 
@@ -206,7 +206,7 @@ class ClientPortalTest extends TestCase
         $timeline = $service->getClientTimeline($order);
         $status = $service->getCustomerStatus($order);
 
-        $this->assertEquals('En Pausa', $status['label']);
+        $this->assertEquals('On hold', $status['label']);
         $this->assertStringContainsString('Esperando confirmación de medidas', $status['description']);
 
         $holdMilestone = $timeline->firstWhere('type', 'on_hold');
@@ -228,7 +228,7 @@ class ClientPortalTest extends TestCase
             ->set('cs_whatsapp_phone', '+1 (678) 999-8877')
             ->call('saveCsWhatsapp')
             ->assertHasNoErrors()
-            ->assertSee('Número de WhatsApp de Atención al Cliente actualizado exitosamente.');
+            ->assertSee('Customer service WhatsApp number updated.');
 
         $this->assertEquals('+1 (678) 999-8877', Setting::get('cs_whatsapp_phone'));
     }

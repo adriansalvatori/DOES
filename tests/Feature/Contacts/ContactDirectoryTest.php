@@ -248,7 +248,7 @@ class ContactDirectoryTest extends TestCase
             ->set('activeTab', 'orders')
             ->assertSee('WO 3001')
             ->assertSee('BANNERS GRAN INAUGURACION')
-            ->assertSee('Vía Main Contact');
+            ->assertSee(__('Vía contacto principal'));
     }
 
     public function test_create_order_auto_assigns_primary_contact_or_defaults_to_main(): void

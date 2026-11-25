@@ -64,7 +64,7 @@ class CreateOrderModalAvailabilityTest extends TestCase
         $component = Livewire::actingAs($user)
             ->test(CreateOrderModal::class)
             ->call('openModal')
-            ->assertSee('Más disponible esta semana:')
+            ->assertSee('Most available this week:')
             ->assertSee('Adrián')
             ->assertDontSee('0 subtareas');
 

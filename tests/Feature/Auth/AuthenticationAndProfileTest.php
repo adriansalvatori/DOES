@@ -240,7 +240,7 @@ class AuthenticationAndProfileTest extends TestCase
         $response->assertSee('Admin');
         $response->assertSee('Manager');
         $response->assertSee('Designer');
-        $response->assertSee('Comercial');
+        $response->assertSee('Sales');
 
         // Ensure old labels and emojis are no longer present
         $response->assertDontSee('PM Camila');
@@ -470,8 +470,8 @@ class AuthenticationAndProfileTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('profileSettingsPage', false);
         $response->assertSee('switchTab', false);
-        $response->assertSee('¿Salir sin guardar los cambios?');
-        $response->assertSee('Tienes cambios sin guardar');
-        $response->assertSee('bg-emerald-600', false);
+        $response->assertSee('Leave without saving?');
+        $response->assertSee('You have unsaved changes');
+        $response->assertSee('x-bind:disabled="!isDirty"', false);
     }
 }

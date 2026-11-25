@@ -1,205 +1,76 @@
-<div class="h-full flex flex-col space-y-4 min-h-0">
-    
-    <!-- Notion Header & Controls -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
-        <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Tareas Vinculadas (Related Tasks)') }}</h1>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-            <div class="relative w-full sm:w-60">
-                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Buscar tarea o empresa...') }}" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-8 pr-3 py-1 text-xs text-zinc-800 focus:outline-none w-full">
+<div class="h-full flex flex-col gap-4 min-h-0">
+    <x-ui.page-header :title="__('Tareas vinculadas')" :count="$tasks->count()">
+        <x-slot:toolbar>
+            <div class="relative w-64">
+                <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Buscar tarea o empresa...') }}" class="ui-input pl-8">
             </div>
-
-            <!-- Status Filter (Searchable) -->
-            <div class="relative min-w-[150px]" 
-                 x-data="{ 
-                     open: false,
-                     search: '',
-                     selectStatus(val) {
-                         $wire.set('statusFilter', val);
-                         this.open = false;
-                     }
-                 }"
-                 x-dropdown-nav>
-                <button 
-                    type="button" 
-                    @click="open = !open" 
-                    @click.outside="open = false"
-                    class="w-full bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-2.5 py-1 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
-                    <span class="truncate">
-                        @if($statusFilter === 'todo')
-                            {{ __('Pendientes (To Do)') }}
-                        @elseif($statusFilter === 'done')
-                            {{ __('Completadas (Done)') }}
-                        @else
-                            {{ __('Todas las Tareas') }}
-                        @endif
-                    </span>
-                    <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
-                </button>
-
-                <div 
-                    x-show="open" 
-                    x-cloak
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 scale-95"
-                    x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 overflow-y-auto divide-y divide-stone-100 text-xs"
-                    style="display: none;">
-                    <button 
-                        type="button"
-                        @click="selectStatus('todo')" 
-                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>{{ __('Pendientes (To Do)') }}</span>
-                        @if($statusFilter === 'todo')
-                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                        @endif
-                    </button>
-                    <button 
-                        type="button"
-                        @click="selectStatus('done')" 
-                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>{{ __('Completadas (Done)') }}</span>
-                        @if($statusFilter === 'done')
-                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                        @endif
-                    </button>
-                    <button 
-                        type="button"
-                        @click="selectStatus('all')" 
-                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>{{ __('Todas las Tareas') }}</span>
-                        @if($statusFilter === 'all')
-                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                        @endif
-                    </button>
-                </div>
-            </div>
-
-            <!-- Type Filter (Searchable) -->
-            <div class="relative min-w-[150px]" 
-                 x-data="{ 
-                     open: false,
-                     search: '',
-                     selectType(val) {
-                         $wire.set('typeFilter', val);
-                         this.open = false;
-                     }
-                 }"
-                 x-dropdown-nav>
-                <button 
-                    type="button" 
-                    @click="open = !open" 
-                    @click.outside="open = false"
-                    class="w-full bg-[#fbfbfa] hover:bg-white border border-[#e9e9e7] hover:border-stone-300 rounded-md px-2.5 py-1 text-xs text-zinc-700 font-medium flex items-center justify-between gap-1 truncate transition shadow-2xs">
-                    <span class="truncate">{{ $typeFilter === 'all' ? __('Todos los Tipos') : $typeFilter }}</span>
-                    <x-lucide-chevron-down class="w-3 h-3 text-zinc-400 shrink-0" />
-                </button>
-
-                <div 
-                    x-show="open" 
-                    x-cloak
-                    x-transition:enter="transition ease-out duration-100"
-                    x-transition:enter-start="opacity-0 scale-95"
-                    x-transition:enter-end="opacity-100 scale-100"
-                    class="absolute left-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-xl w-48 max-h-56 overflow-y-auto divide-y divide-stone-100 text-xs"
-                    style="display: none;">
-                    <div class="p-1.5 sticky top-0 bg-white border-b border-stone-100">
-                        <input 
-                            type="text" 
-                            x-model="search" 
-                            placeholder="{{ __('Buscar tipo...') }}" 
-                            class="w-full bg-stone-50 border border-stone-200 rounded px-2 py-1 text-[11px] text-zinc-800 focus:outline-none">
-                    </div>
-                    <button 
-                        type="button"
-                        @click="selectType('all')" 
-                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                        <span>{{ __('Todos los Tipos') }}</span>
-                        @if($typeFilter === 'all')
-                            <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3]" />
-                        @endif
-                    </button>
-                    @foreach($taskTypes as $type)
-                        <button 
-                            type="button"
-                            x-show="!search || '{{ strtolower(addslashes($type->value)) }}'.includes(search.toLowerCase())"
-                            @click="selectType('{{ $type->value }}')" 
-                            class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-medium text-zinc-800 transition flex items-center justify-between">
-                            <span class="truncate">{{ $type->label() }}</span>
-                            @if($typeFilter === $type->value)
-                                <x-lucide-check class="w-3.5 h-3.5 text-emerald-600 stroke-[3] shrink-0" />
-                            @endif
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
+            <select wire:model.live="statusFilter" class="ui-select w-44" aria-label="{{ __('Estado') }}">
+                <option value="todo">{{ __('Pendientes') }}</option>
+                <option value="done">{{ __('Completadas') }}</option>
+                <option value="all">{{ __('Todas las tareas') }}</option>
+            </select>
+            <select wire:model.live="typeFilter" class="ui-select w-44" aria-label="{{ __('Tipo') }}">
+                <option value="all">{{ __('Todos los tipos') }}</option>
+                @foreach($taskTypes as $type)
+                    <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                @endforeach
+            </select>
+        </x-slot:toolbar>
+    </x-ui.page-header>
 
     @if (session()->has('message'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-lg text-xs font-medium flex items-center gap-2 shrink-0">
-            <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600" />
+        <div class="flex shrink-0 items-center gap-2 rounded-card border border-line bg-surface px-3 py-2 text-body text-ink">
+            <x-lucide-check-circle-2 class="h-4 w-4 shrink-0 text-ok" />
             <span>{{ session('message') }}</span>
         </div>
     @endif
 
-    <!-- Notion Database Table View (Light Mode) -->
-    <div class="flex-1 min-h-0 bg-white border border-[#e9e9e7] rounded-xl shadow-2xs flex flex-col overflow-hidden">
-        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-vertical-scrollbar">
-            <table class="w-full text-left text-xs text-zinc-700">
-                <thead class="bg-[#f7f7f5] text-zinc-600 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
+    <div class="ui-card flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div class="min-h-0 flex-1 overflow-auto custom-vertical-scrollbar">
+            <table class="ui-table">
+                <thead>
                     <tr>
-                        <th class="p-3">{{ __('Estado') }}</th>
-                        <th class="p-3">{{ __('Título de la Tarea') }}</th>
-                        <th class="p-3">{{ __('Orden / Empresa') }}</th>
-                        <th class="p-3">{{ __('Asignado') }}</th>
-                        <th class="p-3">{{ __('Fecha Límite') }}</th>
-                        <th class="p-3 text-right">{{ __('Detalles') }}</th>
+                        <th class="w-10"><span class="sr-only">{{ __('Estado') }}</span></th>
+                        <th>{{ __('Tarea') }}</th>
+                        <th>{{ __('Orden') }}</th>
+                        <th>{{ __('Asignado') }}</th>
+                        <th>{{ __('Fecha límite') }}</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-[#e9e9e7]">
+                <tbody>
                     @forelse($tasks as $task)
-                        <tr class="hover:bg-[#fcfcfb] transition">
-                            <td class="p-3">
-                                <button wire:click="toggleTaskStatus({{ $task->id }})" class="px-2.5 py-1 rounded text-[10px] font-medium transition flex items-center gap-1.5 {{ $task->isDone() ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200' }}">
-                                    <x-lucide-check-circle-2 class="w-3 h-3" />
-                                    <span>{{ $task->isDone() ? 'Done' : 'To Do' }}</span>
+                        @php $done = $task->isDone(); @endphp
+                        <tr wire:key="task-{{ $task->id }}" class="cursor-pointer" wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order_id }} })">
+                            <td x-on:click.stop="">
+                                <button type="button" wire:click="toggleTaskStatus({{ $task->id }})" aria-pressed="{{ $done ? 'true' : 'false' }}"
+                                        title="{{ $done ? __('Reabrir tarea') : __('Marcar como completada') }}" aria-label="{{ $done ? __('Reabrir tarea') : __('Marcar como completada') }}"
+                                        class="flex h-5 w-5 items-center justify-center rounded-full border {{ $done ? 'border-ink bg-ink text-white' : 'border-line-strong text-transparent hover:text-ink-3' }}">
+                                    <x-lucide-check class="h-3 w-3" />
                                 </button>
                             </td>
-                            <td class="p-3 font-medium text-zinc-900">
-                                {{ __($task->title) }}
+                            <td class="font-medium {{ $done ? 'ui-done' : '' }}">{{ __($task->title) }}</td>
+                            <td class="text-ink-2">{{ $task->order?->company_name }}</td>
+                            <td>
+                                @if($task->assignee)
+                                    <x-ui.person :person="$task->assignee" size="sm" show-name />
+                                @else
+                                    <x-ui.person :person="null" size="sm" show-name />
+                                @endif
                             </td>
-                            <td class="p-3 font-normal text-zinc-600 uppercase">
-                                {{ $task->order?->company_name }}
-                            </td>
-                            <td class="p-3">
-                                <span class="px-2 py-0.5 rounded bg-stone-100 border border-stone-200 text-[10px] text-zinc-700 font-medium">
-                                    {{ $task->assignee?->name ?? __('Sin Asignar') }}
-                                </span>
-                            </td>
-                            <td class="p-3 font-mono text-zinc-500">
-                                {{ $task->due_date ? $task->due_date->format('d M, Y') : 'N/A' }}
-                            </td>
-                            <td class="p-3 text-right">
-                                <button wire:click="$dispatch('open-order-detail', { orderId: {{ $task->order_id }} })" class="px-2 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200 text-[10px] font-medium text-zinc-700 hover:text-zinc-900 transition flex items-center gap-1 inline-flex">
-                                    <x-lucide-panel-right class="w-3 h-3 text-zinc-500" />
-                                    <span>{{ __('Detalle') }}</span>
-                                </button>
+                            <td class="whitespace-nowrap">
+                                @if($task->due_date)
+                                    <x-orders.due :date="$task->due_date" :done="$done" />
+                                @else
+                                    <span class="text-ink-3">—</span>
+                                @endif
                             </td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-zinc-400 italic">
-                                {{ __('No se encontraron tareas vinculadas con los filtros seleccionados.') }}
-                            </td>
-                        </tr>
+                        <tr><td colspan="5" class="p-0"><x-ui.empty icon="check-square" :title="__('No se encontraron tareas vinculadas con los filtros seleccionados.')" /></td></tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
     </div>
-
 </div>

@@ -25,6 +25,7 @@ class Client extends Model
         'notes',
         'portal_token',
         'brand_kit',
+        'drive_folder_id',
     ];
 
     protected $casts = [
@@ -165,6 +166,11 @@ class Client extends Model
     public function links(): HasMany
     {
         return $this->hasMany(ClientLink::class)->orderBy('department')->orderBy('label');
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class)->latest()->orderByDesc('id');
     }
 
     public function orders(): HasMany

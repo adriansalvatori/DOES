@@ -1,218 +1,116 @@
-<div class="h-full flex flex-col space-y-3 min-h-0 max-w-4xl mx-auto w-full">
-    
-    <!-- Notion Header Controls -->
-    <div id="tour-client-header" class="bg-white border border-[#e9e9e7] rounded-xl p-3.5 flex flex-col space-y-3 shadow-2xs shrink-0">
-        {{-- Row 1: Title & Badge --}}
-        <div class="flex items-center gap-2.5 min-w-0 flex-wrap">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Catálogo de Compañías') }}</h1>
-            <span class="px-2.5 py-1 rounded-full bg-stone-100 border border-stone-200 text-[11px] font-bold text-zinc-600">{{ $totalClientsCount }}</span>
-        </div>
-
-        {{-- Row 2: Searchbar (fills space) & New Button --}}
-        <div class="flex items-center gap-2 w-full">
-            <!-- Searchbar -->
-            <div class="relative flex-1">
-                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input 
-                    id="tour-client-search"
-                    type="text" 
-                    wire:model.live.debounce.200ms="search" 
-                    placeholder="{{ __('Buscar cliente...') }}" 
-                    class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-7 pr-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400 w-full"
-                >
-            </div>
-
-            <!-- Nuevo Cliente -->
-            <button 
-                id="tour-client-new-btn"
-                type="button" 
-                wire:click="openClientDetail"
-                class="px-3 py-1 h-7 rounded-md bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer shrink-0"
-            >
-                <x-lucide-plus class="w-3 h-3 text-stone-100" />
-                <span>{{ __('Nuevo') }}</span>
-            </button>
-        </div>
+<div class="h-full flex flex-col min-h-0">
+    <div id="tour-client-header">
+        <x-ui.page-header :title="__('Compañías')" :count="$totalClientsCount">
+            <x-slot:actions>
+                <button id="tour-client-new-btn" type="button" wire:click="openClientDetail" class="ui-btn ui-btn-primary">
+                    <x-lucide-plus />
+                    {{ __('Nueva compañía') }}
+                </button>
+            </x-slot:actions>
+            <x-slot:toolbar>
+                <div class="relative w-72 max-w-full">
+                    <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
+                    <input id="tour-client-search" type="text" wire:model.live.debounce.200ms="search" placeholder="{{ __('Buscar compañía...') }}" class="ui-input pl-8">
+                </div>
+            </x-slot:toolbar>
+        </x-ui.page-header>
     </div>
 
-    <!-- Notification Flash Message -->
-    @if(session()->has('message'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-2.5 rounded-lg text-xs font-medium flex items-center justify-between shrink-0">
-            <div class="flex items-center gap-2">
-                <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>{{ session('message') }}</span>
-            </div>
-            <button @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900 cursor-pointer">
-                <x-lucide-x class="w-3 h-3" />
-            </button>
-        </div>
-    @endif
-
-    <!-- Client List Card (Locked against horizontal overflow) -->
-    <div class="flex-1 min-h-0 bg-white border border-[#e9e9e7] rounded-xl shadow-2xs flex flex-col overflow-hidden">
-        <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-vertical-scrollbar">
-            <table class="w-full text-left text-xs text-zinc-700 table-fixed">
-                <colgroup>
-                    <col class="w-auto">
-                    <col class="w-48 sm:w-64">
-                    <col class="w-10">
-                </colgroup>
-                <thead class="bg-[#f7f7f5] text-zinc-500 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
-                    <tr>
-                        <th class="py-2 px-3.5">{{ __('Cliente') }}</th>
-                        <th class="py-2 px-3.5 text-right">{{ __('Órdenes') }}</th>
-                        <th class="py-2 pr-3.5 pl-1 w-10 text-right"></th>
+    <div class="mt-4 flex-1 min-h-0 overflow-auto rounded-card border border-line bg-surface custom-vertical-scrollbar">
+        <table class="ui-table">
+            <thead>
+                <tr>
+                    <th>{{ __('Compañía') }}</th>
+                    <th>{{ __('Contacto principal') }}</th>
+                    <th>{{ __('Teléfono o email') }}</th>
+                    <th class="is-num">{{ __('Activas') }}</th>
+                    <th class="is-num">{{ __('Archivadas') }}</th>
+                    <th class="is-num">{{ __('Backlog') }}</th>
+                    <th class="w-10"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($clients as $client)
+                    @php
+                        $primaryContact = ($client->primaryContact instanceof \Illuminate\Support\Collection ? $client->primaryContact->first() : $client->primaryContact) ?: $client->contacts->first();
+                        $locations = $client->locations;
+                        $mainLocation = $locations->first();
+                        $mainLocationText = trim($mainLocation?->name ?: ($mainLocation?->address ?? ''));
+                        $mainAddress = trim($mainLocation?->address ?? '');
+                        $reach = $primaryContact?->phone ?: $primaryContact?->email;
+                    @endphp
+                    <tr wire:key="client-row-{{ $client->id }}" wire:click="openClientDetail({{ $client->id }})" class="cursor-pointer">
+                        <td class="max-w-0 w-[34%]">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <span class="truncate font-medium text-ink">{{ $client->name }}</span>
+                                @if($mainLocationText !== '')
+                                    <x-orders.location :location="$mainLocationText" class="min-w-0 shrink" />
+                                    @if($locations->count() > 1)
+                                        <span class="shrink-0 text-meta text-ink-3" title="{{ trans_choice('{1} :count ubicación|[2,*] :count ubicaciones', $locations->count(), ['count' => $locations->count()]) }}">+{{ $locations->count() - 1 }}</span>
+                                    @endif
+                                @endif
+                            </div>
+                        </td>
+                        <td class="max-w-0 w-[22%]">
+                            @if($primaryContact?->name)
+                                <span class="block truncate text-ink-2">{{ $primaryContact->name }}</span>
+                            @else
+                                <span class="text-ink-3">—</span>
+                            @endif
+                        </td>
+                        <td class="max-w-0 w-[22%]">
+                            @if($reach)
+                                <span class="block truncate text-ink-2">{{ $reach }}</span>
+                            @else
+                                <span class="text-ink-3">—</span>
+                            @endif
+                        </td>
+                        <td class="is-num {{ $client->active_orders_count > 0 ? 'text-ink font-medium' : 'text-ink-3' }}">{{ $client->active_orders_count }}</td>
+                        <td class="is-num text-ink-3">{{ $client->archived_orders_count }}</td>
+                        <td class="is-num text-ink-3">{{ $client->backlog_orders_count }}</td>
+                        <td class="text-right" x-on:click.stop="">
+                            <div
+                                x-data="{
+                                    copy(text) {
+                                        const done = () => $dispatch('toast', { message: @js(__('Dirección copiada')) });
+                                        if (navigator.clipboard && window.isSecureContext) {
+                                            navigator.clipboard.writeText(text).then(done).catch(() => this.fallback(text, done));
+                                        } else { this.fallback(text, done); }
+                                    },
+                                    fallback(text, done) {
+                                        const ta = document.createElement('textarea');
+                                        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+                                        document.body.appendChild(ta); ta.focus(); ta.select();
+                                        try { document.execCommand('copy'); } catch (e) {}
+                                        document.body.removeChild(ta); done();
+                                    }
+                                }"
+                            >
+                                <flux:dropdown position="bottom" align="end">
+                                    <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Acciones') }}" />
+                                    <flux:menu>
+                                        @if($mainAddress !== '')
+                                            <flux:menu.item icon="document-duplicate" x-on:click="copy({{ \Illuminate\Support\Js::from($mainAddress) }})">{{ __('Copiar dirección') }}</flux:menu.item>
+                                            <flux:menu.separator />
+                                        @endif
+                                        <flux:menu.item
+                                            variant="danger"
+                                            icon="trash"
+                                            wire:click="deleteClient({{ $client->id }})"
+                                            wire:confirm="{{ __('¿Eliminar la compañía :name? Se moverá a la papelera.', ['name' => $client->name]) }}">{{ __('Eliminar compañía') }}</flux:menu.item>
+                                    </flux:menu>
+                                </flux:dropdown>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-[#e9e9e7]">
-                    @forelse($clients as $client)
-                        {{-- Clickable Row --}}
-                        <tr 
-                            wire:click="openClientDetail({{ $client->id }})" 
-                            class="group hover:bg-[#f7f7f5] transition cursor-pointer"
-                        >
-                            <td class="py-2.5 px-3.5 min-w-0">
-                                <div class="flex flex-col min-w-0">
-                                    <span class="font-bold text-zinc-900 text-xs tracking-tight uppercase truncate">
-                                        {{ $client->name }}
-                                    </span>
-                                    @php
-                                        $primaryContact = ($client->primaryContact instanceof \Illuminate\Support\Collection ? $client->primaryContact->first() : $client->primaryContact) ?: $client->contacts->first();
-                                        $mainLocation = $client->locations->first();
-                                        $mainAddress = trim($mainLocation?->address ?? '');
-                                    @endphp
-                                    @if($primaryContact && ($primaryContact->name || $primaryContact->phone || $primaryContact->email))
-                                        <div class="flex items-center gap-2.5 text-[11px] text-zinc-500 font-normal mt-0.5 flex-wrap">
-                                            @if($primaryContact->name)
-                                                <span class="font-medium text-zinc-700 flex items-center gap-1 shrink-0">
-                                                    <x-lucide-user class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                    <span>{{ $primaryContact->name }}</span>
-                                                </span>
-                                            @endif
-                                            @if($primaryContact->phone)
-                                                <span class="flex items-center gap-1 text-zinc-600 font-mono text-[10px] shrink-0">
-                                                    <x-lucide-phone class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                    <span>{{ $primaryContact->phone }}</span>
-                                                </span>
-                                            @endif
-                                            @if($primaryContact->email)
-                                                <span class="flex items-center gap-1 text-zinc-600 truncate text-[10px] min-w-0">
-                                                    <x-lucide-mail class="w-3 h-3 text-zinc-400 shrink-0" />
-                                                    <span class="truncate">{{ $primaryContact->email }}</span>
-                                                </span>
-                                            @endif
-                                        </div>
-                                    @endif
-
-                                    @if(!empty($mainAddress))
-                                        <div 
-                                            x-data="{ 
-                                                copied: false,
-                                                copyText(text) {
-                                                    if (!text) return;
-                                                    if (navigator.clipboard && window.isSecureContext) {
-                                                        navigator.clipboard.writeText(text).then(() => {
-                                                            this.copied = true;
-                                                            setTimeout(() => this.copied = false, 2000);
-                                                        }).catch(() => this.fallbackCopy(text));
-                                                    } else {
-                                                        this.fallbackCopy(text);
-                                                    }
-                                                },
-                                                fallbackCopy(text) {
-                                                    const ta = document.createElement('textarea');
-                                                    ta.value = text;
-                                                    ta.style.position = 'fixed';
-                                                    ta.style.opacity = '0';
-                                                    document.body.appendChild(ta);
-                                                    ta.focus();
-                                                    ta.select();
-                                                    try { document.execCommand('copy'); } catch (e) {}
-                                                    document.body.removeChild(ta);
-                                                    this.copied = true;
-                                                    setTimeout(() => this.copied = false, 2000);
-                                                }
-                                            }"
-                                            class="flex items-center gap-1.5 text-[11px] text-zinc-600 mt-1 min-w-0"
-                                        >
-                                            <span class="flex items-center gap-1 text-zinc-700 min-w-0 truncate">
-                                                <x-lucide-map-pin class="w-3 h-3 text-rose-500 shrink-0" />
-                                                <span class="font-medium truncate">{{ $mainAddress }}</span>
-                                            </span>
-                                            <button 
-                                                type="button" 
-                                                @click.stop.prevent="copyText({{ json_encode($mainAddress) }})"
-                                                class="px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 text-zinc-600 hover:text-zinc-900 text-[10px] font-semibold transition cursor-pointer flex items-center gap-1 shrink-0 border border-stone-200/80 shadow-2xs"
-                                                title="{{ __('Copiar dirección') }}"
-                                            >
-                                                <template x-if="!copied">
-                                                    <span class="flex items-center gap-0.5">
-                                                        <x-lucide-copy class="w-2.5 h-2.5 text-zinc-500" />
-                                                        <span>{{ __('Copiar') }}</span>
-                                                    </span>
-                                                </template>
-                                                <template x-if="copied">
-                                                    <span class="flex items-center gap-0.5 text-emerald-600 font-bold">
-                                                        <x-lucide-check class="w-2.5 h-2.5 text-emerald-600" />
-                                                        <span>{{ __('¡Copiado!') }}</span>
-                                                    </span>
-                                                </template>
-                                            </button>
-                                        </div>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="py-2.5 px-3.5 text-right">
-                                <div class="inline-flex items-center gap-2 justify-end flex-wrap sm:flex-nowrap">
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold {{ $client->active_orders_count > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200/80' : 'bg-stone-100/70 text-zinc-400 border-stone-200/60' }} border inline-flex items-center gap-1 shrink-0">
-                                        <x-lucide-zap class="w-3 h-3 {{ $client->active_orders_count > 0 ? 'text-emerald-600' : 'text-zinc-400' }}" />
-                                        <span>{{ $client->active_orders_count }} activas</span>
-                                    </span>
-
-                                    @if($client->archived_orders_count > 0)
-                                        <span class="inline-flex items-center gap-1 text-[9px] font-medium text-zinc-500 shrink-0" title="{{ $client->archived_orders_count }} {{ __('órdenes archivadas') }}">
-                                            <x-lucide-archive class="w-2.5 h-2.5 text-zinc-400" />
-                                            <span>{{ $client->archived_orders_count }} arch.</span>
-                                        </span>
-                                    @endif
-
-                                    @if($client->backlog_orders_count > 0)
-                                        <span class="inline-flex items-center gap-1 text-[9px] font-medium text-zinc-500 shrink-0" title="{{ $client->backlog_orders_count }} {{ __('órdenes en backlog') }}">
-                                            <x-lucide-inbox class="w-2.5 h-2.5 text-zinc-400" />
-                                            <span>{{ $client->backlog_orders_count }} backlog</span>
-                                        </span>
-                                    @endif
-                                </div>
-                            </td>
-                            <td class="py-2.5 pr-3.5 pl-1 text-right w-10" @click.stop>
-                                <button 
-                                    type="button" 
-                                    wire:click="deleteClient({{ $client->id }})"
-                                    wire:confirm="{{ __('¿Estás seguro de eliminar el cliente \":name\"? Esta acción moverá el cliente a la papelera.', ['name' => $client->name]) }}"
-                                    class="w-7 h-7 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-100/80 border border-transparent hover:border-rose-200 transition opacity-0 group-hover:opacity-100 sm:opacity-40 flex items-center justify-center cursor-pointer ml-auto"
-                                    title="{{ __('Eliminar cliente') }}"
-                                >
-                                    <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                </button>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="3" class="p-8 text-center text-zinc-400 italic">
-                                <div class="flex flex-col items-center gap-1.5">
-                                    <x-lucide-building-2 class="w-6 h-6 text-zinc-300" />
-                                    <p class="text-xs font-medium text-zinc-600">{{ __('No hay clientes en Workspace.') }}</p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-
-        <div class="px-3.5 py-2 bg-[#fbfbfa] border-t border-[#e9e9e7] text-[11px] text-zinc-400 font-medium flex items-center justify-between shrink-0">
-            <span>{{ __('Mostrando :count clientes de Workspace', ['count' => $clients->count()]) }}</span>
-            <span class="text-zinc-400 text-[10px]">{{ __('Haz clic en cualquier fila para abrir') }}</span>
-        </div>
+                @empty
+                    <tr>
+                        <td colspan="7" class="!h-auto py-10">
+                            <x-ui.empty icon="building-2" :title="__('No hay compañías')" :description="filled($search) ? __('Ninguna compañía coincide con la búsqueda.') : null" />
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>

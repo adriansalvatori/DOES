@@ -83,11 +83,11 @@
                 }
                 if (this.isDirty()) {
                     window.KudosDirtyGuard.openConfirmModal({
-                        title: '¿Guardar nueva orden?',
-                        description: 'Has ingresado datos para crear una nueva orden.',
-                        cancelText: 'Cancelar',
-                        discardText: 'No guardar',
-                        saveText: 'Guardar',
+                        title: @js(__('¿Guardar nueva orden?')),
+                        description: @js(__('Has ingresado datos para crear una nueva orden.')),
+                        cancelText: @js(__('Cancelar')),
+                        discardText: @js(__('No guardar')),
+                        saveText: @js(__('Guardar')),
                         onCancel: () => {},
                         onDiscard: () => {
                             this.isOpen = false;
@@ -120,64 +120,462 @@
         @pointerdown="window.KudosModalStack?.bringToFront('create-order-modal')"
         @keydown.window.escape="if (window.KudosModalStack ? window.KudosModalStack.isTop('create-order-modal') : true) confirmClose(() => $wire.closeModal())"
     >
-        <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-2xl w-full flex flex-col transition duration-200 overflow-hidden">
+        <div class="bg-surface border border-line rounded-panel shadow-panel max-w-2xl w-full flex flex-col transition duration-200 overflow-hidden">
             @if($showModal)
-                
+
                 <!-- Modal Header -->
-                <div class="px-6 py-4 border-b border-[#e9e9e7] bg-[#fbfbfa] flex items-center justify-between">
-                    <div class="flex items-center gap-2 min-w-0">
-                        <div class="p-1.5 rounded-lg bg-stone-900 text-white shrink-0">
-                            @if($isDuplicating)
-                                <x-lucide-copy class="w-4 h-4 text-indigo-300" />
-                            @else
-                                <x-lucide-plus-circle class="w-4 h-4" />
-                            @endif
-                        </div>
-                        <div>
-                            @if($isDuplicating)
-                                <h3 class="text-sm font-semibold text-zinc-900 tracking-tight">Duplicar Orden</h3>
-                                <p class="text-[11px] text-zinc-500">Modifica los datos para crear la nueva copia de la orden.</p>
-                            @else
-                                <h3 class="text-sm font-semibold text-zinc-900 tracking-tight">Crear Nueva Orden</h3>
-                                <p class="text-[11px] text-zinc-500">Añade una nueva orden directamente al flujo de trabajo activo.</p>
-                            @endif
-                        </div>
+                <div class="px-6 py-4 border-b border-line flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        @if($isDuplicating)
+                            <h3 class="text-section font-semibold text-ink">{{ __('Duplicar Orden') }}</h3>
+                            <p class="text-meta text-ink-3">{{ __('Modifica los datos para crear la nueva copia de la orden.') }}</p>
+                        @else
+                            <h3 class="text-section font-semibold text-ink">{{ __('Crear Nueva Orden') }}</h3>
+                            <p class="text-meta text-ink-3">{{ __('Añade una nueva orden directamente al flujo de trabajo activo.') }}</p>
+                        @endif
                     </div>
-                    <button type="button" @click="confirmClose(() => $wire.closeModal())" class="p-1 text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 rounded-md transition cursor-pointer">
+                    <button type="button" @click="confirmClose(() => $wire.closeModal())" class="ui-btn ui-btn-ghost ui-btn-icon shrink-0" aria-label="{{ __('Cerrar') }}">
                         <x-lucide-x class="w-4 h-4" />
                     </button>
                 </div>
 
-                <!-- Form Fields Container -->
-                <form wire:submit.prevent="save" class="p-6 space-y-4 text-xs">
-                    
-                    <!-- Row 1: WO Number, Trello ID & Responsible Person -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                        <div>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-hash class="w-3 h-3 text-zinc-400" />
-                                <span>WO (Opcional)</span>
-                            </label>
-                            <div class="flex rounded-md shadow-2xs">
-                                <span class="inline-flex items-center px-2 rounded-l-md border border-r-0 border-[#e9e9e7] bg-stone-100 text-zinc-600 font-mono font-bold text-xs select-none">
-                                    WO
-                                </span>
-                                <input type="text" wire:model="woNumber" placeholder="16350" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-r-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono font-semibold">
+                <!-- Form -->
+                <form wire:submit.prevent="save" class="flex flex-col">
+                    <div class="px-6 py-5 space-y-4 max-h-[70vh] overflow-y-auto">
+
+                        <!-- Row 1: WO number & Responsible person -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="ui-label" for="co-wo">{{ __('WO (Opcional)') }}</label>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex flex-1 min-w-0">
+                                        <span class="inline-flex h-8 items-center px-2.5 rounded-l-control border border-r-0 border-line bg-sunken text-meta font-medium text-ink-3 select-none">WO</span>
+                                        <input id="co-wo" type="text" wire:model="woNumber" placeholder="16350" class="ui-input rounded-l-none font-mono min-w-0">
+                                    </div>
+                                    <button
+                                        type="button"
+                                        wire:click="generateWoNumber"
+                                        wire:loading.attr="disabled"
+                                        class="ui-btn ui-btn-secondary ui-btn-sm shrink-0 disabled:opacity-50"
+                                        title="{{ __('Crear siguiente número de WO automáticamente') }}">
+                                        <x-lucide-loader-2 class="w-4 h-4 animate-spin" wire:loading wire:target="generateWoNumber" />
+                                        <span>{{ __('Siguiente WO') }}</span>
+                                    </button>
+                                </div>
                             </div>
-                            <button 
-                                type="button" 
-                                wire:click="generateWoNumber" 
-                                wire:loading.attr="disabled"
-                                class="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50/80 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 font-semibold text-xs transition-all duration-150 cursor-pointer hover:shadow-xs active:scale-[0.98] disabled:opacity-50 select-none group"
-                                title="Crear siguiente número de WO automáticamente">
-                                <x-lucide-sparkles class="w-3.5 h-3.5 text-amber-500 shrink-0 transition-transform duration-200 group-hover:scale-125 group-hover:rotate-12" wire:loading.remove wire:target="generateWoNumber" />
-                                <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-indigo-600 shrink-0" wire:loading wire:target="generateWoNumber" />
-                                <span>Crear WO Automática</span>
-                            </button>
+
+                            <!-- Responsible Person (Searchable Dropdown Menu) -->
+                            <div class="relative"
+                                 x-data="{
+                                     open: false,
+                                     selectResp(id, name) {
+                                         $wire.set('contactId', id);
+                                         $wire.set('responsiblePerson', name);
+                                         this.open = false;
+                                     }
+                                 }"
+                                 x-dropdown-nav>
+                                <label class="ui-label" for="co-resp">{{ __('Responsable / Cliente') }}</label>
+                                <div class="relative">
+                                    <input
+                                        id="co-resp"
+                                        type="text"
+                                        wire:model.live="responsiblePerson"
+                                        @focus="open = true"
+                                        @click.outside="open = false"
+                                        autocomplete="off"
+                                        placeholder="{{ __('Ej. MARCELA o buscar cliente...') }}"
+                                        class="ui-input pr-8 placeholder:normal-case">
+                                    <button
+                                        type="button"
+                                        @click="open = !open"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink cursor-pointer"
+                                        title="{{ __('Ver lista de clientes') }}">
+                                        <x-lucide-chevron-down class="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <div
+                                    x-show="open"
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95"
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-line rounded-card shadow-menu max-h-64 overflow-y-auto text-body custom-vertical-scrollbar"
+                                    style="display: none;">
+
+                                    {{-- Contactos vinculados a esta marca/compañía --}}
+                                    @if(!empty($clientContacts) && $clientContacts->isNotEmpty())
+                                        <div class="px-3 py-1.5 bg-canvas border-b border-line text-meta font-medium text-ink-3">
+                                            {{ __('Contactos de esta compañía') }}
+                                        </div>
+                                        @foreach($clientContacts as $c)
+                                            <button
+                                                type="button"
+                                                x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($c->name)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                                @click="selectResp({{ $c->id }}, '{{ addslashes($c->name) }}')"
+                                                class="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer font-medium text-ink truncate block">
+                                                {{ $c->name }}
+                                            </button>
+                                        @endforeach
+                                    @endif
+
+                                    {{-- Otros clientes del directorio global --}}
+                                    @php
+                                        $linkedIds = !empty($clientContacts) ? $clientContacts->pluck('id')->toArray() : [];
+                                        $otherContacts = $directoryContacts->filter(fn($dc) => !in_array($dc->id, $linkedIds, true));
+                                    @endphp
+                                    @if($otherContacts->isNotEmpty())
+                                        <div class="px-3 py-1.5 bg-canvas border-b border-line text-meta font-medium text-ink-3">
+                                            {{ __('Directorio de clientes') }}
+                                        </div>
+                                        @foreach($otherContacts as $dc)
+                                            <button
+                                                type="button"
+                                                x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($dc->name)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
+                                                @click="selectResp({{ $dc->id }}, '{{ addslashes($dc->name) }}')"
+                                                class="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer text-ink truncate block">
+                                                {{ $dc->name }}
+                                            </button>
+                                        @endforeach
+                                    @endif
+
+                                    {{-- Crear contacto sobre la marcha si no existe --}}
+                                    <div x-show="Boolean($wire.responsiblePerson && $wire.responsiblePerson.trim().length >= 2)">
+                                        <button
+                                            type="button"
+                                            @click="$wire.createContactForCompany($wire.responsiblePerson); open = false;"
+                                            class="w-full text-left px-3 py-2 border-t border-line hover:bg-sunken text-ink font-medium flex items-center gap-2 cursor-pointer"
+                                        >
+                                            <x-lucide-user-plus class="w-4 h-4 text-ink-3 shrink-0" />
+                                            <span class="truncate">{{ __('+ Crear contacto para esta compañía:') }} <strong class="font-semibold" x-text="$wire.responsiblePerson"></strong></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="relative" 
-                             x-data="{ 
+                        <!-- Row 2: Company name & Location -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="relative"
+                                 x-data="{
+                                     open: false,
+                                     selectComp(comp) {
+                                         $wire.set('companyName', comp);
+                                         this.open = false;
+                                     }
+                                 }"
+                                 x-dropdown-nav>
+                                <label class="ui-label" for="co-company">{{ __('Nombre Empresa') }} <span class="text-danger">*</span></label>
+                                <div class="relative">
+                                    <input
+                                        id="co-company"
+                                        type="text"
+                                        wire:model.live="companyName"
+                                        @focus="open = true"
+                                        @click.outside="open = false"
+                                        autocomplete="off"
+                                        placeholder="{{ __('Ej. RESTAURANTE EL TACO LOCO...') }}"
+                                        class="ui-input pr-8 placeholder:normal-case"
+                                        x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
+                                    <button
+                                        type="button"
+                                        @click="open = !open"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink cursor-pointer"
+                                        aria-label="{{ __('Ver compañías') }}">
+                                        <x-lucide-chevron-down class="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <div
+                                    x-show="open"
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95"
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-line rounded-card shadow-menu max-h-60 overflow-y-auto text-body"
+                                    style="display: none;">
+                                    @forelse($existingCompanies as $comp)
+                                        <button
+                                            type="button"
+                                            x-show="!$wire.companyName || '{{ strtolower(addslashes($comp)) }}'.includes(($wire.companyName || '').toLowerCase())"
+                                            @click="selectComp('{{ addslashes($comp) }}')"
+                                            class="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer text-ink">
+                                            {{ $comp }}
+                                        </button>
+                                    @empty
+                                        <div class="px-3 py-2 text-meta text-ink-3">{{ __('Escribe un nuevo nombre de empresa...') }}</div>
+                                    @endforelse
+                                </div>
+                                @error('companyName') <span class="text-meta text-danger mt-1 block">{{ $message }}</span> @enderror
+                            </div>
+
+                            <div class="relative"
+                                 x-data="{
+                                     open: false,
+                                     selectLoc(loc) {
+                                         $wire.set('locationName', loc);
+                                         this.open = false;
+                                     }
+                                 }"
+                                 x-dropdown-nav>
+                                <label class="ui-label" for="co-location">{{ __('Locación / Sede') }} <span class="font-normal text-ink-3">({{ __('Opcional') }})</span></label>
+                                <div class="relative">
+                                    <input
+                                        id="co-location"
+                                        type="text"
+                                        wire:model.live="locationName"
+                                        @focus="open = true"
+                                        @click.outside="open = false"
+                                        autocomplete="off"
+                                        placeholder="{{ __('Ej. TALPA 8, SUCURSAL CENTRO...') }}"
+                                        class="ui-input pr-8 placeholder:normal-case">
+                                    <button
+                                        type="button"
+                                        @click="open = !open"
+                                        class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink cursor-pointer"
+                                        title="{{ __('Ver locaciones disponibles') }}">
+                                        <x-lucide-chevron-down class="w-4 h-4" />
+                                    </button>
+                                </div>
+
+                                <div
+                                    x-show="open"
+                                    x-cloak
+                                    x-transition:enter="transition ease-out duration-100"
+                                    x-transition:enter-start="opacity-0 scale-95"
+                                    x-transition:enter-end="opacity-100 scale-100"
+                                    class="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-line rounded-card shadow-menu max-h-48 overflow-y-auto text-body"
+                                    style="display: none;">
+
+                                    @if(!empty($clientLocations))
+                                        <div class="px-3 py-1.5 bg-canvas border-b border-line text-meta font-medium text-ink-3">
+                                            {{ __('Locaciones del cliente') }}
+                                        </div>
+                                        @foreach($clientLocations as $cLoc)
+                                            <button
+                                                type="button"
+                                                x-show="!$wire.locationName || '{{ strtolower(addslashes($cLoc)) }}'.includes(($wire.locationName || '').toLowerCase())"
+                                                @click="selectLoc('{{ addslashes($cLoc) }}')"
+                                                class="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer font-medium text-ink flex items-center justify-between">
+                                                <span>{{ $cLoc }}</span>
+                                                <span class="text-meta text-ink-3 font-normal">{{ __('Registrada') }}</span>
+                                            </button>
+                                        @endforeach
+                                    @endif
+
+                                    @php
+                                        $otherLocations = array_diff($existingLocations->toArray(), $clientLocations ?? []);
+                                    @endphp
+
+                                    @if(!empty($otherLocations))
+                                        @if(!empty($clientLocations))
+                                            <div class="px-3 py-1.5 bg-canvas border-b border-line text-meta font-medium text-ink-3">
+                                                {{ __('Otras locaciones') }}
+                                            </div>
+                                        @endif
+                                        @foreach($otherLocations as $loc)
+                                            <button
+                                                type="button"
+                                                x-show="!$wire.locationName || '{{ strtolower(addslashes($loc)) }}'.includes(($wire.locationName || '').toLowerCase())"
+                                                @click="selectLoc('{{ addslashes($loc) }}')"
+                                                class="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer text-ink">
+                                                {{ $loc }}
+                                            </button>
+                                        @endforeach
+                                    @endif
+
+                                    @if(empty($clientLocations) && empty($otherLocations))
+                                        <div class="px-3 py-2 text-meta text-ink-3">{{ __('Escribe una nueva locación...') }}</div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Task description -->
+                        <div>
+                            <label class="ui-label" for="co-task">{{ __('Tarea / Descripción Trabajo') }} <span class="text-danger">*</span></label>
+                            <input id="co-task" type="text" wire:model="taskName" placeholder="{{ __('Ej. MENÚ EXTERIOR ACRÍLICO & ROTULACIÓN') }}" class="ui-input placeholder:normal-case" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
+                            @error('taskName') <span class="text-meta text-danger mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <!-- Row 4: Pieces -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-meta font-medium text-ink-2">{{ __('Piezas de la Orden') }} <span class="font-normal text-ink-3">({{ __('Opcional') }}{{ count($pieces) > 0 ? ': ' . count($pieces) : '' }})</span></span>
+                                <button
+                                    type="button"
+                                    wire:click="$toggle('showPieceSpecs')"
+                                    class="text-meta text-ink-3 hover:text-ink cursor-pointer font-medium transition">
+                                    {{ $showPieceSpecs ? __('Ocultar detalles') : __('Medidas / Material / Cantidad') }}
+                                </button>
+                            </div>
+
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        x-ref="pieceInput"
+                                        wire:model="newPieceName"
+                                        wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
+                                        placeholder="{{ __('Nombre de la pieza (ej. Lona Front 3x2m, Aviso 3D)...') }}"
+                                        class="ui-input flex-1 placeholder:normal-case">
+                                    <button type="button" wire:click="addPiece" class="ui-btn ui-btn-secondary shrink-0">
+                                        <x-lucide-plus class="w-4 h-4" />
+                                        <span>{{ __('Añadir Pieza') }}</span>
+                                    </button>
+                                </div>
+                                @error('newPieceName') <span class="text-meta text-danger block">{{ $message }}</span> @enderror
+
+                                @if($showPieceSpecs)
+                                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                        <div>
+                                            <label class="ui-label">{{ __('Medidas') }}</label>
+                                            <input type="text" wire:model="newPieceDimensions" wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())" placeholder="{{ __('ej. 3.5m x 2.2m') }}" class="ui-input placeholder:normal-case">
+                                        </div>
+                                        <div>
+                                            <label class="ui-label">{{ __('Material / Sustrato') }}</label>
+                                            <input type="text" wire:model="newPieceMaterial" wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())" placeholder="{{ __('ej. Acrílico 3mm, Vinilo') }}" class="ui-input placeholder:normal-case">
+                                        </div>
+                                        <div>
+                                            <label class="ui-label">{{ __('Cantidad') }}</label>
+                                            <input type="number" min="1" wire:model="newPieceQuantity" wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())" class="ui-input">
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+
+                            @if(!empty($pieces))
+                                <div class="mt-2 max-h-48 overflow-y-auto rounded-card border border-line divide-y divide-line">
+                                    @foreach($pieces as $idx => $piece)
+                                        <div class="flex items-center justify-between gap-2 px-3 py-2 text-body hover:bg-sunken">
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-medium text-ink truncate">{{ $piece['name'] }}</span>
+                                                    @if(!empty($piece['quantity']) && $piece['quantity'] > 1)
+                                                        <span class="text-meta text-ink-3 shrink-0">x{{ $piece['quantity'] }}</span>
+                                                    @endif
+                                                </div>
+                                                @if(!empty($piece['dimensions']) || !empty($piece['material']))
+                                                    <div class="text-meta text-ink-3 truncate">
+                                                        {{ collect([$piece['dimensions'] ?? null, $piece['material'] ?? null])->filter()->implode(' · ') }}
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <div class="flex items-center gap-1 shrink-0">
+                                                <button type="button" wire:click="editPiece({{ $idx }})" class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="{{ __('Editar pieza') }}" aria-label="{{ __('Editar pieza') }}">
+                                                    <x-lucide-pencil class="w-4 h-4" />
+                                                </button>
+                                                <button type="button" wire:click="removePiece({{ $idx }})" class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="{{ __('Eliminar pieza') }}" aria-label="{{ __('Eliminar pieza') }}">
+                                                    <x-lucide-trash-2 class="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
+                        <!-- Row 5: Substatus & Designers -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <span class="ui-label">{{ __('Condición / Subestado') }} <span class="font-normal text-ink-3">({{ __('Opcional') }})</span></span>
+                                    @if($substatus || !empty($flags))
+                                        <button type="button" wire:click="selectSubstatus('')" class="mb-1.5 text-meta text-ink-3 hover:text-ink cursor-pointer font-medium transition" title="{{ __('Quitar subestados y banderas') }}">
+                                            {{ __('Limpiar') }}
+                                        </button>
+                                    @endif
+                                </div>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    @forelse($substatuses as $sub)
+                                        @php
+                                            $subVal = $sub instanceof \App\Models\Substatus ? $sub->name : ($sub->value ?? (string) $sub);
+                                            $isGlobal = $sub instanceof \App\Models\Substatus ? (bool) $sub->is_global : ($sub instanceof \App\Enums\Substatus ? $sub->isGlobal() : false);
+                                            $isSelected = $isGlobal ? in_array($subVal, $flags ?? [], true) : ($substatus === $subVal);
+                                            $isUrgentSub = strcasecmp($subVal, 'URGENTE') === 0 || strcasecmp($subVal, 'Urgent') === 0;
+                                        @endphp
+                                        <button
+                                            type="button"
+                                            wire:click="selectSubstatus('{{ addslashes($subVal) }}')"
+                                            class="ui-chip"
+                                            aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
+                                            title="{{ $subVal }}"
+                                        >
+                                            @if($isUrgentSub)
+                                                <span class="w-1.5 h-1.5 rounded-full bg-danger shrink-0"></span>
+                                            @endif
+                                            <span>{{ $subVal }}</span>
+                                        </button>
+                                    @empty
+                                        <span class="text-meta text-ink-3">{{ __('No hay subestados disponibles para este estado') }}</span>
+                                    @endforelse
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="ui-label">{{ __('Diseñadores Asignados') }}</span>
+
+                                @if($mostAvailableDesigner)
+                                    <p class="mb-1.5 text-meta text-ink-3">
+                                        {{ __('Más disponible esta semana:') }}
+                                        <button
+                                            type="button"
+                                            wire:click="toggleDesigner({{ $mostAvailableDesigner->id }})"
+                                            class="font-medium text-ink-2 hover:text-ink hover:underline cursor-pointer"
+                                            title="{{ __('Clic para seleccionar a :name', ['name' => $mostAvailableDesigner->name]) }}"
+                                        >{{ $mostAvailableDesigner->name }}</button>
+                                    </p>
+                                @endif
+
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    @foreach($designers as $designer)
+                                        @php $isAssigned = in_array((int)$designer->id, array_map('intval', $designerIds)); @endphp
+                                        <button
+                                            type="button"
+                                            wire:click="toggleDesigner({{ $designer->id }})"
+                                            class="ui-chip"
+                                            aria-pressed="{{ $isAssigned ? 'true' : 'false' }}"
+                                        >
+                                            <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }}" style="{{ $designer->dot_inline_style }}"></span>
+                                            <span>{{ $designer->name }}</span>
+                                        </button>
+                                    @endforeach
+                                </div>
+                                <p class="text-meta text-ink-3 mt-1.5">{{ __('Si seleccionas Diseñador Externo, se agregará Euralíz automáticamente.') }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Row 6: Due date -->
+                        <div>
+                            @php
+                                $todayDate = now()->toDateString();
+                                $tomorrowDate = now()->addDay()->toDateString();
+                                $isToday = ($dueDate === $todayDate);
+                                $isTomorrow = ($dueDate === $tomorrowDate);
+                            @endphp
+                            <div class="flex items-center justify-between">
+                                <label class="ui-label" for="co-due">{{ __('Fecha Límite (SLA)') }}</label>
+                                @if($dueDate)
+                                    <div class="mb-1.5 flex items-center gap-2 text-meta text-ink-3">
+                                        <span>{{ __('Entrega:') }} <span class="font-medium text-ink-2">{{ \Carbon\Carbon::parse($dueDate)->locale(app()->getLocale())->isoFormat('dddd, D MMMM') }}</span></span>
+                                        <button type="button" wire:click="$set('dueDate', '')" class="hover:text-ink cursor-pointer font-medium transition" title="{{ __('Borrar fecha') }}">{{ __('Quitar') }}</button>
+                                    </div>
+                                @else
+                                    <span class="mb-1.5 text-meta text-ink-3">{{ __('Sin fecha asignada') }}</span>
+                                @endif
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button type="button" wire:click="setDueDatePreset('today')" class="ui-chip" aria-pressed="{{ $isToday ? 'true' : 'false' }}">{{ __('Hoy') }}</button>
+                                <button type="button" wire:click="setDueDatePreset('tomorrow')" class="ui-chip" aria-pressed="{{ $isTomorrow ? 'true' : 'false' }}">{{ __('Mañana') }}</button>
+                                <input id="co-due" type="date" wire:model.live="dueDate" class="ui-input w-44 cursor-pointer">
+                            </div>
+                            @error('dueDate') <span class="text-meta text-danger mt-1 block">{{ $message }}</span> @enderror
+                        </div>
+
+                        <!-- Row 7: Trello card (optional) -->
+                        <div class="relative"
+                             x-data="{
                                  open: false,
                                  selectCard(id) {
                                      $wire.set('trelloCardId', id);
@@ -185,660 +583,79 @@
                                  }
                              }"
                              x-dropdown-nav>
-                            <label class="font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-external-link class="w-3 h-3 text-blue-600" />
-                                <span>ID Tarjeta Trello</span>
-                            </label>
-
+                            <label class="ui-label" for="co-trello">{{ __('ID Tarjeta Trello') }}</label>
                             <div class="relative">
-                                <input 
-                                    type="text" 
-                                    wire:model.live="trelloCardId" 
+                                <input
+                                    id="co-trello"
+                                    type="text"
+                                    wire:model.live="trelloCardId"
                                     @focus="open = true"
                                     @click.outside="open = false"
                                     autocomplete="off"
-                                    placeholder="Ej. AbCdEf12 o buscar..." 
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono pr-7">
-
-                                <button 
-                                    type="button" 
-                                    @click="open = !open" 
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                    title="Ver tarjetas de Trello">
-                                    <x-lucide-chevron-down class="w-3.5 h-3.5" />
+                                    placeholder="{{ __('Ej. AbCdEf12 o buscar...') }}"
+                                    class="ui-input pr-8 font-mono placeholder:font-sans">
+                                <button
+                                    type="button"
+                                    @click="open = !open"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink cursor-pointer"
+                                    title="{{ __('Ver tarjetas de Trello') }}">
+                                    <x-lucide-chevron-down class="w-4 h-4" />
                                 </button>
                             </div>
 
-                            <!-- Custom Searchable Dropdown Popup -->
-                            <div 
-                                x-show="open" 
+                            <div
+                                x-show="open"
                                 x-cloak
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-64 overflow-y-auto divide-y divide-stone-100 text-xs min-w-[260px]"
+                                class="absolute left-0 right-0 bottom-full mb-1 z-50 bg-surface border border-line rounded-card shadow-menu max-h-64 overflow-y-auto text-body"
                                 style="display: none;">
-                                
-                                <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400 sticky top-0 z-10">
-                                    Tarjetas Disponibles ({{ count($availableTrelloCards) }})
+                                <div class="px-3 py-1.5 bg-canvas border-b border-line text-meta font-medium text-ink-3 sticky top-0 z-10">
+                                    {{ __('Tarjetas Disponibles') }} ({{ count($availableTrelloCards) }})
                                 </div>
-
                                 @forelse($availableTrelloCards as $tc)
-                                    <button 
+                                    <button
                                         type="button"
                                         x-show="!$wire.trelloCardId || '{{ strtolower(addslashes($tc->trello_card_id . ' ' . $tc->wo_number . ' ' . $tc->company_name . ' ' . $tc->task_name . ' ' . $tc->trello_title)) }}'.includes(($wire.trelloCardId || '').toLowerCase())"
-                                        @click="selectCard('{{ $tc->trello_card_id }}')" 
-                                        class="w-full text-left p-2 hover:bg-blue-50/70 focus:bg-blue-50 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
+                                        @click="selectCard('{{ $tc->trello_card_id }}')"
+                                        class="w-full text-left px-3 py-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer flex items-center justify-between gap-2 border-b border-line last:border-0">
                                         <div class="min-w-0">
-                                            <span class="font-bold text-zinc-900 block truncate text-[11px]">
-                                                {{ $tc->trello_title ?: ($tc->company_name ?: 'Tarjeta Trello') }}
+                                            <span class="font-medium text-ink block truncate">
+                                                {{ $tc->trello_title ?: ($tc->company_name ?: __('Tarjeta Trello')) }}
                                             </span>
                                             @if($tc->task_name && $tc->task_name !== $tc->trello_title)
-                                                <span class="text-[10px] text-zinc-500 block truncate">{{ $tc->task_name }}</span>
+                                                <span class="text-meta text-ink-3 block truncate">{{ $tc->task_name }}</span>
                                             @endif
                                         </div>
-                                        <span class="font-mono text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200 shrink-0">
-                                            {{ substr($tc->trello_card_id, 0, 8) }}...
-                                        </span>
+                                        <span class="font-mono text-meta text-ink-3 shrink-0">{{ substr($tc->trello_card_id, 0, 8) }}...</span>
                                     </button>
                                 @empty
-                                    <div class="p-3 text-center text-zinc-400 italic text-[11px]">No hay tarjetas disponibles.</div>
+                                    <div class="px-3 py-3 text-center text-meta text-ink-3">{{ __('No hay tarjetas disponibles.') }}</div>
                                 @endforelse
                             </div>
 
-                            <!-- Option to auto-create Trello card if no ID is specified -->
-                            <div class="mt-2 flex items-center gap-2">
-                                <input 
-                                    type="checkbox" 
-                                    id="createOnTrelloCheckbox" 
+                            <label for="createOnTrelloCheckbox" class="mt-2 flex items-center gap-2 text-body text-ink-2 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    id="createOnTrelloCheckbox"
                                     wire:model="createOnTrello"
                                     x-bind:disabled="!!$wire.trelloCardId"
-                                    class="w-3.5 h-3.5 text-blue-600 rounded border-stone-300 focus:ring-blue-500 cursor-pointer disabled:opacity-50">
-                                <label for="createOnTrelloCheckbox" class="text-[11px] text-zinc-600 cursor-pointer select-none font-medium flex items-center gap-1">
-                                    <span>Crear nueva tarjeta en Trello al guardar</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Responsible Person (Searchable Dropdown Menu) -->
-                        <div class="relative" 
-                             x-data="{ 
-                                 open: false,
-                                 selectResp(id, name) {
-                                     $wire.set('contactId', id);
-                                     $wire.set('responsiblePerson', name);
-                                     this.open = false;
-                                 }
-                             }"
-                             x-dropdown-nav>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center justify-between">
-                                <span class="flex items-center gap-1">
-                                    <x-lucide-user-check class="w-3 h-3 text-zinc-400" />
-                                    <span>{{ __('Responsable / Cliente') }}</span>
-                                </span>
+                                    class="w-4 h-4 rounded border-line-strong text-ink focus:ring-ink/20 cursor-pointer disabled:opacity-50">
+                                <span>{{ __('Crear nueva tarjeta en Trello al guardar') }}</span>
                             </label>
-                            <div class="relative">
-                                <input 
-                                    type="text" 
-                                    wire:model.live="responsiblePerson" 
-                                    @focus="open = true"
-                                    @click.outside="open = false"
-                                    autocomplete="off"
-                                    placeholder="{{ __('Ej. MARCELA o buscar cliente...') }}" 
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-2.5 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none pr-7 font-semibold">
-                                
-                                <button 
-                                    type="button" 
-                                    @click="open = !open" 
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5 cursor-pointer"
-                                    title="{{ __('Ver lista de clientes') }}">
-                                    <x-lucide-chevron-down class="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-
-                            <div 
-                                x-show="open" 
-                                x-cloak
-                                x-transition:enter="transition ease-out duration-100"
-                                x-transition:enter-start="opacity-0 scale-95"
-                                x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-64 overflow-y-auto divide-y divide-stone-100 text-xs custom-vertical-scrollbar"
-                                style="display: none;">
-                                
-                                {{-- Contactos vinculados a esta marca/compañía --}}
-                                @if(!empty($clientContacts) && $clientContacts->isNotEmpty())
-                                    <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
-                                        <span>{{ __('Contactos de esta compañía') }}</span>
-                                        <x-lucide-user-check class="w-3 h-3 text-emerald-600" />
-                                    </div>
-                                    @foreach($clientContacts as $c)
-                                        <button 
-                                            type="button"
-                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($c->name)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
-                                            @click="selectResp({{ $c->id }}, '{{ addslashes($c->name) }}')" 
-                                            class="w-full text-left px-3 py-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 transition truncate block">
-                                            {{ $c->name }}
-                                        </button>
-                                    @endforeach
-                                @endif
-
-                                {{-- Otros clientes del directorio global --}}
-                                @php
-                                    $linkedIds = !empty($clientContacts) ? $clientContacts->pluck('id')->toArray() : [];
-                                    $otherContacts = $directoryContacts->filter(fn($dc) => !in_array($dc->id, $linkedIds, true));
-                                @endphp
-
-                                @if($otherContacts->isNotEmpty())
-                                    <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400 flex items-center justify-between">
-                                        <span>{{ __('Directorio de clientes') }}</span>
-                                        <x-lucide-users class="w-3 h-3 text-zinc-400" />
-                                    </div>
-                                    @foreach($otherContacts as $dc)
-                                        <button 
-                                            type="button"
-                                            x-show="!$wire.responsiblePerson || '{{ strtolower(addslashes($dc->name)) }}'.includes(($wire.responsiblePerson || '').toLowerCase())"
-                                            @click="selectResp({{ $dc->id }}, '{{ addslashes($dc->name) }}')" 
-                                            class="w-full text-left px-3 py-2 hover:bg-stone-50 focus:bg-stone-50 focus:outline-none cursor-pointer font-medium text-zinc-800 transition truncate block">
-                                            {{ $dc->name }}
-                                        </button>
-                                    @endforeach
-                                @endif
-
-                                {{-- Botón intuitivo para crear contacto sobre la marcha si no existe --}}
-                                <div x-show="Boolean($wire.responsiblePerson && $wire.responsiblePerson.trim().length >= 2)">
-                                    <button 
-                                        type="button" 
-                                        @click="$wire.createContactForCompany($wire.responsiblePerson); open = false;"
-                                        class="w-full text-left p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border-t border-emerald-200 transition font-bold text-xs flex items-center justify-between gap-2 cursor-pointer"
-                                    >
-                                        <div class="flex items-center gap-1.5 min-w-0">
-                                            <x-lucide-user-plus class="w-4 h-4 text-emerald-600 shrink-0" />
-                                            <span class="truncate">{{ __('+ Crear contacto para esta compañía:') }} <strong class="uppercase" x-text="$wire.responsiblePerson"></strong></span>
-                                        </div>
-                                        <span class="text-[10px] text-emerald-800 bg-emerald-200/80 px-1.5 py-0.5 rounded font-bold shrink-0">{{ __('Crear') }}</span>
-                                    </button>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
-                    <!-- Row 2: Company Name (Required Searchable Combobox) -->
-                    <div class="relative" 
-                         x-data="{ 
-                             open: false,
-                             selectComp(comp) {
-                                 $wire.set('companyName', comp);
-                                 this.open = false;
-                             }
-                         }"
-                         x-dropdown-nav>
-                        <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                            <x-lucide-building-2 class="w-3 h-3 text-zinc-400" />
-                            <span>Nombre Empresa <span class="text-red-500">*</span></span>
-                        </label>
-                        <div class="relative">
-                            <input 
-                                type="text" 
-                                wire:model.live="companyName" 
-                                @focus="open = true"
-                                @click.outside="open = false"
-                                autocomplete="off"
-                                placeholder="Ej. RESTAURANTE EL TACO LOCO..." 
-                                class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none font-semibold pr-7"
-                                x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
-                            
-                            <button 
-                                type="button" 
-                                @click="open = !open" 
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5">
-                                <x-lucide-chevron-down class="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
-                        <div 
-                            x-show="open" 
-                            x-cloak
-                            x-transition:enter="transition ease-out duration-100"
-                            x-transition:enter-start="opacity-0 scale-95"
-                            x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs"
-                            style="display: none;">
-                            @forelse($existingCompanies as $comp)
-                                <button 
-                                    type="button"
-                                    x-show="!$wire.companyName || '{{ strtolower(addslashes($comp)) }}'.includes(($wire.companyName || '').toLowerCase())"
-                                    @click="selectComp('{{ addslashes($comp) }}')" 
-                                    class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-bold text-zinc-900 transition">
-                                    {{ $comp }}
-                                </button>
-                            @empty
-                                <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe un nuevo nombre de empresa...</div>
-                            @endforelse
-                        </div>
-                        @error('companyName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Row 2.5: Location / Sede (Searchable Dropdown Menu) -->
-                    <div class="relative" 
-                         x-data="{ 
-                             open: false,
-                             selectLoc(loc) {
-                                 $wire.set('locationName', loc);
-                                 this.open = false;
-                             }
-                         }"
-                         x-dropdown-nav>
-                        <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                            <x-lucide-map-pin class="w-3 h-3 text-rose-500" />
-                            <span>Locación / Sede <span class="text-zinc-400 font-normal">(Opcional)</span></span>
-                        </label>
-                        <div class="relative">
-                            <input 
-                                type="text" 
-                                wire:model.live="locationName" 
-                                @focus="open = true"
-                                @click.outside="open = false"
-                                autocomplete="off"
-                                placeholder="Ej. TALPA 8, SUCURSAL CENTRO..." 
-                                class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none font-semibold text-emerald-700 pr-7">
-                            
-                            <button 
-                                type="button" 
-                                @click="open = !open" 
-                                class="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 p-0.5"
-                                title="Ver locaciones disponibles">
-                                <x-lucide-chevron-down class="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
-                        <div 
-                            x-show="open" 
-                            x-cloak
-                            x-transition:enter="transition ease-out duration-100"
-                            x-transition:enter-start="opacity-0 scale-95"
-                            x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-lg shadow-2xl max-h-48 overflow-y-auto divide-y divide-stone-100 text-xs"
-                            style="display: none;">
-                            
-                            @if(!empty($clientLocations))
-                                <div class="px-2.5 py-1 bg-emerald-50/80 border-b border-emerald-100 font-bold text-[10px] uppercase text-emerald-800 flex items-center justify-between">
-                                    <span>Locaciones del cliente</span>
-                                    <x-lucide-map-pin class="w-3 h-3 text-rose-500" />
-                                </div>
-                                @foreach($clientLocations as $cLoc)
-                                    <button 
-                                        type="button"
-                                        x-show="!$wire.locationName || '{{ strtolower(addslashes($cLoc)) }}'.includes(($wire.locationName || '').toLowerCase())"
-                                        @click="selectLoc('{{ addslashes($cLoc) }}')" 
-                                        class="w-full text-left p-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none cursor-pointer font-bold text-zinc-900 uppercase transition flex items-center justify-between">
-                                        <span>{{ $cLoc }}</span>
-                                        <span class="text-[10px] text-emerald-600 font-medium normal-case">(Registrada)</span>
-                                    </button>
-                                @endforeach
-                            @endif
-
-                            @php
-                                $otherLocations = array_diff($existingLocations->toArray(), $clientLocations ?? []);
-                            @endphp
-
-                            @if(!empty($otherLocations))
-                                @if(!empty($clientLocations))
-                                    <div class="px-2.5 py-1 bg-stone-50 border-b border-stone-100 font-bold text-[10px] uppercase text-zinc-400">
-                                        Otras locaciones
-                                    </div>
-                                @endif
-                                @foreach($otherLocations as $loc)
-                                    <button 
-                                        type="button"
-                                        x-show="!$wire.locationName || '{{ strtolower(addslashes($loc)) }}'.includes(($wire.locationName || '').toLowerCase())"
-                                        @click="selectLoc('{{ addslashes($loc) }}')" 
-                                        class="w-full text-left p-2 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer font-semibold text-zinc-800 uppercase transition">
-                                        {{ $loc }}
-                                    </button>
-                                @endforeach
-                            @endif
-
-                            @if(empty($clientLocations) && empty($otherLocations))
-                                <div class="p-2.5 text-zinc-400 italic text-[11px]">Escribe una nueva locación...</div>
-                            @endif
-                        </div>
-                    </div>
-
-                    <!-- Row 3: Task Description (Required) -->
-                    <div>
-                        <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                            <x-lucide-briefcase class="w-3 h-3 text-zinc-400" />
-                            <span>Tarea / Descripción Trabajo <span class="text-red-500">*</span></span>
-                        </label>
-                        <input type="text" wire:model="taskName" placeholder="Ej. MENÚ EXTERIOR ACRÍLICO & ROTULACIÓN" class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 uppercase focus:border-stone-400 focus:outline-none" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
-                        @error('taskName') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Row 3.5: Piezas de la Orden (Opcional) -->
-                    <div class="p-3 bg-stone-50/80 border border-[#e9e9e7] rounded-lg space-y-2.5">
-                        <div class="flex items-center justify-between">
-                            <label class="font-medium text-zinc-700 flex items-center gap-1.5">
-                                <x-lucide-layers class="w-3.5 h-3.5 text-pink-600" />
-                                <span class="font-semibold text-zinc-800">Piezas de la Orden</span>
-                                <span class="text-zinc-400 font-normal text-[11px]">(Opcional{{ count($pieces) > 0 ? ': ' . count($pieces) : '' }})</span>
-                            </label>
-                            <button 
-                                type="button" 
-                                wire:click="$toggle('showPieceSpecs')" 
-                                class="text-[11px] text-zinc-500 hover:text-zinc-800 flex items-center gap-1 cursor-pointer font-medium transition">
-                                <x-lucide-sliders-horizontal class="w-3 h-3 text-zinc-400" />
-                                <span>{{ $showPieceSpecs ? 'Ocultar detalles' : 'Medidas / Material / Cantidad' }}</span>
-                            </button>
-                        </div>
-
-                        <!-- Input row to add a piece -->
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2">
-                                <div class="relative flex-1">
-                                    <input 
-                                        type="text" 
-                                        x-ref="pieceInput"
-                                        wire:model="newPieceName" 
-                                        wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
-                                        placeholder="Nombre de la pieza (ej. Lona Front 3x2m, Aviso 3D)..." 
-                                        class="w-full bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 text-xs focus:border-stone-400 focus:outline-none font-medium placeholder-zinc-400">
-                                </div>
-                                <button 
-                                    type="button" 
-                                    wire:click="addPiece"
-                                    class="px-3 py-1.5 rounded-md bg-pink-600 hover:bg-pink-700 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1 shrink-0 shadow-2xs select-none">
-                                    <x-lucide-plus class="w-3.5 h-3.5 stroke-[2.5]" />
-                                    <span>Añadir Pieza</span>
-                                </button>
-                            </div>
-                            @error('newPieceName') <span class="text-red-500 text-[10px] block">{{ $message }}</span> @enderror
-
-                            <!-- Optional Specs Collapsible -->
-                            @if($showPieceSpecs)
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-[#e9e9e7]/80 text-xs">
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-500 font-medium mb-0.5 flex items-center gap-1">
-                                            <x-lucide-ruler class="w-2.5 h-2.5 text-zinc-400" />
-                                            <span>Medidas:</span>
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            wire:model="newPieceDimensions" 
-                                            wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
-                                            placeholder="ej. 3.5m x 2.2m"
-                                            class="w-full bg-white border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-500 font-medium mb-0.5 flex items-center gap-1">
-                                            <x-lucide-box class="w-2.5 h-2.5 text-zinc-400" />
-                                            <span>Material / Sustrato:</span>
-                                        </label>
-                                        <input 
-                                            type="text" 
-                                            wire:model="newPieceMaterial" 
-                                            wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
-                                            placeholder="ej. Acrílico 3mm, Vinilo"
-                                            class="w-full bg-white border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] text-zinc-500 font-medium mb-0.5 flex items-center gap-1">
-                                            <x-lucide-hash class="w-2.5 h-2.5 text-zinc-400" />
-                                            <span>Cantidad:</span>
-                                        </label>
-                                        <input 
-                                            type="number" 
-                                            min="1" 
-                                            wire:model="newPieceQuantity" 
-                                            wire:keydown.enter.prevent="$wire.addPiece().then(() => $refs.pieceInput.focus())"
-                                            class="w-full bg-white border border-[#e9e9e7] rounded-md px-2.5 py-1 text-xs text-zinc-800 focus:outline-none focus:border-stone-400 font-semibold"
-                                        />
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-
-                        <!-- Pieces list -->
-                        @if(!empty($pieces))
-                            <div class="space-y-1.5 pt-1 max-h-48 overflow-y-auto divide-y divide-stone-100">
-                                @foreach($pieces as $idx => $piece)
-                                    <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-md border border-[#e9e9e7] text-xs group hover:border-stone-300 transition">
-                                        <div class="flex items-center gap-2 min-w-0 flex-1">
-                                            <span class="flex items-center justify-center w-5 h-5 rounded-full bg-pink-50 text-pink-700 font-bold text-[10px] shrink-0 border border-pink-200">
-                                                {{ $idx + 1 }}
-                                            </span>
-                                            <div class="min-w-0 flex-1">
-                                                <div class="flex items-center gap-2">
-                                                    <span class="font-semibold text-zinc-800 truncate">{{ $piece['name'] }}</span>
-                                                    @if(!empty($piece['quantity']) && $piece['quantity'] > 1)
-                                                        <span class="text-[10px] font-bold px-1.5 py-0.2 rounded bg-stone-100 text-zinc-600 border border-stone-200 shrink-0">
-                                                            x{{ $piece['quantity'] }}
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                                @if(!empty($piece['dimensions']) || !empty($piece['material']))
-                                                    <div class="flex items-center gap-2 text-[10px] text-zinc-500 mt-0.5 truncate">
-                                                        @if(!empty($piece['dimensions']))
-                                                            <span class="flex items-center gap-0.5">
-                                                                <x-lucide-ruler class="w-2.5 h-2.5 text-zinc-400 shrink-0" />
-                                                                <span>{{ $piece['dimensions'] }}</span>
-                                                            </span>
-                                                        @endif
-                                                        @if(!empty($piece['dimensions']) && !empty($piece['material']))
-                                                            <span>•</span>
-                                                        @endif
-                                                        @if(!empty($piece['material']))
-                                                            <span class="flex items-center gap-0.5">
-                                                                <x-lucide-box class="w-2.5 h-2.5 text-zinc-400 shrink-0" />
-                                                                <span>{{ $piece['material'] }}</span>
-                                                            </span>
-                                                        @endif
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center gap-1 shrink-0">
-                                            <button 
-                                                type="button" 
-                                                wire:click="editPiece({{ $idx }})" 
-                                                class="text-zinc-400 hover:text-indigo-600 p-1 rounded hover:bg-stone-100 transition cursor-pointer"
-                                                title="Editar pieza">
-                                                <x-lucide-pencil class="w-3.5 h-3.5" />
-                                            </button>
-                                            <button 
-                                                type="button" 
-                                                wire:click="removePiece({{ $idx }})" 
-                                                class="text-zinc-400 hover:text-red-500 p-1 rounded hover:bg-stone-100 transition cursor-pointer"
-                                                title="Eliminar pieza">
-                                                <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-
-                    <!-- Row 4: Substatus & Designer -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-start">
-                        <!-- Left Column: Condición / Subestado Pills -->
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="block font-medium text-zinc-700 flex items-center gap-1">
-                                    <x-lucide-tag class="w-3 h-3 text-zinc-400" />
-                                    <span>Condición / Subestado <span class="text-zinc-400 font-normal">(Opcional)</span></span>
-                                </label>
-                                @if($substatus || !empty($flags))
-                                    <button 
-                                        type="button" 
-                                        wire:click="selectSubstatus('')" 
-                                        class="text-[10px] text-zinc-400 hover:text-red-500 cursor-pointer font-medium transition"
-                                        title="Quitar subestados y banderas">
-                                        Limpiar
-                                    </button>
-                                @endif
-                            </div>
-                            <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                                @forelse($substatuses as $sub)
-                                    @php
-                                        $subVal = $sub instanceof \App\Models\Substatus ? $sub->name : ($sub->value ?? (string) $sub);
-                                        $isGlobal = $sub instanceof \App\Models\Substatus ? (bool) $sub->is_global : ($sub instanceof \App\Enums\Substatus ? $sub->isGlobal() : false);
-                                        $isSelected = $isGlobal ? in_array($subVal, $flags ?? [], true) : ($substatus === $subVal);
-
-                                        $subModel = $sub instanceof \App\Models\Substatus ? $sub : \App\Models\Substatus::where('name', $subVal)->first();
-                                        $bgColor = $subModel?->bg_color ?? '#f4f4f5';
-                                        $textColor = $subModel?->text_color ?? '#27272a';
-                                        $borderColor = $subModel?->border_color ?: $bgColor;
-
-                                        $pillStyle = "background-color: {$bgColor}; color: {$textColor}; border-color: {$borderColor};";
-                                    @endphp
-                                    <button 
-                                        type="button"
-                                        wire:click="selectSubstatus('{{ addslashes($subVal) }}')"
-                                        class="px-2.5 py-1 rounded-md text-[11px] border transition-all flex items-center gap-1 cursor-pointer select-none {{ $isSelected ? 'font-bold shadow-xs scale-[1.02] ring-2 ring-stone-900/20' : 'font-medium opacity-60 hover:opacity-95 hover:scale-[1.01]' }}"
-                                        style="{{ $pillStyle }}"
-                                        title="{{ $subVal }}"
-                                    >
-                                        <span>{{ $subVal }}</span>
-                                        @if($isSelected)
-                                            <x-lucide-check class="w-3 h-3 text-current stroke-[2.5]" />
-                                        @endif
-                                    </button>
-                                @empty
-                                    <span class="text-zinc-400 italic text-[11px]">No hay subestados disponibles para este estado</span>
-                                @endforelse
-                            </div>
-                        </div>
-
-                        <!-- Right Column: Diseñadores Asignados -->
-                        <div>
-                            <label class="block font-medium text-zinc-700 mb-1 flex items-center gap-1">
-                                <x-lucide-user class="w-3 h-3 text-zinc-400" />
-                                <span>Diseñadores Asignados</span>
-                            </label>
-
-                            @if($mostAvailableDesigner)
-                                <button 
-                                    type="button"
-                                    wire:click="toggleDesigner({{ $mostAvailableDesigner->id }})"
-                                    class="mb-1.5 w-full flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50/80 hover:bg-emerald-100/90 border border-emerald-200/60 text-[11px] text-emerald-900 transition cursor-pointer select-none group text-left"
-                                    title="Clic para seleccionar a {{ $mostAvailableDesigner->name }}"
-                                >
-                                    <span class="relative flex h-2 w-2 shrink-0">
-                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                    </span>
-                                    <span class="text-emerald-700/80 text-[10.5px]">Más disponible esta semana:</span>
-                                    <span class="font-semibold text-emerald-950 flex items-center gap-1 truncate group-hover:underline">
-                                        <span class="w-1.5 h-1.5 rounded-full shrink-0 {{ $mostAvailableDesigner->dot_color_class }}" style="{{ $mostAvailableDesigner->dot_inline_style }}"></span>
-                                        <span>{{ $mostAvailableDesigner->name }}</span>
-                                    </span>
-                                </button>
-                            @endif
-
-                            <div class="flex flex-wrap items-center gap-1.5 p-2 bg-[#fbfbfa] border border-[#e9e9e7] rounded-md min-h-[38px]">
-                                @foreach($designers as $designer)
-                                    @php $isAssigned = in_array((int)$designer->id, array_map('intval', $designerIds)); @endphp
-                                    <button 
-                                        type="button"
-                                        wire:click="toggleDesigner({{ $designer->id }})"
-                                        class="px-2 py-0.5 rounded text-[11px] font-semibold border transition flex items-center gap-1 cursor-pointer {{ $isAssigned ? $designer->badge_style : 'bg-white text-zinc-500 border-stone-200 hover:bg-stone-100' }}"
-                                        style="{{ $isAssigned ? $designer->badge_inline_style : '' }}"
-                                    >
-                                        <span class="w-2 h-2 rounded-full {{ $designer->dot_color_class }}" style="{{ $designer->dot_inline_style }}"></span>
-                                        <span>{{ $designer->name }}</span>
-                                        @if($isAssigned)
-                                            <x-lucide-check class="w-3 h-3 text-current stroke-[3]" />
-                                        @endif
-                                    </button>
-                                @endforeach
-                            </div>
-                            <span class="text-[10px] text-zinc-400 block mt-1">* Si seleccionas Diseñador Externo, se agregará Euralíz automáticamente.</span>
-                        </div>
-                    </div>
-
-                    <!-- Row 5: Fecha Límite (SLA) Full Width -->
-                    <div class="p-3 bg-stone-50/80 border border-[#e9e9e7] rounded-lg space-y-2.5">
-                        <div class="flex items-center justify-between">
-                            <label class="font-medium text-zinc-700 flex items-center gap-1.5">
-                                <x-lucide-calendar class="w-3.5 h-3.5 text-indigo-600" />
-                                <span class="font-semibold text-zinc-800">Fecha Límite (SLA)</span>
-                            </label>
-                            @if($dueDate)
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[11px] text-zinc-500">
-                                        Entrega: <strong class="text-zinc-800 font-semibold capitalize">{{ \Carbon\Carbon::parse($dueDate)->locale('es')->isoFormat('dddd, D [de] MMMM') }}</strong>
-                                    </span>
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('dueDate', '')" 
-                                        class="text-[10px] text-zinc-400 hover:text-red-500 transition cursor-pointer font-medium"
-                                        title="Borrar fecha">
-                                        Quitar
-                                    </button>
-                                </div>
-                            @else
-                                <span class="text-[11px] text-zinc-400 italic">Sin fecha asignada</span>
-                            @endif
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-2.5 items-center">
-                            @php
-                                $todayDate = now()->toDateString();
-                                $tomorrowDate = now()->addDay()->toDateString();
-                                $isToday = ($dueDate === $todayDate);
-                                $isTomorrow = ($dueDate === $tomorrowDate);
-                            @endphp
-
-                            <!-- Hoy -->
-                            <button 
-                                type="button" 
-                                wire:click="setDueDatePreset('today')"
-                                class="w-full py-1.5 px-3 rounded-md text-xs transition cursor-pointer border text-center select-none {{ $isToday ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold' : 'bg-white text-zinc-700 border-[#e9e9e7] hover:bg-stone-100 hover:border-stone-300 font-medium' }}">
-                                Hoy
-                            </button>
-
-                            <!-- Mañana -->
-                            <button 
-                                type="button" 
-                                wire:click="setDueDatePreset('tomorrow')"
-                                class="w-full py-1.5 px-3 rounded-md text-xs transition cursor-pointer border text-center select-none {{ $isTomorrow ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs font-semibold' : 'bg-white text-zinc-700 border-[#e9e9e7] hover:bg-stone-100 hover:border-stone-300 font-medium' }}">
-                                Mañana
-                            </button>
-
-                            <!-- Exact Date Picker Input -->
-                            <div class="relative w-full">
-                                <input 
-                                    type="date" 
-                                    wire:model.live="dueDate" 
-                                    class="w-full bg-white border border-[#e9e9e7] rounded-md px-3 py-1.5 text-zinc-800 focus:border-stone-400 focus:outline-none font-mono text-xs font-semibold shadow-2xs cursor-pointer">
-                            </div>
-                        </div>
-                        @error('dueDate') <span class="text-red-500 text-[10px] mt-0.5 block">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Footer Buttons -->
-                    <div class="pt-4 border-t border-[#e9e9e7] flex items-center justify-end gap-2">
-                        <button type="button" @click="confirmClose(() => $wire.closeModal())" class="px-3.5 py-1.5 rounded-lg border border-stone-200 text-zinc-600 hover:bg-stone-100 transition font-medium cursor-pointer">
-                            Cancelar
+                    <!-- Footer -->
+                    <div class="px-6 py-3 border-t border-line flex items-center justify-end gap-2">
+                        <button type="button" @click="confirmClose(() => $wire.closeModal())" class="ui-btn ui-btn-secondary">
+                            {{ __('Cancelar') }}
                         </button>
-                        <button 
-                            type="submit" 
-                            :disabled="!isDirty()"
-                            :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
-                            class="px-4 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                        >
-                            @if($isDuplicating)
-                                <x-lucide-copy class="w-3.5 h-3.5" />
-                                <span>Crear Copia</span>
-                            @else
-                                <x-lucide-plus class="w-3.5 h-3.5" />
-                                <span>Crear Orden</span>
-                            @endif
+                        <button type="submit" :disabled="!isDirty()" class="ui-btn ui-btn-primary disabled:opacity-40 disabled:cursor-not-allowed">
+                            {{ $isDuplicating ? __('Crear Copia') : __('Crear Orden') }}
                         </button>
                     </div>
-
                 </form>
             @else
                 @include('livewire.orders.partials.create-order-skeleton')
@@ -848,43 +665,33 @@
 
     <!-- ON HOLD REASON MODAL -->
     @if($showOnHoldModal)
-        <div 
-            class="fixed inset-0 z-[110] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4" 
+        <div
+            class="fixed inset-0 z-[310] bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4"
             @keydown.window.escape.prevent="$wire.closeOnHoldModal()"
             @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.confirmOnHold()"
             wire:keydown.escape="closeOnHoldModal">
-            <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-                <div class="flex items-start justify-between border-b border-[#e9e9e7] pb-3">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 shrink-0">
-                            <x-lucide-pause-circle class="w-4 h-4" />
-                        </div>
-                        <div>
-                            <h3 class="font-bold text-sm text-zinc-900">{{ __('Motivo para Poner en On Hold') }}</h3>
-                            <p class="text-xs text-zinc-500 uppercase">{{ $companyName ?: __('Nueva Orden') }} &mdash; {{ $taskName ?: '' }}</p>
-                        </div>
+            <div class="bg-surface border border-line rounded-panel shadow-panel max-w-md w-full">
+                <div class="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+                    <div class="min-w-0">
+                        <h3 class="text-section font-semibold text-ink">{{ __('Motivo para Poner en On Hold') }}</h3>
+                        <p class="text-meta text-ink-3 truncate">{{ $companyName ?: __('Nueva Orden') }} &mdash; {{ $taskName ?: '' }}</p>
                     </div>
-                    <button wire:click="closeOnHoldModal" type="button" class="text-zinc-400 hover:text-zinc-600 transition">
+                    <button wire:click="closeOnHoldModal" type="button" class="ui-btn ui-btn-ghost ui-btn-icon shrink-0" aria-label="{{ __('Cerrar') }}">
                         <x-lucide-x class="w-4 h-4" />
                     </button>
                 </div>
 
-                <div class="space-y-1.5 text-xs">
-                    <label class="font-medium text-zinc-700 block">{{ __('Motivo / Comentario:') }}</label>
-                    <textarea wire:model="onHoldReason" rows="3" placeholder="Ej: Esperando confirmación de presupuesto por parte del cliente..." class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg p-2.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"></textarea>
+                <div class="px-5 py-4">
+                    <label class="ui-label" for="co-onhold">{{ __('Motivo / Comentario:') }}</label>
+                    <textarea id="co-onhold" wire:model="onHoldReason" rows="3" placeholder="{{ __('Ej: Esperando confirmación de presupuesto por parte del cliente...') }}" class="ui-input"></textarea>
                     @error('onHoldReason')
-                        <span class="text-red-600 text-[11px] block mt-0.5">{{ $message }}</span>
+                        <span class="text-meta text-danger block mt-1">{{ $message }}</span>
                     @enderror
                 </div>
 
-                <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-[#e9e9e7]">
-                    <button wire:click="closeOnHoldModal" type="button" class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition">
-                        {{ __('Cancelar') }}
-                    </button>
-                    <button wire:click="confirmOnHold" wire:loading.attr="disabled" type="button" class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1 cursor-pointer">
-                        <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
-                        <span>{{ __('Poner en On Hold') }}</span>
-                    </button>
+                <div class="flex items-center justify-end gap-2 border-t border-line px-5 py-3">
+                    <button wire:click="closeOnHoldModal" type="button" class="ui-btn ui-btn-secondary">{{ __('Cancelar') }}</button>
+                    <button wire:click="confirmOnHold" wire:loading.attr="disabled" type="button" class="ui-btn ui-btn-primary">{{ __('Poner en On Hold') }}</button>
                 </div>
             </div>
         </div>

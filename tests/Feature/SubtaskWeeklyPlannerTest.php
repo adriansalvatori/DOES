@@ -658,7 +658,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertSee('Revision Final Archivo')
-            ->assertSee('Archivada');
+            ->assertSee('Archived');
     }
 
     public function test_weekly_planner_synchronizes_past_pending_subtasks_in_both_view_modes(): void
@@ -998,7 +998,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
         // When subtask is pending, it should be in slaBreachedList and trigger the SLA alerts banner
         Livewire::test(WeeklyPlanner::class)
             ->assertViewHas('slaBreachedList', fn ($list) => $list->count() === 1 && $list->first()['task_name'] === 'PROPUESTA GIMNASIO, AJUSTES')
-            ->assertSee('Alertas SLA');
+            ->assertSee('SLA alert');
 
         // Check off the subtask
         Livewire::test(WeeklyPlanner::class)
@@ -1009,7 +1009,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
         // When subtask is checked, it must NOT appear in slaBreachedList and must NOT show SLA alerts banner
         Livewire::test(WeeklyPlanner::class)
             ->assertViewHas('slaBreachedList', fn ($list) => $list->isEmpty())
-            ->assertDontSee('Alertas SLA');
+            ->assertDontSee('SLA alert');
     }
 
     public function test_weekly_planner_workspace_orders_list_contains_search_attributes_for_multi_word_subtask_matching(): void
@@ -1405,7 +1405,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
             Livewire::test(WeeklyPlanner::class)
                 ->set('viewMode', 'by_designer')
                 ->set('selectedDesignerFilter', (string) $designer1->id)
-                ->assertSee('Progreso de hoy')
+                ->assertSee('progress')
                 ->assertSee('50%')
                 ->assertSee('Menu revisión')
                 ->assertSee('Imprimir vinilos');
@@ -1414,7 +1414,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
             Livewire::test(WeeklyPlanner::class)
                 ->set('viewMode', 'by_designer')
                 ->set('selectedDesignerFilter', 'all')
-                ->assertDontSee('Progreso de hoy');
+                ->assertDontSee('progress');
         } finally {
             Carbon::setTestNow();
         }
@@ -1627,8 +1627,9 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertSee('SUPER URGENTE CO')
-            ->assertSee('URGENTE')
-            ->assertSeeHtml('border-red-500');
+            ->assertSee(__('Urgente'))
+            ->assertSeeHtml('data-tone="danger"')
+            ->assertDontSeeHtml('border-red-500');
     }
 
     public function test_weekly_planner_persists_designer_filter_in_session(): void

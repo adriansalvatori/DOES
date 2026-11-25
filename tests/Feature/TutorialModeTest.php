@@ -20,7 +20,7 @@ class TutorialModeTest extends TestCase
         $response->assertDontSee('Modo Demo', false);
         $response->assertDontSee('tour-demo-btn', false);
         $response->assertSee('tour-dashboard-stats', false);
-        $response->assertSee('tour-designer-colors', false);
+        $response->assertSee('tour-designer-pills', false);
     }
 
     public function test_all_demo_acts_routes_have_tour_targets(): void

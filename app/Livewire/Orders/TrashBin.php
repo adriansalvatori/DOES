@@ -33,7 +33,7 @@ class TrashBin extends Component
             'metadata' => ['comment' => 'Orden restaurada desde la papelera.'],
         ]);
 
-        session()->flash('message', "Orden '{$order->company_name}' restaurada correctamente.");
+        session()->flash('message', __('Orden \':company\' restaurada correctamente.', ['company' => $order->company_name]));
     }
 
     public function forceDeleteOrder(int $orderId): void
@@ -47,7 +47,7 @@ class TrashBin extends Component
         $company = $order->company_name ?? __('Orden');
         $order->forceDelete();
 
-        session()->flash('message', "Orden '{$company}' eliminada permanentemente de la app y de Trello.");
+        session()->flash('message', __('Orden \':company\' eliminada permanentemente de la app y de Trello.', ['company' => $company]));
     }
 
     public function emptyTrash(): void
@@ -64,7 +64,7 @@ class TrashBin extends Component
             $order->forceDelete();
         }
 
-        session()->flash('message', "Se han eliminado permanentemente {$count} orden(es) de la papelera y de Trello.");
+        session()->flash('message', trans_choice('{1} Se eliminó permanentemente :count orden de la papelera y de Trello.|[0,*] Se eliminaron permanentemente :count órdenes de la papelera y de Trello.', $count));
     }
 
     public function render()

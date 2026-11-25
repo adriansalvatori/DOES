@@ -200,7 +200,7 @@ class OverviewTest extends TestCase
         $this->assertEquals('2026-10-10', $fresh->delivery_due_date?->format('Y-m-d'));
     }
 
-    public function test_overview_renders_urgent_red_background_when_order_has_due_date(): void
+    public function test_overview_renders_danger_text_when_order_due_date_is_past(): void
     {
         $orderWithDueDate = Order::create([
             'wo_number' => 'WO 77777',
@@ -213,8 +213,8 @@ class OverviewTest extends TestCase
 
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
-            ->assertSeeHtml('due-date-urgent')
-            ->assertSeeHtml('bg-red-600');
+            ->assertSeeHtml('text-danger font-medium')
+            ->assertDontSeeHtml('bg-red-600');
     }
 
     public function test_overview_can_move_order_between_backlog_and_workspace(): void
@@ -283,7 +283,7 @@ class OverviewTest extends TestCase
             ->test(OverviewIndex::class)
             ->assertSet('perPage', 0)
             ->assertSee('CACHED ORDER TEST')
-            ->assertSee('Sin paginación • File Cached')
+            ->assertDontSee('File Cached')
             ->call('refreshCache')
             ->assertDispatched('toast');
     }
@@ -600,7 +600,7 @@ class OverviewTest extends TestCase
             ->assertSee('WO 99999');
     }
 
-    public function test_orders_with_archived_substatus_are_treated_as_archived_and_render_cyan_row(): void
+    public function test_orders_with_archived_substatus_are_treated_as_archived_and_render_muted_row(): void
     {
         $order = Order::create([
             'wo_number' => 'WO 16128',
@@ -615,7 +615,8 @@ class OverviewTest extends TestCase
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
             ->assertSee('WO 16128')
-            ->assertSee('bg-cyan-100/90 hover:bg-cyan-200/90 text-cyan-950 font-semibold', false);
+            ->assertSee('text-ink-3 hover:bg-sunken', false)
+            ->assertDontSee('bg-cyan-100', false);
     }
 
     public function test_updating_substatus_to_archived_substatus_archives_order_and_sets_archived_at(): void

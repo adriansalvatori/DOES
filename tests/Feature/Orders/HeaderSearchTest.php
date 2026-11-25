@@ -219,9 +219,8 @@ class HeaderSearchTest extends TestCase
                 });
         });
 
+        // The header no longer shows a Trello button (Trello is being retired); the action still works until cutover.
         Livewire::test(HeaderSearch::class)
-            ->assertSeeHtml('bg-[#0079bf]')
-            ->assertSeeHtml('runTrelloSyncOnlyNew')
             ->call('runTrelloSyncOnlyNew')
             ->assertDispatched('order-updated')
             ->assertDispatched('toast');
@@ -232,7 +231,7 @@ class HeaderSearchTest extends TestCase
         ]);
     }
 
-    public function test_header_search_trello_sync_available_for_all_user_roles(): void
+    public function test_header_search_renders_for_all_user_roles_without_a_trello_button(): void
     {
         $roles = [UserRole::ADMIN, UserRole::COORDINATOR, UserRole::DESIGNER, UserRole::SALES];
 
@@ -242,8 +241,8 @@ class HeaderSearchTest extends TestCase
 
             Livewire::test(HeaderSearch::class)
                 ->assertStatus(200)
-                ->assertSeeHtml('bg-[#0079bf]')
-                ->assertSeeHtml('runTrelloSyncOnlyNew');
+                ->assertSee(__('Buscar o ir a…'))
+                ->assertDontSeeHtml('runTrelloSyncOnlyNew');
         }
     }
 }

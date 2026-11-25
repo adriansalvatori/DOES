@@ -105,4 +105,25 @@ class CoreStatusTest extends TestCase
         $this->assertEquals('ENTRANTE', $cast->set($dummy, 'core_status', CoreStatus::ENTRANTE, []));
         $this->assertEquals('ENTRANTE', $cast->set($dummy, 'core_status', 'entrante', []));
     }
+
+    public function test_every_status_maps_to_one_of_five_lifecycle_phases(): void
+    {
+        $expected = [
+            'ENTRANTE' => 1,
+            'EURALIZ ORDERS RECEIVED' => 2,
+            'ADRIAN ORDERS RECEIVED' => 2,
+            'CESAR ORDERS RECEIVED' => 2,
+            'TO DO TODAY' => 2,
+            'ENVIADO A CAMILA' => 3,
+            'ENVIADO AL CLIENTE' => 4,
+            'ON HOLD' => 4,
+            'EN PRODUCCIÓN' => 5,
+            'ARCHIVED' => 5,
+        ];
+
+        foreach (CoreStatus::cases() as $status) {
+            $this->assertSame($expected[$status->value], $status->phase(), "Unexpected phase for {$status->name}");
+            $this->assertNotEmpty($status->phaseLabel());
+        }
+    }
 }

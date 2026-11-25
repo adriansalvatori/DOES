@@ -480,6 +480,7 @@ class Index extends Component
         $newTrelloOrders = $newTrelloQuery->get();
 
         return view('livewire.dashboard.index', [
+            'inProgressCount' => $allOrders->count(),
             'overdueOrders' => $overdueOrders,
             'toDoTodayOrders' => $toDoTodayOrders,
             'toDoTodayTasks' => $toDoTodayTasks,
@@ -490,6 +491,6 @@ class Index extends Component
             'pronosticoAltaOrders' => $pronosticoAltaOrders,
             'newTrelloOrders' => $newTrelloOrders,
             'designers' => Designer::where('active', true)->internal()->orderBy('name')->get(),
-        ])->layout('components.layouts.app', ['title' => __('Dashboard Operativo - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Hoy')]);
     }
 }

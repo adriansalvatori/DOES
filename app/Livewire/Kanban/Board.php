@@ -147,7 +147,7 @@ class Board extends Component
 
         if ($newStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
             $this->dispatch('open-order-detail', orderId: $orderId, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.');
+            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.', type: 'info');
 
             return;
         }
@@ -384,7 +384,7 @@ class Board extends Component
         if ($newStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
             $this->showResumeModal = false;
             $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.');
+            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.', type: 'info');
 
             return;
         }

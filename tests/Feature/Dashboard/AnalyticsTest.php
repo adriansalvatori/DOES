@@ -28,8 +28,7 @@ class AnalyticsTest extends TestCase
         $this->actingAs($user)
             ->get('/analytics')
             ->assertStatus(200)
-            ->assertSee(__('Analytics Dashboard'))
-            ->assertSee(__('Centro de Control'));
+            ->assertSee(__('Analytics'));
 
         Livewire::test(Analytics::class)
             ->assertSee(__('Mapa de Órdenes en Curso'))

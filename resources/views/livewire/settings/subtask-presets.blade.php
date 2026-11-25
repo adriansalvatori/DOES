@@ -1,76 +1,52 @@
-<div class="flex-1 w-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-6xl mx-auto pb-24">
-    <!-- Header Card -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-        <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Gestión de Subtareas & Tareas del Sistema') }}</h1>
-        </div>
-
-        <div class="flex items-center gap-3">
-            <div class="relative w-60 sm:w-64">
-                <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input 
-                    wire:model.live.debounce.250ms="search" 
-                    type="text" 
-                    placeholder="{{ __('Buscar tarea o plantilla...') }}" 
-                    class="w-full pl-9 pr-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-stone-400 transition" />
+<div class="h-full w-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-10 max-w-4xl">
+    <x-ui.page-header :title="__('Gestión de Subtareas & Tareas del Sistema')">
+        <x-slot:actions>
+            <div class="relative w-56">
+                <x-lucide-search class="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                    wire:model.live.debounce.250ms="search"
+                    type="text"
+                    placeholder="{{ __('Buscar tarea o plantilla...') }}"
+                    class="ui-input pl-9 pr-3" />
             </div>
 
             @if($activeTab === 'presets')
-                <button 
-                    wire:click="openCreateModal" 
-                    class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-2xs transition flex items-center gap-1.5 cursor-pointer shrink-0">
-                    <x-lucide-plus class="w-4 h-4" />
-                    <span>{{ __('Nueva Subtarea') }}</span>
-                </button>
+                <flux:button wire:click="openCreateModal" variant="primary" size="sm" icon="plus" class="shrink-0">{{ __('Nueva Subtarea') }}</flux:button>
             @endif
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <!-- Navigation Tabs Bar -->
-    <div class="flex items-center gap-2 border-b border-[#e9e9e7] pb-2 shrink-0 text-xs font-medium">
-        <button 
-            wire:click="setActiveTab('presets')" 
-            class="px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 {{ $activeTab === 'presets' ? 'bg-stone-900 text-white font-semibold shadow-2xs' : 'bg-white border border-stone-200 text-zinc-600 hover:bg-stone-50' }}">
-            <x-lucide-list-checks class="w-4 h-4" />
-            <span>{{ __('Plantillas de Subtareas Diarias') }} ({{ $presets->count() }})</span>
+    <div class="flex items-center gap-1 border-b border-line shrink-0 text-body text-ink-3">
+        <button wire:click="setActiveTab('presets')"
+            class="px-3 py-2 border-b-2 cursor-pointer transition {{ $activeTab === 'presets' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
+            {{ __('Plantillas de Subtareas Diarias') }} ({{ $presets->count() }})
         </button>
-        
-        <button 
-            wire:click="setActiveTab('system')" 
-            class="px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-2 {{ $activeTab === 'system' ? 'bg-stone-900 text-white font-semibold shadow-2xs' : 'bg-white border border-stone-200 text-zinc-600 hover:bg-stone-50' }}">
-            <x-lucide-cog class="w-4 h-4" />
-            <span>{{ __('Tareas Relacionadas del Sistema') }} ({{ $systemTaskConfigs->count() }})</span>
+        <button wire:click="setActiveTab('system')"
+            class="px-3 py-2 border-b-2 cursor-pointer transition {{ $activeTab === 'system' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
+            {{ __('Tareas Relacionadas del Sistema') }} ({{ $systemTaskConfigs->count() }})
         </button>
     </div>
 
-    <!-- Flash Notifications -->
     @if(session()->has('message'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-xs font-medium flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600" />
-                <span>{{ session('message') }}</span>
-            </div>
+        <div class="bg-ok-soft text-ok border border-line px-3.5 py-2.5 rounded-card text-body flex items-center gap-2 shrink-0">
+            <x-lucide-check class="w-4 h-4 shrink-0" />
+            <span>{{ session('message') }}</span>
         </div>
     @endif
 
     <!-- TAB 1: PRESETS (Plantillas de Subtareas) -->
     @if($activeTab === 'presets')
-        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
-            <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50 shrink-0">
+        <div class="bg-surface border border-line rounded-card overflow-hidden flex flex-col shrink-0">
+            <div class="px-4 py-3 border-b border-line flex items-center justify-between gap-3 shrink-0">
                 <div>
-                    <h2 class="font-bold text-xs text-zinc-800 uppercase tracking-wider">{{ __('Subtareas Predeterminadas (Weekly Planner)') }}</h2>
-                    <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Opciones rápidas disponibles al hacer clic en "+ Subtarea" en la agenda diaria.') }}</p>
+                    <h2 class="text-row font-semibold text-ink">{{ __('Subtareas Predeterminadas (Weekly Planner)') }}</h2>
+                    <p class="text-meta text-ink-3 mt-0.5">{{ __('Opciones rápidas disponibles al hacer clic en "+ Subtarea" en la agenda diaria.') }}</p>
                 </div>
-                <span class="text-xs font-semibold text-zinc-500 bg-white border border-stone-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                    {{ $presets->count() }} {{ __('plantillas') }}
-                </span>
+                <span class="text-meta text-ink-3 shrink-0">{{ $presets->count() }} {{ __('plantillas') }}</span>
             </div>
 
             @if($presets->isEmpty())
-                <div class="p-12 text-center text-zinc-400">
-                    <x-lucide-list-checks class="w-10 h-10 mx-auto text-zinc-300 mb-2" />
-                    <p class="text-xs">{{ __('No se encontraron subtareas que coincidan con la búsqueda.') }}</p>
-                </div>
+                <x-ui.empty icon="list-checks" :title="__('No se encontraron subtareas que coincidan con la búsqueda.')" />
             @else
                 <div 
                     x-data="{
@@ -95,7 +71,7 @@
                             this.draggedId = null;
                         }
                     }"
-                    class="divide-y divide-stone-100 overflow-y-auto max-h-[calc(100vh-270px)] custom-vertical-scrollbar">
+                    class="divide-y divide-line">
                     @foreach($presets as $index => $preset)
                         <div 
                             wire:key="preset-{{ $preset->id }}"
@@ -104,65 +80,41 @@
                             @dragstart="handleDragStart($event, {{ $preset->id }})"
                             @dragover.prevent
                             @drop="handleDrop($event, {{ $preset->id }})"
-                            class="px-5 py-3.5 flex items-center justify-between hover:bg-stone-50/60 transition gap-4 group">
-                            
-                            <!-- Drag Grip Handle & Chip Preview -->
+                            class="px-4 py-3 flex items-center justify-between hover:bg-sunken transition-colors gap-4 group">
+
                             <div class="flex items-center gap-3 min-w-0 flex-1">
-                                <div class="cursor-grab active:cursor-grabbing text-zinc-300 group-hover:text-zinc-500 transition p-1 shrink-0" title="{{ __('Arrastra para reordenar') }}">
+                                <div class="cursor-grab active:cursor-grabbing text-ink-3 transition p-1 shrink-0" title="{{ __('Arrastra para reordenar') }}">
                                     <x-lucide-grip-vertical class="w-4 h-4" />
                                 </div>
 
-                                <!-- Badge Chip Preview -->
                                 @php
                                     $safePresetIcon = (preg_match('/^[a-z0-9\-]+$/i', $preset->emoji ?? '')) ? $preset->emoji : 'tag';
                                 @endphp
-                                <span 
-                                    class="px-2.5 py-1 rounded-md text-xs font-semibold border shrink-0 shadow-2xs inline-flex items-center gap-1.5 {{ $preset->badgeStyle() }}">
+                                <span class="px-2.5 py-0.5 rounded-control text-body font-medium border shrink-0 inline-flex items-center gap-1.5 bg-surface text-ink border-line">
                                     <x-dynamic-component :component="'lucide-' . $safePresetIcon" class="w-3.5 h-3.5" />
                                     <span>{{ __($preset->title) }}</span>
                                 </span>
                             </div>
 
-                            <!-- Right Side Controls: Category badge + Trabajo/Gestión badge + Active Toggle & Actions -->
-                            <div class="flex items-center gap-2.5 shrink-0">
-                                <!-- Category Badge -->
+                            <div class="flex items-center gap-2 shrink-0">
                                 @if($preset->category)
-                                    <span class="text-[10px] px-2 py-0.5 rounded-md border font-medium shrink-0 flex items-center gap-1 {{ $preset->category->badgeStyle() }}" title="{{ __('Al completar hoy, envía la orden a: ') . $preset->category->returnActionLabel() }}">
-                                        <span>{{ $preset->category->shortReturnLabel() }}</span>
-                                    </span>
+                                    <span class="text-meta text-ink-3 hidden md:inline" title="{{ __('Al completar hoy, envía la orden a: ') . $preset->category->returnActionLabel() }}">{{ $preset->category->shortReturnLabel() }}</span>
                                 @endif
 
-                                <!-- Trabajo / Gestión Badge (Positioned next to Active status) -->
-                                @if($preset->is_work_task)
-                                    <span class="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded-md border border-blue-200 font-bold shrink-0 flex items-center gap-1">
-                                        <x-lucide-wrench class="w-3 h-3 text-blue-600" />
-                                        <span>{{ __('Trabajo') }}</span>
-                                    </span>
-                                @else
-                                    <span class="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-200 font-bold shrink-0 flex items-center gap-1">
-                                        <x-lucide-clipboard-list class="w-3 h-3 text-amber-600" />
-                                        <span>{{ __('Gestión') }}</span>
-                                    </span>
-                                @endif
+                                <x-ui.tag tone="neutral">{{ $preset->is_work_task ? __('Trabajo') : __('Gestión') }}</x-ui.tag>
 
-                                <button 
-                                    wire:click="toggleActive({{ $preset->id }})" 
-                                    class="px-2.5 py-1 rounded-lg border text-xs font-medium transition cursor-pointer flex items-center gap-1.5 {{ $preset->is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-stone-50 text-stone-600 border-stone-200' }}">
-                                    <span class="w-2 h-2 rounded-full {{ $preset->is_active ? 'bg-emerald-500' : 'bg-stone-400' }}"></span>
-                                    <span>{{ $preset->is_active ? __('Activa') : __('Inactiva') }}</span>
+                                <button
+                                    wire:click="toggleActive({{ $preset->id }})"
+                                    class="px-2 py-1 rounded-control border border-line text-meta transition cursor-pointer hover:bg-sunken {{ $preset->is_active ? 'text-ink' : 'text-ink-3' }}">
+                                    {{ $preset->is_active ? __('Activa') : __('Inactiva') }}
                                 </button>
 
-                                <button 
-                                    wire:click="openEditModal({{ $preset->id }})" 
-                                    class="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-medium border border-stone-200 transition flex items-center gap-1 cursor-pointer">
-                                    <x-lucide-pencil class="w-3.5 h-3.5" />
-                                    <span>{{ __('Editar') }}</span>
-                                </button>
+                                <flux:button wire:click="openEditModal({{ $preset->id }})" variant="subtle" size="sm" icon="pencil">{{ __('Editar') }}</flux:button>
 
-                                <button 
-                                    wire:click="delete({{ $preset->id }})" 
-                                    wire:confirm="{{ __('¿Estás seguro de eliminar la plantilla de subtarea ":title"?', ['title' => $preset->title]) }}" 
-                                    class="p-1.5 rounded-lg bg-white hover:bg-red-50 text-red-600 border border-stone-200 hover:border-red-200 transition cursor-pointer" 
+                                <button
+                                    wire:click="delete({{ $preset->id }})"
+                                    wire:confirm="{{ __('¿Estás seguro de eliminar la plantilla de subtarea ":title"?', ['title' => $preset->title]) }}"
+                                    class="p-1.5 rounded-control text-ink-3 hover:text-danger hover:bg-danger-soft transition cursor-pointer"
                                     title="{{ __('Eliminar Subtarea') }}">
                                     <x-lucide-trash-2 class="w-4 h-4" />
                                 </button>
@@ -176,64 +128,44 @@
 
     <!-- TAB 2: SYSTEM RELATED TASKS (Tareas Relacionadas del Sistema con Toggle y Descripción) -->
     @if($activeTab === 'system')
-        <div class="bg-white border border-[#e9e9e7] rounded-2xl shadow-2xs overflow-hidden flex flex-col flex-1 min-h-0">
-            <div class="px-5 py-4 border-b border-[#e9e9e7] flex items-center justify-between bg-stone-50/50 shrink-0">
+        <div class="bg-surface border border-line rounded-card overflow-hidden flex flex-col shrink-0">
+            <div class="px-4 py-3 border-b border-line flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="font-bold text-xs text-zinc-800 uppercase tracking-wider">{{ __('Tareas Relacionadas del Sistema (System Tasks)') }}</h2>
-                    <p class="text-[11px] text-zinc-500 mt-0.5">{{ __('Acciones operativas predefinidas del sistema. Activa o desactiva su uso y revisa su funcionalidad.') }}</p>
+                    <h2 class="text-row font-semibold text-ink">{{ __('Tareas Relacionadas del Sistema (System Tasks)') }}</h2>
+                    <p class="text-meta text-ink-3 mt-0.5">{{ __('Acciones operativas predefinidas del sistema. Activa o desactiva su uso y revisa su funcionalidad.') }}</p>
                 </div>
-                <span class="text-xs font-semibold text-zinc-500 bg-white border border-stone-200 px-2.5 py-1 rounded-lg shadow-2xs">
-                    {{ $systemTaskConfigs->count() }} {{ __('tareas') }}
-                </span>
+                <span class="text-meta text-ink-3 shrink-0">{{ $systemTaskConfigs->count() }} {{ __('tareas') }}</span>
             </div>
 
             @if($systemTaskConfigs->isEmpty())
-                <div class="p-12 text-center text-zinc-400">
-                    <x-lucide-cog class="w-10 h-10 mx-auto text-zinc-300 mb-2" />
-                    <p class="text-xs">{{ __('No se encontraron tareas del sistema que coincidan con el filtro de búsqueda.') }}</p>
-                </div>
+                <x-ui.empty icon="cog" :title="__('No se encontraron tareas del sistema que coincidan con el filtro de búsqueda.')" />
             @else
-                <div class="divide-y divide-stone-100 overflow-y-auto max-h-[calc(100vh-270px)] custom-vertical-scrollbar">
+                <div class="divide-y divide-line">
                     @foreach($systemTaskConfigs as $sysTask)
-                        <div wire:key="sys-task-{{ $sysTask->id }}" class="p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-stone-50/60 transition">
-                            
-                            <!-- Task Details & Description -->
-                            <div class="space-y-1.5 min-w-0 flex-1">
+                        <div wire:key="sys-task-{{ $sysTask->id }}" class="px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-sunken transition-colors">
+                            <div class="space-y-1 min-w-0 flex-1">
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <h3 class="font-bold text-sm text-zinc-900">{{ __($sysTask->title) }}</h3>
-                                    
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-semibold border {{ $sysTask->categoryBadgeStyle() }}">
-                                        {{ __($sysTask->category) }}
-                                    </span>
-
-                                    <span class="px-2 py-0.5 rounded bg-stone-100 text-stone-600 font-mono text-[10px] border border-stone-200">
-                                        {{ $sysTask->task_type }}
-                                    </span>
+                                    <h3 class="text-row font-medium text-ink">{{ __($sysTask->title) }}</h3>
+                                    <x-ui.tag tone="neutral">{{ __($sysTask->category) }}</x-ui.tag>
+                                    <span class="text-meta text-ink-3 font-mono">{{ $sysTask->task_type }}</span>
                                 </div>
-
-                                <p class="text-xs text-zinc-600 leading-relaxed font-normal">
-                                    {{ __($sysTask->description) }}
-                                </p>
+                                <p class="text-body text-ink-2">{{ __($sysTask->description) }}</p>
                             </div>
 
-                            <!-- Toggle Button -->
-                            <div class="shrink-0 flex items-center gap-3 border-t md:border-t-0 pt-2 md:pt-0 border-stone-100">
-                                <span class="text-xs font-semibold {{ $sysTask->is_active ? 'text-emerald-700' : 'text-stone-400' }}">
+                            <div class="shrink-0 flex items-center gap-3">
+                                <span class="text-meta {{ $sysTask->is_active ? 'text-ink' : 'text-ink-3' }}">
                                     {{ $sysTask->is_active ? __('Encendida (Habilitada)') : __('Apagada (Deshabilitada)') }}
                                 </span>
 
-                                <button 
-                                    wire:click="toggleSystemTaskActive({{ $sysTask->id }})" 
+                                <button
+                                    wire:click="toggleSystemTaskActive({{ $sysTask->id }})"
                                     type="button"
-                                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {{ $sysTask->is_active ? 'bg-emerald-500' : 'bg-stone-300' }}"
+                                    class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-gold {{ $sysTask->is_active ? 'bg-ink' : 'bg-line-strong' }}"
                                     role="switch"
                                     aria-checked="{{ $sysTask->is_active ? 'true' : 'false' }}">
-                                    <span 
-                                        class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $sysTask->is_active ? 'translate-x-5' : 'translate-x-0' }}">
-                                    </span>
+                                    <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ $sysTask->is_active ? 'translate-x-5' : 'translate-x-0' }}"></span>
                                 </button>
                             </div>
-
                         </div>
                     @endforeach
                 </div>
@@ -243,7 +175,7 @@
 
     <!-- Create / Edit Subtask Preset Modal -->
     @if($showModal)
-        <div @click.self="confirmClose(() => $wire.closeModal())" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="fixed inset-0 z-[150] bg-ink/40 flex items-center justify-center p-4">
             <div 
                 x-data="{
                     initialTitle: null,
@@ -259,8 +191,6 @@
                         this.initialColorTheme = $wire.color_theme || '';
                         this.initialCategory = $wire.category || 'new_design';
                         this.initialIsActive = Boolean($wire.is_active);
-                        window.KudosDirtyGuard.register('subtask-preset-modal', () => this.isDirty());
-                        this.$cleanup(() => window.KudosDirtyGuard.unregister('subtask-preset-modal'));
                     },
                     isDirty() {
                         if (!$wire.showModal) return false;
@@ -270,41 +200,13 @@
                                ($wire.color_theme || '') !== this.initialColorTheme ||
                                ($wire.category || '') !== this.initialCategory ||
                                Boolean($wire.is_active) !== this.initialIsActive;
-                    },
-                    confirmClose(action) {
-                        if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
-                            return;
-                        }
-                        if (this.isDirty()) {
-                            window.KudosDirtyGuard.openConfirmModal({
-                                title: @js(__('¿Guardar subtarea?')),
-                                description: @js(__('Has ingresado o editado información de esta plantilla de subtarea.')),
-                                cancelText: @js(__('Cancelar')),
-                                discardText: @js(__('No guardar')),
-                                saveText: @js(__('Guardar')),
-                                onCancel: () => {},
-                                onDiscard: () => {
-                                    window.KudosDirtyGuard.unregister('subtask-preset-modal');
-                                    action();
-                                },
-                                onSave: () => {
-                                    window.KudosDirtyGuard.unregister('subtask-preset-modal');
-                                    $wire.save();
-                                }
-                            });
-                        } else {
-                            action();
-                        }
                     }
                 }"
-                @keydown.window.escape="confirmClose(() => $wire.closeModal())"
-                class="bg-white rounded-2xl border border-stone-200 shadow-xl max-w-md w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
-                <div class="flex items-center justify-between border-b border-stone-100 pb-3">
-                    <h3 class="font-bold text-sm text-zinc-900 flex items-center gap-2">
-                        <x-lucide-list-checks class="w-4 h-4 text-stone-700" />
-                        <span>{{ $editingId ? __('Editar Subtarea') : __('Nueva Subtarea Predeterminada') }}</span>
-                    </h3>
-                    <button type="button" @click="confirmClose(() => $wire.closeModal())" class="text-zinc-400 hover:text-zinc-700 cursor-pointer">
+                @keydown.window.escape="$wire.closeModal()"
+                class="bg-surface rounded-panel border border-line shadow-panel max-w-md w-full p-5 space-y-4 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between border-b border-line pb-3">
+                    <h3 class="text-section font-semibold text-ink">{{ $editingId ? __('Editar Subtarea') : __('Nueva Subtarea Predeterminada') }}</h3>
+                    <button type="button" @click="$wire.closeModal()" class="text-ink-3 hover:text-ink cursor-pointer">
                         <x-lucide-x class="w-4 h-4" />
                     </button>
                 </div>
@@ -312,32 +214,30 @@
                 <!-- Form Fields -->
                 <form wire:submit.prevent="save" class="space-y-4">
                     <div>
-                        <label class="block text-xs font-medium text-zinc-700 mb-1">{{ __('Título de la Subtarea') }}</label>
+                        <label class="block text-meta text-ink-2 mb-1">{{ __('Título de la Subtarea') }}</label>
                         <input 
                             wire:model.live.debounce.150ms="title" 
                             type="text" 
                             placeholder="{{ __('Ej: Revisiones cliente, Ajuste Camila...') }}" 
-                            class="w-full px-3 py-2 border border-stone-200 rounded-lg text-xs focus:ring-2 focus:ring-stone-400 focus:outline-none font-semibold text-zinc-800" />
-                        @error('title') <span class="text-[11px] text-red-600 mt-0.5 block">{{ $message }}</span> @enderror
+                            class="ui-input" />
+                        @error('title') <span class="text-meta text-danger mt-0.5 block">{{ $message }}</span> @enderror
                     </div>
 
                     <!-- Tipo de Subtarea (Impacto en Kanban: Working vs Managing) -->
                     <div class="space-y-1.5">
-                        <label class="block font-semibold text-zinc-700 text-xs mb-1">{{ __('Comportamiento en Kanban') }}</label>
+                        <label class="block text-meta text-ink-2 mb-1">{{ __('Comportamiento en Kanban') }}</label>
                         <div class="grid grid-cols-2 gap-2">
                             <button 
                                 type="button" 
                                 wire:click="$set('is_work_task', true)"
-                                class="px-3 py-2 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer {{ $is_work_task ? 'bg-blue-50 text-blue-800 border-blue-300 ring-1 ring-blue-400 font-bold' : 'bg-stone-50 text-zinc-600 border-stone-200 hover:bg-stone-100' }}">
-                                <x-lucide-wrench class="w-3.5 h-3.5 text-blue-600" />
-                                <span>{{ __('Trabajo') }}</span>
+                                class="px-3 py-1.5 rounded-control border text-body font-medium flex items-center justify-center gap-1.5 transition cursor-pointer {{ $is_work_task ? 'bg-ink text-white border-ink' : 'bg-surface text-ink-2 border-line hover:bg-sunken' }}">
+                                                                <span>{{ __('Trabajo') }}</span>
                             </button>
                             <button 
                                 type="button" 
                                 wire:click="$set('is_work_task', false)"
-                                class="px-3 py-2 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer {{ !$is_work_task ? 'bg-amber-50 text-amber-800 border-amber-300 ring-1 ring-amber-400 font-bold' : 'bg-stone-50 text-zinc-600 border-stone-200 hover:bg-stone-100' }}">
-                                <x-lucide-clipboard-list class="w-3.5 h-3.5 text-amber-600" />
-                                <span>{{ __('Gestión') }}</span>
+                                class="px-3 py-1.5 rounded-control border text-body font-medium flex items-center justify-center gap-1.5 transition cursor-pointer {{ !$is_work_task ? 'bg-ink text-white border-ink' : 'bg-surface text-ink-2 border-line hover:bg-sunken' }}">
+                                                                <span>{{ __('Gestión') }}</span>
                             </button>
                         </div>
                     </div>
@@ -347,26 +247,26 @@
                         open: false, 
                         selected: @entangle('category'),
                         options: {
-                            'new_design': { label: '{{ __('Volver al estado anterior') }}', dot: 'bg-emerald-500' },
-                            'client_adjustments': { label: '{{ __('Enviado al Cliente') }}', dot: 'bg-blue-500' },
-                            'camila_adjustments': { label: '{{ __('Enviado a Camila') }}', dot: 'bg-purple-500' },
-                            'production_adjustments': { label: '{{ __('En Producción') }}', dot: 'bg-pink-500' },
-                            'management': { label: '{{ __('No mover la orden') }}', dot: 'bg-stone-400' }
+                            'new_design': { label: '{{ __('Volver al estado anterior') }}', dot: 'bg-ink-3' },
+                            'client_adjustments': { label: '{{ __('Enviado al Cliente') }}', dot: 'bg-ink-3' },
+                            'camila_adjustments': { label: '{{ __('Enviado a Camila') }}', dot: 'bg-ink-3' },
+                            'production_adjustments': { label: '{{ __('En Producción') }}', dot: 'bg-ink-3' },
+                            'management': { label: '{{ __('No mover la orden') }}', dot: 'bg-ink-3' }
                         }
                     }">
-                        <label class="block font-semibold text-zinc-700 text-xs mb-1">
+                        <label class="block text-meta text-ink-2 mb-1">
                             {{ __('Al marcar como lista, enviar orden a...') }}
                         </label>
                         <div class="relative">
                             <button 
                                 type="button" 
                                 @click="open = !open" 
-                                class="w-full bg-[#fbfbfa] hover:bg-white focus:bg-white border border-[#e9e9e7] focus:border-stone-400 rounded-xl px-3 py-2 text-xs text-zinc-800 flex items-center justify-between transition shadow-2xs font-medium cursor-pointer">
+                                class="w-full bg-surface border border-line-strong rounded-control px-3 py-1.5 text-body text-ink flex items-center justify-between transition cursor-pointer">
                                 <span class="flex items-center gap-2">
-                                    <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="options[selected]?.dot || 'bg-emerald-500'"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="options[selected]?.dot || 'bg-ink-3'"></span>
                                     <span x-text="options[selected]?.label || '{{ __('Volver al estado anterior') }}'"></span>
                                 </span>
-                                <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400 transition-transform duration-200" ::class="{ 'rotate-180': open }" />
+                                <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3 transition-transform duration-200" ::class="{ 'rotate-180': open }" />
                             </button>
                             <div 
                                 x-show="open" 
@@ -375,32 +275,32 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 scale-95"
                                 x-transition:enter-end="opacity-100 scale-100"
-                                class="absolute left-0 right-0 mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-xl p-1.5 space-y-0.5 text-left text-xs">
+                                class="absolute left-0 right-0 mt-1 z-50 bg-surface border border-line rounded-card shadow-menu p-1.5 space-y-0.5 text-left text-body">
                                 <template x-for="(opt, key) in options" :key="key">
                                     <button 
                                         type="button" 
                                         @click="selected = key; open = false" 
-                                        class="w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition cursor-pointer hover:bg-stone-100" 
-                                        :class="selected === key ? 'font-bold text-zinc-900 bg-stone-50' : 'text-zinc-700'">
+                                        class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-control text-body transition cursor-pointer hover:bg-sunken" 
+                                        :class="selected === key ? 'font-semibold text-ink bg-sunken' : 'text-ink-2'">
                                         <span class="flex items-center gap-2">
                                             <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="opt.dot"></span>
                                             <span x-text="opt.label"></span>
                                         </span>
                                         <span x-show="selected === key">
-                                            <x-lucide-check class="w-3.5 h-3.5 text-zinc-800 stroke-[2.5]" />
+                                            <x-lucide-check class="w-3.5 h-3.5 text-ink" />
                                         </span>
                                     </button>
                                 </template>
                             </div>
                         </div>
-                        <p class="text-[10px] text-zinc-500">
+                        <p class="text-meta text-ink-3">
                             {{ __('Cuando se completen las subtareas de hoy, la orden se moverá automáticamente a este estado.') }}
                         </p>
                     </div>
 
                     <!-- Lucide Icon Library Grid Picker -->
                     <div class="space-y-1.5">
-                        <label class="block font-semibold text-zinc-700 text-xs mb-1">{{ __('Ícono de la Subtarea (Icon Library)') }}</label>
+                        <label class="block text-meta text-ink-2 mb-1">{{ __('Ícono de la Subtarea (Icon Library)') }}</label>
                         @php
                             $iconLibrary = [
                                 'sparkles' => __('Propuesta'),
@@ -419,13 +319,13 @@
                                 'zap' => __('Urgente'),
                             ];
                         @endphp
-                        <div class="grid grid-cols-7 gap-1.5 p-2 bg-[#fbfbfa] border border-[#e9e9e7] rounded-xl">
+                        <div class="grid grid-cols-7 gap-1.5 p-2 bg-sunken rounded-control">
                             @foreach($iconLibrary as $iconKey => $iconLabel)
                                 <button 
                                     type="button" 
                                     wire:click="$set('emoji', '{{ $iconKey }}')"
                                     title="{{ $iconLabel }}"
-                                    class="w-8 h-8 rounded-lg border transition flex items-center justify-center cursor-pointer {{ $emoji === $iconKey ? 'bg-stone-900 text-white border-stone-900 shadow-2xs' : 'bg-white text-zinc-700 border-stone-200 hover:bg-stone-100' }}">
+                                    class="w-8 h-8 rounded-control border transition flex items-center justify-center cursor-pointer {{ $emoji === $iconKey ? 'bg-ink text-white border-ink' : 'bg-surface text-ink-2 border-line hover:bg-sunken' }}">
                                     <x-dynamic-component :component="'lucide-' . $iconKey" class="w-4 h-4" />
                                 </button>
                             @endforeach
@@ -434,7 +334,7 @@
 
                     <!-- Color Theme Picker -->
                     <div class="space-y-2">
-                        <label class="block text-xs font-medium text-zinc-700">{{ __('Tema de Color (Badge)') }}</label>
+                        <label class="block text-meta text-ink-2">{{ __('Tema de Color (Badge)') }}</label>
                         <div class="grid grid-cols-4 gap-2">
                             @php
                                 $themes = [
@@ -452,7 +352,7 @@
                                 <button 
                                     type="button" 
                                     wire:click="$set('color_theme', '{{ $key }}')"
-                                    class="p-2 rounded-xl border text-center text-xs font-medium transition cursor-pointer flex items-center justify-center gap-1.5 {{ $info['bg'] }} {{ $color_theme === $key ? 'ring-2 ring-stone-900 ring-offset-1 font-bold' : '' }}">
+                                    class="p-2 rounded-control border text-center text-body font-medium transition cursor-pointer flex items-center justify-center gap-1.5 {{ $info['bg'] }} {{ $color_theme === $key ? 'ring-2 ring-ink ring-offset-1' : '' }}">
                                     <span>{{ $info['label'] }}</span>
                                 </button>
                             @endforeach
@@ -465,42 +365,28 @@
                             wire:model="is_active" 
                             type="checkbox" 
                             id="is_active" 
-                            class="w-4 h-4 rounded text-stone-900 focus:ring-stone-400 border-stone-300" />
-                        <label for="is_active" class="text-xs font-medium text-zinc-700 cursor-pointer">{{ __('Activa (disponible en el planificador)') }}</label>
+                            class="w-4 h-4 rounded text-ink focus:ring-gold border-line-strong" />
+                        <label for="is_active" class="text-body text-ink-2 cursor-pointer">{{ __('Activa (disponible en el planificador)') }}</label>
                     </div>
 
                     <!-- Live Badge Preview -->
-                    <div class="p-3 bg-stone-50 border border-stone-200 rounded-xl space-y-1">
-                        <span class="text-[10px] text-zinc-400 uppercase font-semibold block">{{ __('Vista Previa del Botón') }}</span>
+                    <div class="p-3 bg-sunken rounded-control space-y-1">
+                        <span class="text-meta text-ink-3 block">{{ __('Vista Previa del Botón') }}</span>
                         <div class="pt-0.5">
                             @php
                                 $previewPreset = new \App\Models\SubtaskPreset(['color_theme' => $color_theme]);
                                 $safePreviewIcon = (preg_match('/^[a-z0-9\-]+$/i', $emoji ?? '')) ? $emoji : 'tag';
                             @endphp
-                            <span class="px-2.5 py-1 rounded-md text-xs font-semibold border inline-flex items-center gap-1.5 shadow-2xs {{ $previewPreset->badgeStyle() }}">
+                            <span class="px-2.5 py-0.5 rounded-control text-body font-medium border inline-flex items-center gap-1.5 bg-surface text-ink border-line">
                                 <x-dynamic-component :component="'lucide-' . $safePreviewIcon" class="w-3.5 h-3.5" />
                                 <span>{{ $title ? __($title) : __('Ejemplo Subtarea') }}</span>
                             </span>
                         </div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="flex items-center justify-end gap-2 pt-2 border-t border-stone-100">
-                        <button 
-                            type="button" 
-                            @click="confirmClose(() => $wire.closeModal())" 
-                            class="px-4 py-2 border border-stone-200 text-zinc-700 hover:bg-stone-50 text-xs font-medium rounded-xl transition cursor-pointer">
-                            {{ __('Cancelar') }}
-                        </button>
-                        <button 
-                            type="submit" 
-                            :disabled="!isDirty()"
-                            :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
-                            class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5"
-                        >
-                            <x-lucide-check class="w-3.5 h-3.5" x-show="isDirty()" />
-                            <span>{{ __('Guardar Subtarea') }}</span>
-                        </button>
+                    <div class="flex items-center justify-end gap-2 pt-3 border-t border-line">
+                        <flux:button type="button" @click="$wire.closeModal()" variant="ghost" size="sm">{{ __('Cancelar') }}</flux:button>
+                        <flux:button type="submit" variant="primary" size="sm" x-bind:disabled="!isDirty()">{{ __('Guardar Subtarea') }}</flux:button>
                     </div>
                 </form>
             </div>

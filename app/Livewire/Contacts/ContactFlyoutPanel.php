@@ -125,6 +125,49 @@ class ContactFlyoutPanel extends Component
         }
     }
 
+    /**
+     * Record-data edits the Save button must confirm first (old value next to the new one).
+     * New contacts have nothing to compare against, so they save without a prompt.
+     *
+     * @return array<int, array{field: string, from: string, to: string}>
+     */
+    public function pendingChanges(): array
+    {
+        $contact = $this->contactId ? Contact::with('clients')->find($this->contactId) : null;
+        if (! $contact) {
+            return [];
+        }
+
+        $changes = [];
+
+        $newName = mb_strtoupper(trim($this->name), 'UTF-8');
+        if ($newName !== '' && $newName !== (string) $contact->name) {
+            $changes[] = ['field' => __('Nombre'), 'from' => (string) $contact->name, 'to' => $newName];
+        }
+
+        $oldPhone = ClientLocation::formatPhoneNumber($contact->phone ?? '');
+        $newPhone = ClientLocation::formatPhoneNumber(trim($this->phone));
+        if ($oldPhone !== $newPhone) {
+            $changes[] = ['field' => __('Teléfono'), 'from' => $oldPhone, 'to' => $newPhone];
+        }
+
+        if (trim((string) $contact->email) !== trim($this->email)) {
+            $changes[] = ['field' => __('Email'), 'from' => (string) $contact->email, 'to' => trim($this->email)];
+        }
+
+        $oldIds = $contact->clients->pluck('id')->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $newIds = collect($this->linkedClientIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
+        if ($oldIds !== $newIds) {
+            $changes[] = [
+                'field' => __('Compañías vinculadas'),
+                'from' => $contact->clients->pluck('name')->sort()->join(', '),
+                'to' => Client::whereIn('id', $newIds)->orderBy('name')->pluck('name')->join(', '),
+            ];
+        }
+
+        return $changes;
+    }
+
     public function save(): void
     {
         $this->name = mb_strtoupper(trim($this->name), 'UTF-8');
@@ -137,14 +180,14 @@ class ContactFlyoutPanel extends Component
             ],
             'email' => 'nullable|email',
         ], [
-            'name.required' => 'El nombre del cliente/contacto es obligatorio.',
-            'name.min' => 'El nombre debe tener al menos 2 caracteres.',
-            'email.email' => 'El correo electrónico debe ser una dirección válida.',
+            'name.required' => __('El nombre del cliente/contacto es obligatorio.'),
+            'name.min' => __('El nombre debe tener al menos 2 caracteres.'),
+            'email.email' => __('El correo electrónico debe ser una dirección válida.'),
         ]);
 
         $phone = trim($this->phone);
         if (! empty($phone) && ! ClientLocation::isValidPhoneNumber($phone)) {
-            $this->addError('phone', 'El teléfono debe tener 10 dígitos (ej. (770) 864-9359).');
+            $this->addError('phone', __('El teléfono debe tener 10 dígitos (ej. (770) 864-9359).'));
 
             return;
         }
@@ -233,7 +276,7 @@ class ContactFlyoutPanel extends Component
         }
 
         $this->dispatch('contact-updated');
-        session()->flash('message', "Cliente '{$contact->name}' guardado correctamente.");
+        $this->dispatch('toast', message: __('Contacto ":name" guardado.', ['name' => $contact->name]));
     }
 
     public function setAsPrimaryClient(int $clientId): void
@@ -268,7 +311,7 @@ class ContactFlyoutPanel extends Component
             ]);
 
         $this->dispatch('contact-updated');
-        session()->flash('message', "Se estableció a {$contact->name} como MAIN CONTACT de la compañía.");
+        $this->dispatch('toast', message: __(':name es ahora el contacto principal de la compañía.', ['name' => $contact->name]));
     }
 
     public function executeMerge(int $targetContactId): void
@@ -285,7 +328,7 @@ class ContactFlyoutPanel extends Component
             app(ClientMatchingService::class)->mergeContacts($source, $target);
 
             $this->dispatch('contact-updated');
-            session()->flash('message', "Contacto fusionado exitosamente en '{$targetName}'.");
+            $this->dispatch('toast', message: __('Contacto fusionado en ":name".', ['name' => $targetName]));
             $this->open($target->id);
         }
     }

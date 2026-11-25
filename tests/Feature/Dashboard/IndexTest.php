@@ -33,7 +33,7 @@ class IndexTest extends TestCase
         $this->actingAs($user)
             ->get('/')
             ->assertStatus(200)
-            ->assertSee(__('Centro de Control Operativo'))
+            ->assertSee(__('Hoy'))
             ->assertSee('tour-dashboard-stats', false);
 
         Livewire::actingAs($user)
@@ -324,7 +324,7 @@ class IndexTest extends TestCase
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
             'type' => RelatedTaskType::SUBTASK->value,
-            'title' => 'Ajustes Camila: Ajustar contraste en logo',
+            'title' => __('Ajustes Camila: :comment', ['comment' => 'Ajustar contraste en logo']),
         ]);
     }
 

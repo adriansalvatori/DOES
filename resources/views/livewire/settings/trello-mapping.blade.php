@@ -21,15 +21,15 @@
             <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0" />
             <span>{{ __('Tienes asignaciones de listas sin guardar. Recuerda hacer clic en "Guardar Mapeo".') }}</span>
         </div>
-        <button wire:click="saveMappings" @click="snapshot()" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
+        <button wire:click="saveMappings" @click="snapshot()" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer">
             {{ __('Guardar Mapeo Ahora') }}
         </button>
     </div>
     
     <!-- Top Notch Notion Header -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
+    <div class="bg-white border border-line rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
         <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Mapeo de Listas Trello') }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-semibold text-zinc-900 ">{{ __('Mapeo de Listas Trello') }}</h1>
         </div>
 
         <div class="flex items-center gap-2.5">
@@ -63,13 +63,13 @@
     @endif
 
     <!-- Main Mappings Table Card -->
-    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-4 shadow-2xs flex-1">
-        <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-3">
-            <h3 class="font-semibold text-xs text-zinc-800 uppercase tracking-wider flex items-center gap-2">
+    <div class="bg-white border border-line rounded-xl p-4 space-y-4 shadow-2xs flex-1">
+        <div class="flex items-center justify-between border-b border-line pb-3">
+            <h3 class="font-semibold text-xs text-zinc-800  r flex items-center gap-2">
                 <x-lucide-arrow-right-left class="w-4 h-4 text-zinc-500" /> {{ __('Asignación de Columnas') }}
             </h3>
             
-            <span class="text-[11px] text-zinc-500 font-mono">
+            <span class="text-meta text-zinc-500 font-mono">
                 {{ __('Total Listas Trello Obtenidas:') }} <strong>{{ count($trelloLists) }}</strong>
             </span>
         </div>
@@ -82,20 +82,20 @@
                     $selectedList = collect($trelloLists)->firstWhere('id', $selectedListId);
                     $selectedListName = $selectedList['name'] ?? '';
                 @endphp
-                <div class="p-3.5 bg-[#fbfbfa] hover:bg-stone-50 rounded-xl border border-stone-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4 transition">
+                <div class="p-3.5 bg-canvas hover:bg-stone-50 rounded-xl border border-stone-200/90 flex flex-col md:flex-row md:items-center justify-between gap-4 transition">
                     
                     <!-- Left: Core Status Name & Color Badge -->
                     <div class="flex items-center gap-3 min-w-0 flex-1">
                         <div class="w-3.5 h-3.5 rounded-full bg-{{ $status->color() }}-500 shrink-0 shadow-2xs"></div>
                         <div class="min-w-0">
-                            <span class="font-bold text-xs text-zinc-900 block truncate">{{ $status->label() }}</span>
-                            <span class="font-mono text-[10px] text-zinc-400 block truncate">{{ __('Estatus Local:') }} {{ $val }}</span>
+                            <span class="font-semibold text-xs text-zinc-900 block truncate">{{ $status->label() }}</span>
+                            <span class="font-mono text-meta text-zinc-400 block truncate">{{ __('Estatus Local:') }} {{ $val }}</span>
                         </div>
                     </div>
 
                     <!-- Middle: Mapping Arrow -->
                     <div class="hidden md:flex items-center gap-1.5 text-zinc-400 text-xs shrink-0">
-                        <span class="text-[10px] font-mono text-zinc-400 uppercase">{{ __('Mapea a') }}</span>
+                        <span class="text-meta font-mono text-zinc-400 ">{{ __('Mapea a') }}</span>
                         <x-lucide-arrow-right class="w-4 h-4 text-zinc-400" />
                     </div>
 
@@ -127,7 +127,7 @@
                                 @click="open = true"
                                 autocomplete="off"
                                 :placeholder="selectedName ? selectedName : @js(__('-- Seleccionar o Buscar Lista Trello --'))" 
-                                class="w-full rounded-lg border border-[#e9e9e7] bg-white pl-3 pr-8 py-2 text-xs text-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10 font-medium shadow-2xs placeholder:text-zinc-900 placeholder:font-semibold">
+                                class="ui-input pl-3 pr-8">
 
                             <button 
                                 type="button" 
@@ -143,7 +143,7 @@
                             x-transition:enter="transition ease-out duration-100"
                             x-transition:enter-start="opacity-0 scale-95"
                             x-transition:enter-end="opacity-100 scale-100"
-                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs">
+                            class="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-line rounded-xl shadow-2xl max-h-60 overflow-y-auto divide-y divide-stone-100 text-xs">
                             
                             <button 
                                 type="button"
@@ -161,7 +161,7 @@
                                     x-show="!search || '{{ strtolower(addslashes($tList['name'])) }}'.includes(search.toLowerCase())"
                                     @click="selectList('{{ $tList['id'] }}', '{{ addslashes($tList['name']) }}')"
                                     class="w-full text-left p-2.5 hover:bg-purple-50 focus:bg-purple-50 focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition"
-                                    :class="selectedId === '{{ $tList['id'] }}' ? 'bg-purple-50/80 font-bold text-purple-900' : 'text-zinc-800'">
+                                    :class="selectedId === '{{ $tList['id'] }}' ? 'bg-purple-50/80 font-semibold text-purple-900' : 'text-zinc-800'">
                                     <span class="truncate">{{ $tList['name'] }}</span>
                                     <template x-if="selectedId === '{{ $tList['id'] }}'">
                                         <x-lucide-check class="w-3.5 h-3.5 text-purple-600 shrink-0" />
@@ -181,7 +181,7 @@
                 @click="snapshot()"
                 :disabled="!isDirty()"
                 :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
-                class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 font-bold">
+                class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 font-semibold">
                 <x-lucide-save class="w-3.5 h-3.5" />
                 <span>{{ __('Guardar Cambios de Mapeo') }}</span>
             </button>

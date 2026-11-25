@@ -1,175 +1,101 @@
-<div class="h-full flex flex-col space-y-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-5xl mx-auto">
-    <!-- Top Header & Search Bar (Trello Docs Style) -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-6 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
-        <div class="flex items-center gap-3 min-w-0 flex-wrap">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Guía de Comportamientos') }}</h1>
-            <span class="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-semibold">
-                {{ __('Trello & Kudos Docs') }}
-            </span>
-        </div>
-
-        <div class="w-full md:w-80 shrink-0">
-            <div class="relative">
-                <x-lucide-search class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input 
-                    wire:model.live.debounce.200ms="search" 
-                    type="text" 
-                    placeholder="{{ __('Buscar regla o comportamiento...') }}" 
-                    class="w-full pl-9 pr-3 py-2 bg-stone-50 border border-stone-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition" />
+<div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 w-full max-w-4xl pb-10">
+    <x-ui.page-header :title="__('Guía de Comportamientos')" :subtitle="__('Trello & Kudos Docs')">
+        <x-slot:actions>
+            <div class="relative w-full sm:w-72">
+                <x-lucide-search class="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                    wire:model.live.debounce.200ms="search"
+                    type="text"
+                    placeholder="{{ __('Buscar regla o comportamiento...') }}"
+                    class="ui-input pl-9 pr-3" />
             </div>
-        </div>
-    </div>
+        </x-slot:actions>
+    </x-ui.page-header>
 
-    <!-- Category Pill Filter Tabs -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none shrink-0 text-xs">
-        <button 
-            wire:click="selectCategory('all')" 
-            class="px-4 py-2 rounded-xl font-semibold transition cursor-pointer flex items-center gap-2 shrink-0 {{ $activeCategory === 'all' ? 'bg-zinc-900 text-white shadow-2xs' : 'bg-white text-zinc-600 border border-stone-200 hover:bg-stone-50' }}">
-            <x-lucide-layers class="w-4 h-4 text-blue-400" />
-            <span>{{ __('Todas las Guías') }}</span>
+    <div class="flex items-center gap-1 overflow-x-auto border-b border-line shrink-0 text-body text-ink-3">
+        <button
+            wire:click="selectCategory('all')"
+            class="px-3 py-2 border-b-2 cursor-pointer shrink-0 transition {{ $activeCategory === 'all' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
+            {{ __('Todas las Guías') }}
         </button>
 
         @foreach($allCategories as $catKey => $cat)
-            <button 
-                wire:click="selectCategory('{{ $catKey }}')" 
-                class="px-4 py-2 rounded-xl font-semibold transition cursor-pointer flex items-center gap-2 shrink-0 {{ $activeCategory === $catKey ? 'bg-zinc-900 text-white shadow-2xs' : 'bg-white text-zinc-600 border border-stone-200 hover:bg-stone-50' }}">
-                @if($cat['icon'] === 'git-commit')
-                    <x-lucide-git-commit class="w-4 h-4 text-indigo-500" />
-                @elseif($cat['icon'] === 'list-checks')
-                    <x-lucide-list-checks class="w-4 h-4 text-emerald-500" />
-                @elseif($cat['icon'] === 'tags')
-                    <x-lucide-tags class="w-4 h-4 text-fuchsia-500" />
-                @elseif($cat['icon'] === 'refresh-cw')
-                    <x-lucide-refresh-cw class="w-4 h-4 text-blue-500" />
-                @elseif($cat['icon'] === 'alert-triangle')
-                    <x-lucide-alert-triangle class="w-4 h-4 text-amber-500" />
-                @elseif($cat['icon'] === 'database')
-                    <x-lucide-database class="w-4 h-4 text-rose-500" />
-                @else
-                    <x-lucide-file-text class="w-4 h-4 text-stone-500" />
-                @endif
-                <span>{{ $cat['title'] }}</span>
+            <button
+                wire:click="selectCategory('{{ $catKey }}')"
+                class="px-3 py-2 border-b-2 cursor-pointer shrink-0 transition {{ $activeCategory === $catKey ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
+                {{ $cat['title'] }}
             </button>
         @endforeach
     </div>
 
-    <!-- Main Canvas Document (Clean Open Trello Knowledge Base Style) -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-6 md:p-10 shadow-2xs">
+    <div class="bg-surface border border-line rounded-card p-5 md:p-7">
         @if(empty($categories))
-            <div class="py-16 text-center text-zinc-400 space-y-3">
-                <x-lucide-search-x class="w-12 h-12 mx-auto text-zinc-300" />
-                <p class="text-sm font-medium text-zinc-600">{{ __('No encontramos explicaciones que coincidan con tu búsqueda.') }}</p>
-                <button wire:click="$set('search', '')" class="text-xs text-blue-600 font-semibold hover:underline">
-                    {{ __('Restablecer filtro de búsqueda') }}
-                </button>
-            </div>
+            <x-ui.empty icon="search-x" :title="__('No encontramos explicaciones que coincidan con tu búsqueda.')">
+                <flux:button wire:click="$set('search', '')" variant="subtle" size="sm">{{ __('Restablecer filtro de búsqueda') }}</flux:button>
+            </x-ui.empty>
         @else
-            <div class="space-y-12 divide-y divide-stone-100">
+            <div class="space-y-10 divide-y divide-line">
                 @foreach($categories as $catKey => $cat)
                     @if($activeCategory === 'all' || $activeCategory === $catKey)
-                        <div class="{{ $loop->first ? '' : 'pt-10' }} space-y-6">
-                            <!-- Category Header Title (Open Trello Style) -->
-                            <div class="flex items-center justify-between border-b border-stone-200/80 pb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-stone-100 text-zinc-800 flex items-center justify-center font-bold">
-                                        @if($cat['icon'] === 'git-commit')
-                                            <x-lucide-git-commit class="w-4 h-4 text-indigo-600" />
-                                        @elseif($cat['icon'] === 'list-checks')
-                                            <x-lucide-list-checks class="w-4 h-4 text-emerald-600" />
-                                        @elseif($cat['icon'] === 'tags')
-                                            <x-lucide-tags class="w-4 h-4 text-fuchsia-600" />
-                                        @elseif($cat['icon'] === 'refresh-cw')
-                                            <x-lucide-refresh-cw class="w-4 h-4 text-blue-600" />
-                                        @elseif($cat['icon'] === 'alert-triangle')
-                                            <x-lucide-alert-triangle class="w-4 h-4 text-amber-600" />
-                                        @elseif($cat['icon'] === 'database')
-                                            <x-lucide-database class="w-4 h-4 text-rose-600" />
-                                        @else
-                                            <x-lucide-file-text class="w-4 h-4 text-stone-600" />
-                                        @endif
-                                    </div>
-                                    <div>
-                                        <h2 class="text-lg font-bold text-zinc-900 tracking-tight">{{ $cat['title'] }}</h2>
-                                        <p class="text-xs text-zinc-500">{{ $cat['description'] }}</p>
-                                    </div>
+                        <div class="{{ $loop->first ? '' : 'pt-8' }} space-y-5">
+                            <div class="flex items-start justify-between gap-3 border-b border-line pb-3">
+                                <div>
+                                    <h2 class="text-section font-semibold text-ink">{{ $cat['title'] }}</h2>
+                                    <p class="text-body text-ink-3">{{ $cat['description'] }}</p>
                                 </div>
-                                <span class="px-3 py-1 rounded-full text-[10px] font-bold bg-stone-100 text-stone-600 uppercase tracking-wider">
-                                    {{ $cat['badge'] }}
-                                </span>
+                                <x-ui.tag tone="neutral">{{ $cat['badge'] }}</x-ui.tag>
                             </div>
 
-                            <!-- Articles within Category -->
-                            <div class="space-y-8">
+                            <div class="space-y-7">
                                 @foreach($cat['articles'] as $article)
-                                    <div class="space-y-4">
+                                    <div class="space-y-3">
                                         <div>
-                                            <h3 class="text-sm font-bold text-zinc-800 tracking-tight flex items-center gap-2">
-                                                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                                                {{ $article['title'] }}
-                                            </h3>
+                                            <h3 class="text-row font-semibold text-ink">{{ $article['title'] }}</h3>
                                             @if(isset($article['summary']))
-                                                <p class="text-xs text-zinc-600 mt-1 pl-4 leading-relaxed">{{ $article['summary'] }}</p>
+                                                <p class="text-body text-ink-2 mt-1">{{ $article['summary'] }}</p>
                                             @endif
                                         </div>
 
-                                        <!-- Trello Lifecycle Flow Timeline (Open Stepper Line) -->
                                         @if(isset($article['steps']))
-                                            <div class="pl-4 py-2">
-                                                <div class="relative border-l-2 border-stone-200 pl-6 space-y-6">
-                                                    @foreach($article['steps'] as $idx => $step)
-                                                        <div class="relative group">
-                                                            <!-- Timeline Dot -->
-                                                            <div class="absolute -left-[31px] top-0.5 w-4 h-4 rounded-full bg-white border-2 border-blue-600 flex items-center justify-center">
-                                                                <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                                                            </div>
-                                                            <div class="space-y-1">
-                                                                <div class="flex items-center gap-2.5">
-                                                                    <span class="font-bold text-xs text-zinc-900">{{ $step['name'] }}</span>
-                                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase border {{ $step['badge_style'] }}">
-                                                                        {{ $step['badge'] }}
-                                                                    </span>
-                                                                </div>
-                                                                <p class="text-xs text-zinc-600 leading-relaxed">{{ $step['desc'] }}</p>
-                                                            </div>
+                                            <div class="relative border-l border-line-strong pl-5 ml-1 space-y-4">
+                                                @foreach($article['steps'] as $idx => $step)
+                                                    <div class="relative space-y-0.5">
+                                                        <span class="absolute -left-[25px] top-1.5 w-2 h-2 rounded-full bg-ink-3"></span>
+                                                        <div class="flex items-center gap-2">
+                                                            <span class="text-body font-medium text-ink">{{ $step['name'] }}</span>
+                                                            <x-ui.tag tone="neutral">{{ $step['badge'] }}</x-ui.tag>
                                                         </div>
-                                                    @endforeach
-                                                </div>
+                                                        <p class="text-body text-ink-2">{{ $step['desc'] }}</p>
+                                                    </div>
+                                                @endforeach
                                             </div>
                                         @endif
 
-                                        <!-- Clean Open Bullet List (No Boxes) -->
                                         @if(isset($article['points']))
-                                            <div class="pl-4 space-y-2.5 my-3">
+                                            <ul class="space-y-1.5 list-disc pl-5 marker:text-ink-3">
                                                 @foreach($article['points'] as $point)
-                                                    <div class="flex items-start gap-2.5 text-xs text-zinc-700 leading-relaxed">
-                                                        <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                                        <span>{{ $point }}</span>
-                                                    </div>
+                                                    <li class="text-body text-ink-2">{{ $point }}</li>
                                                 @endforeach
-                                            </div>
+                                            </ul>
                                         @endif
 
-                                        <!-- Substatus Badges Open Grid -->
                                         @if(isset($article['examples']))
-                                            <div class="pl-4 grid grid-cols-1 sm:grid-cols-2 gap-3 my-3">
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                 @foreach($article['examples'] as $ex)
-                                                    <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-stone-50 transition border border-stone-100">
-                                                        <span class="px-2.5 py-0.5 rounded text-[10px] font-bold border shrink-0 {{ $ex['badge_style'] }}">
-                                                            {{ $ex['badge'] }}
-                                                        </span>
-                                                        <p class="text-xs text-zinc-600 leading-relaxed">{{ $ex['desc'] }}</p>
+                                                    <div class="flex items-start gap-3 p-3 rounded-control border border-line">
+                                                        <x-ui.tag tone="neutral" class="shrink-0">{{ $ex['badge'] }}</x-ui.tag>
+                                                        <p class="text-body text-ink-2">{{ $ex['desc'] }}</p>
                                                     </div>
                                                 @endforeach
                                             </div>
                                         @endif
 
-                                        <!-- Trello Callout Pro-Tip Banner -->
                                         @if(isset($article['tip']))
-                                            <div class="ml-4 p-4 rounded-r-xl bg-blue-50/70 border-l-4 border-blue-500 text-xs text-blue-950 flex items-start gap-3">
-                                                <x-lucide-info class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                                                <div class="leading-relaxed">
-                                                    <strong class="font-bold text-blue-900">{{ __('Nota Operativa') }}:</strong>
-                                                    <span class="ml-1 text-blue-800">{{ $article['tip'] }}</span>
+                                            <div class="p-3 rounded-control bg-sunken text-body text-ink-2 flex items-start gap-2.5">
+                                                <x-lucide-info class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
+                                                <div>
+                                                    <strong class="font-semibold text-ink">{{ __('Nota Operativa') }}:</strong>
+                                                    <span class="ml-1">{{ $article['tip'] }}</span>
                                                 </div>
                                             </div>
                                         @endif

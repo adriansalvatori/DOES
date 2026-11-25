@@ -82,6 +82,9 @@ class Order extends Model
         'installation_types',
         'overview_checked',
         'delivery_note',
+        'description',
+        'drive_folder_id',
+        'trello_migrated_at',
     ];
 
     protected $casts = [
@@ -117,6 +120,7 @@ class Order extends Model
         'client_revision_count' => 'integer',
         'internal_revision_count' => 'integer',
         'archived_at' => 'datetime',
+        'trello_migrated_at' => 'datetime',
     ];
 
     public function scopeInWorkspace(Builder $query): Builder
@@ -432,6 +436,26 @@ class Order extends Model
     public function stages(): HasMany
     {
         return $this->hasMany(OrderStage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(OrderComment::class)->orderBy('created_at')->orderBy('id');
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(Media::class)->latest()->orderByDesc('id');
+    }
+
+    /**
+     * Folder name used for this order in the shared Drive, e.g. "WO 16512 · SIGN DE BABY SHOWER".
+     */
+    public function getDriveFolderNameAttribute(): string
+    {
+        $prefix = $this->wo_number ? trim($this->wo_number) : 'Orden #'.$this->id;
+
+        return trim($prefix.' · '.$this->clean_task_name, ' ·');
     }
 
     public function elements(): HasMany

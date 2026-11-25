@@ -4,45 +4,43 @@
         $archivedSubstatuses = $archivedSubstatuses ?? \App\Models\Substatus::getArchivedSubstatuses();
     @endphp
     <div 
-        class="fixed inset-0 z-[360] bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150" 
+        class="fixed inset-0 z-[360] bg-ink/40 flex items-center justify-center p-4" 
         @keydown.window.escape.prevent="$wire.closeArchiveModal()"
         @keydown.window.enter.prevent="$wire.confirmArchive()"
         wire:keydown.escape="closeArchiveModal">
         <div 
-            class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xl max-w-md w-full p-4 space-y-3 animate-in fade-in zoom-in-95 duration-150"
+            class="bg-surface border border-line rounded-panel shadow-panel max-w-md w-full p-5 space-y-3"
             @click.outside="$wire.closeArchiveModal()">
             
             <!-- Modal Header -->
-            <div class="flex items-center justify-between pb-2.5 border-b border-[#e9e9e7]">
+            <div class="flex items-center justify-between pb-2.5 border-b border-line">
                 <div class="flex items-center gap-2 min-w-0">
-                    <div class="w-7 h-7 rounded-lg bg-rose-50 border border-rose-200/80 flex items-center justify-center text-rose-600 shrink-0">
-                        <x-lucide-archive class="w-3.5 h-3.5" />
-                    </div>
+                    <x-lucide-archive class="w-4 h-4 text-ink-2 shrink-0" />
                     <div class="min-w-0">
-                        <h3 class="text-sm font-bold text-zinc-900 truncate leading-tight">{{ __('Archivar Orden') }}</h3>
+                        <h3 class="text-section font-semibold text-ink truncate">{{ __('Archivar Orden') }}</h3>
                         @if($targetOrder)
-                            <p class="text-[11px] text-zinc-500 uppercase truncate font-mono leading-tight">
+                            <p class="text-meta text-ink-3 truncate">
                                 {{ $targetOrder->wo_number ? $targetOrder->wo_number . ' · ' : '' }}{{ $targetOrder->company_name ?? '' }}
                             </p>
                         @else
-                            <p class="text-[11px] text-zinc-500 leading-tight">{{ __('Selecciona el subestatus de cierre.') }}</p>
+                            <p class="text-meta text-ink-3">{{ __('Selecciona el subestatus de cierre.') }}</p>
                         @endif
                     </div>
                 </div>
                 <button 
                     wire:click="closeArchiveModal" 
                     type="button" 
-                    class="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 transition cursor-pointer"
+                    class="p-1 rounded-control text-ink-3 hover:text-ink hover:bg-sunken transition cursor-pointer"
                     title="{{ __('Cerrar') }}">
                     <x-lucide-x class="w-4 h-4" />
                 </button>
             </div>
 
             <!-- Modal Body -->
-            <div class="space-y-2 text-xs">
+            <div class="space-y-2 text-body">
                 <div class="flex items-center justify-between">
-                    <label class="font-semibold text-zinc-700 block text-xs">{{ __('Razón o subestatus de cierre:') }}</label>
-                    <span class="text-[11px] text-zinc-400 font-medium">
+                    <label class="font-medium text-ink-2 block text-meta">{{ __('Razón o subestatus de cierre:') }}</label>
+                    <span class="text-meta text-ink-3">
                         {{ count($archivedSubstatuses) }} {{ __('disponibles') }}
                     </span>
                 </div>
@@ -70,10 +68,10 @@
                         @endphp
 
                         <label 
-                            class="flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition select-none text-xs"
+                            class="flex items-center justify-between px-2.5 py-1.5 rounded-control cursor-pointer transition select-none text-body"
                             :class="$wire.archiveSubstatus === '{{ addslashes($subName) }}' 
-                                ? 'bg-rose-50' 
-                                : 'hover:bg-stone-100/80'"
+                                ? 'bg-sunken' 
+                                : 'hover:bg-sunken'"
                             @if($desc) title="{{ $desc }}" @endif>
                             <input 
                                 type="radio" 
@@ -82,19 +80,19 @@
                                 class="sr-only">
                             
                             <div class="flex items-center gap-2 min-w-0">
-                                <span class="px-2 py-0.5 rounded text-[11px] font-semibold border shrink-0 tracking-tight" style="{{ $inlineStyle }}">
+                                <span class="px-2 py-0.5 rounded text-meta font-medium border shrink-0" style="{{ $inlineStyle }}">
                                     {{ $subName }}
                                 </span>
 
                                 @if($isDefault)
-                                    <span class="text-[9px] font-semibold text-zinc-400 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200 shrink-0 uppercase tracking-tight">
+                                    <span class="text-meta text-ink-3 bg-sunken px-1.5 rounded shrink-0">
                                         {{ __('Default') }}
                                     </span>
                                 @endif
                             </div>
                         </label>
                     @empty
-                        <div class="p-3 text-center text-xs text-zinc-500 bg-stone-50 rounded-lg border border-stone-200">
+                        <div class="p-3 text-center text-body text-ink-3 bg-sunken rounded-control">
                             {{ __('No hay subestatus configurados para archivar.') }}
                         </div>
                     @endforelse
@@ -102,18 +100,18 @@
             </div>
 
             <!-- Modal Footer -->
-            <div class="flex items-center justify-end gap-2 pt-2.5 border-t border-[#e9e9e7]">
+            <div class="flex items-center justify-end gap-2 pt-2.5 border-t border-line">
                 <button 
                     wire:click="closeArchiveModal" 
                     type="button" 
-                    class="px-3 py-1.5 rounded-lg border border-stone-200 bg-stone-50 hover:bg-stone-100 text-xs font-medium text-zinc-700 transition cursor-pointer">
+                    class="ui-btn ui-btn-secondary">
                     {{ __('Cancelar') }}
                 </button>
                 <button 
                     wire:click="confirmArchive" 
                     wire:loading.attr="disabled" 
                     type="button" 
-                    class="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+                    class="ui-btn ui-btn-primary disabled:opacity-50">
                     <span wire:loading.remove wire:target="confirmArchive" class="flex items-center gap-1.5">
                         <x-lucide-archive class="w-3.5 h-3.5" />
                         <span>{{ __('Archivar Orden') }}</span>

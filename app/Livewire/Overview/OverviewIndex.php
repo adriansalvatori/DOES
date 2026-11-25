@@ -429,8 +429,7 @@ class OverviewIndex extends Component
                 'flags' => $order->flags ?? [],
                 'designer_id' => $order->designer_id ?? $order->primary_designer?->id,
                 'designer_name' => $order->designer_name,
-                'designer_badge_inline_style' => $order->getDesignerBadgeInlineStyle(),
-                'designer_badge_style' => $order->getDesignerBadgeStyle(),
+                'designer_hex' => $order->primary_designer?->hex_color,
                 'review_status' => $order->review_status,
                 'installation_type' => $order->installation_type,
                 'installation_types' => $order->installation_types_list,
@@ -882,6 +881,41 @@ class OverviewIndex extends Component
     }
 
     #[Renderless]
+    /**
+     * The only place that maps a substatus to a color. Color shows health, never stage:
+     * danger, warn and info for the health families; everything else (custom substatuses too) is neutral.
+     *
+     * @return 'danger'|'warn'|'info'|'neutral'
+     */
+    public static function substatusTone(?string $name): string
+    {
+        return match (mb_strtoupper(trim((string) $name))) {
+            'OVERDUE', 'URGENTE' => 'danger',
+            'ALMOST OVERDUE', 'BLOQUEADA', 'FALTA INFORMACIÓN', 'FALTA APROBACIÓN DE ESTIMADO',
+            'CUSTOMER SERVICE REQUIRED', 'CLIENTE NO RESPONSIVE', 'NO RESPUESTA' => 'warn',
+            'WAITING FOR CLIENT', 'ESPERANDO RESPUESTA', 'ESPERANDO PERMISO', 'PROCESO DE PERMISO', 'PAUSADO' => 'info',
+            default => 'neutral',
+        };
+    }
+
+    /**
+     * Name => tone for every known substatus, so the browser can tone a cell after an instant edit.
+     *
+     * @return array<string, string>
+     */
+    public static function substatusToneMap(): array
+    {
+        $names = array_map(fn (Substatus $case) => $case->value, Substatus::cases());
+        $names = array_merge($names, \App\Models\Substatus::query()->pluck('name')->all());
+
+        $map = [];
+        foreach (array_unique($names) as $name) {
+            $map[$name] = self::substatusTone($name);
+        }
+
+        return $map;
+    }
+
     public function quickUpdateField(int $orderId, string $field, ?string $value): void
     {
         $order = Order::find($orderId);

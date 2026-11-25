@@ -293,7 +293,7 @@ class WorkingTodayStatusTest extends TestCase
         // Action required view should surface this order with keepOnPendingWork option
         Livewire::test(ResolverList::class)
             ->assertSee('SUBTASK AUTO DONE')
-            ->assertSee('Conservar en trabajo pendiente')
+            ->assertSee(__('Conservar en trabajo pendiente'))
             ->call('keepOnPendingWork', $order->id);
 
         $order->refresh();

@@ -197,20 +197,21 @@ class NotificationCenterTest extends TestCase
 
         $this->actingAs($designerUser);
 
-        // Initially unread: contains "New Order", headline, and full opacity (opacity-100)
+        // Initially unread: contains "New Order", headline, and emphasized headline
         Livewire::test(NotificationCenter::class)
             ->assertSee('New Order')
             ->assertSee('ACME CORP')
             ->assertSee('FLYER DESIGN')
-            ->assertSeeHtml('opacity-100');
+            ->assertSeeHtml('font-medium text-ink')
+            ->assertDontSeeHtml('ui-done');
 
         // Mark as read (opened)
         $notification = $designerUser->notifications()->first();
         $notification->markAsRead();
 
-        // Now that it has been opened/read, opacity should be reduced (opacity-40)
+        // Now that it has been opened/read, the row is dimmed (ui-done)
         Livewire::test(NotificationCenter::class)
-            ->assertSeeHtml('opacity-40');
+            ->assertSeeHtml('ui-done');
     }
 
     public function test_order_flagged_urgent_dispatches_notification(): void
@@ -289,7 +290,7 @@ class NotificationCenterTest extends TestCase
         Livewire::test(NotificationCenter::class)
             ->assertSee('César')
             ->assertSee('Status')
-            ->assertSee('EMPRESA OTRO • TAREA CESAR');
+            ->assertSee('EMPRESA OTRO · TAREA CESAR');
     }
 
     public function test_initial_mount_does_not_dispatch_desktop_notification_for_existing_notifications(): void

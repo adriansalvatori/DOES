@@ -29,7 +29,7 @@
             wire:click="saveSettings"
             wire:loading.attr="disabled"
             wire:target="saveSettings"
-            class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5 shrink-0">
+            class="px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-2xs transition cursor-pointer flex items-center gap-1.5 shrink-0">
             <x-lucide-save wire:loading.remove wire:target="saveSettings" class="w-3.5 h-3.5" />
             <x-lucide-refresh-cw wire:loading wire:target="saveSettings" class="w-3.5 h-3.5 animate-spin" />
             <span>{{ __('Guardar Configuración') }}</span>
@@ -51,9 +51,9 @@
     @endif
     
     <!-- Top Notion Header -->
-    <div id="tour-trello-sync-header" class="bg-white border border-[#e9e9e7] rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
+    <div id="tour-trello-sync-header" class="bg-white border border-line rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
         <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Sincronización en Vivo con Trello') }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-semibold text-zinc-900 ">{{ __('Sincronización en Vivo con Trello') }}</h1>
         </div>
 
         <div class="flex items-center gap-2.5 flex-wrap">
@@ -80,7 +80,7 @@
                 id="tour-trello-sync-btn"
                 wire:click="runTrelloSync" 
                 wire:loading.attr="disabled"
-                :class="isDirty() ? 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm shadow-amber-600/20 font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-2xs font-medium'"
+                :class="isDirty() ? 'bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-sm shadow-amber-600/20 font-semibold' : 'bg-zinc-900 hover:bg-zinc-800 text-white cursor-pointer shadow-2xs font-medium'"
                 class="px-3.5 py-1.5 rounded-md text-xs transition flex items-center gap-2 cursor-pointer">
                 <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="runTrelloSync" class="w-3.5 h-3.5" />
                 <span wire:loading.remove wire:target="runTrelloSync">{{ __('Sincronización Completa') }}</span>
@@ -99,7 +99,7 @@
                 </div>
             </div>
             <div>
-                <h3 class="font-bold text-sm text-zinc-900 tracking-tight">
+                <h3 class="font-semibold text-sm text-zinc-900 ">
                     <span wire:loading wire:target="runTrelloSyncOnlyNew">{{ __('Buscando Tarjetas Nuevas...') }}</span>
                     <span wire:loading wire:target="runTrelloSync">{{ __('Sincronizando con Trello...') }}</span>
                 </h3>
@@ -120,7 +120,7 @@
             <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-xl w-full p-6 space-y-5 animate-in fade-in zoom-in duration-150">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold shadow-2xs">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center font-semibold shadow-2xs">
                             @if(($syncReport['type'] ?? 'full') === 'new_only')
                                 <x-lucide-sparkles class="w-5 h-5 text-emerald-600" />
                             @else
@@ -128,14 +128,14 @@
                             @endif
                         </div>
                         <div>
-                            <h3 class="font-bold text-sm text-zinc-900 tracking-tight">
+                            <h3 class="font-semibold text-sm text-zinc-900 ">
                                 @if(($syncReport['type'] ?? 'full') === 'new_only')
                                     {{ __('Búsqueda de Tarjetas Nuevas') }}
                                 @else
                                     {{ __('Resumen de Sincronización Trello') }}
                                 @endif
                             </h3>
-                            <p class="text-[11px] text-zinc-400 font-mono">{{ $syncReport['timestamp'] }}</p>
+                            <p class="text-meta text-zinc-400 font-mono">{{ $syncReport['timestamp'] }}</p>
                         </div>
                     </div>
                     <button wire:click="closeReportModal" class="text-zinc-400 hover:text-zinc-700 cursor-pointer">
@@ -147,32 +147,32 @@
                     <!-- New Only Metrics Grid (3 Clean Columns) -->
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         <div class="p-3 rounded-xl border bg-emerald-50/80 border-emerald-200 text-left">
-                            <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">
+                            <span class="text-meta  font-semibold text-emerald-800 r block truncate">
                                 {{ __('Nuevas Importadas') }}
                             </span>
                             <div class="flex items-baseline gap-1 mt-1">
-                                <span class="text-2xl font-black text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
-                                <span class="text-[11px] font-medium text-emerald-700">{{ __('órdenes') }}</span>
+                                <span class="text-2xl font-semibold text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
+                                <span class="text-meta font-medium text-emerald-700">{{ __('órdenes') }}</span>
                             </div>
                         </div>
 
                         <div class="p-3 rounded-xl border bg-stone-50 border-stone-200 text-left">
-                            <span class="text-[9px] uppercase font-bold text-stone-600 tracking-wider block truncate">
+                            <span class="text-meta  font-semibold text-stone-600 r block truncate">
                                 {{ __('Ya Registradas') }}
                             </span>
                             <div class="flex items-baseline gap-1 mt-1">
-                                <span class="text-2xl font-black text-stone-800 font-mono">{{ $syncReport['unchanged'] }}</span>
-                                <span class="text-[11px] font-medium text-stone-500">{{ __('omitidas') }}</span>
+                                <span class="text-2xl font-semibold text-stone-800 font-mono">{{ $syncReport['unchanged'] }}</span>
+                                <span class="text-meta font-medium text-stone-500">{{ __('omitidas') }}</span>
                             </div>
                         </div>
 
                         <div class="p-3 rounded-xl border bg-stone-50 border-stone-200 text-left col-span-2 sm:col-span-1">
-                            <span class="text-[9px] uppercase font-bold text-stone-600 tracking-wider block truncate">
+                            <span class="text-meta  font-semibold text-stone-600 r block truncate">
                                 {{ __('Total en Tablero') }}
                             </span>
                             <div class="flex items-baseline gap-1 mt-1">
-                                <span class="text-2xl font-black text-stone-800 font-mono">{{ $syncReport['total'] }}</span>
-                                <span class="text-[11px] font-medium text-stone-500">{{ __('tarjetas') }}</span>
+                                <span class="text-2xl font-semibold text-stone-800 font-mono">{{ $syncReport['total'] }}</span>
+                                <span class="text-meta font-medium text-stone-500">{{ __('tarjetas') }}</span>
                             </div>
                         </div>
                     </div>
@@ -184,8 +184,8 @@
                                 <x-lucide-check-circle-2 class="w-5 h-5 text-emerald-600" />
                             </div>
                             <div>
-                                <p class="font-bold text-xs text-zinc-900">{{ __('¡No hay tarjetas nuevas por importar!') }}</p>
-                                <p class="text-[11px] text-zinc-500 mt-1 leading-relaxed max-w-sm mx-auto">
+                                <p class="font-semibold text-xs text-zinc-900">{{ __('¡No hay tarjetas nuevas por importar!') }}</p>
+                                <p class="text-meta text-zinc-500 mt-1 leading-relaxed max-w-sm mx-auto">
                                     {{ __('Todas las :total tarjetas activas del tablero ya están registradas en DOES. No se modificó ninguna orden existente.', ['total' => $syncReport['total']]) }}
                                 </p>
                             </div>
@@ -194,11 +194,11 @@
                         <!-- List of newly imported cards -->
                         <div class="space-y-2.5">
                             <div class="flex items-center justify-between">
-                                <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <span class="text-xs font-semibold text-zinc-800  r flex items-center gap-1.5">
                                     <x-lucide-list-checks class="w-4 h-4 text-emerald-600" /> 
                                     {{ __('Tarjetas Nuevas Importadas') }} ({{ count($syncReport['changes']) }})
                                 </span>
-                                <span class="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                                <span class="text-meta  font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                                     {{ __('En Buzón Backlog') }}
                                 </span>
                             </div>
@@ -209,21 +209,21 @@
                                         @if(isset($chg['order_id']))
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $chg['order_id'] }} })"
                                         @endif
-                                        class="p-3 bg-[#fbfbfa] hover:bg-emerald-50/40 rounded-xl border border-stone-200 hover:border-emerald-300 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
+                                        class="p-3 bg-canvas hover:bg-emerald-50/40 rounded-xl border border-stone-200 hover:border-emerald-300 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
                                         title="{{ __('Haz clic para ver el detalle de esta orden') }}">
                                         <div class="min-w-0 flex-1 space-y-1">
                                             <div class="space-y-0.5">
-                                                <span class="font-bold text-zinc-900 group-hover:text-emerald-950 flex items-center gap-1.5 truncate text-xs">
+                                                <span class="font-semibold text-zinc-900 group-hover:text-emerald-950 flex items-center gap-1.5 truncate text-xs">
                                                     <span>{{ $chg['company'] }}</span>
                                                     <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-400 group-hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition shrink-0" />
                                                 </span>
                                                 @if(!empty($chg['task']))
-                                                    <span class="text-[11px] text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
+                                                    <span class="text-meta text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
                                                 @endif
                                             </div>
                                         </div>
                                         <div class="shrink-0 flex items-center gap-2">
-                                            <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                                            <span class="px-2.5 py-1 rounded-md text-meta font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                                                 <x-lucide-plus class="w-3 h-3 text-emerald-600" />
                                                 <span>{{ __('Nueva') }}</span>
                                             </span>
@@ -235,7 +235,7 @@
                     @endif
 
                     <div class="pt-2 border-t border-stone-100 flex items-center justify-between gap-3">
-                        <span class="text-[11px] text-zinc-400">
+                        <span class="text-meta text-zinc-400">
                             {{ __('Órdenes existentes protegidas (sin cambios ni conflictos).') }}
                         </span>
                         <button 
@@ -250,54 +250,54 @@
                         <button 
                             wire:click="setFilter('created')"
                             class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'created' ? 'bg-emerald-100/70 border-emerald-400 ring-2 ring-emerald-400/30' : 'bg-emerald-50/70 border-emerald-200 hover:bg-emerald-100/50' }}">
-                            <span class="text-[9px] uppercase font-bold text-emerald-800 tracking-wider block truncate">{{ __('Nuevas') }}</span>
+                            <span class="text-meta  font-semibold text-emerald-800 r block truncate">{{ __('Nuevas') }}</span>
                             <div class="flex items-baseline gap-1 mt-0.5">
-                                <span class="text-lg font-bold text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
+                                <span class="text-lg font-semibold text-emerald-900 font-mono">+{{ $syncReport['added'] }}</span>
                             </div>
                         </button>
 
                         <button 
                             wire:click="setFilter('pushed_to_trello')"
                             class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'pushed_to_trello' ? 'bg-purple-100/70 border-purple-400 ring-2 ring-purple-400/30' : 'bg-purple-50/70 border-purple-200 hover:bg-purple-100/50' }}">
-                            <span class="text-[9px] uppercase font-bold text-purple-800 tracking-wider block truncate">{{ __('Enviadas') }}</span>
+                            <span class="text-meta  font-semibold text-purple-800 r block truncate">{{ __('Enviadas') }}</span>
                             <div class="flex items-baseline gap-1 mt-0.5">
-                                <span class="text-lg font-bold text-purple-900 font-mono">{{ $syncReport['pushed'] ?? 0 }}</span>
+                                <span class="text-lg font-semibold text-purple-900 font-mono">{{ $syncReport['pushed'] ?? 0 }}</span>
                             </div>
                         </button>
 
                         <button 
                             wire:click="setFilter('moved')"
                             class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'moved' ? 'bg-sky-100/70 border-sky-400 ring-2 ring-sky-400/30' : 'bg-sky-50/70 border-sky-200 hover:bg-sky-100/50' }}">
-                            <span class="text-[9px] uppercase font-bold text-sky-800 tracking-wider block truncate">{{ __('Movidas') }}</span>
+                            <span class="text-meta  font-semibold text-sky-800 r block truncate">{{ __('Movidas') }}</span>
                             <div class="flex items-baseline gap-1 mt-0.5">
-                                <span class="text-lg font-bold text-sky-900 font-mono">{{ $syncReport['moved'] }}</span>
+                                <span class="text-lg font-semibold text-sky-900 font-mono">{{ $syncReport['moved'] }}</span>
                             </div>
                         </button>
 
                         <button 
                             wire:click="setFilter('updated')"
                             class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'updated' ? 'bg-amber-100/70 border-amber-400 ring-2 ring-amber-400/30' : 'bg-amber-50/70 border-amber-200 hover:bg-amber-100/50' }}">
-                            <span class="text-[9px] uppercase font-bold text-amber-800 tracking-wider block truncate">{{ __('Actualizadas') }}</span>
+                            <span class="text-meta  font-semibold text-amber-800 r block truncate">{{ __('Actualizadas') }}</span>
                             <div class="flex items-baseline gap-1 mt-0.5">
-                                <span class="text-lg font-bold text-amber-900 font-mono">{{ $syncReport['updated'] }}</span>
+                                <span class="text-lg font-semibold text-amber-900 font-mono">{{ $syncReport['updated'] }}</span>
                             </div>
                         </button>
 
                         <button 
                             wire:click="setFilter('conflict')"
                             class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'conflict' ? 'bg-rose-100/70 border-rose-400 ring-2 ring-rose-400/30' : 'bg-rose-50/70 border-rose-200 hover:bg-rose-100/50' }}">
-                            <span class="text-[9px] uppercase font-bold text-rose-800 tracking-wider block truncate">{{ __('Conflictos') }}</span>
+                            <span class="text-meta  font-semibold text-rose-800 r block truncate">{{ __('Conflictos') }}</span>
                             <div class="flex items-baseline gap-1 mt-0.5">
-                                <span class="text-lg font-bold text-rose-900 font-mono">{{ $syncReport['conflicts'] ?? 0 }}</span>
+                                <span class="text-lg font-semibold text-rose-900 font-mono">{{ $syncReport['conflicts'] ?? 0 }}</span>
                             </div>
                         </button>
 
                         <button 
                             wire:click="setFilter('deleted')"
                             class="p-2.5 rounded-xl border text-left transition cursor-pointer {{ $activeFilter === 'deleted' ? 'bg-stone-200/70 border-stone-400 ring-2 ring-stone-400/30' : 'bg-stone-100/70 border-stone-300 hover:bg-stone-200/50' }}">
-                            <span class="text-[9px] uppercase font-bold text-stone-800 tracking-wider block truncate">{{ __('Faltantes') }}</span>
+                            <span class="text-meta  font-semibold text-stone-800 r block truncate">{{ __('Faltantes') }}</span>
                             <div class="flex items-baseline gap-1 mt-0.5">
-                                <span class="text-lg font-bold text-stone-900 font-mono">{{ $syncReport['deleted'] }}</span>
+                                <span class="text-lg font-semibold text-stone-900 font-mono">{{ $syncReport['deleted'] }}</span>
                             </div>
                         </button>
                     </div>
@@ -306,20 +306,20 @@
                         <div class="bg-amber-50/90 border border-amber-300/90 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 shadow-2xs">
                             <div class="flex items-center gap-2">
                                 <x-lucide-alert-triangle class="w-4 h-4 text-amber-700 shrink-0" />
-                                <span class="text-xs font-bold text-amber-950">{{ __('Conflictos Detectados:') }} {{ $syncReport['conflicts'] }} {{ __('orden(es)') }}</span>
+                                <span class="text-xs font-semibold text-amber-950">{{ __('Conflictos Detectados:') }} {{ $syncReport['conflicts'] }} {{ __('orden(es)') }}</span>
                             </div>
 
                             <div class="flex items-center gap-2">
                                 <button 
                                     wire:click="resolveAllWorkspace" 
-                                    class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                    class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-meta rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
                                     <x-lucide-arrow-up-right class="w-3.5 h-3.5" />
                                     <span>{{ __('Use Details from Workspace for All') }}</span>
                                 </button>
 
                                 <button 
                                     wire:click="resolveAllTrello" 
-                                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
+                                    class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-meta rounded-lg shadow-2xs transition cursor-pointer flex items-center gap-1">
                                     <x-lucide-arrow-down-left class="w-3.5 h-3.5" />
                                     <span>{{ __('Use Details from Trello for All') }}</span>
                                 </button>
@@ -331,19 +331,19 @@
                         <span class="flex items-center gap-1.5">
                             <x-lucide-layers class="w-4 h-4 text-zinc-500" /> {{ __('Total Procesadas en Tablero:') }}
                         </span>
-                        <span class="font-bold font-mono text-zinc-900">{{ $syncReport['total'] }} {{ __('tarjetas') }}</span>
+                        <span class="font-semibold font-mono text-zinc-900">{{ $syncReport['total'] }} {{ __('tarjetas') }}</span>
                     </div>
 
                     <!-- Complete Scrollable List of Changed Cards -->
                     <div class="space-y-2.5">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-zinc-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <span class="text-xs font-semibold text-zinc-800  r flex items-center gap-1.5">
                                 <x-lucide-list-checks class="w-4 h-4 text-stone-600" /> 
                                 {{ __('Lista de Tarjetas Que Cambiaron') }} ({{ count($syncReport['changes']) }})
                             </span>
 
                             <!-- Filter Category Tabs -->
-                            <div class="flex items-center gap-1 text-[11px]">
+                            <div class="flex items-center gap-1 text-meta">
                                 <button 
                                     wire:click="setFilter('all')" 
                                     class="px-2 py-0.5 rounded-md font-medium transition cursor-pointer {{ $activeFilter === 'all' ? 'bg-zinc-900 text-white font-semibold' : 'text-zinc-600 hover:bg-stone-100' }}">
@@ -372,16 +372,16 @@
                                         @elseif(isset($chg['order_id']))
                                             wire:click="$dispatch('open-order-detail', { orderId: {{ $chg['order_id'] }} })"
                                         @endif
-                                        class="p-3 bg-[#fbfbfa] hover:bg-stone-100/90 rounded-xl border border-stone-200 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
+                                        class="p-3 bg-canvas hover:bg-stone-100/90 rounded-xl border border-stone-200 flex items-center justify-between gap-3 transition cursor-pointer group shadow-2xs"
                                         title="{{ $chg['action'] === 'conflict' ? __('Haz clic para resolver conflicto') : __('Haz clic para ver el detalle de esta orden') }}">
                                         <div class="min-w-0 flex-1 space-y-1">
                                             <div class="space-y-0.5">
-                                                <span class="font-bold text-zinc-900 group-hover:text-stone-900 flex items-center gap-1.5 truncate text-xs">
+                                                <span class="font-semibold text-zinc-900 group-hover:text-stone-900 flex items-center gap-1.5 truncate text-xs">
                                                     <span>{{ $chg['company'] }}</span>
                                                     <x-lucide-external-link class="w-3.5 h-3.5 text-zinc-400 group-hover:text-zinc-700 opacity-0 group-hover:opacity-100 transition shrink-0" />
                                                 </span>
                                                 @if($chg['task'])
-                                                    <span class="text-[11px] text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
+                                                    <span class="text-meta text-zinc-500 block truncate font-normal">{{ $chg['task'] }}</span>
                                                 @endif
                                             </div>
 
@@ -390,20 +390,20 @@
                                                 <div class="flex flex-wrap gap-1.5 pt-1">
                                                     @foreach($chg['diff_fields'] as $field)
                                                         @if($field === 'company_name')
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-meta font-semibold bg-amber-100 text-amber-950 border border-amber-300">
                                                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                                                 Workspace: {{ $chg['workspace_data']['company_name'] ?? '' }}
                                                             </span>
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-meta font-semibold bg-blue-100 text-blue-950 border border-blue-300">
                                                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                                                 Trello: {{ $chg['trello_data']['company_name'] ?? '' }}
                                                             </span>
                                                         @elseif($field === 'task_name')
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-100 text-amber-950 border border-amber-300">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-meta font-semibold bg-amber-100 text-amber-950 border border-amber-300">
                                                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                                                 Workspace: {{ $chg['workspace_data']['task_name'] ?? '' }}
                                                             </span>
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-100 text-blue-950 border border-blue-300">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-meta font-semibold bg-blue-100 text-blue-950 border border-blue-300">
                                                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                                                 Trello: {{ $chg['trello_data']['task_name'] ?? '' }}
                                                             </span>
@@ -416,7 +416,7 @@
                                             @elseif(!empty($chg['details']))
                                                 <div class="flex flex-wrap gap-1 pt-0.5">
                                                     @foreach($chg['details'] as $detail)
-                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium {{ $chg['action'] === 'conflict' ? 'bg-rose-100 text-rose-900 border border-rose-300' : 'bg-amber-50 text-amber-900 border border-amber-200/80' }} shadow-2xs">
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-meta font-medium {{ $chg['action'] === 'conflict' ? 'bg-rose-100 text-rose-900 border border-rose-300' : 'bg-amber-50 text-amber-900 border border-amber-200/80' }} shadow-2xs">
                                                             <x-lucide-sparkles class="w-3 h-3 {{ $chg['action'] === 'conflict' ? 'text-rose-600' : 'text-amber-600' }} shrink-0" />
                                                             <span>{{ $detail }}</span>
                                                         </span>
@@ -427,11 +427,11 @@
 
                                         <div class="shrink-0 text-right">
                                             @if($chg['action'] === 'created')
-                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                <span class="px-2.5 py-1 rounded-md text-meta font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                                     + {{ __('Nueva Orden') }}
                                                 </span>
                                             @elseif($chg['action'] === 'pushed_to_trello')
-                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
+                                                <span class="px-2.5 py-1 rounded-md text-meta font-semibold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
                                                     <x-lucide-arrow-up-right class="w-3.5 h-3.5 text-purple-600 inline shrink-0" />
                                                     @if(! empty($chg['pushed_title']))
                                                         <span class="truncate max-w-[220px]" title="{{ $chg['pushed_title'] }}">{{ __('Enviado a Trello:') }} {{ $chg['pushed_title'] }}</span>
@@ -442,24 +442,24 @@
                                                     @endif
                                                 </span>
                                             @elseif($chg['action'] === 'moved')
-                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-sky-100 text-sky-800 border border-sky-200 flex items-center gap-1">
+                                                <span class="px-2.5 py-1 rounded-md text-meta font-semibold bg-sky-100 text-sky-800 border border-sky-200 flex items-center gap-1">
                                                     <span>{{ $chg['previous_status'] ?? '' }}</span>
                                                     <x-lucide-arrow-right class="w-3.5 h-3.5 text-sky-600 inline shrink-0" />
                                                     <span>{{ $chg['new_status'] ?? '' }}</span>
                                                 </span>
                                             @elseif($chg['action'] === 'updated')
-                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                <span class="px-2.5 py-1 rounded-md text-meta font-semibold bg-amber-100 text-amber-800 border border-amber-200">
                                                     {{ __('Actualizada') }}
                                                 </span>
                                             @elseif($chg['action'] === 'conflict')
                                                 <button 
                                                     wire:click.stop="openConflictModal({{ $chg['order_id'] }})"
-                                                    class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-600 text-white hover:bg-rose-700 border border-rose-700 flex items-center gap-1 shadow-2xs cursor-pointer">
+                                                    class="px-2.5 py-1 rounded-md text-meta font-semibold bg-rose-600 text-white hover:bg-rose-700 border border-rose-700 flex items-center gap-1 shadow-2xs cursor-pointer">
                                                     <x-lucide-alert-triangle class="w-3 h-3 text-white inline shrink-0" />
                                                     <span>{{ __('Resolver Conflicto') }}</span>
                                                 </button>
                                             @elseif($chg['action'] === 'deleted')
-                                                <span class="px-2.5 py-1 rounded-md text-[10px] font-bold bg-stone-200 text-stone-800 border border-stone-300">
+                                                <span class="px-2.5 py-1 rounded-md text-meta font-semibold bg-stone-200 text-stone-800 border border-stone-300">
                                                     {{ __('Falta en Trello') }}
                                                 </span>
                                             @endif
@@ -490,18 +490,18 @@
             <div class="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-4xl w-full p-5 space-y-4 animate-in fade-in zoom-in duration-150 max-h-[90vh] overflow-y-auto custom-vertical-scrollbar">
                 <div class="flex items-center justify-between border-b border-stone-100 pb-3">
                     <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center font-bold">
+                        <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center font-semibold">
                             <x-lucide-alert-triangle class="w-4 h-4 text-amber-700" />
                         </div>
                         <div>
-                            <h3 class="font-bold text-sm text-zinc-900 tracking-tight">{{ __('Resolver Conflicto de Sincronización') }}</h3>
+                            <h3 class="font-semibold text-sm text-zinc-900 ">{{ __('Resolver Conflicto de Sincronización') }}</h3>
                             <p class="text-xs text-zinc-500">{{ __('Compara los detalles entre Workspace y Trello para decidir cuál conservar.') }}</p>
                         </div>
                     </div>
 
                     <div class="flex items-center gap-2">
                         @if(!empty($selectedConflict['trello_data']['trello_url']))
-                            <a href="{{ $selectedConflict['trello_data']['trello_url'] }}" target="_blank" rel="noopener" class="px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1 transition">
+                            <a href="{{ $selectedConflict['trello_data']['trello_url'] }}" target="_blank" rel="noopener" class="px-2.5 py-1 text-meta font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg flex items-center gap-1 transition">
                                 <x-lucide-external-link class="w-3.5 h-3.5" />
                                 <span>{{ __('Ver en Trello.com') }}</span>
                             </a>
@@ -518,7 +518,7 @@
                             <x-lucide-alert-octagon class="w-4 h-4 text-rose-600 shrink-0" />
                             <span>{{ __('No se pudo enviar la tarjeta a Trello. Verifica tu conexión o token API y vuelve a intentarlo.') }}</span>
                         </div>
-                        <button wire:click="resolveUseWorkspace({{ $selectedConflict['order_id'] }})" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-[11px] shrink-0 transition shadow-2xs">
+                        <button wire:click="resolveUseWorkspace({{ $selectedConflict['order_id'] }})" class="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-meta shrink-0 transition shadow-2xs">
                             {{ __('Reintentar Envío a Trello') }}
                         </button>
                     </div>
@@ -529,11 +529,11 @@
                     <!-- Workspace Card Details (Left - Mustard Yellow Theme) -->
                     <div class="bg-amber-50/70 border border-amber-300/90 rounded-xl p-3.5 space-y-3">
                         <div class="flex items-center justify-between border-b border-amber-300/70 pb-2">
-                            <span class="font-bold text-amber-950 flex items-center gap-1.5 text-xs">
+                            <span class="font-semibold text-amber-950 flex items-center gap-1.5 text-xs">
                                 <x-lucide-layout class="w-4 h-4 text-amber-700" />
                                 {{ __('Kudos Workspace (Local)') }}
                             </span>
-                            <span class="text-[10px] text-amber-800 font-mono font-medium">
+                            <span class="text-meta text-amber-800 font-mono font-medium">
                                 🕒 {{ $selectedConflict['workspace_updated_at'] ?? 'N/A' }}
                             </span>
                         </div>
@@ -541,29 +541,29 @@
                         <div class="space-y-2.5">
                             <div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
+                                    <span class="text-meta font-semibold text-amber-900  r block">{{ __('COMPANY / CLIENT') }}</span>
                                     @if(!empty($selectedConflict['workspace_data']['is_client_linked']))
-                                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
+                                        <span class="text-meta font-semibold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300 inline-flex items-center gap-1">
                                             <x-lucide-check class="w-3 h-3 text-emerald-700 shrink-0" />
                                             <span>{{ __('Cliente Vinculado DB') }}</span>
                                         </span>
                                     @endif
                                 </div>
-                                <p class="font-bold text-zinc-900 p-1.5 rounded mt-0.5 {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 border border-amber-400' : 'bg-amber-100/40' }}">
+                                <p class="font-semibold text-zinc-900 p-1.5 rounded mt-0.5 {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 border border-amber-400' : 'bg-amber-100/40' }}">
                                     {{ $selectedConflict['workspace_data']['company_name'] ?? '—' }}
                                 </p>
                             </div>
 
                             <div>
-                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NOMBRE DE TAREA') }}</span>
-                                <p class="font-medium text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                <span class="text-meta font-semibold text-amber-900  r block">{{ __('NOMBRE DE TAREA') }}</span>
+                                <p class="font-medium text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-semibold border border-amber-400' : 'bg-amber-100/40' }}">
                                     {{ $selectedConflict['workspace_data']['task_name'] ?? '—' }}
                                 </p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
+                                    <span class="text-meta font-semibold text-amber-900  r block">{{ __('NÚMERO DE WO') }}</span>
                                      @if(!empty($selectedConflict['workspace_data']['wo_number']))
                                          <div class="mt-0.5"><x-wo-badge :number="$selectedConflict['workspace_data']['wo_number']" variant="amber" /></div>
                                      @else
@@ -572,8 +572,8 @@
                                 </div>
 
                                 <div>
-                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('DISEÑADOR ASIGNADO') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                    <span class="text-meta font-semibold text-amber-900  r block">{{ __('DISEÑADOR ASIGNADO') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-semibold border border-amber-400' : 'bg-amber-100/40' }}">
                                         {{ $selectedConflict['workspace_data']['designer_name'] ?? 'Sin asignar' }}
                                     </p>
                                 </div>
@@ -581,16 +581,16 @@
 
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('FECHA DE ENTREGA') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium flex items-center gap-1 {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                    <span class="text-meta font-semibold text-amber-900  r block">{{ __('FECHA DE ENTREGA') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium flex items-center gap-1 {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-semibold border border-amber-400' : 'bg-amber-100/40' }}">
                                         <x-lucide-calendar class="w-3.5 h-3.5 text-amber-800 shrink-0" />
                                         <span>{{ $selectedConflict['workspace_data']['due_date'] ?? 'Sin fecha' }}</span>
                                     </p>
                                 </div>
 
                                 <div>
-                                    <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('ESTADO LOCAL') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold flex items-center gap-1 {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-bold border border-amber-400' : 'bg-amber-100/40' }}">
+                                    <span class="text-meta font-semibold text-amber-900  r block">{{ __('ESTADO LOCAL') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold flex items-center gap-1 {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-amber-200/90 text-amber-950 font-semibold border border-amber-400' : 'bg-amber-100/40' }}">
                                         <x-lucide-pin class="w-3.5 h-3.5 text-amber-800 shrink-0" />
                                         <span>{{ $selectedConflict['workspace_data']['core_status'] ?? 'Sin estado' }}</span>
                                     </p>
@@ -598,7 +598,7 @@
                             </div>
 
                             <div>
-                                <span class="text-[10px] font-bold text-amber-900 uppercase tracking-wider block">{{ __('CONTACTO / RESPONSABLE') }}</span>
+                                <span class="text-meta font-semibold text-amber-900  r block">{{ __('CONTACTO / RESPONSABLE') }}</span>
                                 <p class="text-zinc-800 p-1.5 rounded mt-0.5 bg-amber-100/40 font-medium flex items-center gap-1">
                                     <x-lucide-user class="w-3.5 h-3.5 text-amber-800 shrink-0" />
                                     <span>{{ $selectedConflict['workspace_data']['responsible_person'] ?? 'Sin contacto' }}</span>
@@ -610,11 +610,11 @@
                     <!-- Trello Card Details (Right - Royal Blue Theme) -->
                     <div class="bg-blue-50/70 border border-blue-300/90 rounded-xl p-3.5 space-y-3">
                         <div class="flex items-center justify-between border-b border-blue-300/70 pb-2">
-                            <span class="font-bold text-blue-950 flex items-center gap-1.5 text-xs">
+                            <span class="font-semibold text-blue-950 flex items-center gap-1.5 text-xs">
                                 <x-lucide-trello class="w-4 h-4 text-blue-700" />
                                 {{ __('Tablero Trello') }}
                             </span>
-                            <span class="text-[10px] text-blue-800 font-mono font-medium flex items-center gap-1">
+                            <span class="text-meta text-blue-800 font-mono font-medium flex items-center gap-1">
                                 <x-lucide-clock class="w-3 h-3 text-blue-700 shrink-0" />
                                 <span>{{ $selectedConflict['trello_updated_at'] ?? 'N/A' }}</span>
                             </span>
@@ -622,22 +622,22 @@
 
                         <div class="space-y-2.5">
                             <div>
-                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('COMPANY / CLIENT') }}</span>
-                                <p class="font-bold text-zinc-900 p-1.5 rounded mt-0.5 {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                <span class="text-meta font-semibold text-blue-900  r block">{{ __('COMPANY / CLIENT') }}</span>
+                                <p class="font-semibold text-zinc-900 p-1.5 rounded mt-0.5 {{ in_array('company_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-semibold border border-blue-400' : 'bg-blue-100/40' }}">
                                     {{ $selectedConflict['trello_data']['company_name'] ?? '—' }}
                                 </p>
                             </div>
 
                             <div>
-                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NOMBRE DE TAREA') }}</span>
-                                <p class="font-medium text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                <span class="text-meta font-semibold text-blue-900  r block">{{ __('NOMBRE DE TAREA') }}</span>
+                                <p class="font-medium text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('task_name', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-semibold border border-blue-400' : 'bg-blue-100/40' }}">
                                     {{ $selectedConflict['trello_data']['task_name'] ?? '—' }}
                                 </p>
                             </div>
 
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('NÚMERO DE WO') }}</span>
+                                    <span class="text-meta font-semibold text-blue-900  r block">{{ __('NÚMERO DE WO') }}</span>
                                      @if(!empty($selectedConflict['trello_data']['wo_number']))
                                          <div class="mt-0.5"><x-wo-badge :number="$selectedConflict['trello_data']['wo_number']" variant="outline" /></div>
                                      @else
@@ -646,8 +646,8 @@
                                 </div>
 
                                 <div>
-                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('DISEÑADOR ASIGNADO') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                    <span class="text-meta font-semibold text-blue-900  r block">{{ __('DISEÑADOR ASIGNADO') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 {{ in_array('designer', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-semibold border border-blue-400' : 'bg-blue-100/40' }}">
                                         {{ $selectedConflict['trello_data']['designer_name'] ?? 'Sin asignar' }}
                                     </p>
                                 </div>
@@ -655,16 +655,16 @@
 
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('FECHA DE ENTREGA') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium flex items-center gap-1 {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                    <span class="text-meta font-semibold text-blue-900  r block">{{ __('FECHA DE ENTREGA') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-medium flex items-center gap-1 {{ in_array('due_date', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-semibold border border-blue-400' : 'bg-blue-100/40' }}">
                                         <x-lucide-calendar class="w-3.5 h-3.5 text-blue-800 shrink-0" />
                                         <span>{{ $selectedConflict['trello_data']['due_date'] ?? 'Sin fecha' }}</span>
                                     </p>
                                 </div>
 
                                 <div>
-                                    <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('LISTA EN TRELLO') }}</span>
-                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold flex items-center gap-1 {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-bold border border-blue-400' : 'bg-blue-100/40' }}">
+                                    <span class="text-meta font-semibold text-blue-900  r block">{{ __('LISTA EN TRELLO') }}</span>
+                                    <p class="text-zinc-800 p-1.5 rounded mt-0.5 font-semibold flex items-center gap-1 {{ in_array('core_status', $selectedConflict['diff_fields'] ?? []) ? 'bg-blue-200/90 text-blue-950 font-semibold border border-blue-400' : 'bg-blue-100/40' }}">
                                         <x-lucide-pin class="w-3.5 h-3.5 text-blue-800 shrink-0" />
                                         <span>{{ $selectedConflict['trello_data']['core_status'] ?? 'Sin estado' }}</span>
                                     </p>
@@ -672,8 +672,8 @@
                             </div>
 
                             <div>
-                                <span class="text-[10px] font-bold text-blue-900 uppercase tracking-wider block">{{ __('DESCRIPCIÓN / NOTAS TRELLO') }}</span>
-                                <p class="text-zinc-700 p-1.5 rounded mt-0.5 bg-blue-100/40 font-mono text-[11px] truncate">
+                                <span class="text-meta font-semibold text-blue-900  r block">{{ __('DESCRIPCIÓN / NOTAS TRELLO') }}</span>
+                                <p class="text-zinc-700 p-1.5 rounded mt-0.5 bg-blue-100/40 font-mono text-meta truncate">
                                     {{ $selectedConflict['trello_data']['trello_desc'] ?: 'Sin descripción' }}
                                 </p>
                             </div>
@@ -732,8 +732,8 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
 
         <!-- Board & Token Credentials Setup -->
-        <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-4 shadow-2xs">
-            <h3 class="font-semibold text-xs text-zinc-800 uppercase tracking-wider border-b border-[#e9e9e7] pb-2 flex items-center gap-2">
+        <div class="bg-white border border-line rounded-xl p-4 space-y-4 shadow-2xs">
+            <h3 class="font-semibold text-xs text-zinc-800  r border-b border-line pb-2 flex items-center gap-2">
                 <x-lucide-key class="w-4 h-4 text-zinc-500" /> {{ __('Configuración del Tablero & Autenticación') }}
             </h3>
 
@@ -741,48 +741,48 @@
                 <!-- Trello Board URL / ID Input -->
                 <div>
                     <label class="text-zinc-700 block font-medium mb-1">{{ __('1. URL o ID de tu Tablero Trello:') }}</label>
-                    <input id="tour-trello-board-input" type="text" wire:model="boardId" placeholder="Ej: https://trello.com/b/ABC123xyz/kudos-design-ops o ABC123xyz" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-2 text-xs text-zinc-900 focus:outline-none w-full font-mono">
-                    <p class="text-[11px] text-zinc-400 mt-1">{{ __('Pega el link de tu tablero Trello o el ID de 8 caracteres.') }}</p>
+                    <input id="tour-trello-board-input" type="text" wire:model="boardId" placeholder="Ej: https://trello.com/b/ABC123xyz/kudos-design-ops o ABC123xyz" class="ui-input font-mono">
+                    <p class="text-meta text-zinc-400 mt-1">{{ __('Pega el link de tu tablero Trello o el ID de 8 caracteres.') }}</p>
                 </div>
 
                 <!-- Trello API Key -->
                 <div>
-                    <label class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('API Key Trello:') }}</label>
-                    <div class="bg-[#f7f7f5] p-2 rounded-md border border-[#e9e9e7] font-mono text-zinc-800 font-medium flex items-center justify-between">
+                    <label class="text-zinc-500 block text-meta  font-semibold">{{ __('API Key Trello:') }}</label>
+                    <div class="bg-[#f7f7f5] p-2 rounded-md border border-line font-mono text-zinc-800 font-medium flex items-center justify-between">
                         <span>{{ $apiKey }}</span>
-                        <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">{{ __('Configurada') }}</span>
+                        <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 text-meta">{{ __('Configurada') }}</span>
                     </div>
                 </div>
 
                 <!-- User Token Input -->
                 <div>
                     <label class="text-zinc-700 block font-medium mb-1">{{ __('2. Token de Usuario Trello (Requerido para tableros privados):') }}</label>
-                    <input type="text" wire:model="userToken" placeholder="{{ __('Pega aquí el Token de 64 caracteres de Trello...') }}" class="bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-2 text-xs text-zinc-900 focus:outline-none w-full font-mono">
+                    <input type="text" wire:model="userToken" placeholder="{{ __('Pega aquí el Token de 64 caracteres de Trello...') }}" class="ui-input font-mono">
 
                     <!-- Token Generator Banner -->
                     <div class="mt-2.5 bg-stone-100 border border-stone-200 rounded-lg p-3 text-xs space-y-1.5">
                         <div class="flex items-center justify-between">
                             <span class="font-medium text-zinc-800">{{ __('¿No tienes un Token de Usuario?') }}</span>
-                            <a href="https://trello.com/1/authorize?expiration=never&name=KudosDesignOps&scope=read,write,account&response_type=token&key={{ $apiKey }}" target="_blank" class="px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-white font-medium text-[11px] flex items-center gap-1 transition">
+                            <a href="https://trello.com/1/authorize?expiration=never&name=KudosDesignOps&scope=read,write,account&response_type=token&key={{ $apiKey }}" target="_blank" class="px-2.5 py-1 rounded bg-stone-800 hover:bg-stone-700 text-white font-medium text-meta flex items-center gap-1 transition">
                                 <x-lucide-key class="w-3 h-3 text-white shrink-0" />
                                 <span>{{ __('Generar Token') }}</span>
                                 <x-lucide-external-link class="w-3 h-3" />
                             </a>
                         </div>
-                        <p class="text-[11px] text-zinc-500 leading-relaxed">{{ __('Haz clic en Generar Token, da clic en "Permitir" en Trello y copia el Token de 64 caracteres.') }}</p>
+                        <p class="text-meta text-zinc-500 leading-relaxed">{{ __('Haz clic en Generar Token, da clic en "Permitir" en Trello y copia el Token de 64 caracteres.') }}</p>
                     </div>
                 </div>
 
                 <!-- Save Settings Footer -->
-                <div class="pt-3.5 border-t border-[#e9e9e7] flex items-center justify-between gap-2">
+                <div class="pt-3.5 border-t border-line flex items-center justify-between gap-2">
                     <template x-if="isDirty()">
-                        <span class="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
+                        <span class="text-meta font-semibold text-amber-700 flex items-center gap-1">
                             <x-lucide-alert-circle class="w-3.5 h-3.5 text-amber-600 shrink-0" />
                             <span>{{ __('Cambios pendientes de guardar') }}</span>
                         </span>
                     </template>
                     <template x-if="!isDirty()">
-                        <span class="text-[11px] text-zinc-400 flex items-center gap-1">
+                        <span class="text-meta text-zinc-400 flex items-center gap-1">
                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                             <span>{{ __('Configuración al día') }}</span>
                         </span>
@@ -793,7 +793,7 @@
                         wire:click="saveSettings"
                         wire:loading.attr="disabled"
                         wire:target="saveSettings"
-                        :class="isDirty() ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm font-bold' : 'bg-zinc-900 hover:bg-zinc-800 text-white font-medium'"
+                        :class="isDirty() ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm font-semibold' : 'bg-zinc-900 hover:bg-zinc-800 text-white font-medium'"
                         class="px-4 py-2 rounded-lg text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
                         <x-lucide-save wire:loading.remove wire:target="saveSettings" class="w-3.5 h-3.5" />
                         <x-lucide-refresh-cw wire:loading wire:target="saveSettings" class="w-3.5 h-3.5 animate-spin" />
@@ -804,13 +804,13 @@
         </div>
 
         <!-- Sync Console & Rate Limits -->
-        <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 space-y-3 flex flex-col justify-between shadow-2xs">
+        <div class="bg-white border border-line rounded-xl p-4 space-y-3 flex flex-col justify-between shadow-2xs">
             <div>
-                <h3 class="font-semibold text-xs text-zinc-800 uppercase tracking-wider border-b border-[#e9e9e7] pb-2 flex items-center gap-2">
+                <h3 class="font-semibold text-xs text-zinc-800  r border-b border-line pb-2 flex items-center gap-2">
                     <x-lucide-terminal class="w-4 h-4 text-zinc-500" /> {{ __('Consola de Diagnóstico & Sincronización') }}
                 </h3>
                 
-                <div class="mt-3 bg-[#fbfbfa] p-3 rounded-lg border border-[#e9e9e7] font-mono text-[11px] space-y-1.5 min-h-[220px] max-h-[300px] overflow-y-auto scrollbar-thin">
+                <div class="mt-3 bg-canvas p-3 rounded-lg border border-line font-mono text-meta space-y-1.5 min-h-[220px] max-h-[300px] overflow-y-auto scrollbar-thin">
                     <div class="text-zinc-400 font-medium">--- {{ __('Log de Ejecución Trello REST API') }} ---</div>
                     @forelse($syncLog as $log)
                         <div class="leading-relaxed {{ str_contains(strtolower($log), 'error') || str_contains(strtolower($log), 'fallo') ? 'text-red-600 font-semibold' : (str_contains(strtolower($log), 'exito') || str_contains(strtolower($log), 'completad') ? 'text-emerald-700 font-medium' : 'text-zinc-700') }}">
@@ -822,7 +822,7 @@
                 </div>
             </div>
 
-            <div class="p-2.5 bg-stone-50 rounded-lg border border-stone-200 text-[11px] text-zinc-600 space-y-0.5">
+            <div class="p-2.5 bg-stone-50 rounded-lg border border-stone-200 text-meta text-zinc-600 space-y-0.5">
                 <span class="font-medium text-zinc-800 flex items-center gap-1">
                     <x-lucide-info class="w-3 h-3 text-zinc-500" /> {{ __('Límites de la API de Trello:') }}
                 </span>

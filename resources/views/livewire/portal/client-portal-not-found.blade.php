@@ -5,25 +5,25 @@
     </div>
 
     {{-- Not Found Card --}}
-    <div class="w-full bg-white rounded-2xl p-7 shadow-xs border border-zinc-200/80 text-center space-y-4 my-auto">
-        <div class="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto border border-amber-200/60 shadow-2xs">
-            <x-lucide-qr-code class="w-7 h-7" />
+    <div class="w-full bg-white rounded-panel p-7 border border-line text-center space-y-4 my-auto">
+        <div class="w-12 h-12 rounded-card bg-sunken text-ink-3 flex items-center justify-center mx-auto">
+            <x-lucide-qr-code class="w-6 h-6" />
         </div>
 
         <div class="space-y-1.5">
-            <h1 class="text-base font-bold text-zinc-900 tracking-tight">
+            <h1 class="text-section font-semibold text-ink">
                 {{ __('Enlace o Código QR No Válido') }}
             </h1>
-            <p class="text-xs text-zinc-500 leading-relaxed">
+            <p class="text-body text-ink-3">
                 {{ __('El código QR o enlace al portal no corresponde a un cliente activo o ha sido modificado.') }}
             </p>
         </div>
 
-        <div class="pt-2 border-t border-zinc-100 text-xs text-zinc-600 space-y-2">
-            <p class="font-medium text-zinc-700">
+        <div class="pt-2 border-t border-line text-body text-ink-2 space-y-2">
+            <p class="font-medium text-ink">
                 {{ __('¿Necesitas ayuda con tus pedidos?') }}
             </p>
-            <p class="text-[11px] text-zinc-500">
+            <p class="text-meta text-ink-3">
                 {{ __('Por favor comunícate directamente con tu asesor de Kudos Print Media para recibir un nuevo enlace de acceso.') }}
             </p>
         </div>
@@ -31,8 +31,8 @@
 
     {{-- Footer --}}
     <div class="w-full pb-6 text-center">
-        <p class="text-[11px] text-zinc-400 font-medium">
-            Kudos Print Media &bull; Portal de Clientes
+        <p class="text-meta text-ink-3">
+            Kudos Print Media &bull; {{ __('Portal de Clientes') }}
         </p>
     </div>
 </div>

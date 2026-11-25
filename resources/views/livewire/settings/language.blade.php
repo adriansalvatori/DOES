@@ -1,78 +1,36 @@
-<div class="h-full flex flex-col space-y-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-4xl mx-auto w-full">
-    
-    <!-- Notion Header & Controls -->
-    <div class="bg-white border border-[#e9e9e7] rounded-2xl p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-        <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">{{ __('Idioma / Language') }}</h1>
-        </div>
-    </div>
+<div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 w-full max-w-4xl">
+    <x-ui.page-header :title="__('Idioma / Language')" :subtitle="__('El cambio se aplica al instante; no hay botón de guardar.')" />
 
     @if (session()->has('message'))
-        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 rounded-xl text-xs font-medium flex items-center gap-2 shrink-0 shadow-2xs">
-            <x-lucide-check-circle-2 class="w-4 h-4 text-emerald-600 shrink-0" />
+        <div class="bg-ok-soft text-ok border border-line rounded-card px-3.5 py-2.5 text-body flex items-center gap-2 shrink-0">
+            <x-lucide-check class="w-4 h-4 shrink-0" />
             <span>{{ session('message') }}</span>
         </div>
     @endif
 
-    <!-- Language Selector Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Spanish Card -->
-        <div 
-            wire:click="setLocale('es')"
-            @click="localStorage.setItem('app_locale', 'es')"
-            class="bg-white border-2 rounded-2xl p-5 cursor-pointer transition-all duration-200 select-none relative shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 {{ $currentLocale === 'es' ? 'border-stone-900 bg-stone-50/50 ring-2 ring-stone-900/10' : 'border-[#e9e9e7] hover:border-stone-400' }}"
-        >
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-stone-900 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                        ES
-                    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        @foreach ([
+            ['code' => 'es', 'name' => 'Español', 'note' => 'Spanish (Default)', 'desc' => 'Interfaz nativa en español con términos y flujos adaptados al equipo de diseño.'],
+            ['code' => 'en', 'name' => 'English', 'note' => 'Inglés', 'desc' => 'Full English interface translation for international team members and partners.'],
+        ] as $lang)
+            <button
+                type="button"
+                wire:click="setLocale('{{ $lang['code'] }}')"
+                @click="localStorage.setItem('app_locale', '{{ $lang['code'] }}')"
+                aria-pressed="{{ $currentLocale === $lang['code'] ? 'true' : 'false' }}"
+                class="text-left bg-surface border rounded-card p-4 cursor-pointer transition-colors flex flex-col gap-2 {{ $currentLocale === $lang['code'] ? 'border-ink' : 'border-line hover:border-line-strong' }}"
+            >
+                <div class="flex items-start justify-between gap-3">
                     <div>
-                        <h3 class="font-bold text-sm text-zinc-900">Español</h3>
-                        <p class="text-xs text-zinc-500">Spanish (Default)</p>
+                        <h3 class="text-row font-semibold text-ink">{{ $lang['name'] }}</h3>
+                        <p class="text-meta text-ink-3">{{ $lang['note'] }}</p>
                     </div>
+                    @if($currentLocale === $lang['code'])
+                        <x-ui.tag tone="neutral" icon="check">{{ __('Activo') }}</x-ui.tag>
+                    @endif
                 </div>
-                @if($currentLocale === 'es')
-                    <span class="px-2.5 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-bold flex items-center gap-1 shadow-2xs">
-                        <x-lucide-check class="w-3 h-3 stroke-[3]" />
-                        <span>{{ __('Activo') }}</span>
-                    </span>
-                @endif
-            </div>
-
-            <p class="text-xs text-zinc-600 leading-relaxed">
-                Interfaz nativa en español con términos y flujos adaptados al equipo de diseño.
-            </p>
-        </div>
-
-        <!-- English Card -->
-        <div 
-            wire:click="setLocale('en')"
-            @click="localStorage.setItem('app_locale', 'en')"
-            class="bg-white border-2 rounded-2xl p-5 cursor-pointer transition-all duration-200 select-none relative shadow-2xs hover:shadow-md flex flex-col justify-between space-y-4 {{ $currentLocale === 'en' ? 'border-stone-900 bg-stone-50/50 ring-2 ring-stone-900/10' : 'border-[#e9e9e7] hover:border-stone-400' }}"
-        >
-            <div class="flex items-start justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-2xs">
-                        EN
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-sm text-zinc-900">English</h3>
-                        <p class="text-xs text-zinc-500">Inglés</p>
-                    </div>
-                </div>
-                @if($currentLocale === 'en')
-                    <span class="px-2.5 py-0.5 rounded-full bg-stone-900 text-white text-[10px] font-bold flex items-center gap-1 shadow-2xs">
-                        <x-lucide-check class="w-3 h-3 stroke-[3]" />
-                        <span>{{ __('Activo') }}</span>
-                    </span>
-                @endif
-            </div>
-
-            <p class="text-xs text-zinc-600 leading-relaxed">
-                Full English interface translation for international team members and partners.
-            </p>
-        </div>
+                <p class="text-body text-ink-2">{{ $lang['desc'] }}</p>
+            </button>
+        @endforeach
     </div>
-
 </div>

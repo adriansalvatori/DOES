@@ -1,5 +1,18 @@
 import './qr-card.js';
 
+/**
+ * Ask before changing record data (WO, company name, contact details, address, linked client, prices).
+ * Resolves true when the user confirms, false when they cancel.
+ * Usage: KudosConfirmChange({ field: 'WO', from: '16412', to: '16413' }).then((ok) => { if (ok) { ... } });
+ */
+window.KudosConfirmChange = function ({ field = '', from = '', to = '', note = '', confirmText = '' } = {}) {
+    return new Promise((resolve) => {
+        window.dispatchEvent(new CustomEvent('kudos-confirm-change', {
+            detail: { field, from, to, note, confirmText, resolve },
+        }));
+    });
+};
+
 // Kudos Design Ops - Global Dirty Guard Manager
 
 window.KudosDirtyGuard = {

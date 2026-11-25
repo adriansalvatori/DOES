@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\GoogleDriveAuthController;
+use App\Http\Controllers\MediaController;
 use App\Livewire\Auth\Login;
 use App\Livewire\Backlog\Index as BacklogIndex;
 use App\Livewire\Clients\ClientIndex;
@@ -19,10 +21,12 @@ use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\ColorCoding;
 use App\Livewire\Settings\CsvReconciliation;
 use App\Livewire\Settings\Documentation;
+use App\Livewire\Settings\GoogleDriveSettings;
 use App\Livewire\Settings\InstallationTypes;
 use App\Livewire\Settings\LanguageSettings;
 use App\Livewire\Settings\NotificationSettings;
 use App\Livewire\Settings\ProfileSettings;
+use App\Livewire\Settings\SettingsIndex;
 use App\Livewire\Settings\Substatuses;
 use App\Livewire\Settings\SubtaskPresets;
 use App\Livewire\Settings\TrelloMapping;
@@ -93,6 +97,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/tasks', TaskList::class)->name('tasks');
     Route::get('/resolver', ResolverList::class)->name('resolver');
     Route::get('/trello-sync', TrelloSync::class)->name('trello-sync');
+    Route::get('/settings', SettingsIndex::class)->name('settings.index');
     Route::get('/settings/documentation', Documentation::class)->name('settings.documentation');
     Route::get('/settings/color-coding', ColorCoding::class)->name('settings.color-coding');
     Route::get('/settings/language', LanguageSettings::class)->name('settings.language');
@@ -105,7 +110,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/profile', ProfileSettings::class)->name('settings.profile');
     Route::get('/settings/users', UserManagement::class)->name('settings.users');
     Route::get('/settings/notifications', NotificationSettings::class)->name('settings.notifications');
+    Route::get('/settings/google-drive', GoogleDriveSettings::class)->name('settings.google-drive');
+    Route::get('/settings/google-drive/connect', [GoogleDriveAuthController::class, 'redirect'])->name('google-drive.connect');
+    Route::get('/settings/google-drive/callback', [GoogleDriveAuthController::class, 'callback'])->name('google-drive.callback');
     Route::get('/trash', TrashBin::class)->name('trash');
+
+    Route::get('/media/{media}/file', [MediaController::class, 'file'])->name('media.file');
+    Route::get('/media/{media}/thumbnail', [MediaController::class, 'thumbnail'])->name('media.thumbnail');
 
     Route::get('/trello-attachment-proxy', function (Request $request) {
         $url = $request->query('url');

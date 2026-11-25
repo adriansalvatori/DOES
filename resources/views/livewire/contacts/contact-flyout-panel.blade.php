@@ -9,6 +9,13 @@
         openImmediate() {
             this.isOpen = true;
         },
+        async confirmSave() {
+            const changes = await $wire.pendingChanges();
+            for (const change of changes) {
+                if (! await KudosConfirmChange(change)) { return; }
+            }
+            $wire.save();
+        },
         closeModal() {
             this.isOpen = false;
             $wire.close();
@@ -22,381 +29,194 @@
     style="z-index: 300;"
 >
     {{-- Backdrop --}}
-    <div 
-        @click="closeModal()"
-        class="fixed inset-0 bg-stone-900/30 backdrop-blur-xs transition-opacity"
-    ></div>
+    <div @click="closeModal()" class="fixed inset-0 bg-stone-900/30"></div>
 
     {{-- Slide-over Panel --}}
-    <div 
-        class="fixed inset-y-0 right-0 w-full max-w-2xl bg-[#fafafa] border-l border-[#e9e9e7] shadow-2xl flex flex-col overflow-hidden"
-    >
+    <div class="fixed inset-y-0 right-0 w-full max-w-2xl bg-canvas border-l border-line shadow-panel flex flex-col overflow-hidden">
         @if($isOpen)
             {{-- Header --}}
-            <div class="p-4 bg-white border-b border-[#e9e9e7] flex items-center justify-between gap-3 shrink-0">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <div class="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
-                        {{ !empty($name) ? mb_substr($name, 0, 1, 'UTF-8') : '?' }}
-                    </div>
+            <div class="px-5 py-4 bg-surface border-b border-line flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <x-ui.person :name="$name !== '' ? $name : '?'" color="#1c1917" size="lg" />
                     <div class="min-w-0">
-                        <span class="text-[10px] uppercase font-semibold text-zinc-400 tracking-wider block">
-                            {{ $contactId ? __('Ficha de Cliente / Responsable') : __('Nuevo Cliente / Contacto') }}
-                        </span>
-                        <h2 class="text-base font-bold text-zinc-900 truncate uppercase">
+                        <p class="text-meta text-ink-3">
+                            {{ $contactId ? __('Ficha de contacto') : __('Nuevo contacto') }}
+                        </p>
+                        <h2 class="text-section font-semibold text-ink truncate">
                             {{ !empty($name) ? $name : __('Sin nombre') }}
                         </h2>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2 shrink-0">
-                    <button 
-                        type="button" 
-                        wire:click="save"
-                        class="px-3 py-1.5 rounded-md bg-stone-900 hover:bg-stone-800 text-white font-medium text-xs shadow-2xs transition flex items-center gap-1.5 cursor-pointer"
-                    >
-                        <x-lucide-check class="w-3.5 h-3.5 text-stone-200" />
-                        <span>{{ __('Guardar') }}</span>
+                    <button type="button" @click="confirmSave()" class="ui-btn ui-btn-primary">
+                        <x-lucide-check />
+                        {{ __('Guardar') }}
                     </button>
-                    <button 
-                        type="button" 
-                        wire:click="close"
-                        class="p-1.5 rounded-md hover:bg-stone-100 text-zinc-400 hover:text-zinc-700 transition cursor-pointer"
-                        title="{{ __('Cerrar') }}"
-                    >
-                        <x-lucide-x class="w-4 h-4" />
+                    <button type="button" wire:click="close" class="ui-btn ui-btn-ghost ui-btn-icon" title="{{ __('Cerrar') }}" aria-label="{{ __('Cerrar') }}">
+                        <x-lucide-x />
                     </button>
                 </div>
             </div>
 
-            {{-- Flash Message --}}
-            @if(session()->has('message'))
-                <div class="bg-emerald-50 border-b border-emerald-200 text-emerald-800 px-4 py-2 text-xs font-medium flex items-center justify-between shrink-0">
-                    <div class="flex items-center gap-2">
-                        <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>{{ session('message') }}</span>
-                    </div>
-                    <button @click="$el.parentElement.remove()" class="text-emerald-600 hover:text-emerald-900 cursor-pointer">
-                        <x-lucide-x class="w-3 h-3" />
-                    </button>
-                </div>
-            @endif
-
-            {{-- Navigation Tabs --}}
-            <div class="bg-white border-b border-[#e9e9e7] px-4 flex items-center gap-4 shrink-0 overflow-x-auto">
-                <button 
-                    type="button" 
-                    wire:click="$set('activeTab', 'general')"
-                    class="py-2.5 border-b-2 font-medium transition cursor-pointer flex items-center gap-1.5 text-xs {{ $activeTab === 'general' ? 'border-zinc-900 text-zinc-900 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
-                >
-                    <x-lucide-user class="w-3.5 h-3.5" />
-                    <span>{{ __('General') }}</span>
-                </button>
+            {{-- Tabs --}}
+            <div class="bg-surface border-b border-line px-5 flex items-center gap-5 shrink-0 overflow-x-auto">
+                @php
+                    $tabClass = fn (string $tab) => 'py-2.5 -mb-px border-b-2 text-body font-medium transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap '
+                        . ($activeTab === $tab ? 'border-ink text-ink' : 'border-transparent text-ink-3 hover:text-ink');
+                @endphp
+                <button type="button" wire:click="$set('activeTab', 'general')" class="{{ $tabClass('general') }}">{{ __('General') }}</button>
 
                 @if($contactId)
-                    <button 
-                        type="button" 
-                        wire:click="$set('activeTab', 'orders')"
-                        class="py-2.5 border-b-2 font-medium transition cursor-pointer flex items-center gap-1.5 text-xs {{ $activeTab === 'orders' ? 'border-zinc-900 text-zinc-900 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
-                    >
-                        <x-lucide-folder class="w-3.5 h-3.5" />
-                        <span>{{ __('Órdenes Asignadas') }}</span>
+                    <button type="button" wire:click="$set('activeTab', 'orders')" class="{{ $tabClass('orders') }}">
+                        {{ __('Órdenes asignadas') }}
                         @if($assignedOrders->count() > 0)
-                            <span class="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                                {{ $assignedOrders->count() }}
-                            </span>
+                            <span class="rounded-full bg-sunken px-1.5 text-meta tabular-nums text-ink-2">{{ $assignedOrders->count() }}</span>
                         @endif
                     </button>
 
-                    <button 
-                        type="button" 
-                        wire:click="$set('activeTab', 'merge')"
-                        class="py-2.5 border-b-2 font-medium transition cursor-pointer flex items-center gap-1.5 text-xs {{ $activeTab === 'merge' ? 'border-zinc-900 text-zinc-900 font-bold' : 'border-transparent text-zinc-500 hover:text-zinc-800' }}"
-                    >
-                        <x-lucide-git-merge class="w-3.5 h-3.5" />
-                        <span>{{ __('Fusionar / Duplicados') }}</span>
+                    <button type="button" wire:click="$set('activeTab', 'merge')" class="{{ $tabClass('merge') }}">
+                        {{ __('Fusionar / duplicados') }}
                         @if(count($mergeSuggestions) > 0)
-                            <span class="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
-                                {{ count($mergeSuggestions) }}
-                            </span>
+                            <span class="rounded-full bg-warn-soft px-1.5 text-meta tabular-nums text-warn">{{ count($mergeSuggestions) }}</span>
                         @endif
                     </button>
                 @endif
             </div>
 
             {{-- Body Content --}}
-            <div class="flex-1 min-h-0 overflow-y-auto p-5 custom-vertical-scrollbar space-y-6">
-                
+            <div class="flex-1 min-h-0 overflow-y-auto p-5 custom-vertical-scrollbar space-y-4">
+
                 {{-- TAB: GENERAL --}}
                 @if($activeTab === 'general')
-                    {{-- Section 1: Basic Info --}}
-                    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-4">
-                        <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                            <x-lucide-user-check class="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{{ __('Datos Personales y Contacto') }}</span>
-                        </h3>
+                    <div class="ui-card p-4 space-y-4">
+                        <h3 class="ui-section-title">{{ __('Datos personales y contacto') }}</h3>
 
                         <div class="space-y-3">
-                            {{-- Nombre --}}
                             <div>
-                                <label class="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
-                                    {{ __('Nombre Completo') }} <span class="text-rose-500">*</span>
-                                </label>
-                                <input 
-                                    type="text" 
-                                    wire:model.defer="name" 
-                                    placeholder="{{ __('Ej: MARCELA DUQUE') }}" 
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs font-semibold text-zinc-900 focus:outline-none focus:border-stone-400 uppercase"
-                                />
-                                @error('name') <span class="text-rose-500 text-[11px] mt-0.5 block">{{ $message }}</span> @enderror
+                                <label class="ui-label">{{ __('Nombre completo') }} <span class="text-danger">*</span></label>
+                                <input type="text" wire:model.defer="name" placeholder="{{ __('Ej: MARCELA DUQUE') }}" class="ui-input font-medium" />
+                                @error('name') <span class="text-danger text-meta mt-0.5 block">{{ $message }}</span> @enderror
                             </div>
 
-                            {{-- Cargo / Rol --}}
                             <div>
-                                <label class="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
-                                    {{ __('Cargo / Rol / Departamento (Opcional)') }}
-                                </label>
-                                <input 
-                                    type="text" 
-                                    wire:model.defer="role_title" 
-                                    placeholder="{{ __('Ej: Gerente de Compras, Project Manager, Owner') }}" 
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400"
-                                />
+                                <label class="ui-label">{{ __('Cargo / rol / departamento (opcional)') }}</label>
+                                <input type="text" wire:model.defer="role_title" placeholder="{{ __('Ej: Gerente de Compras, Project Manager, Owner') }}" class="ui-input" />
                             </div>
 
-                            {{-- Teléfono & Email --}}
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
-                                        {{ __('Teléfono') }}
-                                    </label>
-                                    <div class="relative">
-                                        <input 
-                                            type="text" 
-                                            wire:model.defer="phone" 
-                                            x-on:input="
-                                                let val = $el.value.replace(/\D/g, '');
-                                                if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
-                                                if (val.length > 10) val = val.substring(0, 10);
-                                                if (val.length === 0) { $el.value = ''; }
-                                                else if (val.length <= 3) { $el.value = '(' + val; }
-                                                else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
-                                                else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
-                                            "
-                                            placeholder="(000) 000-0000" 
-                                            class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs font-mono text-zinc-900 focus:outline-none focus:border-stone-400"
-                                        />
-                                    </div>
-                                    @error('phone') <span class="text-rose-500 text-[11px] mt-0.5 block">{{ $message }}</span> @enderror
+                                    <label class="ui-label">{{ __('Teléfono') }}</label>
+                                    <input
+                                        type="text"
+                                        wire:model.defer="phone"
+                                        x-on:input="
+                                            let val = $el.value.replace(/\D/g, '');
+                                            if (val.length === 11 && val.startsWith('1')) val = val.substring(1);
+                                            if (val.length > 10) val = val.substring(0, 10);
+                                            if (val.length === 0) { $el.value = ''; }
+                                            else if (val.length <= 3) { $el.value = '(' + val; }
+                                            else if (val.length <= 6) { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3); }
+                                            else { $el.value = '(' + val.substring(0, 3) + ') ' + val.substring(3, 6) + '-' + val.substring(6); }
+                                        "
+                                        placeholder="(000) 000-0000"
+                                        class="ui-input"
+                                    />
+                                    @error('phone') <span class="text-danger text-meta mt-0.5 block">{{ $message }}</span> @enderror
                                 </div>
 
                                 <div>
-                                    <label class="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1">
-                                        {{ __('Correo Electrónico') }}
-                                    </label>
-                                    <input 
-                                        type="email" 
-                                        wire:model.defer="email" 
-                                        placeholder="{{ __('ejemplo@empresa.com') }}" 
-                                        class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-stone-400"
-                                    />
-                                    @error('email') <span class="text-rose-500 text-[11px] mt-0.5 block">{{ $message }}</span> @enderror
+                                    <label class="ui-label">{{ __('Correo electrónico') }}</label>
+                                    <input type="email" wire:model.defer="email" placeholder="{{ __('ejemplo@empresa.com') }}" class="ui-input" />
+                                    @error('email') <span class="text-danger text-meta mt-0.5 block">{{ $message }}</span> @enderror
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Section 2: Communication Preferences --}}
-                    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-4">
-                        <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                            <x-lucide-message-square class="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{{ __('Preferencias de Comunicación') }}</span>
-                        </h3>
+                    <div class="ui-card p-4 space-y-4">
+                        <h3 class="ui-section-title">{{ __('Preferencias de comunicación') }}</h3>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {{-- Canal Preferido --}}
-                            <div>
-                                <label class="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                                    {{ __('Canal Preferido') }}
-                                </label>
-                                <div class="grid grid-cols-2 gap-1.5">
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_channel', 'whatsapp')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer {{ $preferred_channel === 'whatsapp' ? 'bg-emerald-50 border-emerald-500 text-emerald-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <x-lucide-message-circle class="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                        <span>WhatsApp</span>
-                                    </button>
-
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_channel', 'call')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer {{ $preferred_channel === 'call' ? 'bg-blue-50 border-blue-500 text-blue-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <x-lucide-phone class="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                                        <span>{{ __('Llamada') }}</span>
-                                    </button>
-
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_channel', 'email')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer {{ $preferred_channel === 'email' ? 'bg-amber-50 border-amber-500 text-amber-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <x-lucide-mail class="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                                        <span>Email</span>
-                                    </button>
-
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_channel', 'any')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer {{ $preferred_channel === 'any' ? 'bg-stone-100 border-stone-500 text-zinc-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <x-lucide-messages-square class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                        <span>{{ __('Cualquiera') }}</span>
-                                    </button>
-                                </div>
+                        <div>
+                            <label class="ui-label">{{ __('Canal preferido') }}</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach(['whatsapp' => 'WhatsApp', 'call' => __('Llamada'), 'email' => 'Email', 'any' => __('Cualquiera')] as $channelKey => $channelLabel)
+                                    <button type="button" wire:click="$set('preferred_channel', '{{ $channelKey }}')" class="ui-chip" aria-pressed="{{ $preferred_channel === $channelKey ? 'true' : 'false' }}">{{ $channelLabel }}</button>
+                                @endforeach
                             </div>
+                        </div>
 
-                            {{-- Idioma de Contacto --}}
-                            <div>
-                                <label class="block text-[11px] font-bold text-zinc-700 uppercase tracking-wider mb-1.5">
-                                    {{ __('Idioma de Contacto') }}
-                                </label>
-                                <div class="grid grid-cols-1 gap-1.5">
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_language', 'es')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition cursor-pointer {{ $preferred_language === 'es' ? 'bg-stone-100 border-stone-500 text-zinc-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-                                            <span class="font-mono font-bold text-[10px] px-1.5 py-0.2 rounded bg-stone-200/80 text-stone-800">ES</span>
-                                            <span>{{ __('Español') }}</span>
-                                        </div>
-                                        @if($preferred_language === 'es') <x-lucide-check class="w-3.5 h-3.5 text-stone-700" /> @endif
-                                    </button>
-
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_language', 'en')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition cursor-pointer {{ $preferred_language === 'en' ? 'bg-indigo-50 border-indigo-500 text-indigo-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <x-lucide-languages class="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                                            <span class="font-mono font-bold text-[10px] px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800">EN</span>
-                                            <span>{{ __('Inglés (English)') }}</span>
-                                        </div>
-                                        @if($preferred_language === 'en') <x-lucide-check class="w-3.5 h-3.5 text-indigo-700" /> @endif
-                                    </button>
-
-                                    <button 
-                                        type="button" 
-                                        wire:click="$set('preferred_language', 'both')"
-                                        class="p-2 rounded-lg border text-xs font-semibold flex items-center justify-between transition cursor-pointer {{ $preferred_language === 'both' ? 'bg-purple-50 border-purple-500 text-purple-900 shadow-2xs' : 'bg-[#fbfbfa] border-[#e9e9e7] text-zinc-600 hover:bg-stone-50' }}"
-                                    >
-                                        <div class="flex items-center gap-2">
-                                            <x-lucide-languages class="w-3.5 h-3.5 text-purple-500 shrink-0" />
-                                            <span class="font-mono font-bold text-[10px] px-1.5 py-0.2 rounded bg-purple-100 text-purple-800">ES / EN</span>
-                                            <span>{{ __('Bilingüe / Ambos idiomas') }}</span>
-                                        </div>
-                                        @if($preferred_language === 'both') <x-lucide-check class="w-3.5 h-3.5 text-purple-700" /> @endif
-                                    </button>
-                                </div>
+                        <div>
+                            <label class="ui-label">{{ __('Idioma de contacto') }}</label>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach(['es' => __('Español'), 'en' => __('Inglés'), 'both' => __('Bilingüe')] as $langKey => $langLabel)
+                                    <button type="button" wire:click="$set('preferred_language', '{{ $langKey }}')" class="ui-chip" aria-pressed="{{ $preferred_language === $langKey ? 'true' : 'false' }}">{{ $langLabel }}</button>
+                                @endforeach
                             </div>
                         </div>
                     </div>
 
-                    {{-- Section 3: Linked Brands / Companies --}}
-                    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-3">
+                    {{-- Linked companies --}}
+                    <div class="ui-card p-4 space-y-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                                <x-lucide-building-2 class="w-3.5 h-3.5 text-zinc-500" />
-                                <span>{{ __('Marcas / Compañías Vinculadas') }}</span>
-                            </h3>
-                            <span class="text-[11px] text-zinc-400">
-                                {{ count($linkedClientIds) }} {{ __('vinculadas') }}
-                            </span>
+                            <h3 class="ui-section-title">{{ __('Compañías vinculadas') }}</h3>
+                            <span class="text-meta text-ink-3">{{ trans_choice('{0} Ninguna vinculada|{1} :count vinculada|[2,*] :count vinculadas', count($linkedClientIds), ['count' => count($linkedClientIds)]) }}</span>
                         </div>
-                        <p class="text-[11px] text-zinc-500">
-                            {{ __('Este cliente podrá atender órdenes de cualquiera de las marcas vinculadas a continuación:') }}
-                        </p>
+                        <p class="text-meta text-ink-3">{{ __('Este contacto podrá atender órdenes de cualquiera de las compañías vinculadas a continuación:') }}</p>
 
-                        {{-- Chips of currently linked brands --}}
-                        <div class="flex flex-wrap gap-1.5 min-h-8 p-2 bg-[#fbfbfa] border border-[#e9e9e7] rounded-lg">
+                        <div class="flex flex-wrap gap-1.5 min-h-10 p-2 bg-sunken/60 border border-line rounded-control">
                             @php
                                 $linkedClients = \App\Models\Client::whereIn('id', $linkedClientIds)->orderBy('name')->get();
                             @endphp
                             @forelse($linkedClients as $lClient)
                                 @php
                                     $isPrimary = $currentContact ? (bool) $currentContact->clients->firstWhere('id', $lClient->id)?->pivot?->is_primary : false;
+                                    $currentMainName = $isPrimary || ! $currentContact
+                                        ? ''
+                                        : (string) $lClient->contacts()->wherePivot('is_primary', true)->value('contacts.name');
                                 @endphp
-                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-stone-900 text-white text-xs font-medium shadow-2xs">
-                                    <x-lucide-building-2 class="w-3 h-3 text-stone-300" />
+                                <span class="inline-flex items-center gap-1.5 h-7 pl-2.5 pr-1.5 rounded-full border border-line bg-surface text-meta font-medium text-ink">
                                     <span>{{ $lClient->name }}</span>
 
                                     @if($isPrimary)
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-amber-400 text-stone-950 flex items-center gap-0.5 shadow-2xs" title="{{ __('Contacto Principal de esta compañía') }}">
-                                            <x-lucide-star class="w-2.5 h-2.5 fill-current" />
-                                            <span>MAIN</span>
-                                        </span>
-                                    @else
-                                        <button 
-                                            type="button" 
-                                            wire:click="setAsPrimaryClient({{ $lClient->id }})"
-                                            class="text-[10px] text-zinc-400 hover:text-amber-300 transition cursor-pointer flex items-center gap-0.5 ml-0.5 hover:underline"
-                                            title="{{ __('Establecer como contacto principal (MAIN) de esta compañía') }}"
-                                        >
-                                            <x-lucide-star class="w-2.5 h-2.5" />
-                                            <span>Hacer MAIN</span>
-                                        </button>
+                                        <x-ui.tag icon="star" title="{{ __('Contacto principal de esta compañía') }}">{{ __('Principal') }}</x-ui.tag>
+                                    @elseif($currentContact)
+                                        <button
+                                            type="button"
+                                            x-on:click="KudosConfirmChange({ field: @js(__('Contacto principal de :company', ['company' => $lClient->name])), from: @js($currentMainName), to: @js($currentContact->name) }).then(ok => ok && $wire.setAsPrimaryClient({{ $lClient->id }}))"
+                                            class="text-ink-3 hover:text-ink hover:underline cursor-pointer"
+                                            title="{{ __('Establecer como contacto principal de esta compañía') }}"
+                                        >{{ __('Hacer principal') }}</button>
                                     @endif
 
-                                    <button 
-                                        type="button" 
-                                        wire:click="toggleClientLink({{ $lClient->id }})"
-                                        class="hover:text-rose-300 transition cursor-pointer ml-1"
-                                        title="{{ __('Desvincular marca') }}"
-                                    >
-                                        <x-lucide-x class="w-3 h-3" />
+                                    <button type="button" wire:click="toggleClientLink({{ $lClient->id }})" class="text-ink-3 hover:text-danger transition cursor-pointer rounded-full p-0.5" title="{{ __('Desvincular compañía') }}" aria-label="{{ __('Desvincular compañía') }}">
+                                        <x-lucide-x class="w-3.5 h-3.5" />
                                     </button>
                                 </span>
                             @empty
-                                <span class="text-xs text-zinc-400 italic py-0.5">
-                                    {{ __('Sin marcas vinculadas. Busca y agrega una abajo:') }}
-                                </span>
+                                <span class="text-body text-ink-3 py-0.5">{{ __('Sin compañías vinculadas. Busca y agrega una abajo:') }}</span>
                             @endforelse
                         </div>
 
-                        {{-- Search & Picker to link more brands --}}
-                        <div class="pt-2">
+                        <div class="pt-1">
                             <div class="relative mb-2">
-                                <x-lucide-search class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                                <input 
-                                    type="text" 
-                                    wire:model.live.debounce.150ms="clientSearch" 
-                                    placeholder="{{ __('Buscar marca para vincular...') }}" 
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md pl-7 pr-3 py-1 text-xs text-zinc-800 placeholder-zinc-400 focus:outline-none focus:border-stone-400"
-                                />
+                                <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
+                                <input type="text" wire:model.live.debounce.150ms="clientSearch" placeholder="{{ __('Buscar compañía para vincular...') }}" class="ui-input pl-8" />
                             </div>
 
-                            <div class="max-h-36 overflow-y-auto space-y-1 custom-vertical-scrollbar border border-zinc-100 rounded-lg p-1 bg-white">
+                            <div class="max-h-40 overflow-y-auto custom-vertical-scrollbar border border-line rounded-control p-1 bg-surface">
                                 @foreach($allClients as $clientOpt)
                                     @php $isLinked = in_array($clientOpt->id, $linkedClientIds, true); @endphp
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         wire:click="toggleClientLink({{ $clientOpt->id }})"
-                                        class="w-full text-left px-2.5 py-1 rounded-md text-xs flex items-center justify-between transition cursor-pointer {{ $isLinked ? 'bg-stone-100 text-zinc-900 font-bold' : 'hover:bg-stone-50 text-zinc-700' }}"
+                                        class="w-full text-left px-2.5 py-1.5 rounded-control text-body flex items-center justify-between transition cursor-pointer hover:bg-sunken {{ $isLinked ? 'text-ink font-medium' : 'text-ink-2' }}"
                                     >
                                         <span class="truncate">{{ $clientOpt->name }}</span>
                                         @if($isLinked)
-                                            <span class="text-[10px] text-emerald-600 font-semibold flex items-center gap-0.5">
-                                                <x-lucide-check class="w-3 h-3" />
-                                                <span>{{ __('Vinculada') }}</span>
-                                            </span>
+                                            <span class="text-meta text-ink-3 flex items-center gap-1"><x-lucide-check class="w-3.5 h-3.5" />{{ __('Vinculada') }}</span>
                                         @else
-                                            <span class="text-[10px] text-zinc-400 font-medium">
-                                                + {{ __('Vincular') }}
-                                            </span>
+                                            <span class="text-meta text-ink-3">{{ __('Vincular') }}</span>
                                         @endif
                                     </button>
                                 @endforeach
@@ -404,103 +224,57 @@
                         </div>
                     </div>
 
-                    {{-- Section 4: Internal Notes --}}
-                    <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-2">
-                        <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider flex items-center gap-1.5">
-                            <x-lucide-file-text class="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{{ __('Notas de Atención') }}</span>
-                        </h3>
-                        <textarea 
-                            wire:model.defer="notes" 
-                            rows="3" 
-                            placeholder="{{ __('Ej: Solo contactar por las mañanas. Muy exigente con los pantones. etc.') }}"
-                            class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md p-2.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400"
-                        ></textarea>
+                    <div class="ui-card p-4 space-y-2">
+                        <h3 class="ui-section-title">{{ __('Notas de atención') }}</h3>
+                        <textarea wire:model.defer="notes" rows="3" placeholder="{{ __('Ej: Solo contactar por las mañanas. Muy exigente con los pantones. etc.') }}" class="ui-input"></textarea>
                     </div>
                 @endif
 
-                {{-- TAB: ORDENES ASIGNADAS --}}
+                {{-- TAB: ASSIGNED ORDERS --}}
                 @if($activeTab === 'orders' && $currentContact)
                     <div class="space-y-4">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between gap-3">
                             <div>
-                                <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                                    {{ __('Órdenes de') }} {{ $currentContact->name }}
-                                </h3>
-                                <p class="text-[11px] text-zinc-500">
-                                    {{ __('Solo las órdenes donde este cliente es el responsable asignado:') }}
-                                </p>
+                                <h3 class="ui-section-title">{{ __('Órdenes de :name', ['name' => $currentContact->name]) }}</h3>
+                                <p class="text-meta text-ink-3">{{ __('Solo las órdenes donde este contacto es el responsable asignado:') }}</p>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                                {{ $assignedOrders->count() }} {{ __('activas') }}
-                            </span>
+                            <span class="text-meta text-ink-3 whitespace-nowrap">{{ trans_choice('{1} :count activa|[0,*] :count activas', $assignedOrders->count(), ['count' => $assignedOrders->count()]) }}</span>
                         </div>
 
-                        {{-- Active Orders List --}}
-                        <div class="bg-white border border-[#e9e9e7] rounded-xl shadow-2xs overflow-hidden">
+                        <div class="rounded-card border border-line bg-surface overflow-hidden">
                             <div class="max-h-96 overflow-y-auto custom-vertical-scrollbar">
-                                <table class="w-full text-left text-xs text-zinc-700 table-fixed">
-                                    <colgroup>
-                                        <col class="w-20">
-                                        <col class="w-auto">
-                                        <col class="w-28">
-                                        <col class="w-24">
-                                        <col class="w-24">
-                                    </colgroup>
-                                    <thead class="bg-[#f7f7f5] text-zinc-500 font-semibold border-b border-[#e9e9e7] uppercase text-[10px] tracking-wider sticky top-0 z-10">
+                                <table class="ui-table">
+                                    <thead>
                                         <tr>
-                                            <th class="py-2 px-3">{{ __('WO') }}</th>
-                                            <th class="py-2 px-3">{{ __('Tarea / Compañía') }}</th>
-                                            <th class="py-2 px-3">{{ __('Diseñador') }}</th>
-                                            <th class="py-2 px-3">{{ __('Estado') }}</th>
-                                            <th class="py-2 px-3 text-right">{{ __('Entrega') }}</th>
+                                            <th>{{ __('WO') }}</th>
+                                            <th>{{ __('Tarea / Compañía') }}</th>
+                                            <th>{{ __('Diseñador') }}</th>
+                                            <th>{{ __('Estado') }}</th>
+                                            <th class="is-num">{{ __('Entrega') }}</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-[#e9e9e7]">
+                                    <tbody>
                                         @forelse($assignedOrders as $ord)
-                                            <tr 
-                                                class="hover:bg-stone-50 transition cursor-pointer"
-                                                wire:click="$dispatch('open-order-detail', { orderId: {{ $ord->id }} })"
-                                            >
-                                                <td class="py-2 px-3 font-mono font-bold text-zinc-900">
-                                                    {{ $ord->wo_number ?: '-' }}
+                                            <tr class="cursor-pointer" wire:click="$dispatch('open-order-detail', { orderId: {{ $ord->id }} })">
+                                                <td class="whitespace-nowrap">
+                                                    @if($ord->wo_number)<x-wo-badge :number="$ord->wo_number" />@else<span class="text-ink-3">—</span>@endif
                                                 </td>
-                                                <td class="py-2 px-3 min-w-0">
-                                                    <div class="flex flex-col min-w-0">
-                                                        <span class="font-medium text-zinc-900 truncate">
-                                                            {{ $ord->clean_task_name ?: $ord->task_name }}
-                                                        </span>
-                                                        <div class="flex items-center gap-1.5 min-w-0">
-                                                            <span class="text-[10px] text-zinc-500 uppercase truncate">
-                                                                {{ $ord->company_name ?: ($ord->client?->name ?? '-') }}
-                                                            </span>
-                                                            @if($ord->contact_id !== $currentContact->id && $ord->responsible_person !== $currentContact->name)
-                                                                <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
-                                                                    {{ __('Vía Main Contact') }}
-                                                                </span>
-                                                            @endif
-                                                        </div>
-                                                    </div>
+                                                <td class="max-w-0 w-[40%]">
+                                                    <span class="block truncate font-medium text-ink">{{ $ord->clean_task_name ?: $ord->task_name }}</span>
+                                                    <span class="flex items-center gap-1.5 min-w-0 text-meta text-ink-3">
+                                                        <span class="truncate">{{ $ord->company_name ?: ($ord->client?->name ?? '-') }}</span>
+                                                        @if($ord->contact_id !== $currentContact->id && $ord->responsible_person !== $currentContact->name)
+                                                            <span class="shrink-0">· {{ __('Vía contacto principal') }}</span>
+                                                        @endif
+                                                    </span>
                                                 </td>
-                                                <td class="py-2 px-3 text-zinc-700 truncate">
-                                                    {{ $ord->designer?->name ?: '-' }}
-                                                </td>
-                                                <td class="py-2 px-3">
-                                                    @if($ord->core_status)
-                                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-stone-100 text-stone-700 border border-stone-200">
-                                                            {{ $ord->core_status->label() }}
-                                                        </span>
-                                                    @endif
-                                                </td>
-                                                <td class="py-2 px-3 text-right text-zinc-600 font-mono text-[10px]">
-                                                    {{ $ord->current_due_date ? $ord->current_due_date->format('d/m/Y') : '-' }}
-                                                </td>
+                                                <td class="truncate text-ink-2">{{ $ord->designer?->name ?: '—' }}</td>
+                                                <td class="text-ink-2 whitespace-nowrap">{{ $ord->core_status?->label() }}</td>
+                                                <td class="is-num whitespace-nowrap text-ink-2">{{ $ord->current_due_date ? $ord->current_due_date->format('d/m/Y') : '—' }}</td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="py-8 text-center text-zinc-400 text-xs">
-                                                    {{ __('No tiene órdenes activas en este momento.') }}
-                                                </td>
+                                                <td colspan="5" class="!h-auto py-8 text-center text-ink-3">{{ __('No tiene órdenes activas en este momento.') }}</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -508,99 +282,77 @@
                             </div>
                         </div>
 
-                        {{-- Archived and Backlog counts --}}
-                        <div class="grid grid-cols-2 gap-3 pt-2">
-                            <div class="p-3 bg-stone-50 border border-stone-200/80 rounded-lg text-xs">
-                                <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('Órdenes en Backlog') }}</span>
-                                <span class="text-base font-bold text-zinc-900">{{ $backlogOrders->count() }}</span>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="ui-card p-3">
+                                <span class="text-meta text-ink-3 block">{{ __('Órdenes en backlog') }}</span>
+                                <span class="text-title font-semibold text-ink tabular-nums">{{ $backlogOrders->count() }}</span>
                             </div>
-                            <div class="p-3 bg-stone-50 border border-stone-200/80 rounded-lg text-xs">
-                                <span class="text-zinc-500 block text-[10px] uppercase font-semibold">{{ __('Órdenes Archivadas') }}</span>
-                                <span class="text-base font-bold text-zinc-900">{{ $archivedOrders->count() }}</span>
+                            <div class="ui-card p-3">
+                                <span class="text-meta text-ink-3 block">{{ __('Órdenes archivadas') }}</span>
+                                <span class="text-title font-semibold text-ink tabular-nums">{{ $archivedOrders->count() }}</span>
                             </div>
                         </div>
                     </div>
                 @endif
 
-                {{-- TAB: FUSIONAR / DUPLICADOS --}}
+                {{-- TAB: MERGE / DUPLICATES --}}
                 @if($activeTab === 'merge' && $currentContact)
                     <div class="space-y-4">
                         <div>
-                            <h3 class="text-xs font-bold text-zinc-900 uppercase tracking-wider">
-                                {{ __('Herramienta de Fusión de Clientes') }}
-                            </h3>
-                            <p class="text-[11px] text-zinc-500">
-                                {{ __('Si este cliente está duplicado, puedes fusionarlo con otro. Se transferirán todas sus órdenes y marcas vinculadas:') }}
-                            </p>
+                            <h3 class="ui-section-title">{{ __('Herramienta de fusión de contactos') }}</h3>
+                            <p class="text-meta text-ink-3">{{ __('Si este contacto está duplicado, puedes fusionarlo con otro. Se transferirán todas sus órdenes y compañías vinculadas:') }}</p>
                         </div>
 
-                        {{-- Sugerencias Automáticas --}}
                         @if(count($mergeSuggestions) > 0)
-                            <div class="bg-amber-50/90 border border-amber-200 rounded-xl p-4 space-y-3">
-                                <div class="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
-                                    <x-lucide-alert-triangle class="w-4 h-4 text-amber-600" />
-                                    <span>{{ __('Sugerencias de duplicados detectadas:') }}</span>
-                                </div>
+                            <div class="ui-card p-4 space-y-3">
+                                <h4 class="text-body font-medium text-ink">{{ __('Posibles duplicados detectados') }}</h4>
                                 <div class="space-y-2">
                                     @foreach($mergeSuggestions as $sugg)
                                         @php $candidate = $sugg['contact']; @endphp
-                                        <div class="flex items-center justify-between p-2.5 bg-white rounded-lg border border-amber-200/70 text-xs gap-3">
-                                            <div>
-                                                <span class="font-bold text-zinc-900 uppercase">{{ $candidate->name }}</span>
-                                                <div class="flex items-center gap-2 text-[10px] text-zinc-500 mt-0.5">
+                                        <div class="flex items-center justify-between p-2.5 rounded-control bg-sunken/60 text-body gap-3">
+                                            <div class="min-w-0">
+                                                <span class="font-medium text-ink">{{ $candidate->name }}</span>
+                                                <div class="flex items-center gap-2 text-meta text-ink-3">
                                                     @if($candidate->phone) <span>{{ $candidate->phone }}</span> @endif
-                                                    @if($candidate->email) <span>{{ $candidate->email }}</span> @endif
+                                                    @if($candidate->email) <span class="truncate">{{ $candidate->email }}</span> @endif
                                                 </div>
                                             </div>
-                                            <button 
-                                                type="button" 
-                                                wire:click="executeMerge({{ $candidate->id }})"
-                                                wire:confirm="¿Seguro que deseas fusionar a {{ $currentContact->name }} dentro de {{ $candidate->name }}? Esta acción es irreversible."
-                                                class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-2xs transition cursor-pointer shrink-0"
-                                            >
-                                                {{ __('Fusionar aquí') }}
-                                            </button>
+                                            <button
+                                                type="button"
+                                                x-on:click="KudosConfirmChange({ field: @js(__('Fusionar contactos')), from: @js($currentContact->name), to: @js($candidate->name), note: @js(__('Se transferirán todas sus órdenes y compañías vinculadas. Esta acción es irreversible.')), confirmText: @js(__('Fusionar')) }).then(ok => ok && $wire.executeMerge({{ $candidate->id }}))"
+                                                class="ui-btn ui-btn-secondary ui-btn-sm"
+                                            >{{ __('Fusionar aquí') }}</button>
                                         </div>
                                     @endforeach
                                 </div>
                             </div>
                         @endif
 
-                        {{-- Fusión manual --}}
-                        <div class="bg-white border border-[#e9e9e7] rounded-xl p-4 shadow-2xs space-y-3">
-                            <h4 class="text-xs font-bold text-zinc-800 uppercase tracking-wider">
-                                {{ __('Fusionar manualmente con otro contacto') }}
-                            </h4>
-                            <p class="text-[11px] text-zinc-500">
-                                {{ __('Selecciona el contacto destino que conservará toda la información:') }}
-                            </p>
+                        <div class="ui-card p-4 space-y-3">
+                            <h4 class="text-body font-medium text-ink">{{ __('Fusionar manualmente con otro contacto') }}</h4>
+                            <p class="text-meta text-ink-3">{{ __('Selecciona el contacto destino que conservará toda la información:') }}</p>
 
                             <div class="space-y-2">
-                                <select 
-                                    wire:model="selectedMergeTargetId"
-                                    class="w-full bg-[#fbfbfa] border border-[#e9e9e7] rounded-md px-3 py-1.5 text-xs text-zinc-800 focus:outline-none focus:border-stone-400"
-                                >
+                                <select wire:model="selectedMergeTargetId" class="ui-select">
                                     <option value="">{{ __('-- Seleccionar contacto destino --') }}</option>
                                     @foreach($allOtherContacts as $otherC)
-                                        <option value="{{ $otherC->id }}">{{ $otherC->name }} ({{ $otherC->phone ?: 'Sin teléfono' }})</option>
+                                        <option value="{{ $otherC->id }}">{{ $otherC->name }} ({{ $otherC->phone ?: __('Sin teléfono') }})</option>
                                     @endforeach
                                 </select>
 
                                 @if($selectedMergeTargetId)
-                                    <button 
-                                        type="button" 
-                                        wire:click="executeMerge({{ $selectedMergeTargetId }})"
-                                        wire:confirm="¿Confirmas fusionar {{ $currentContact->name }} en el contacto seleccionado? Todas las órdenes y marcas se transferirán."
-                                        class="w-full py-1.5 rounded-md bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs shadow-2xs transition cursor-pointer"
-                                    >
-                                        {{ __('Confirmar Fusión') }}
-                                    </button>
+                                    @php $mergeTarget = $allOtherContacts->firstWhere('id', $selectedMergeTargetId); @endphp
+                                    <button
+                                        type="button"
+                                        x-on:click="KudosConfirmChange({ field: @js(__('Fusionar contactos')), from: @js($currentContact->name), to: @js($mergeTarget?->name ?? ''), note: @js(__('Todas las órdenes y compañías se transferirán.')), confirmText: @js(__('Fusionar')) }).then(ok => ok && $wire.executeMerge({{ $selectedMergeTargetId }}))"
+                                        class="ui-btn ui-btn-primary w-full"
+                                    >{{ __('Confirmar fusión') }}</button>
                                 @endif
                             </div>
                         </div>
                     </div>
                 @endif
-
+            </div>
         @else
             @include('livewire.contacts.partials.contact-flyout-skeleton')
         @endif

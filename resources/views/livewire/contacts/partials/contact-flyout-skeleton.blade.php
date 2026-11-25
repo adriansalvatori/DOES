@@ -1,5 +1,5 @@
 {{-- Contact Flyout Skeleton UI (Ultra-delicate, borderless, soft fills, zero-lag) --}}
-<div class="flex flex-col h-full w-full bg-white select-none animate-pulse overflow-hidden">
+<div class="flex flex-col h-full w-full bg-white select-none overflow-hidden">
     <!-- Header (Borderless, soft subtle fills) -->
     <div class="px-6 py-4.5 bg-white flex items-center justify-between shrink-0">
         <div class="flex items-center gap-3 min-w-0">

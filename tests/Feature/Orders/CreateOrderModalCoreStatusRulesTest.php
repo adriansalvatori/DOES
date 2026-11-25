@@ -209,6 +209,6 @@ class CreateOrderModalCoreStatusRulesTest extends TestCase
             ->assertDontSeeHtml('>PROCESO DE PERMISO</span>')
             ->assertDontSeeHtml('>OVERDUE</span>')
             ->assertDontSeeHtml('>ALMOST OVERDUE</span>')
-            ->assertSeeHtml('background-color: #DC2626');
+            ->assertSeeHtml('aria-pressed="false"');
     }
 }

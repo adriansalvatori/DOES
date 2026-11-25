@@ -1,251 +1,205 @@
 @php
     $isBlocked = $order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE;
     $isUrgent = $order->isUrgente();
+    $isDone = (bool) $order->done_today;
+    $responsible = $order->display_responsible_person;
+    $substatusLabel = ($order->substatus && $order->substatus->value !== 'URGENTE')
+        ? \Illuminate\Support\Str::ucfirst(\Illuminate\Support\Str::lower($order->substatus->value))
+        : null;
+    $elementCount = $order->elements->count();
+    $readyCount = $elementCount > 0 ? $order->elements->filter(fn ($element) => $element->isReadyForProduction())->count() : 0;
+    $activeStage = $elementCount > 0 ? $order->getActiveStage() : null;
+    $taskCount = $order->relatedTasks->count();
+    $tasksDone = $order->relatedTasks->where('status', 'done')->count();
+    $tasksPending = $order->relatedTasks->where('status', 'todo')->count();
 @endphp
 
-<div 
+<div
     wire:key="order-card-{{ $order->id }}"
     x-data="{ showTasks: false }"
     @click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
+    @keydown.enter.self="$dispatch('open-order-detail', { orderId: {{ $order->id }} })"
+    tabindex="0"
     draggable="true"
     @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
-    class="kanban-card p-3 space-y-2 transition cursor-pointer active:cursor-grabbing group relative select-none hover:shadow-md {{ $isUrgent ? 'rounded-xl hover:shadow-lg ' . $order->getUrgentCardClasses() : 'rounded-lg shadow-2xs ' . $order->getCardBgClass() }}"
-    @if(!$isUrgent)
-        @if($isBlocked) style="border: 1px solid #d6d3d1 !important; background-color: #f5f5f4 !important;" 
-        @elseif($order->is_missing_from_trello) style="border: 1.5px dashed #a8a29e !important; background-color: #f5f5f4 !important; opacity: 0.75 !important;" 
-        @elseif($order->isOverdue()) style="border: 1px solid #ef4444 !important; background-color: #fef2f2 !important;" 
-        @elseif($order->isDueToday()) style="border: 1px solid #f59e0b !important; background-color: #fffbeb !important;" 
-        @elseif($order->isApproved() || $order->isInProduction()) style="border: 1px solid #f472b6 !important; background-color: #fdf2f8 !important;" 
-        @endif
-    @endif
+    class="kanban-card group relative bg-surface border rounded-card p-3 flex flex-col gap-1.5 cursor-pointer select-none transition hover:border-line-strong hover:shadow-menu active:cursor-grabbing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold {{ $order->is_missing_from_trello ? 'border-dashed border-line-strong opacity-75' : 'border-line' }}"
 >
-    <!-- Card Header: Badges & Designer -->
-    <div class="flex items-start justify-between gap-1.5 min-w-0">
-        <div class="flex flex-wrap gap-1 min-w-0">
-            @if($order->is_missing_from_trello)
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-stone-200 text-stone-700 border border-stone-300 shrink-0 whitespace-nowrap flex items-center gap-0.5">
-                    <x-lucide-alert-triangle class="w-2.5 h-2.5 text-stone-600" />
-                    <span>{{ __('FALTA EN TRELLO') }}</span>
-                </span>
-            @endif
-
-            @if($order->wo_number)
-                <x-wo-badge :number="$order->wo_number" variant="dark" />
-            @endif
-
-            @if($isUrgent)
-                <x-urgent-badge :done="$order->done_today" :blocked="$isBlocked" />
-            @elseif($order->approved && $order->substatus !== \App\Enums\Substatus::PONER_EN_ALTA)
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-0.5 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-100 text-pink-800 border border-pink-300' }}">
-                    <x-lucide-check-circle-2 class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : 'text-pink-600' }}" />
-                    <span>{{ __('APROBADA') }}</span>
-                </span>
-            @endif
-
-            @php
-                $respBadge = $order->display_responsible_person;
-            @endphp
-            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap flex items-center gap-1 {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : ($respBadge === 'MAIN' ? 'bg-stone-100 text-stone-600 border border-stone-200' : 'bg-indigo-50 text-indigo-800 border border-indigo-200') }}">
-                <x-lucide-user class="w-2.5 h-2.5 {{ $isBlocked ? 'text-stone-500' : ($respBadge === 'MAIN' ? 'text-stone-400' : 'text-indigo-600') }} shrink-0" />
-                <span>{{ $respBadge }}</span>
-            </span>
-
-            @if($order->substatus && $order->substatus->value !== 'URGENTE')
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-medium border shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border-stone-300' : $order->substatus->badgeStyle() }}" style="{{ ! $isBlocked ? $order->substatus->getInlineBadgeStyle() : '' }}">
-                    {{ $order->substatus->value }}
-                </span>
-            @endif
-
-            @if($order->customer_service_required)
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 whitespace-nowrap {{ $isBlocked ? 'bg-stone-200 text-stone-700 border border-stone-300' : 'bg-pink-50 text-pink-700 border border-pink-200' }}">
-                    {{ __('ATENCIÓN CLIENTE') }}
-                </span>
-            @endif
-        </div>
-
-        <div class="flex items-center gap-1 shrink-0 ml-1">
-            @if($order->trello_url)
-                <a href="{{ $order->trello_url }}" @click.stop target="_blank" rel="noopener noreferrer" class="p-1 rounded text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition shrink-0" title="Abrir en Trello.com">
-                    <x-lucide-external-link class="w-3.5 h-3.5" />
-                </a>
-            @endif
-            <div class="flex flex-wrap items-center gap-1 shrink-0 justify-end">
-                @forelse($order->assigned_designers as $des)
-                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border shrink-0 whitespace-nowrap {{ $des->badge_style }}" style="{{ $des->badge_inline_style }}">
-                        {{ $des->name }}
-                    </span>
-                @empty
-                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded border border-amber-300 bg-amber-100 text-amber-800 shrink-0 whitespace-nowrap">
-                        {{ __('Sin Asignar') }}
-                    </span>
-                @endforelse
-            </div>
-        </div>
-    </div>
-
-    <!-- Card Title & Company -->
-    <div class="min-w-0 flex items-start gap-2">
-        <button 
-            wire:click="toggleDoneToday({{ $order->id }})" 
+    <!-- Identity: done check, WO, people, menu -->
+    <div class="flex items-center gap-1.5 min-w-0">
+        <button
+            wire:click="toggleDoneToday({{ $order->id }})"
             @click.stop
             type="button"
-            class="w-4 h-4 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent hover:text-emerald-500/40' }}"
-            title="{{ $order->done_today ? __('Completado (Clic para desmarcar)') : __('Marcar como completado') }}">
+            class="w-4 h-4 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $isDone ? 'bg-ok border-ok text-white' : 'border-line-strong hover:border-ok bg-surface text-transparent hover:text-ok/50 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100' }}"
+            title="{{ $isDone ? __('Completado (Clic para desmarcar)') : __('Marcar como completado') }}"
+            aria-label="{{ $isDone ? __('Completado (Clic para desmarcar)') : __('Marcar como completado') }}"
+            aria-pressed="{{ $isDone ? 'true' : 'false' }}">
             <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
         </button>
-        <div class="min-w-0 flex-1">
-            <div class="flex items-center justify-between gap-1.5 min-w-0">
-                <div class="flex items-center gap-1.5 flex-wrap min-w-0">
-                    <h4 class="font-normal text-[11px] {{ $isUrgent ? 'text-zinc-600' : 'text-zinc-500' }} truncate leading-snug min-w-0 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
-                    @if($order->location_text)
-                        <span class="inline-flex items-center gap-0.5 text-[9px] font-semibold text-stone-600 bg-stone-100 px-1.5 py-0.2 rounded border border-stone-200/90 shrink-0 {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="Locación: {{ $order->location_text }}">
-                            <x-lucide-map-pin class="w-2.5 h-2.5 text-rose-500 shrink-0" />
-                            <span class="truncate max-w-[120px]">{{ $order->location_text }}</span>
-                        </span>
-                    @endif
-                </div>
-                @if($isBlocked)
-                    <button 
-                        wire:click="openUnblockModal({{ $order->id }})" 
-                        @click.stop 
-                        type="button"
-                        class="px-2.5 py-1 rounded-lg bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold text-xs shadow-md transition flex items-center gap-1 shrink-0 cursor-pointer opacity-100 filter-none"
-                        title="{{ __('Desbloquear orden') }}">
-                        <x-lucide-unlock class="w-3.5 h-3.5 text-white stroke-[2.5]" />
-                        <span>{{ __('Desbloquear') }}</span>
-                    </button>
-                @endif
+
+        @if($order->wo_number)
+            <x-wo-badge :number="$order->wo_number" />
+        @endif
+
+        <div class="ml-auto flex items-center gap-1 shrink-0">
+            <div class="flex items-center -space-x-1">
+                @forelse($order->assigned_designers as $designer)
+                    <x-ui.person :person="$designer" size="sm" class="ring-2 ring-surface rounded-full" />
+                @empty
+                    <x-ui.person size="sm" />
+                @endforelse
             </div>
-            <p class="font-bold text-xs text-zinc-900 group-hover:text-stone-800 transition truncate mt-0.5 uppercase {{ $order->done_today ? 'line-through text-zinc-400' : '' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+
+            <div @click.stop class="opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition">
+                <flux:dropdown position="bottom" align="end">
+                    <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" :tooltip="__('Acciones')" aria-label="{{ __('Acciones') }}" />
+                    <flux:menu>
+                        <flux:menu.submenu :heading="__('Mover a...')" icon="arrows-right-left">
+                            @foreach($allColumns as $columnOption)
+                                @if($columnOption !== $order->core_status)
+                                    <flux:menu.item wire:click="moveOrder({{ $order->id }}, {{ \Illuminate\Support\Js::from($columnOption->value) }})">{{ $columnOption->label() }}</flux:menu.item>
+                                @endif
+                            @endforeach
+                        </flux:menu.submenu>
+                        <flux:menu.item icon="document-duplicate" wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })">{{ __('Duplicar Orden') }}</flux:menu.item>
+                        @if($order->trello_url)
+                            <flux:menu.item icon="arrow-top-right-on-square" href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer">{{ __('Abrir en Trello') }}</flux:menu.item>
+                        @endif
+                        @if(auth()->user()?->canDeleteOrders())
+                            <flux:menu.separator />
+                            <flux:menu.item
+                                variant="danger"
+                                icon="trash"
+                                wire:click="trashOrder({{ $order->id }})"
+                                wire:confirm="{{ __('¿Enviar esta orden a la papelera (archivar en Trello)?') }}">{{ __('Enviar a la papelera (archivar)') }}</flux:menu.item>
+                        @endif
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
         </div>
     </div>
 
-    <!-- Metadata & Due Date -->
-    <div class="flex items-center justify-between text-[10px] {{ $isUrgent && !$order->done_today ? 'border-red-200/60' : ($order->done_today ? 'border-stone-200 text-zinc-500' : 'text-zinc-500 border-[#f0f0ee]') }} pt-1.5 border-t gap-1">
-        <div class="flex items-center gap-1 min-w-0">
-            @if($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE)
-                @php
-                    $sentDate = $order->last_sent_to_client_at ?? $order->last_meaningful_update ?? $order->updated_at ?? now();
-                    $daysElapsed = $sentDate ? $sentDate->diffInWeekdays(now()) : 0;
-                    $daysRemaining = max(0, 9 - $daysElapsed);
-                @endphp
-                <x-lucide-send class="w-3 h-3 text-sky-500 shrink-0" />
-                <span class="font-mono font-medium truncate text-sky-800" title="Enviado el {{ $sentDate->format('d M, Y') }} ({{ $daysElapsed }}d hábiles transcurridos)">
-                    {{ __('Enviado hace') }} {{ $daysElapsed }}d hábiles <span class="text-sky-600 font-normal">({{ $daysRemaining }}d a Hold)</span>
-                </span>
-            @else
-                <x-lucide-calendar class="w-3.5 h-3.5 {{ $order->done_today ? 'text-zinc-400' : ($isUrgent ? 'text-red-600' : 'text-zinc-400') }} shrink-0" />
-                <span class="font-mono font-medium truncate {{ $order->done_today ? 'text-zinc-500' : ($isUrgent ? 'text-red-700 font-bold' : ($order->isOverdue() ? 'text-red-600 font-bold' : ($order->isDueToday() ? 'text-amber-800 font-bold' : 'text-zinc-700'))) }}">
-                    {{ $order->current_due_date ? ($order->current_due_date->isToday() ? __('Hoy') . ' (' . $order->current_due_date->format('d M') . ')' : $order->current_due_date->format('d M')) : 'N/A' }}
-                </span>
+    <!-- Client, location, job -->
+    <div class="min-w-0">
+        <div class="flex items-center gap-2 min-w-0">
+            <h4 class="text-row font-medium text-ink truncate min-w-0 {{ $isDone ? 'ui-done' : '' }}" title="{{ $order->company_name }}">{{ $order->company_name }}</h4>
+            <x-orders.location :location="$order->location_text" class="shrink-0 max-w-[45%]" />
+        </div>
+        <p class="text-body truncate {{ $isDone ? 'ui-done' : 'text-ink-2' }}" title="{{ $order->task_name }}">{{ $order->task_name }}</p>
+        @if($substatusLabel || $responsible !== 'MAIN')
+            <p class="text-meta text-ink-3 truncate mt-0.5">
+                {{ $substatusLabel }}@if($substatusLabel && $responsible !== 'MAIN') · @endif
+                @if($responsible !== 'MAIN')<span title="{{ __('Responsable') }}">{{ $responsible }}</span>@endif
+            </p>
+        @endif
+    </div>
+
+    <!-- Health signals: the only colored elements on the card -->
+    @if($isUrgent || $order->customer_service_required || ($order->approved && $order->substatus !== \App\Enums\Substatus::PONER_EN_ALTA) || $order->is_missing_from_trello)
+        <div class="flex flex-wrap items-center gap-1">
+            @if($isUrgent)
+                <x-ui.tag tone="danger" icon="zap">{{ __('Urgente') }}</x-ui.tag>
+            @endif
+            @if($order->customer_service_required)
+                <x-ui.tag tone="warn">{{ __('Atención al Cliente (CS)') }}</x-ui.tag>
+            @endif
+            @if($order->approved && $order->substatus !== \App\Enums\Substatus::PONER_EN_ALTA)
+                <x-ui.tag tone="ok" icon="check-circle-2">{{ __('Aprobada') }}</x-ui.tag>
+            @endif
+            @if($order->is_missing_from_trello)
+                <x-ui.tag icon="alert-triangle">{{ __('Falta en Trello') }}</x-ui.tag>
             @endif
         </div>
+    @endif
 
-        <div class="flex items-center gap-1 shrink-0">
+    <!-- Due, progress, next step -->
+    <div class="flex items-center gap-1.5 pt-1.5 mt-0.5 border-t border-line min-w-0">
+        @if($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE)
             @php
-                $elemCount = $order->elements->count();
+                $sentDate = $order->last_sent_to_client_at ?? $order->last_meaningful_update ?? $order->updated_at ?? now();
+                $daysElapsed = $sentDate ? $sentDate->diffInWeekdays(now()) : 0;
+                $daysToHold = max(0, 9 - $daysElapsed);
             @endphp
-            @if($elemCount > 0)
-                @php
-                    $readyCount = $order->elements->filter(fn($e) => $e->isReadyForProduction())->count();
-                    $activeStage = $order->getActiveStage();
-                @endphp
-                <span class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] {{ $readyCount === $elemCount ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-pink-50 text-pink-800 border-pink-200' }}" title="{{ __('Piezas en Alta') }}: {{ $readyCount }}/{{ $elemCount }} {{ __('listas para producción') }} {{ $activeStage ? '• ' . $activeStage->name : '' }}">
-                    <x-lucide-layers class="w-3 h-3 text-pink-600 shrink-0" />
-                    <span>{{ $readyCount }}/{{ $elemCount }}</span>
+            <x-ui.tag :tone="$daysToHold <= 2 ? 'warn' : 'info'" icon="send" title="{{ __('Enviado el :date. Pasa a On Hold en :days d hábiles.', ['date' => $sentDate->format('d/m/Y'), 'days' => $daysToHold]) }}">
+                {{ __('Con el cliente :days d', ['days' => $daysElapsed]) }}
+            </x-ui.tag>
+        @else
+            <x-orders.due :date="$order->current_due_date" :done="$isDone" />
+        @endif
+
+        <div class="ml-auto flex items-center gap-2 shrink-0 text-meta text-ink-3 tabular-nums">
+            @if($elementCount > 0)
+                <span class="inline-flex items-center gap-1 {{ $readyCount === $elementCount ? 'text-ok' : '' }}" title="{{ __('Piezas en Alta') }}: {{ $readyCount }}/{{ $elementCount }} {{ __('listas para producción') }}{{ $activeStage ? ' • ' . $activeStage->name : '' }}">
+                    <x-lucide-layers class="w-3.5 h-3.5" aria-hidden="true" />
+                    {{ $readyCount }}/{{ $elementCount }}
                 </span>
             @endif
 
-            @if($order->relatedTasks->count() > 0)
-                <button 
+            @if($taskCount > 0)
+                <button
                     @click.stop="showTasks = !showTasks"
                     type="button"
-                    class="px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 shrink-0 whitespace-nowrap text-[10px] transition cursor-pointer {{ $order->relatedTasks->where('status', 'todo')->count() > 0 ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200' }}"
+                    class="inline-flex items-center gap-1 rounded px-1 -mx-1 hover:bg-sunken hover:text-ink transition cursor-pointer {{ $tasksPending > 0 ? 'text-ink-2' : '' }}"
+                    :aria-expanded="showTasks.toString()"
                     title="{{ __('Ver subtareas de la orden') }}">
-                    <x-lucide-check-square class="w-3 h-3 text-amber-700 shrink-0" />
-                    <span>{{ $order->relatedTasks->where('status', 'done')->count() }}/{{ $order->relatedTasks->count() }} {{ __('Tareas') }}</span>
-                    <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" />
+                    <x-lucide-list-checks class="w-3.5 h-3.5" aria-hidden="true" />
+                    {{ $tasksDone }}/{{ $taskCount }}
+                    <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" x-bind:class="{ 'rotate-180': showTasks }" aria-hidden="true" />
+                </button>
+            @endif
+
+            @if($isBlocked)
+                <button
+                    wire:click="openUnblockModal({{ $order->id }})"
+                    @click.stop
+                    type="button"
+                    class="inline-flex items-center gap-1 h-6 px-2 rounded-control border border-line-strong bg-surface text-meta font-medium text-ink hover:bg-sunken transition cursor-pointer"
+                    title="{{ __('Desbloquear orden') }}">
+                    <x-lucide-lock-open class="w-3.5 h-3.5 text-warn" aria-hidden="true" />
+                    {{ __('Desbloquear') }}
                 </button>
             @endif
         </div>
     </div>
 
-    <!-- Expandable Subtasks List -->
-    @if($order->relatedTasks->count() > 0)
-        <div x-show="showTasks" x-collapse @click.stop class="pt-2 border-t {{ $isUrgent && !$order->done_today ? 'border-red-200/60' : 'border-[#f0f0ee]' }} space-y-1.5 min-w-0">
-            <div class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+    <!-- Expandable subtasks -->
+    @if($taskCount > 0)
+        <div x-show="showTasks" x-collapse @click.stop class="pt-2 border-t border-line space-y-1 min-w-0" style="display: none;">
+            <div class="text-meta text-ink-3 flex items-center justify-between">
                 <span>{{ __('Subtareas & Acciones') }}</span>
-                <span class="text-[9px] text-zinc-400 font-normal">{{ $order->relatedTasks->where('status', 'todo')->count() }} {{ __('pendientes') }}</span>
+                <span>{{ $tasksPending }} {{ __('pendientes') }}</span>
             </div>
             @foreach($order->relatedTasks as $task)
-                <div class="flex items-center justify-between gap-1.5 p-1.5 rounded {{ $isUrgent ? 'bg-white/90' : 'bg-[#fbfbfa]' }} border border-stone-200 text-[11px] shadow-2xs">
+                <div class="flex items-center justify-between gap-1.5 px-1.5 py-1 rounded-control hover:bg-sunken text-body min-w-0">
                     <div class="flex items-center gap-1.5 min-w-0">
-                        <button 
+                        <button
                             wire:click="toggleTaskComplete({{ $task->id }})"
                             @click.stop
-                            type="button" 
-                            class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300 hover:border-emerald-500 bg-white text-transparent' }}">
+                            type="button"
+                            class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-ok border-ok text-white' : 'border-line-strong hover:border-ok bg-surface text-transparent' }}"
+                            aria-label="{{ $task->title }}"
+                            aria-pressed="{{ $task->isDone() ? 'true' : 'false' }}">
                             <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                         </button>
-                        <span class="font-medium truncate text-[11px] {{ $task->isDone() ? 'line-through text-zinc-400' : 'text-zinc-800' }}" title="{{ $task->title }}">
-                            {{ $task->title }}
-                        </span>
+                        <span class="truncate {{ $task->isDone() ? 'ui-done' : 'text-ink' }}" title="{{ $task->title }}">{{ $task->title }}</span>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
+                        <span class="text-meta text-ink-3">{{ $task->type === \App\Enums\RelatedTaskType::SUBTASK ? __('Subtarea') : __('Acción') }}</span>
                         @if($task->type === \App\Enums\RelatedTaskType::SUBTASK)
-                            <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
-                                {{ __('SUBTAREA') }}
-                            </span>
-                            <button 
+                            <button
                                 wire:click="deleteTask({{ $task->id }})"
                                 wire:confirm="{{ __('¿Eliminar esta subtarea?') }}"
                                 @click.stop
                                 type="button"
-                                class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition"
-                                title="{{ __('Eliminar subtarea') }}">
+                                class="p-0.5 rounded text-ink-3 hover:text-danger hover:bg-danger-soft transition"
+                                title="{{ __('Eliminar subtarea') }}"
+                                aria-label="{{ __('Eliminar subtarea') }}">
                                 <x-lucide-x class="w-3 h-3" />
                             </button>
-                        @else
-                            <span class="px-1 py-0.2 rounded text-[8px] font-bold bg-violet-100 text-violet-800 border border-violet-200 shrink-0">
-                                {{ __('ACCION') }}
-                            </span>
                         @endif
                     </div>
                 </div>
             @endforeach
         </div>
     @endif
-
-    <!-- Quick Move Select & Modal Trigger -->
-    <div class="pt-1.5 flex items-center justify-between gap-1.5 border-t min-w-0 {{ $order->done_today ? 'border-stone-200' : ($isUrgent ? 'border-red-200/60' : 'border-[#f0f0ee]') }}">
-        <select wire:change="moveOrder({{ $order->id }}, $event.target.value)" @click.stop class="rounded px-1.5 py-0.5 text-[10px] focus:outline-none w-full min-w-0 truncate font-medium {{ $order->done_today ? 'bg-stone-50 border-stone-200 text-zinc-600' : ($isUrgent ? 'bg-white border-red-200 hover:border-red-300 text-zinc-800' : 'bg-[#fbfbfa] border border-[#e9e9e7] text-zinc-700') }}">
-            <option value="">{{ __('Mover a...') }}</option>
-            @foreach($allColumns as $colOption)
-                @if($colOption !== $order->core_status)
-                    <option value="{{ $colOption->value }}">{{ $colOption->label() }}</option>
-                @endif
-            @endforeach
-        </select>
-
-        <div class="shrink-0 flex items-center gap-1">
-            <button wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })" @click.stop class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : ($isUrgent ? 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' : 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-700 hover:text-zinc-900') }}" title="{{ __('Duplicar Orden') }}">
-                <x-lucide-copy class="w-3 h-3 text-zinc-500" />
-                <span>{{ __('Duplicar') }}</span>
-            </button>
-            <button wire:click="$dispatch('open-order-detail', { orderId: {{ $order->id }} })" @click.stop class="p-1 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-600' : ($isUrgent ? 'bg-white hover:bg-rose-100 border-red-200 text-zinc-700 hover:text-zinc-900' : 'bg-stone-100 hover:bg-stone-200 border-stone-200 text-zinc-700 hover:text-zinc-900') }}" title="{{ __('Ver detalle de la orden') }}">
-                <x-lucide-panel-right class="w-3.5 h-3.5 text-zinc-600" />
-            </button>
-            @if(auth()->user()?->canDeleteOrders())
-                <button
-                    wire:click="trashOrder({{ $order->id }})"
-                    @click.stop
-                    wire:confirm="{{ __('¿Enviar esta orden a la papelera (archivar en Trello)?') }}"
-                    class="px-1.5 py-0.5 rounded border text-[10px] font-medium transition flex items-center gap-1 {{ $order->done_today ? 'bg-stone-100 hover:bg-red-50 border-stone-200 text-zinc-500 hover:text-red-600' : ($isUrgent ? 'bg-white hover:bg-red-100 border-red-200 text-red-600 hover:text-red-800' : 'bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 hover:text-red-800') }}"
-                    title="{{ __('Enviar a la papelera (archivar)') }}"
-                >
-                    <x-lucide-trash-2 class="w-3 h-3" />
-                </button>
-            @endif
-        </div>
-    </div>
 </div>

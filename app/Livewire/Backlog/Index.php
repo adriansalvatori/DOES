@@ -116,13 +116,13 @@ class Index extends Component
 
         $order->update($updateData);
 
-        session()->flash('message', "Orden {$order->company_name} añadida al Workspace activo.");
+        session()->flash('message', __('Orden :company añadida al Workspace activo.', ['company' => $order->company_name]));
     }
 
     public function addSelectedToWorkspace()
     {
         if (empty($this->selectedOrders)) {
-            session()->flash('warning', 'Selecciona al menos una orden para añadir al Workspace.');
+            session()->flash('warning', __('Selecciona al menos una orden para añadir al Workspace.'));
 
             return;
         }
@@ -152,7 +152,7 @@ class Index extends Component
         $this->selectedOrders = [];
         $this->selectAll = false;
 
-        session()->flash('message', "Se añadieron {$count} órdenes al Workspace activo correctamente.");
+        session()->flash('message', trans_choice('{1} Se añadió :count orden al Workspace activo.|[2,*] Se añadieron :count órdenes al Workspace activo.', $count));
     }
 
     public function addAllFilteredToWorkspace()
@@ -182,7 +182,7 @@ class Index extends Component
         $this->selectedOrders = [];
         $this->selectAll = false;
 
-        session()->flash('message', "Se añadieron las {$count} órdenes filtradas al Workspace activo.");
+        session()->flash('message', trans_choice('{1} Se añadió :count orden filtrada al Workspace activo.|[2,*] Se añadieron las :count órdenes filtradas al Workspace activo.', $count));
     }
 
     public function removeFromWorkspace($orderId)
@@ -190,7 +190,7 @@ class Index extends Component
         $order = Order::findOrFail($orderId);
         $order->update(['in_workspace' => false]);
 
-        session()->flash('message', "Orden {$order->company_name} movida de regreso al Backlog.");
+        session()->flash('message', __('Orden :company movida de regreso al Backlog.', ['company' => $order->company_name]));
     }
 
     public function setFilter(string $filter): void
@@ -211,7 +211,7 @@ class Index extends Component
         $boardId = Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '')));
 
         if (empty(trim($boardId))) {
-            session()->flash('warning', 'No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.');
+            session()->flash('warning', __('No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.'));
 
             return;
         }
@@ -222,7 +222,7 @@ class Index extends Component
         // Fetch lists
         $listsRes = $syncService->getBoardLists($extractedBoardId, $apiKey, $userToken);
         if (! $listsRes['success']) {
-            session()->flash('warning', 'Error al conectar con la API de Trello: '.($listsRes['error'] ?? 'Error de autenticación o tablero no encontrado'));
+            session()->flash('warning', __('Error al conectar con la API de Trello: :error', ['error' => $listsRes['error'] ?? __('Error de autenticación o tablero no encontrado')]));
 
             return;
         }
@@ -236,7 +236,7 @@ class Index extends Component
         // Fetch cards
         $cardsRes = $syncService->getBoardCards($extractedBoardId, $apiKey, $userToken);
         if (! $cardsRes['success']) {
-            session()->flash('warning', 'Error al obtener tarjetas desde Trello.');
+            session()->flash('warning', __('Error al obtener tarjetas desde Trello.'));
 
             return;
         }
@@ -303,7 +303,7 @@ class Index extends Component
             'changes' => $changesList,
         ];
 
-        session()->flash('message', "Sincronización con Trello completada exitosamente ({$totalSynced} tarjetas procesadas).");
+        session()->flash('message', __('Sincronización con Trello completada exitosamente (:count tarjetas procesadas).', ['count' => $totalSynced]));
     }
 
     public function runTrelloSyncOnlyNew(): void
@@ -313,7 +313,7 @@ class Index extends Component
         $boardId = Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '')));
 
         if (empty(trim($boardId))) {
-            session()->flash('warning', 'No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.');
+            session()->flash('warning', __('No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.'));
 
             return;
         }
@@ -324,7 +324,7 @@ class Index extends Component
         // Fetch lists
         $listsRes = $syncService->getBoardLists($extractedBoardId, $apiKey, $userToken);
         if (! $listsRes['success']) {
-            session()->flash('warning', 'Error al conectar con la API de Trello: '.($listsRes['error'] ?? 'Error de autenticación o tablero no encontrado'));
+            session()->flash('warning', __('Error al conectar con la API de Trello: :error', ['error' => $listsRes['error'] ?? __('Error de autenticación o tablero no encontrado')]));
 
             return;
         }
@@ -338,7 +338,7 @@ class Index extends Component
         // Fetch cards
         $cardsRes = $syncService->getBoardCards($extractedBoardId, $apiKey, $userToken);
         if (! $cardsRes['success']) {
-            session()->flash('warning', 'Error al obtener tarjetas desde Trello.');
+            session()->flash('warning', __('Error al obtener tarjetas desde Trello.'));
 
             return;
         }
@@ -453,9 +453,9 @@ class Index extends Component
         $this->activeFilter = $addedCount > 0 ? 'created' : 'all';
 
         if ($addedCount > 0) {
-            session()->flash('message', "Sincronización completada: se importaron {$addedCount} tarjetas nuevas de Trello.");
+            session()->flash('message', __('Sincronización completada: se importaron :count tarjetas nuevas de Trello.', ['count' => $addedCount]));
         } else {
-            session()->flash('message', "No hay tarjetas nuevas en Trello ({$skippedCount} existentes omitidas).");
+            session()->flash('message', __('No hay tarjetas nuevas en Trello (:count existentes omitidas).', ['count' => $skippedCount]));
         }
     }
 
@@ -519,6 +519,6 @@ class Index extends Component
                 ->distinct()
                 ->orderBy('responsible_person')
                 ->pluck('responsible_person'),
-        ])->layout('components.layouts.app', ['title' => __('Backlog de Órdenes - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Backlog').' - '.config('app.name')]);
     }
 }

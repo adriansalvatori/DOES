@@ -78,7 +78,7 @@ class ClientDatabaseTest extends TestCase
         Livewire::test(ClientIndex::class)
             ->assertStatus(200)
             ->assertSee('CLIENTE TEST')
-            ->assertSee(__('Catálogo de Compañías'));
+            ->assertSee(__('Compañías'));
     }
 
     public function test_merging_clients_extracts_location_and_updates_orders(): void
@@ -268,7 +268,7 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee('¡Posible contacto duplicado con')
+            ->assertSee(__('¡Posible contacto duplicado con'))
             ->call('confirmMergeContact', 1, 'GIO')
             ->call('save');
 
@@ -295,7 +295,7 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee('¡Posible contacto duplicado con')
+            ->assertSee(__('¡Posible contacto duplicado con'))
             ->call('confirmMergeContact', 1, 'GIO GARCIA')
             ->call('save');
 
@@ -332,7 +332,7 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee('Eliminar Cliente')
+            ->assertSee(__('Eliminar compañía'))
             ->call('deleteClient')
             ->assertSet('isOpen', false)
             ->assertDispatched('client-updated');
@@ -362,8 +362,8 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee('Proyectos (1)')
-            ->assertSee('Archivados (1)')
+            ->assertSee(__('Proyectos'))
+            ->assertSee(__('Archivados'))
             ->set('activeTab', 'archived')
             ->assertSee('ARCHIVED PROJECT TASK');
     }
@@ -431,9 +431,12 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientIndex::class)
             ->assertSee('CLIENTE CON CONTEOS MIXTOS')
-            ->assertSee('1 activas')
-            ->assertSee('2 arch.')
-            ->assertSee('1 backlog');
+            ->assertSeeHtmlInOrder([
+                'CLIENTE CON CONTEOS MIXTOS',
+                'is-num text-ink font-medium">1</td>',
+                'is-num text-ink-3">2</td>',
+                'is-num text-ink-3">1</td>',
+            ]);
     }
 
     public function test_can_sort_active_orders_by_fields_in_client_flyout(): void
@@ -535,8 +538,8 @@ class ClientDatabaseTest extends TestCase
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
             ->set('activeTab', 'brand_kit')
-            ->assertSee('Brand Kit')
-            ->assertSee('Activos & Enlaces Clave')
+            ->assertSee(__('Brand Kit'))
+            ->assertSee(__('Activos y enlaces clave'))
             ->call('addBrandColor')
             ->set('brandKit.colors.0.name', 'Azul Corporativo')
             ->set('brandKit.colors.0.hex', '#0055FF')

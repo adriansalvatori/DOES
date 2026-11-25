@@ -48,7 +48,7 @@
         class="fixed top-5 right-5 z-[9999] bg-stone-900/95 backdrop-blur text-white text-xs font-medium px-4 py-2.5 rounded-xl shadow-2xl border border-stone-700/80 flex items-center gap-3 pointer-events-none select-none"
     >
         <x-lucide-refresh-cw class="w-4 h-4 text-amber-400 animate-spin shrink-0" />
-        <span class="font-medium tracking-tight">{{ __('Generando respaldo de base de datos...') }}</span>
-        <span class="text-[10px] font-mono text-zinc-300 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-700">⌘S</span>
+        <span class="font-medium ">{{ __('Generando respaldo de base de datos...') }}</span>
+        <span class="text-meta font-mono text-zinc-300 bg-stone-800 px-1.5 py-0.5 rounded border border-stone-700">⌘S</span>
     </div>
 </div>

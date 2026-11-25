@@ -5,6 +5,7 @@ namespace App\Livewire\Orders;
 use App\Models\Client;
 use App\Models\Order;
 use App\Models\Setting;
+use App\Services\NavigationService;
 use App\Services\OrderTitleParserService;
 use App\Services\TrelloSyncService;
 use Illuminate\Contracts\View\View;
@@ -185,6 +186,7 @@ class HeaderSearch extends Component
         return view('livewire.orders.header-search', [
             'results' => $results,
             'clientResults' => $clientResults,
+            'destinations' => app(NavigationService::class)->destinations(auth()->user()),
         ]);
     }
 }

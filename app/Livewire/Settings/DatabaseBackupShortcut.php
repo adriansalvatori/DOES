@@ -24,7 +24,7 @@ class DatabaseBackupShortcut extends Component
         }
 
         if (! $user->isAdmin()) {
-            $this->dispatch('toast', message: __('Solo los administradores pueden generar respaldos de base de datos.'));
+            $this->dispatch('toast', message: __('Solo los administradores pueden generar respaldos de base de datos.'), type: 'error');
 
             return;
         }
@@ -44,10 +44,10 @@ class DatabaseBackupShortcut extends Component
             } else {
                 $output = trim(Artisan::output());
                 $errorMsg = __('Ocurrió un error al generar el respaldo de base de datos.').($output ? " ({$output})" : '');
-                $this->dispatch('toast', message: $errorMsg);
+                $this->dispatch('toast', message: $errorMsg, type: 'error');
             }
         } catch (\Throwable $e) {
-            $this->dispatch('toast', message: __('Error: ').$e->getMessage());
+            $this->dispatch('toast', message: __('Error: ').$e->getMessage(), type: 'error');
         } finally {
             $this->isBackingUp = false;
         }

@@ -50,7 +50,7 @@ class ArchivedOrders extends Component
         ]);
 
         $this->dispatch('order-updated');
-        session()->flash('message', "Subestatus de la orden '{$order->company_name}' actualizado.");
+        session()->flash('message', __('Subestatus de la orden \':company\' actualizado.', ['company' => $order->company_name]));
     }
 
     public function archiveOrder(int $orderId): void
@@ -88,7 +88,7 @@ class ArchivedOrders extends Component
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden '{$order->company_name}' archivada y cerrada exitosamente.");
+        session()->flash('message', __('Orden \':company\' archivada y cerrada exitosamente.', ['company' => $order->company_name]));
     }
 
     public function restoreOrder(int $orderId): void
@@ -111,7 +111,7 @@ class ArchivedOrders extends Component
         ]);
 
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden '{$order->company_name}' reabierta y devuelta a En Producción.");
+        session()->flash('message', __('Orden \':company\' reabierta y devuelta a En Producción.', ['company' => $order->company_name]));
     }
 
     #[On('order-updated')]
@@ -226,6 +226,6 @@ class ArchivedOrders extends Component
             'globalAvgTurnaround' => $globalAvgTurnaround,
             'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
             'pendingArchiveOrder' => $this->pendingArchiveOrderId ? Order::find($this->pendingArchiveOrderId) : null,
-        ])->layout('components.layouts.app', ['title' => __('Órdenes Archivadas & Rendimiento - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Órdenes archivadas').' - '.config('app.name')]);
     }
 }

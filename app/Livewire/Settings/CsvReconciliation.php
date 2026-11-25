@@ -233,7 +233,7 @@ class CsvReconciliation extends Component
             }
         } else {
             $this->errorMessage = $result['message'] ?? 'Ocurrió un error al procesar el lote.';
-            $this->dispatch('toast', message: $this->errorMessage);
+            $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
 
@@ -252,7 +252,7 @@ class CsvReconciliation extends Component
             $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
         } else {
             $this->errorMessage = $result['message'] ?? 'Error al actualizar la orden.';
-            $this->dispatch('toast', message: $this->errorMessage);
+            $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
 
@@ -297,7 +297,7 @@ class CsvReconciliation extends Component
             $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
         } else {
             $this->errorMessage = $result['message'];
-            $this->dispatch('toast', message: $result['message']);
+            $this->dispatch('toast', message: $result['message'], type: 'error');
         }
     }
 
@@ -314,7 +314,7 @@ class CsvReconciliation extends Component
             $this->meta = $service->getAnalysisMeta();
         } else {
             $this->errorMessage = 'No se pudo crear el cliente para esta orden.';
-            $this->dispatch('toast', message: $this->errorMessage);
+            $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
 
@@ -449,7 +449,7 @@ class CsvReconciliation extends Component
             $this->unmatchedFilter = 'all';
         } else {
             $this->errorMessage = $res['message'] ?? 'Error al vincular tarjetas de Trello.';
-            $this->dispatch('toast', message: $this->errorMessage);
+            $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
 
@@ -460,7 +460,7 @@ class CsvReconciliation extends Component
         $preview = $this->trelloCardPreview[$rowId] ?? null;
         if (! $preview || empty($preview['id'])) {
             $this->errorMessage = 'Por favor verifica la tarjeta de Trello antes de vincular.';
-            $this->dispatch('toast', message: $this->errorMessage);
+            $this->dispatch('toast', message: $this->errorMessage, type: 'error');
 
             return;
         }
@@ -475,7 +475,7 @@ class CsvReconciliation extends Component
             unset($this->trelloInput[$rowId], $this->trelloCardPreview[$rowId]);
         } else {
             $this->errorMessage = $result['message'] ?? 'Error al vincular con Trello.';
-            $this->dispatch('toast', message: $this->errorMessage);
+            $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
 

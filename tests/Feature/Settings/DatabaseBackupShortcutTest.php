@@ -33,16 +33,19 @@ class DatabaseBackupShortcutTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_shortcut_component_is_rendered_in_app_layout_for_authenticated_users(): void
+    public function test_shortcut_component_is_rendered_only_on_the_backups_page(): void
     {
         $admin = User::factory()->create([
             'role' => UserRole::ADMIN,
         ]);
 
-        $response = $this->actingAs($admin)->get('/');
+        $this->actingAs($admin)->get('/settings/backups')
+            ->assertStatus(200)
+            ->assertSeeLivewire(DatabaseBackupShortcut::class);
 
-        $response->assertStatus(200);
-        $response->assertSeeLivewire(DatabaseBackupShortcut::class);
+        $this->actingAs($admin)->get('/')
+            ->assertStatus(200)
+            ->assertDontSeeLivewire(DatabaseBackupShortcut::class);
     }
 
     public function test_admin_can_trigger_backup_via_shortcut_component(): void

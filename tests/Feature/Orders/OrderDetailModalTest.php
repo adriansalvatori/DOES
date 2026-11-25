@@ -549,7 +549,7 @@ class OrderDetailModalTest extends TestCase
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
             ->assertSee('Aprobación Recibida')
-            ->assertSee('LÍNEA DE TIEMPO / HISTORIAL')
+            ->assertSee('Historial')
             ->assertSee('timeline-scrollbar');
     }
 
@@ -717,7 +717,7 @@ class OrderDetailModalTest extends TestCase
             ->call('openModal', $order->id, true)
             ->assertSuccessful()
             ->assertSee('EN ESPERA DE ARCHIVO')
-            ->assertSee('background-color: #fef3c7');
+            ->assertDontSee('background-color: #fef3c7');
     }
 
     public function test_changing_status_to_on_hold_triggers_modal_and_records_reason(): void

@@ -92,7 +92,7 @@ class ArchivedOrdersTest extends TestCase
         $user = User::factory()->create();
         $response = $this->actingAs($user)->get('/archived');
         $response->assertStatus(200);
-        $response->assertSee('Órdenes Archivadas &amp; Rendimiento', false);
+        $response->assertSee('Archived orders');
         $response->assertSee('CLOSED CLIENT');
         $response->assertSee('Euralíz');
     }

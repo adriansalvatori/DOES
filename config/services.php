@@ -43,4 +43,13 @@ return [
         'board_id' => env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54'),
     ],
 
+    'google_drive' => [
+        // OAuth client ("Web application") from the DOES Google Cloud project. An admin then connects a Kudos
+        // account in Ajustes → Google Drive; that account must be a Content manager of the shared drive.
+        'client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+        // Folder inside the Kudos shared drive that DOES owns (all client/order folders are created beneath it).
+        'root_folder_id' => env('GOOGLE_DRIVE_ROOT_FOLDER_ID'),
+    ],
+
 ];

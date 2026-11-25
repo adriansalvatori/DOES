@@ -165,6 +165,6 @@ class Analytics extends Component
             'minAvailableOrders' => $minAvailableOrders,
             'unassignedCount' => $unassignedCount,
             'unassignedAvailableCount' => $unassignedAvailableCount,
-        ])->layout('components.layouts.app', ['title' => __('Analytics Dashboard - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Analytics').' - '.config('app.name')]);
     }
 }

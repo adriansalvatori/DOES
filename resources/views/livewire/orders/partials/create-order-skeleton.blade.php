@@ -1,10 +1,10 @@
 {{-- Create Order Skeleton UI (Ultra-delicate, borderless, soft fills, zero-lag) --}}
-<div class="flex flex-col w-full bg-white rounded-xl overflow-hidden select-none animate-pulse">
+<div class="flex flex-col w-full bg-white rounded-panel overflow-hidden select-none animate-pulse">
     <!-- Modal Header (Borderless, soft subtle fills) -->
     <div class="px-6 py-4.5 bg-white flex items-center justify-between">
         <div class="flex items-center gap-3 min-w-0">
-            <div class="w-8 h-8 rounded-lg bg-stone-900/90 flex items-center justify-center shrink-0">
-                <div class="w-4 h-4 rounded-full bg-white/20"></div>
+            <div class="w-8 h-8 rounded-lg bg-sunken flex items-center justify-center shrink-0">
+                <div class="w-4 h-4 rounded-full bg-line"></div>
             </div>
             <div class="space-y-1.5">
                 <div class="h-4 w-36 bg-stone-200/80 rounded-md"></div>
@@ -27,11 +27,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div class="space-y-1.5">
                 <div class="h-3 w-16 bg-stone-200/60 rounded-md"></div>
-                <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+                <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
             </div>
             <div class="space-y-1.5">
                 <div class="h-3 w-20 bg-stone-200/60 rounded-md"></div>
-                <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+                <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
             </div>
         </div>
 
@@ -39,29 +39,29 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div class="space-y-1.5">
                 <div class="h-3 w-24 bg-stone-200/60 rounded-md"></div>
-                <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+                <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
             </div>
             <div class="space-y-1.5">
                 <div class="h-3 w-20 bg-stone-200/60 rounded-md"></div>
-                <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+                <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
             </div>
         </div>
 
         <!-- Row 3: Task Name (Full width) -->
         <div class="space-y-1.5">
             <div class="h-3 w-28 bg-stone-200/60 rounded-md"></div>
-            <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+            <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
         </div>
 
         <!-- Row 4: Responsible & Due Date -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div class="space-y-1.5">
                 <div class="h-3 w-32 bg-stone-200/60 rounded-md"></div>
-                <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+                <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
             </div>
             <div class="space-y-1.5">
                 <div class="h-3 w-24 bg-stone-200/60 rounded-md"></div>
-                <div class="h-9 w-full bg-stone-100/70 rounded-xl"></div>
+                <div class="h-8 w-full bg-stone-100/70 rounded-control"></div>
             </div>
         </div>
 
@@ -77,7 +77,7 @@
 
         <!-- Row 6: Pieces Section (Soft container, no borders) -->
         <div class="pt-2">
-            <div class="p-4 rounded-2xl bg-stone-50/80 space-y-3">
+            <div class="p-4 rounded-card bg-stone-50/80 space-y-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <div class="w-3.5 h-3.5 rounded bg-stone-200"></div>
@@ -86,7 +86,7 @@
                     <div class="h-6 w-24 bg-stone-100 rounded-lg"></div>
                 </div>
                 <!-- Piece placeholder item -->
-                <div class="h-10 w-full bg-white/80 rounded-xl"></div>
+                <div class="h-10 w-full bg-white/80 rounded-control"></div>
             </div>
         </div>
     </div>

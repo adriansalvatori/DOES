@@ -33,6 +33,37 @@ enum CoreStatus: string
         };
     }
 
+    /**
+     * Position of this status in the five-phase lifecycle: 1 Entrada, 2 Diseño, 3 Revisión, 4 Cliente, 5 Producción.
+     * Archived orders count as a completed lifecycle.
+     */
+    public function phase(): int
+    {
+        return match ($this) {
+            self::ENTRANTE => 1,
+            self::EURALIZ_ORDERS_RECEIVED,
+            self::ADRIAN_ORDERS_RECEIVED,
+            self::CESAR_ORDERS_RECEIVED,
+            self::TO_DO_TODAY => 2,
+            self::ENVIADO_A_CAMILA => 3,
+            self::ENVIADO_AL_CLIENTE,
+            self::ON_HOLD => 4,
+            self::EN_PRODUCCION,
+            self::ARCHIVED => 5,
+        };
+    }
+
+    public function phaseLabel(): string
+    {
+        return match ($this->phase()) {
+            1 => __('Entrada'),
+            2 => __('Diseño'),
+            3 => __('Revisión'),
+            4 => __('Cliente'),
+            default => __('Producción'),
+        };
+    }
+
     public function shortLabel(): string
     {
         return match ($this) {

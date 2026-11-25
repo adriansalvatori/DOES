@@ -1,6 +1,10 @@
+{{--
+    The WO tag: the order's fixed identifier. Always black with bold white text, wherever a work order appears.
+    `variant` is accepted for backwards compatibility but every variant renders the same black tag.
+--}}
 @props([
     'number' => null,
-    'variant' => 'dark', // 'dark', 'light', 'outline', 'amber'
+    'variant' => 'dark',
     'prefix' => '',
     'showCopyIcon' => false,
 ])
@@ -22,13 +26,7 @@
         "
         title="{{ __('Clic para copiar WO ') . ($cleanNumber ?: $rawNumber) }}"
         {{ $attributes->merge([
-            'class' => 'font-mono inline-flex items-center gap-1 cursor-pointer transition select-none group/wobadge ' . (
-                $variant === 'dark' ? 'px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold bg-stone-900 hover:bg-black text-white shrink-0 whitespace-nowrap shadow-2xs' :
-                ($variant === 'light' ? 'px-1.5 py-0.2 rounded text-[10px] font-bold bg-stone-200 hover:bg-stone-300 text-zinc-700 shrink-0 whitespace-nowrap' :
-                ($variant === 'outline' ? 'px-1.5 py-0.2 rounded text-[10px] font-bold bg-stone-100 hover:bg-stone-200 border border-stone-200 text-zinc-700 shrink-0 whitespace-nowrap' :
-                ($variant === 'amber' ? 'font-mono bg-white hover:bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300 text-amber-950 font-bold shadow-2xs' :
-                'px-1.5 py-0.5 rounded text-[10px] font-bold bg-stone-800 text-white shrink-0')))
-            )
+            'class' => 'font-sans tabular-nums inline-flex items-center gap-1 cursor-pointer transition select-none group/wobadge px-1.5 py-0.5 rounded text-xs leading-4 font-bold bg-wo hover:bg-black text-white shrink-0 whitespace-nowrap',
         ]) }}
     >
         <span>{{ $prefix }}{{ $rawNumber }}</span>
