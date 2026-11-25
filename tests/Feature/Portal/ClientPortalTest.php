@@ -2,13 +2,19 @@
 
 namespace Tests\Feature\Portal;
 
+use App\Domain\Delivery\Enums\BlockReason;
+use App\Domain\Delivery\Enums\DeliverableStatus;
+use App\Domain\Delivery\Models\Block;
+use App\Domain\Delivery\Models\Deliverable;
+use App\Domain\Delivery\Models\Phase;
+use App\Domain\Delivery\Models\Receipt;
+use App\Domain\Delivery\Models\WorkOrder;
 use App\Enums\CoreStatus;
 use App\Enums\UserRole;
 use App\Livewire\Clients\ClientFlyoutPanel;
 use App\Livewire\Portal\ClientPortal;
 use App\Livewire\Settings\UserManagement;
 use App\Models\Client;
-use App\Models\Designer;
 use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\Setting;
@@ -16,6 +22,7 @@ use App\Models\User;
 use App\Services\ClientTimelineService;
 use App\Services\QrCodeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -43,7 +50,7 @@ class ClientPortalTest extends TestCase
         $response = $this->get('/c/'.$client->portal_token);
 
         $response->assertStatus(200);
-        $response->assertSee('FUERZA LATINA');
+        $response->assertSee('Fuerza Latina');
         $response->assertSee('Live tracking');
     }
 
@@ -55,100 +62,99 @@ class ClientPortalTest extends TestCase
         $response->assertSee('Invalid link or QR code');
     }
 
-    public function test_client_portal_displays_active_orders_and_filters(): void
+    public function test_client_portal_is_organized_by_work_order_phase_and_deliverable(): void
     {
-        $client = Client::create([
-            'name' => 'Fuerza Latina',
+        $client = Client::create(['name' => 'Fuerza Latina']);
+        $workOrder = WorkOrder::factory()->create(['client_id' => $client->id, 'number' => 'WO 16362', 'description' => 'Gainesville storefront', 'promised_date' => '2026-12-15']);
+        $phase = Phase::factory()->create(['work_order_id' => $workOrder->id, 'name' => 'Phase one', 'position' => 1]);
+        Deliverable::factory()->inStatus(DeliverableStatus::CLIENT_REVIEW)->create([
+            'work_order_id' => $workOrder->id, 'phase_id' => $phase->id, 'task_name' => 'ROLLUP BANNER GAINESVILLE', 'due_target' => '2026-12-10',
         ]);
-
-        $order1 = Order::create([
-            'client_id' => $client->id,
-            'company_name' => 'FUERZA LATINA',
-            'task_name' => 'ROLLUP BANNER GAINESVILLE',
-            'wo_number' => 'WO 16362',
-            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
-            'in_workspace' => true,
+        $produced = Deliverable::factory()->inStatus(DeliverableStatus::IN_PRODUCTION)->create([
+            'work_order_id' => $workOrder->id, 'phase_id' => $phase->id, 'task_name' => 'WINDOW GRAPHICS',
         ]);
+        Deliverable::factory()->inStatus(DeliverableStatus::FULFILLMENT)->create(['work_order_id' => $workOrder->id, 'task_name' => 'DOOR VINYL']);
+        Receipt::factory()->create(['deliverable_id' => $produced->id, 'received_at' => '2026-11-20 10:00:00']);
 
-        $order2 = Order::create([
-            'client_id' => $client->id,
-            'company_name' => 'FUERZA LATINA',
-            'task_name' => 'WINDOW GRAPHICS',
-            'wo_number' => 'WO 16227',
-            'core_status' => CoreStatus::EN_PRODUCCION,
-            'in_workspace' => true,
-        ]);
+        $oldWorkOrder = WorkOrder::factory()->create(['client_id' => $client->id, 'number' => 'WO 15000']);
+        Deliverable::factory()->done()->create(['work_order_id' => $oldWorkOrder->id, 'task_name' => 'OLD ARCHIVED PROJECT', 'closed_at' => now()->subDays(90)]);
 
-        // Archived order should not appear
-        $order3 = Order::create([
-            'client_id' => $client->id,
-            'company_name' => 'FUERZA LATINA',
-            'task_name' => 'OLD ARCHIVED PROJECT',
-            'wo_number' => 'WO 15000',
-            'core_status' => CoreStatus::ARCHIVED,
-            'in_workspace' => true,
-        ]);
-
-        Livewire::test(ClientPortal::class, ['token' => $client->portal_token])
-            ->assertSee('ROLLUP BANNER GAINESVILLE')
+        $this->get('/c/'.$client->portal_token)
+            ->assertOk()
             ->assertSee('WO 16362')
-            ->assertSee('Waiting for your response')
-            ->assertSee('WINDOW GRAPHICS')
-            ->assertSee(__('In Production'))
-            ->assertDontSee('OLD ARCHIVED PROJECT');
+            ->assertSee('Gainesville storefront')
+            ->assertSee('Phase one')
+            ->assertSee('ROLLUP BANNER GAINESVILLE')
+            ->assertSee('Waiting for your review')
+            ->assertSee('Dec 15, 2026')
+            ->assertSee('Dec 10, 2026')
+            ->assertSee('In production')
+            ->assertSee('Received Nov 20, 2026')
+            ->assertSee('Ready for delivery or pickup')
+            ->assertSee('Not received yet')
+            ->assertDontSee('OLD ARCHIVED PROJECT')
+            ->assertDontSee('WO 15000');
     }
 
-    public function test_client_portal_can_select_order_and_view_compact_timeline(): void
+    public function test_client_portal_never_shows_another_clients_work_orders_or_internal_blocks(): void
     {
-        $client = Client::create([
-            'name' => 'Fuerza Latina',
-        ]);
+        $client = Client::create(['name' => 'Fuerza Latina']);
+        $other = Client::create(['name' => 'Other Client']);
+        $mine = WorkOrder::factory()->create(['client_id' => $client->id, 'number' => 'WO 111']);
+        $theirs = WorkOrder::factory()->create(['client_id' => $other->id, 'number' => 'WO 222']);
+        $blocked = Deliverable::factory()->inStatus(DeliverableStatus::IN_DESIGN)->create(['work_order_id' => $mine->id, 'task_name' => 'BLOCKED ITEM']);
+        Block::factory()->create(['deliverable_id' => $blocked->id, 'reason' => BlockReason::MISSING_LOGO]);
+        Deliverable::factory()->create(['work_order_id' => $theirs->id, 'task_name' => 'THEIR SECRET']);
 
-        $order = Order::create([
-            'client_id' => $client->id,
-            'company_name' => 'FUERZA LATINA',
-            'task_name' => 'PARTIAL WRAP BLACK TRUCK',
-            'wo_number' => 'WO 16289',
-            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
-            'in_workspace' => true,
-        ]);
+        $this->get('/c/'.$client->portal_token)
+            ->assertSee('WO 111')
+            ->assertSee('In design')
+            ->assertDontSee('Missing logo')
+            ->assertDontSee('WO 222')
+            ->assertDontSee('THEIR SECRET');
+    }
 
-        OrderEvent::create([
-            'order_id' => $order->id,
-            'event_type' => 'ORDER_CREATED',
-            'actor' => 'Sistema',
-            'previous_value' => null,
-            'new_value' => 'FUERZA LATINA',
-            'created_at' => now()->subDays(5),
-        ]);
+    public function test_client_portal_renders_in_the_requested_language(): void
+    {
+        $client = Client::create(['name' => 'Fuerza Latina']);
+        $workOrder = WorkOrder::factory()->create(['client_id' => $client->id, 'promised_date' => '2026-12-15']);
+        Deliverable::factory()->inStatus(DeliverableStatus::CLIENT_REVIEW)->create(['work_order_id' => $workOrder->id]);
 
-        OrderEvent::create([
-            'order_id' => $order->id,
-            'event_type' => 'ORDER_SENT_TO_CLIENT',
-            'actor' => 'Disenador',
-            'previous_value' => null,
-            'new_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
-            'created_at' => now()->subDays(3),
-        ]);
+        $this->get('/c/'.$client->portal_token.'?lang=es')
+            ->assertOk()
+            ->assertSee(trans('Waiting for your review', [], 'es'))
+            ->assertSee(trans('Promised for', [], 'es'))
+            ->assertSee('15 de dic. de 2026');
 
-        OrderEvent::create([
-            'order_id' => $order->id,
-            'event_type' => 'SUBTASK_COMPLETED',
-            'actor' => 'Disenador',
-            'previous_value' => null,
-            'new_value' => 'Ajustes cliente',
-            'created_at' => now()->subDays(2),
-        ]);
+        $this->get('/c/'.$client->portal_token.'?lang=en')->assertSee('Waiting for your review');
+    }
+
+    public function test_client_portal_keeps_the_token_mechanism_and_query_count_is_small(): void
+    {
+        $client = Client::create(['name' => 'Fuerza Latina']);
+        foreach (range(1, 5) as $index) {
+            $workOrder = WorkOrder::factory()->create(['client_id' => $client->id]);
+            Deliverable::factory()->count(4)->create(['work_order_id' => $workOrder->id]);
+        }
+
+        DB::enableQueryLog();
+        $this->get('/c/'.$client->portal_token)->assertOk();
+        $queries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertLessThanOrEqual(15, $queries);
+        $this->get('/c/not-a-token')->assertOk()->assertSee('Invalid link or QR code');
+    }
+
+    public function test_portal_links_to_customer_service_whatsapp(): void
+    {
+        Setting::set('cs_whatsapp_phone', '+16783580594');
+        $client = Client::create(['name' => 'Fuerza Latina']);
 
         Livewire::test(ClientPortal::class, ['token' => $client->portal_token])
-            ->call('selectOrder', $order->id)
-            ->assertSet('selectedOrderId', $order->id)
-            ->assertSee('Order timeline')
-            ->assertSee('Order received and started')
-            ->assertSee('Design sent for your review')
-            ->assertSee('Changes / comments received')
-            ->call('closeOrder')
-            ->assertSet('selectedOrderId', null);
+            ->assertSee('+1 (678) 358-0594')
+            ->assertSeeHtml('https://wa.me/16783580594?text=')
+            ->assertSee('cs@kudosprintmedia.com');
     }
 
     public function test_client_flyout_panel_displays_qr_and_portal_link(): void
@@ -231,43 +237,5 @@ class ClientPortalTest extends TestCase
             ->assertSee('Customer service WhatsApp number updated.');
 
         $this->assertEquals('+1 (678) 999-8877', Setting::get('cs_whatsapp_phone'));
-    }
-
-    public function test_portal_displays_cs_whatsapp_and_designer_chat_buttons(): void
-    {
-        Setting::set('cs_whatsapp_phone', '+16783580594');
-
-        $client = Client::create(['name' => 'Fuerza Latina']);
-
-        $designerUser = User::factory()->create([
-            'name' => 'Euraliz Disenadora',
-            'phone' => '+1 (555) 123-4567',
-        ]);
-
-        $designer = Designer::create([
-            'name' => 'Euraliz',
-            'user_id' => $designerUser->id,
-            'active' => true,
-        ]);
-
-        $order = Order::create([
-            'client_id' => $client->id,
-            'company_name' => 'Fuerza Latina',
-            'task_name' => 'Wrap Design',
-            'wo_number' => 'WO 999',
-            'designer_id' => $designer->id,
-            'core_status' => CoreStatus::ENVIADO_AL_CLIENTE,
-            'in_workspace' => true,
-        ]);
-
-        Livewire::test(ClientPortal::class, ['token' => $client->portal_token])
-            ->call('selectOrder', $order->id)
-            ->assertSee('Chat with Customer Service')
-            ->assertSee('+1 (678) 358-0594')
-            ->assertSee('Chat with Euraliz, your designer')
-            ->assertSee('+1 (555) 123-4567')
-            ->assertSee('5555 Oakborook Pkwy')
-            ->assertSee('+1 (770) 696-4048 Ext. 301')
-            ->assertSee('cs@kudosprintmedia.com');
     }
 }

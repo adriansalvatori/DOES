@@ -73,7 +73,7 @@ class LanguageSettingsTest extends TestCase
         $response = $this->actingAs($user)->get('/kanban');
         $response->assertStatus(200);
         $response->assertSee('Kanban Board');
-        $response->assertSee(__('New Order'));
+        $response->assertSee(__('New work order'));
 
         $responseTrash = $this->get('/trash');
         $responseTrash->assertStatus(200);

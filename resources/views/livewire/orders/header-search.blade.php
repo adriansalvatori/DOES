@@ -1,6 +1,6 @@
 {{--
-    ⌘K command palette. The top bar shows a search-style trigger and "Nueva Orden".
-    ⌘K / Ctrl+K or a click opens the palette: live order and client search (server-side),
+    ⌘K command palette. The top bar shows a search-style trigger and "New work order".
+    ⌘K / Ctrl+K or a click opens the palette: live work order, deliverable and client search (server-side),
     "Ir a" destinations from NavigationService (filtered in the browser) and quick actions.
     Keyboard: ↑ ↓ move, Enter opens, Esc closes. Tab moves focus normally inside the dialog.
 --}}
@@ -58,11 +58,11 @@
 
     <button
         type="button"
-        @click="$dispatch('open-create-order')"
+        @click="$dispatch('open-create-work-order')"
         class="ui-btn ui-btn-primary"
-        title="{{ __('New Order') }}">
+        title="{{ __('New work order') }}">
         <x-lucide-plus aria-hidden="true" />
-        <span class="hidden sm:inline">{{ __('New Order') }}</span>
+        <span class="hidden sm:inline">{{ __('New work order') }}</span>
     </button>
 
     <!-- Palette dialog -->
@@ -96,7 +96,7 @@
                     @keydown.arrow-down.prevent="move(1)"
                     @keydown.arrow-up.prevent="move(-1)"
                     @keydown.enter.prevent="activate()"
-                    placeholder="{{ __('WO, client, contact or section…') }}"
+                    placeholder="{{ __('WO, client, deliverable or section…') }}"
                     autocomplete="off"
                     spellcheck="false"
                     class="flex-1 h-12 bg-transparent text-row text-ink placeholder:text-ink-3 focus:outline-none"
@@ -110,34 +110,66 @@
             <div x-ref="list" class="overflow-y-auto p-1.5 space-y-3 custom-vertical-scrollbar" role="listbox">
                 @php $hasQuery = mb_strlen(trim($search)) >= 1; @endphp
 
-                @if($hasQuery && count($results) > 0)
+                @if($hasQuery && count($workOrders) > 0)
                     <div>
-                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Orders') }}</p>
-                        @foreach($results as $order)
-                            <div
-                                wire:key="palette-order-{{ $order->id }}"
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Work orders') }}</p>
+                        @foreach($workOrders as $workOrder)
+                            <a
+                                wire:key="palette-wo-{{ $workOrder->id }}"
+                                href="{{ route('v2.work-orders.show', $workOrder) }}"
+                                wire:navigate
                                 data-palette-item
                                 role="option"
                                 tabindex="-1"
                                 :aria-selected="isSelected($el).toString()"
                                 :class="isSelected($el) ? 'bg-sunken' : ''"
                                 @mouseenter="selectedIndex = items().indexOf($el)"
-                                @click="$wire.selectOrder({{ $order->id }}); open = false; query = ''"
+                                @click="closePalette()"
                                 class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
                             >
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-2 min-w-0">
-                                        @if($order->wo_number)
-                                            <x-wo-badge :number="$order->wo_number" />
+                                        @if($workOrder->number)
+                                            <x-wo-badge :number="$workOrder->number" />
                                         @endif
-                                        <span class="text-row font-medium text-ink truncate">{{ $order->company_name }}</span>
-                                        <x-orders.location :location="$order->location_text" class="shrink-0" />
+                                        <span class="text-row font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder->client?->name) }}</span>
+                                        <x-orders.location :location="\App\Support\TitleCase::from($workOrder->clientLocation?->name)" class="shrink-0" />
                                     </div>
-                                    <p class="text-body text-ink-2 truncate">{{ $order->task_name }}</p>
+                                    @if($workOrder->description)
+                                        <p class="text-body text-ink-2 truncate">{{ $workOrder->description }}</p>
+                                    @endif
                                 </div>
-                                <x-orders.stage :status="$order->core_status" :show-label="false" class="shrink-0" />
-                                @php $designer = $order->primary_designer; @endphp
-                                <x-ui.person :person="$designer" size="sm" class="shrink-0" />
+                                <span class="text-meta text-ink-3 shrink-0">{{ trans_choice(':count deliverable|:count deliverables', $workOrder->deliverables_count, ['count' => $workOrder->deliverables_count]) }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if($hasQuery && count($deliverables) > 0)
+                    <div>
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Deliverables') }}</p>
+                        @foreach($deliverables as $deliverable)
+                            <div
+                                wire:key="palette-deliverable-{{ $deliverable->id }}"
+                                data-palette-item
+                                role="option"
+                                tabindex="-1"
+                                :aria-selected="isSelected($el).toString()"
+                                :class="isSelected($el) ? 'bg-sunken' : ''"
+                                @mouseenter="selectedIndex = items().indexOf($el)"
+                                @click="open = false; query = ''; $wire.selectDeliverable({{ $deliverable->id }})"
+                                class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
+                            >
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-2 min-w-0">
+                                        @if($deliverable->workOrder?->number)
+                                            <x-wo-badge :number="$deliverable->workOrder->number" />
+                                        @endif
+                                        <span class="text-row font-medium text-ink truncate">{{ $deliverable->task_name }}</span>
+                                    </div>
+                                    <p class="text-body text-ink-2 truncate">{{ \App\Support\TitleCase::from($deliverable->workOrder?->client?->name) }}</p>
+                                </div>
+                                <span class="text-meta text-ink-3 shrink-0">{{ $deliverable->status?->label() }}</span>
                             </div>
                         @endforeach
                     </div>
@@ -155,18 +187,15 @@
                                 :aria-selected="isSelected($el).toString()"
                                 :class="isSelected($el) ? 'bg-sunken' : ''"
                                 @mouseenter="selectedIndex = items().indexOf($el)"
-                                @click="$wire.selectClient({{ $client->id }}); open = false; query = ''"
+                                @click="open = false; query = ''; $wire.selectClient({{ $client->id }})"
                                 class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
                             >
                                 <span class="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-sunken text-ink-2">
                                     <x-lucide-building-2 class="w-4 h-4" aria-hidden="true" />
                                 </span>
                                 <div class="min-w-0 flex-1">
-                                    <p class="text-row font-medium text-ink truncate">{{ $client->name }}</p>
-                                    <p class="text-meta text-ink-3 truncate">
-                                        {{ trans_choice(':count active order|:count active orders', $client->active_orders_count, ['count' => $client->active_orders_count]) }}
-                                        @if($client->primaryContact) · {{ $client->primaryContact->name }} @endif
-                                    </p>
+                                    <p class="text-row font-medium text-ink truncate">{{ \App\Support\TitleCase::from($client->name) }}</p>
+                                    <p class="text-meta text-ink-3 truncate">{{ trans_choice(':count active order|:count active orders', $client->active_orders_count, ['count' => $client->active_orders_count]) }}</p>
                                 </div>
                             </div>
                         @endforeach
@@ -174,7 +203,7 @@
                 @endif
 
                 <!-- Quick actions -->
-                <div x-show="matches(@js(mb_strtolower(__('New Order') . ' crear')))">
+                <div x-show="matches(@js(mb_strtolower(__('New work order') . ' crear')))">
                     <p class="px-2 py-1 text-meta text-ink-3">{{ __('Actions') }}</p>
                     <div
                         data-palette-item
@@ -183,13 +212,13 @@
                         :aria-selected="isSelected($el).toString()"
                         :class="isSelected($el) ? 'bg-sunken' : ''"
                         @mouseenter="selectedIndex = items().indexOf($el)"
-                        @click="closePalette(); $dispatch('open-create-order')"
+                        @click="closePalette(); $dispatch('open-create-work-order')"
                         class="flex items-center gap-3 px-2 py-2 rounded-control cursor-pointer"
                     >
                         <span class="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-ink text-white">
                             <x-lucide-plus class="w-4 h-4" aria-hidden="true" />
                         </span>
-                        <span class="text-row text-ink">{{ __('New Order') }}</span>
+                        <span class="text-row text-ink">{{ __('New work order') }}</span>
                     </div>
                 </div>
 
@@ -221,7 +250,7 @@
                     </div>
                 @endforeach
 
-                @if($hasQuery && count($results) === 0 && count($clientResults) === 0)
+                @if($hasQuery && count($workOrders) === 0 && count($deliverables) === 0 && count($clientResults) === 0)
                     <p class="px-2 py-6 text-center text-body text-ink-3" x-show="items().length === 0">
                         {{ __('No results for “:query”.', ['query' => trim($search)]) }}
                     </p>

@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Settings;
 
+use App\Application\Delivery\Queries\BoardLimits;
 use App\Enums\UserRole;
 use App\Models\Designer;
 use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -31,6 +33,12 @@ class UserManagement extends Component
     public ?int $designer_id = null;
 
     public bool $active = true;
+
+    public bool $is_reviewer = false;
+
+    public bool $is_lead = false;
+
+    public int $wip_limit = 4;
 
     public string $password = '';
 
@@ -97,7 +105,9 @@ class UserManagement extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['editingUserId', 'name', 'email', 'phone', 'role', 'designer_id', 'password', 'active']);
+        $this->reset(['editingUserId', 'name', 'email', 'phone', 'role', 'designer_id', 'password', 'active', 'is_reviewer', 'is_lead']);
+        $this->wip_limit = app(BoardLimits::class)->defaultWipLimit();
+        $this->resetValidation();
         $this->role = UserRole::DESIGNER->value;
         $this->active = true;
         $this->changePassword = true;
@@ -113,6 +123,10 @@ class UserManagement extends Component
         $this->phone = $user->phone ?? ($user->designer?->phone ?? '');
         $this->role = $user->role->value;
         $this->active = $user->active;
+        $this->is_reviewer = (bool) $user->is_reviewer;
+        $this->is_lead = (bool) $user->is_lead;
+        $this->wip_limit = (int) ($user->wip_limit ?? app(BoardLimits::class)->defaultWipLimit());
+        $this->resetValidation();
         $this->designer_id = $user->designer?->id;
         $this->password = '';
         $this->changePassword = false;
@@ -125,7 +139,10 @@ class UserManagement extends Component
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$this->editingUserId,
             'phone' => 'nullable|string|max:50',
-            'role' => 'required|string',
+            'role' => ['required', Rule::enum(UserRole::class)],
+            'is_reviewer' => 'boolean',
+            'is_lead' => 'boolean',
+            'wip_limit' => 'required|integer|min:1|max:50',
             'active' => 'boolean',
             'designer_id' => 'nullable|integer|exists:designers,id',
         ];
@@ -146,6 +163,9 @@ class UserManagement extends Component
                 'phone' => $cleanPhone,
                 'role' => $this->role,
                 'active' => $this->active,
+                'is_reviewer' => $this->is_reviewer,
+                'is_lead' => $this->is_lead,
+                'wip_limit' => $this->wip_limit,
             ]);
 
             if ($this->changePassword && ! empty($this->password)) {
@@ -159,6 +179,9 @@ class UserManagement extends Component
                 'password' => Hash::make($this->password),
                 'role' => $this->role,
                 'active' => $this->active,
+                'is_reviewer' => $this->is_reviewer,
+                'is_lead' => $this->is_lead,
+                'wip_limit' => $this->wip_limit,
             ]);
         }
 

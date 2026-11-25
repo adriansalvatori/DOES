@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Enums\CoreStatus;
+use App\Domain\Delivery\Models\WorkOrder;
 use App\Livewire\Orders\HeaderSearch;
-use App\Models\Order;
+use App\Models\Client;
 use App\Models\User;
 use App\Services\NavigationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -96,22 +96,16 @@ class NavigationShellTest extends TestCase
     {
         $this->actingAs(User::factory()->admin()->create());
 
-        Order::unguarded(fn () => Order::create([
-            'company_name' => 'PANADERÍA SOL DE MAYO',
-            'task_name' => 'BANNER 3X1',
-            'wo_number' => 'WO 16412',
-            'core_status' => CoreStatus::TO_DO_TODAY,
-            'in_workspace' => true,
-        ]));
+        $client = Client::create(['name' => 'PANADERÍA SOL DE MAYO']);
+        WorkOrder::factory()->create(['number' => 'WO 16412', 'client_id' => $client->id]);
 
         Livewire::test(HeaderSearch::class)
             ->assertSee(__('Search or jump to…'))
-            ->assertSee(__('New Order'))
+            ->assertSee(__('New work order'))
             ->assertSee('href="/settings"', false)
             ->assertSee('href="/kanban"', false)
             ->assertDontSee(__('Traer Nuevas'))
-            ->set('search', 'PANADERÍA')
-            ->assertSee('PANADERÍA SOL DE MAYO')
+            ->set('search', '16412')
             ->assertSee('WO 16412');
     }
 

@@ -31,6 +31,7 @@ class WorkOrderListQuery
             ->tap(fn (Builder $query) => WorkOrderTabExpression::whereTab($query, $tab))
             ->with(['client', 'clientLocation'])
             ->withCount([
+                'phases as phases_count',
                 'deliverables as deliverables_count',
                 'deliverables as open_count' => fn (Builder $deliverables) => $deliverables->active(),
                 'deliverables as approved_count' => fn (Builder $deliverables) => $deliverables->whereHas(

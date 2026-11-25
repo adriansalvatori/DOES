@@ -2,127 +2,124 @@
 
 namespace App\Livewire\Portal;
 
-use App\Enums\CoreStatus;
+use App\Domain\Delivery\Enums\CloseReason;
+use App\Domain\Delivery\Enums\DeliverableStatus;
+use App\Domain\Delivery\Models\Deliverable;
+use App\Domain\Delivery\Models\WorkOrder;
 use App\Models\Client;
 use App\Models\Setting;
-use App\Services\ClientTimelineService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\App;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
+/**
+ * Public, read-only client portal (/c/{token}): work order, then phase, then deliverables with a client-friendly status,
+ * the promised date and the receipt status. Renders in `?lang=` or the visitor's default locale.
+ */
 class ClientPortal extends Component
 {
+    public const RECENT_DAYS = 30;
+
+    public const MAX_WORK_ORDERS = 30;
+
     public string $token = '';
 
-    public ?int $selectedOrderId = null;
-
-    public string $search = '';
-
-    public string $statusFilter = 'all';
+    #[Url(as: 'lang')]
+    public string $lang = '';
 
     public bool $clientNotFound = false;
 
     public function mount(string $token): void
     {
         $this->token = trim($token);
-        $client = Client::where('portal_token', $this->token)->first();
+        $this->clientNotFound = ! Client::where('portal_token', $this->token)->exists();
+        $this->applyLocale();
+    }
+
+    public function hydrate(): void
+    {
+        $this->applyLocale();
+    }
+
+    /**
+     * Client-friendly status of a deliverable. Blocks stay internal: the client sees the stage the work is in.
+     */
+    public static function customerStatus(Deliverable $deliverable): string
+    {
+        if ($deliverable->openHold !== null) {
+            return __('On hold');
+        }
+
+        return match ($deliverable->status) {
+            DeliverableStatus::INTAKE, DeliverableStatus::READY => __('Received'),
+            DeliverableStatus::IN_DESIGN, DeliverableStatus::INTERNAL_REVIEW => __('In design'),
+            DeliverableStatus::CLIENT_REVIEW => __('Waiting for your review'),
+            DeliverableStatus::PRODUCTION_FILES,
+            DeliverableStatus::READY_FOR_PRODUCTION,
+            DeliverableStatus::PRODUCTION_QUEUE => __('Preparing for production'),
+            DeliverableStatus::IN_PRODUCTION, DeliverableStatus::PRODUCED => __('In production'),
+            DeliverableStatus::FULFILLMENT => __('Ready for delivery or pickup'),
+            DeliverableStatus::DONE => $deliverable->close_reason === null || $deliverable->close_reason === CloseReason::COMPLETED
+                ? __('Completed')
+                : __('Closed'),
+            default => __('In progress'),
+        };
+    }
+
+    /**
+     * Whether the status needs an answer from the client.
+     */
+    public static function needsClientAction(Deliverable $deliverable): bool
+    {
+        return $deliverable->status === DeliverableStatus::CLIENT_REVIEW && $deliverable->openHold === null;
+    }
+
+    public function render(): View
+    {
+        $layout = 'components.layouts.portal';
+
+        $client = $this->clientNotFound ? null : Client::where('portal_token', $this->token)->with(['locations'])->first();
 
         if (! $client) {
-            $this->clientNotFound = true;
-        }
-    }
-
-    public function selectOrder(int $orderId): void
-    {
-        $this->selectedOrderId = $orderId;
-    }
-
-    public function closeOrder(): void
-    {
-        $this->selectedOrderId = null;
-    }
-
-    public function setFilter(string $filter): void
-    {
-        $this->statusFilter = $filter;
-    }
-
-    public function render()
-    {
-        if ($this->clientNotFound) {
             return view('livewire.portal.client-portal-not-found')
-                ->layout('components.layouts.portal', ['title' => __('Link not found · Kudos')]);
+                ->layout($layout, ['title' => __('Link not found · Kudos')]);
         }
 
-        $client = Client::where('portal_token', $this->token)
-            ->with(['locations', 'contacts'])
-            ->first();
+        $recentSince = now()->subDays(self::RECENT_DAYS);
 
-        if (! $client) {
-            return view('livewire.portal.client-portal-not-found')
-                ->layout('components.layouts.portal', ['title' => __('Link not found · Kudos')]);
-        }
-
-        $timelineService = app(ClientTimelineService::class);
-        $csPhone = Setting::get('cs_whatsapp_phone', '+16783580594');
-
-        $query = $client->activeOrders()
-            ->with(['clientLocation', 'designer.user', 'designers.user', 'events'])
-            ->orderByDesc('updated_at');
-
-        if (! empty(trim($this->search))) {
-            $s = trim($this->search);
-            $query->where(function ($q) use ($s) {
-                $q->where('wo_number', 'like', "%{$s}%")
-                    ->orWhere('task_name', 'like', "%{$s}%")
-                    ->orWhere('trello_title', 'like', "%{$s}%")
-                    ->orWhere('location_name', 'like', "%{$s}%");
-            });
-        }
-
-        if ($this->statusFilter === 'review') {
-            $query->where('core_status', CoreStatus::ENVIADO_AL_CLIENTE);
-        } elseif ($this->statusFilter === 'production') {
-            $query->where('core_status', CoreStatus::EN_PRODUCCION);
-        } elseif ($this->statusFilter === 'hold') {
-            $query->where('core_status', CoreStatus::ON_HOLD);
-        } elseif ($this->statusFilter === 'design') {
-            $query->whereNotIn('core_status', [CoreStatus::ENVIADO_AL_CLIENTE, CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD]);
-        }
-
-        $orders = $query->get();
-
-        $selectedOrder = null;
-        $selectedTimeline = collect();
-        $selectedStatus = null;
-
-        if ($this->selectedOrderId) {
-            $selectedOrder = $client->activeOrders()
-                ->with(['clientLocation', 'designer.user', 'designers.user', 'events'])
-                ->find($this->selectedOrderId);
-
-            if ($selectedOrder) {
-                $selectedTimeline = $timelineService->getClientTimeline($selectedOrder);
-                $selectedStatus = $timelineService->getCustomerStatus($selectedOrder);
-            }
-        }
-
-        $allCount = $client->activeOrders()->count();
-        $reviewCount = $client->activeOrders()->where('core_status', CoreStatus::ENVIADO_AL_CLIENTE)->count();
-        $productionCount = $client->activeOrders()->where('core_status', CoreStatus::EN_PRODUCCION)->count();
-        $holdCount = $client->activeOrders()->where('core_status', CoreStatus::ON_HOLD)->count();
+        $workOrders = WorkOrder::query()
+            ->where('client_id', $client->id)
+            ->where('in_backlog', false)
+            ->whereHas('deliverables', fn ($deliverables) => $deliverables
+                ->where(fn ($open) => $open
+                    ->where('status', '!=', DeliverableStatus::DONE->value)
+                    ->orWhere('closed_at', '>=', $recentSince)))
+            ->with([
+                'clientLocation',
+                'phases' => fn ($phases) => $phases->orderBy('position'),
+                'deliverables' => fn ($deliverables) => $deliverables
+                    ->with(['receipts', 'openHold'])
+                    ->orderByRaw('due_target IS NULL')
+                    ->orderBy('due_target')
+                    ->orderBy('id'),
+            ])
+            ->latest('id')
+            ->limit(self::MAX_WORK_ORDERS)
+            ->get();
 
         return view('livewire.portal.client-portal', [
             'client' => $client,
-            'orders' => $orders,
-            'selectedOrder' => $selectedOrder,
-            'selectedTimeline' => $selectedTimeline,
-            'selectedStatus' => $selectedStatus,
-            'timelineService' => $timelineService,
-            'csPhone' => $csPhone,
-            'allCount' => $allCount,
-            'reviewCount' => $reviewCount,
-            'productionCount' => $productionCount,
-            'holdCount' => $holdCount,
-        ])->layout('components.layouts.portal', ['title' => __('My Orders · :name', ['name' => $client->name])]);
+            'workOrders' => $workOrders,
+            'csPhone' => Setting::get('cs_whatsapp_phone', '+16783580594'),
+        ])->layout($layout, ['title' => __('My Orders · :name', ['name' => $client->name])]);
+    }
+
+    private function applyLocale(): void
+    {
+        if (in_array($this->lang, ['en', 'es'], true)) {
+            App::setLocale($this->lang);
+        }
     }
 
     public static function formatDisplayPhone(?string $phone): string

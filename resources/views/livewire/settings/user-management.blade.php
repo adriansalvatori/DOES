@@ -135,7 +135,16 @@
                             </div>
                         </td>
                         <td class="py-3 px-4">
-                            <x-ui.tag tone="neutral">{{ $u->role->label() }}</x-ui.tag>
+                            <div class="flex flex-wrap items-center gap-1">
+                                <x-ui.tag tone="neutral">{{ $u->role->label() }}</x-ui.tag>
+                                @if($u->is_reviewer)
+                                    <x-ui.tag tone="neutral">{{ __('Reviewer') }}</x-ui.tag>
+                                @endif
+                                @if($u->is_lead)
+                                    <x-ui.tag tone="neutral">{{ __('Design lead') }}</x-ui.tag>
+                                @endif
+                                <span class="text-meta text-ink-3" title="{{ __('WIP limit') }}">{{ __('WIP :count', ['count' => $u->wip_limit]) }}</span>
+                            </div>
                         </td>
                         <td class="py-3 px-4">
                             @if($u->designer)
@@ -232,6 +241,24 @@
                                 <option value="{{ $d->id }}">{{ $d->name }}</option>
                             @endforeach
                         </select>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input wire:model="is_reviewer" type="checkbox" class="rounded border-line-strong text-ink focus:ring-gold" />
+                            <span class="text-ink-2">{{ __('Reviewer') }}</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input wire:model="is_lead" type="checkbox" class="rounded border-line-strong text-ink focus:ring-gold" />
+                            <span class="text-ink-2">{{ __('Design lead') }}</span>
+                        </label>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-meta text-ink-2">{{ __('WIP limit') }}</label>
+                        <input wire:model="wip_limit" type="number" min="1" max="50" class="ui-input" />
+                        <p class="text-meta text-ink-3">{{ __('Cards this person can have in design at once.') }}</p>
+                        @error('wip_limit') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
                     </div>
 
                     @if($editingUserId)

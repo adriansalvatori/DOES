@@ -80,7 +80,24 @@ class ResolverQuery
 
         return $workOrder->contact?->phone
             ?: $workOrder->clientLocation?->phone
-            ?: ($workOrder->client?->phones[0] ?? null)
+            ?: $this->firstClientPhone($workOrder->client?->phones)
             ?: null;
+    }
+
+    /**
+     * Client phones are stored as a list of numbers or of {label, phone} entries.
+     *
+     * @param  list<string|array{label?: string, phone?: string}>|null  $phones
+     */
+    private function firstClientPhone(?array $phones): ?string
+    {
+        foreach ($phones ?? [] as $entry) {
+            $number = is_array($entry) ? ($entry['phone'] ?? null) : $entry;
+            if (filled($number)) {
+                return (string) $number;
+            }
+        }
+
+        return null;
     }
 }

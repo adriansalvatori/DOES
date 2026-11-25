@@ -2,13 +2,20 @@
 
 namespace App\Livewire\Notifications;
 
+use App\Application\Delivery\Queries\WorkflowLabels;
+use App\Domain\Delivery\Support\Roles;
 use App\Models\Order;
+use App\Models\User;
 use App\Notifications\SystemNotification;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class NotificationCenter extends Component
 {
+    public const LIST_LIMIT = 50;
+
     public bool $open = false;
 
     public array $knownNotificationIds = [];
@@ -18,7 +25,8 @@ class NotificationCenter extends Component
         $user = Auth::user();
         if ($user) {
             $this->knownNotificationIds = $user->notifications()
-                ->take(30)
+                ->latest()
+                ->limit(self::LIST_LIMIT)
                 ->pluck('id')
                 ->map(fn ($id) => (string) $id)
                 ->all();
@@ -37,7 +45,7 @@ class NotificationCenter extends Component
             $notification->markAsRead();
 
             if (isset($notification->data['order_id'])) {
-                $this->dispatch('open-order-detail', orderId: $notification->data['order_id']);
+                $this->dispatch('open-deliverable', deliverableId: (int) $notification->data['order_id']);
                 $this->open = false;
             }
         }
@@ -47,8 +55,55 @@ class NotificationCenter extends Component
     {
         $user = Auth::user();
         if ($user) {
-            $user->unreadNotifications->markAsRead();
+            $this->visibleNotifications($user)->whereNull('read_at')->update(['read_at' => now()]);
         }
+    }
+
+    /**
+     * Notifications the user may see: not their own actions, and for a designer only the cards assigned to them.
+     *
+     * @return Builder<DatabaseNotification>
+     */
+    private function visibleNotifications(User $user): Builder
+    {
+        $isLeadOrManager = Roles::isManager($user) || ($user->isDesigner() && $user->designer?->is_lead);
+
+        return DatabaseNotification::query()
+            ->where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->getKey())
+            ->where(fn (Builder $query) => $query
+                ->whereNull('data->actor_id')
+                ->orWhere('data->actor_id', '!=', $user->getKey()))
+            ->when($user->isDesigner() && ! $isLeadOrManager, fn (Builder $query) => $query
+                ->where(fn (Builder $assigned) => $assigned
+                    ->whereNull('data->order_id')
+                    ->orWhereIn('data->order_id', Order::query()->select('id')->where(fn (Builder $mine) => $mine
+                        ->where('assignee_id', $user->getKey())
+                        ->when($user->designer, fn (Builder $legacy) => $legacy->orWhere('designer_id', $user->designer->id))))));
+    }
+
+    /**
+     * The detail line in the reader's locale. A block reason stored as already rendered text is mapped back to its code.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function localizedDetail(array $data): ?string
+    {
+        $labels = app(WorkflowLabels::class);
+        $params = (array) ($data['detail_params'] ?? []);
+
+        if (isset($params['block_reason']) && is_string($params['block_reason'])) {
+            return $labels->label('block_reason', $params['block_reason']);
+        }
+
+        if (($data['event_type'] ?? '') === 'order_blocked' && is_string($params['reason'] ?? null)) {
+            $code = $labels->codeForLabel('block_reason', $params['reason']);
+            if ($code !== null) {
+                return $labels->label('block_reason', $code);
+            }
+        }
+
+        return SystemNotification::localizedDetail($data);
     }
 
     public function render()
@@ -62,40 +117,17 @@ class NotificationCenter extends Component
             ]);
         }
 
-        $isLeadOrManager = $user->isAdmin()
-            || $user->isCoordinator()
-            || ($user->isDesigner() && $user->designer?->is_lead);
+        $visible = $this->visibleNotifications($user);
+        $unreadCount = (clone $visible)->whereNull('read_at')->count();
 
-        $designerOrderIds = [];
-        if ($user->isDesigner() && $user->designer && ! $isLeadOrManager) {
-            $designerOrderIds = Order::where('designer_id', $user->designer->id)->pluck('id')->toArray();
-        }
-
-        // Fetch notifications
-        $allNotifications = $user->notifications()
+        $allNotifications = $visible
+            ->latest()
+            ->limit(self::LIST_LIMIT)
             ->get()
             ->each(function ($n): void {
                 $data = $n->data ?? [];
-                $data['detail_text'] = SystemNotification::localizedDetail($data);
+                $data['detail_text'] = $this->localizedDetail($data);
                 $n->data = $data;
-            })
-            ->filter(function ($n) use ($user, $isLeadOrManager, $designerOrderIds) {
-                $data = $n->data ?? [];
-
-                // Exclude if user is the actor
-                if (isset($data['actor_id']) && (int) $data['actor_id'] === (int) $user->id) {
-                    return false;
-                }
-
-                // If standard designer (not Lead or Manager), only show notifications for assigned orders
-                if (! $isLeadOrManager && $user->isDesigner()) {
-                    $orderId = $data['order_id'] ?? null;
-                    if ($orderId && ! in_array((int) $orderId, $designerOrderIds, true)) {
-                        return false;
-                    }
-                }
-
-                return true;
             });
 
         // Sort: Unread first, then Urgent / Overdue, then created_at DESC
@@ -115,9 +147,7 @@ class NotificationCenter extends Component
             }
 
             return $b->created_at <=> $a->created_at;
-        })->take(20);
-
-        $unreadCount = $allNotifications->whereNull('read_at')->count();
+        })->values();
 
         // Detect new incoming unread notifications not in knownNotificationIds
         $newIncoming = $allNotifications->filter(function ($n) {
