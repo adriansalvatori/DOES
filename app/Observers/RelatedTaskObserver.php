@@ -66,14 +66,16 @@ class RelatedTaskObserver
                         eventType: 'welcome_email_sent',
                         label: 'Email Sent',
                         order: $task->order,
-                        detailText: 'Correo de bienvenida'
+                        detailText: __('Welcome email'),
+                        detailKey: 'Welcome email'
                     );
                 } elseif ($task->type === RelatedTaskType::CORREO_ATRASO) {
                     NotificationDispatcher::dispatch(
                         eventType: 'overdue_email_sent',
                         label: 'Email Sent',
                         order: $task->order,
-                        detailText: 'Correo de atraso'
+                        detailText: __('Overdue email'),
+                        detailKey: 'Overdue email'
                     );
                 }
 
@@ -115,7 +117,7 @@ class RelatedTaskObserver
             OrderEvent::create([
                 'order_id' => $task->order_id,
                 'event_type' => 'SUBTASK_COMPLETED',
-                'actor' => auth()->user()?->name ?? ($task->assignee?->name ?? 'Usuario'),
+                'actor' => auth()->user()?->name ?? ($task->assignee?->name ?? __('User')),
                 'new_value' => $task->title,
                 'metadata' => [
                     'task_id' => $task->id,

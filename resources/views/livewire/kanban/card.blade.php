@@ -4,7 +4,7 @@
     $isDone = (bool) $order->done_today;
     $responsible = $order->display_responsible_person;
     $substatusLabel = ($order->substatus && $order->substatus->value !== 'URGENTE')
-        ? \Illuminate\Support\Str::ucfirst(\Illuminate\Support\Str::lower($order->substatus->value))
+        ? \Illuminate\Support\Str::ucfirst(\Illuminate\Support\Str::lower($order->substatus->label()))
         : null;
     $elementCount = $order->elements->count();
     $readyCount = $elementCount > 0 ? $order->elements->filter(fn ($element) => $element->isReadyForProduction())->count() : 0;
@@ -162,11 +162,11 @@
                             @click.stop
                             type="button"
                             class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-ok border-ok text-white' : 'border-line-strong hover:border-ok bg-surface text-transparent' }}"
-                            aria-label="{{ $task->title }}"
+                            aria-label="{{ $task->display_title }}"
                             aria-pressed="{{ $task->isDone() ? 'true' : 'false' }}">
                             <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                         </button>
-                        <span class="truncate {{ $task->isDone() ? 'ui-done' : 'text-ink' }}" title="{{ $task->title }}">{{ $task->title }}</span>
+                        <span class="truncate {{ $task->isDone() ? 'ui-done' : 'text-ink' }}" title="{{ $task->display_title }}">{{ $task->display_title }}</span>
                     </div>
                     <div class="flex items-center gap-1 shrink-0">
                         <span class="text-meta text-ink-3">{{ $task->type === \App\Enums\RelatedTaskType::SUBTASK ? __('Subtask') : __('Action') }}</span>

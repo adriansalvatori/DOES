@@ -311,7 +311,7 @@ class AutomationObserverNormalizationTest extends AutomationCharacterizationTest
 
         $notes = $this->notificationsOf($admin, 'order_approved_alta', $order);
         $this->assertCount(1, $notes);
-        $this->assertSame('Pendiente ALTA', $notes[0]['detail_text']);
+        $this->assertSame('Pending ALTA', $notes[0]['detail_text']);
     }
 
     public function test_urgent_substatus_notifies(): void

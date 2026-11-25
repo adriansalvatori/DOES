@@ -1015,7 +1015,7 @@
                             class="sticky top-0 left-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('production_processed_at')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Processed in production') }}">{{ __('Proc. prod.') }}</span>
+                                <span class="truncate" title="{{ __('Processed in production') }}">{{ __('Processed') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1037,7 +1037,7 @@
                             class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 pl-3 sm:pl-4 pr-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('wo_number')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="WO #">WO #</span>
+                                <span class="truncate" title="{{ __('WO #') }}">{{ __('WO #') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1585,7 +1585,7 @@
                                         @if($order->isOverdue())
                                             <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['danger'] }} shrink-0" title="{{ __('Overdue') }}">!</span>
                                         @elseif($order->isDueToday())
-                                            <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['warn'] }} shrink-0" title="{{ __('Due today') }}">PV</span>
+                                            <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['warn'] }} shrink-0" title="{{ __('Due today') }}">{{ __('DUE') }}</span>
                                         @endif
                                         <template x-for="fName in getOrderFlags({{ $order->id }}, {{ \Illuminate\Support\Js::from($order->flags ?? []) }})" :key="fName">
                                             <span 
@@ -1707,7 +1707,7 @@
                         type="button"
                         data-menu-item
                         @mouseenter="updateActiveFromHover($el)"
-                        x-show="matchesMenuSearch('sin asignar')"
+                        x-show="matchesMenuSearch(@js(mb_strtolower(__('Unassigned'))))"
                         @click="setDesigner(null, null, '', '', null)"
                         class="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-stone-100 text-stone-500 cursor-pointer">
                         -- {{ __('Unassigned') }} --
@@ -1740,7 +1740,7 @@
         <!-- 2. Review Status Popover Content -->
         <template x-if="activeMenu === 'review'">
             <div class="flex flex-col h-full min-h-0 space-y-1">
-                <div class="px-2 py-0.5 text-meta font-semibold text-ink-3">Estado de Revisión</div>
+                <div class="px-2 py-0.5 text-meta font-semibold text-ink-3">{{ __('Review status') }}</div>
                 <button 
                     type="button"
                     data-menu-item
@@ -1889,7 +1889,7 @@
                             >
                         </div>
                         <p class="text-meta text-stone-400 mt-1">
-                            <span class="font-medium text-stone-500">Tip:</span> Escribe el nombre y presiona <kbd class="px-1 py-0.5 text-meta bg-stone-100 border border-stone-200 rounded font-mono text-stone-600">Enter</kbd> para agregar. Pulsa <kbd class="px-1 py-0.5 text-meta bg-stone-100 border border-stone-200 rounded font-mono text-stone-600">Backspace</kbd> para borrar la última.
+                            <span class="font-medium text-stone-500">{{ __('Tip:') }}</span> {!! __('Type the name and press :enter to add. Press :backspace to remove the last one.', ['enter' => '<kbd class="px-1 py-0.5 text-meta bg-stone-100 border border-stone-200 rounded font-mono text-stone-600">Enter</kbd>', 'backspace' => '<kbd class="px-1 py-0.5 text-meta bg-stone-100 border border-stone-200 rounded font-mono text-stone-600">Backspace</kbd>']) !!}
                         </p>
                     </div>
 
@@ -1901,7 +1901,7 @@
                             </span>
                             <template x-if="$store.installationModal && $store.installationModal.getFirstMatch() && $store.installationModal.search">
                                 <span class="text-xs text-ink-3 font-medium">
-                                    Presiona ↵ para agregar <strong class="font-semibold underline" x-text="$store.installationModal.getFirstMatch()"></strong>
+                                    {{ __('Press ↵ to add') }} <strong class="font-semibold underline" x-text="$store.installationModal.getFirstMatch()"></strong>
                                 </span>
                             </template>
                         </div>
@@ -2161,7 +2161,7 @@
                         </div>
 
                         <!-- Opción "Sin Subestatus" -->
-                        <div class="mb-2" x-show="!$store.substatusModal || $store.substatusModal.matchesSearch('sin subestatus') || $store.substatusModal.matchesSearch('ninguno')">
+                        <div class="mb-2" x-show="!$store.substatusModal || $store.substatusModal.matchesSearch(@js(mb_strtolower(__('No substatus')))) || $store.substatusModal.matchesSearch(@js(mb_strtolower(__('None'))))">
                             <button 
                                 type="button"
                                 @click.stop="$store.substatusModal.clearSubstatus()"

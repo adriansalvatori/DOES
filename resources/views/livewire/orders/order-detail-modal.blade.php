@@ -184,7 +184,7 @@
 
                         <span class="text-meta text-ink-3 flex items-center gap-1 whitespace-nowrap">
                             <x-lucide-clock class="w-3.5 h-3.5 shrink-0" />
-                            <span>{{ ($order->trello_created_at ?? $order->created_at)?->format('d M, Y (H:i)') ?? '—' }}</span>
+                            <span>{{ ($order->trello_created_at ?? $order->created_at)?->translatedFormat('d M, Y (H:i)') ?? '—' }}</span>
                         </span>
                     </div>
 
@@ -377,7 +377,7 @@
                     @if($order->substatus)
                         <span class="text-meta text-ink-2 inline-flex items-center gap-1">
                             <x-lucide-circle-dot class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                            <span>{{ $order->substatus->value }}</span>
+                            <span>{{ $order->substatus->label() }}</span>
                         </span>
                     @endif
                 </div>
@@ -692,7 +692,7 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('e.g. TAQUERIA LA CHULA...') }}" 
+                                        placeholder="{{ __('e.g. MAIN STREET BAKERY...') }}" 
                                         class="ui-input pr-7"
                                         x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                                     
@@ -947,7 +947,7 @@
                                     <div class="max-h-56 overflow-y-auto divide-y divide-line">
                                         <button 
                                             type="button"
-                                            x-show="!search || 'sin subestatus'.includes(search.toLowerCase().trim())"
+                                            x-show="!search || @js(mb_strtolower(__('No substatus'))).includes(search.toLowerCase().trim())"
                                             @click="selectSub('')" 
                                             class="w-full text-left p-2.5 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer text-ink-3 italic transition flex items-center justify-between">
                                             <span>{{ __('No Substatus') }}</span>
@@ -958,10 +958,10 @@
                                         @foreach($substatuses as $sub)
                                             <button 
                                                 type="button"
-                                                x-show="!search || '{{ strtolower(addslashes($sub->value)) }}'.includes(search.toLowerCase().trim())"
+                                                x-show="!search || '{{ strtolower(addslashes($sub->value.' '.$sub->label())) }}'.includes(search.toLowerCase().trim())"
                                                 @click="selectSub('{{ $sub->value }}')" 
                                                 class="w-full text-left p-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer transition flex items-center justify-between">
-                                                <span class="text-body text-ink">{{ $sub->value }}</span>
+                                                <span class="text-body text-ink">{{ $sub->label() }}</span>
                                                 @if($editSubstatus === $sub->value)
                                                     <x-lucide-check class="w-3.5 h-3.5 text-ok stroke-[3]" />
                                                 @endif
@@ -1262,7 +1262,7 @@ JS;
                                                     @click="editing = true; $nextTick(() => $refs.editInput.focus())"
                                                     class="font-medium text-ink text-body break-words cursor-pointer hover:underline decoration-line-strong underline-offset-2 transition {{ $task->isDone() ? 'ui-done font-normal' : '' }}" 
                                                     title="{{ __('Click to edit subtask name') }}">
-                                                    {{ $task->title }}
+                                                    {{ $task->display_title }}
                                                 </span>
 
                                                 <!-- Subtask Category Badge (Clickable dropdown) -->
@@ -1374,7 +1374,7 @@ JS;
                                                         class="inline-flex items-center gap-1 h-6 px-1.5 rounded-control text-meta font-medium text-ink-2 hover:bg-sunken hover:text-ink transition cursor-pointer shrink-0"
                                                         title="{{ __('Click to change scheduled date') }}">
                                                         <x-lucide-calendar class="w-3.5 h-3.5 text-ink-3" />
-                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->format('d M') : __('+ Date') }}</span>
+                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->translatedFormat('d M') : __('+ Date') }}</span>
                                                         <x-lucide-chevron-down class="w-3 h-3 text-ink-3" />
                                                     </button>
 
@@ -1991,7 +1991,7 @@ JS;
                                             @disabled($isUploadingAttachment)
                                         >
                                             <x-lucide-upload class="w-3.5 h-3.5 text-sky-600 shrink-0" />
-                                            <span>{{ __('Subir archivos') }}</span>
+                                            <span>{{ __('Upload files') }}</span>
                                         </button>
                                         <input 
                                             type="file" 
@@ -2133,7 +2133,7 @@ JS;
                                                     $sizeFormatted = round($bytes / pow(1024, $i), 1) . ' ' . ($units[$i] ?? 'B');
                                                 }
 
-                                                $directDownloadUrl = route('trello.attachment-proxy', ['url' => $attachment['url'], 'download' => 1, 'filename' => $attachment['name'] ?? 'archivo']);
+                                                $directDownloadUrl = route('trello.attachment-proxy', ['url' => $attachment['url'], 'download' => 1, 'filename' => $attachment['name'] ?? __('file')]);
                                             @endphp
                                             
                                             <div 
@@ -2153,7 +2153,7 @@ JS;
                                                         <template x-if="imgError">
                                                             <div class="w-full h-full bg-stone-100 text-stone-400 flex flex-col items-center justify-center gap-1">
                                                                 <x-lucide-image class="w-6 h-6 stroke-[1.5]" />
-                                                                <span class="text-[9px] text-stone-400 font-medium">{{ __('Imagen') }}</span>
+                                                                <span class="text-[9px] text-stone-400 font-medium">{{ __('Image') }}</span>
                             </div>
                                                         </template>
                                                         <div class="absolute inset-0 bg-sky-950/20 backdrop-blur-[0.5px] opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center pointer-events-none">
@@ -2191,16 +2191,16 @@ JS;
                                                                 <span class="font-mono text-[9px] text-zinc-500 bg-stone-100/90 border border-stone-200/60 px-1 py-0.2 rounded font-medium shrink-0">{{ $sizeFormatted }}</span>
                                                             @endif
                                                             @if(!empty($attachment['date']))
-                                                                <span class="truncate">{{ \Carbon\Carbon::parse($attachment['date'])->format('d M') }}</span>
+                                                                <span class="truncate">{{ \Carbon\Carbon::parse($attachment['date'])->translatedFormat('d M') }}</span>
                                                             @endif
                                                         </div>
 
                                                         <div class="flex items-center gap-0.5 shrink-0" @click.stop>
                                                             <a 
                                                                 href="{{ $directDownloadUrl }}" 
-                                                                download="{{ $attachment['name'] ?? 'archivo' }}" 
+                                                                download="{{ $attachment['name'] ?? __('file') }}" 
                                                                 class="p-0.5 rounded text-zinc-400 hover:text-sky-600 hover:bg-sky-50 transition cursor-pointer" 
-                                                                title="{{ __('Descargar') }}"
+                                                                title="{{ __('Download') }}"
                                                             >
                                                                 <x-lucide-download class="w-3 h-3" />
                                                             </a>
@@ -2208,7 +2208,7 @@ JS;
                                                                 type="button" 
                                                                 wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('File')) }}')" 
                                                                 class="p-0.5 rounded text-zinc-400 hover:text-sky-600 hover:bg-sky-50 transition cursor-pointer" 
-                                                                title="{{ __('Vista previa') }}"
+                                                                title="{{ __('Preview') }}"
                                                             >
                                                                 <x-lucide-maximize-2 class="w-3 h-3" />
                                                             </button>
@@ -3570,7 +3570,7 @@ JS;
                                             @click="format('bold')" 
                                             :class="isBold ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="p-1.5 rounded-md border text-xs font-bold transition flex items-center justify-center cursor-pointer" 
-                                            title="{{ __('Negrita (⌘B / Ctrl+B)') }}"
+                                            title="{{ __('Bold (⌘B / Ctrl+B)') }}"
                                         >
                                             <x-lucide-bold class="w-3.5 h-3.5" />
                                         </button>
@@ -3582,7 +3582,7 @@ JS;
                                             @click="format('italic')" 
                                             :class="isItalic ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="p-1.5 rounded-md border text-xs italic transition flex items-center justify-center cursor-pointer" 
-                                            title="{{ __('Cursiva (⌘I / Ctrl+I)') }}"
+                                            title="{{ __('Italic (⌘I / Ctrl+I)') }}"
                                         >
                                             <x-lucide-italic class="w-3.5 h-3.5" />
                                         </button>
@@ -3593,7 +3593,7 @@ JS;
                                             @mousedown.prevent 
                                             @click="promptLink()" 
                                             class="p-1.5 rounded-md border border-transparent text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 text-xs transition flex items-center justify-center cursor-pointer" 
-                                            title="{{ __('Insertar enlace (⌘K / Ctrl+K)') }}"
+                                            title="{{ __('Insert link (⌘K / Ctrl+K)') }}"
                                         >
                                             <x-lucide-link class="w-3.5 h-3.5" />
                                         </button>
@@ -3646,10 +3646,10 @@ JS;
                                             @click="toggleList('ol')" 
                                             :class="isOrderedList ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="px-2 py-1 rounded-md border text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer" 
-                                            title="{{ __('Lista numerada (1.)') }}"
+                                            title="{{ __('Numbered list (1.)') }}"
                                         >
                                             <x-lucide-list-ordered class="w-3.5 h-3.5" />
-                                            <span class="hidden sm:inline">{{ __('Numerada') }}</span>
+                                            <span class="hidden sm:inline">{{ __('Numbered') }}</span>
                                         </button>
 
                                         <!-- Checklist -->
@@ -3798,7 +3798,7 @@ JS;
                                             type="button" 
                                             @click="$refs.photoInput.click()" 
                                             class="px-2 py-1 rounded-md text-[11px] font-medium text-zinc-600 hover:text-sky-700 hover:bg-stone-200/60 transition flex items-center gap-1.5 cursor-pointer border border-transparent hover:border-stone-200"
-                                            title="{{ __('Adjuntar fotos a este comentario') }}"
+                                            title="{{ __('Attach photos to this comment') }}"
                                         >
                                             <x-lucide-camera class="w-3.5 h-3.5 text-zinc-500" />
                                             <span>{{ __('Attach photo') }}</span>
@@ -3815,7 +3815,7 @@ JS;
                                             <span class="text-zinc-300">•</span>
                                             <span class="flex items-center gap-1">
                                                 <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">⌘ / Ctrl + Enter</kbd>
-                                                <span>{{ __('publicar') }}</span>
+                                                <span>{{ __('post') }}</span>
                                             </span>
                                         </div>
                                     </div>
@@ -3832,7 +3832,7 @@ JS;
                                         >
                                             <x-lucide-send x-show="!isSubmitting && !isUploadingPhotos" class="w-3.5 h-3.5" />
                                             <x-lucide-loader-2 x-show="isSubmitting || isUploadingPhotos" x-cloak class="w-3.5 h-3.5 animate-spin" />
-                                            <span x-text="isSubmitting ? '{{ __('Publicando...') }}' : (isUploadingPhotos ? '{{ __('Uploading photos...') }}' : '{{ __('Post to Trello') }}')">{{ __('Post to Trello') }}</span>
+                                            <span x-text="isSubmitting ? '{{ __('Posting...') }}' : (isUploadingPhotos ? '{{ __('Uploading photos...') }}' : '{{ __('Post to Trello') }}')">{{ __('Post to Trello') }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -4214,7 +4214,7 @@ JS;
                                     <select wire:model.live="selectedApprovalStageId" class="w-full bg-surface border border-line rounded-card p-2.5 text-xs text-ink focus:outline-none focus:border-line-strong ">
                                         <option value="">{{ __('Select a stage...') }}</option>
                                         @foreach($order->stages as $stg)
-                                            <option value="{{ $stg->id }}">{{ $stg->name }} ({{ $stg->elements->count() }} piezas)</option>
+                                            <option value="{{ $stg->id }}">{{ $stg->name }} ({{ __(':count pieces', ['count' => $stg->elements->count()]) }})</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -4646,7 +4646,7 @@ JS;
                     @endphp
                     <a href="{{ $lightboxDownloadUrl }}" download="{{ $previewMediaTitle }}" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-200 text-xs font-medium border border-white/10 transition flex items-center gap-1.5 shadow-2xs">
                         <x-lucide-download class="w-3.5 h-3.5 text-sky-400" />
-                        <span class="hidden sm:inline">{{ __('Descargar') }}</span>
+                        <span class="hidden sm:inline">{{ __('Download') }}</span>
                     </a>
                     <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center border border-white/10 transition cursor-pointer" title="{{ __('Close (Esc)') }}">
                         <x-lucide-x class="w-4 h-4" />

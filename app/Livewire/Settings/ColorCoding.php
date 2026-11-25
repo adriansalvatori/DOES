@@ -5,11 +5,9 @@ namespace App\Livewire\Settings;
 use App\Services\ColorCodingService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-#[Title('Personalización de Colores')]
 class ColorCoding extends Component
 {
     public string $activeCategory = 'all';
@@ -143,6 +141,6 @@ class ColorCoding extends Component
             'items' => $filteredItems,
             'categories' => $categories,
             'totalItemsCount' => count($allItems),
-        ]);
+        ])->title(__('Color Customization'));
     }
 }

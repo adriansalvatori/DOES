@@ -98,12 +98,12 @@
 
                 @if(($syncReport['type'] ?? 'full') === 'new_only')
                     <div class="grid grid-cols-3 gap-2">
-                        @foreach([['Nuevas Importadas', '+'.$syncReport['added'], 'órdenes'], ['Ya Registradas', $syncReport['unchanged'], 'omitidas'], ['Total en Tablero', $syncReport['total'], 'tarjetas']] as [$lbl, $val, $unit])
+                        @foreach([[__('Newly imported'), '+'.$syncReport['added'], __('orders')], [__('Already registered'), $syncReport['unchanged'], __('skipped')], [__('Total on board'), $syncReport['total'], __('cards')]] as [$lbl, $val, $unit])
                             <div class="ui-card p-3">
-                                <span class="block truncate text-meta text-ink-3">{{ __($lbl) }}</span>
+                                <span class="block truncate text-meta text-ink-3">{{ $lbl }}</span>
                                 <div class="mt-1 flex items-baseline gap-1">
                                     <span class="text-title font-semibold tabular-nums text-ink">{{ $val }}</span>
-                                    <span class="text-meta text-ink-3">{{ __($unit) }}</span>
+                                    <span class="text-meta text-ink-3">{{ $unit }}</span>
                                 </div>
                             </div>
                         @endforeach
@@ -142,10 +142,10 @@
                     </div>
                 @else
                     <div class="grid grid-cols-2 gap-2 sm:grid-cols-5">
-                        @foreach([['created', 'Nuevas Importadas', '+'.$syncReport['added']], ['pushed_to_trello', 'Enviadas a Trello', $syncReport['pushed'] ?? 0], ['moved', 'Movidas Local', $syncReport['moved']], ['updated', 'Actualizadas', $syncReport['updated']], ['deleted', 'Faltantes Trello', $syncReport['deleted']]] as [$key, $lbl, $val])
+                        @foreach([['created', __('Newly imported'), '+'.$syncReport['added']], ['pushed_to_trello', __('Sent to Trello'), $syncReport['pushed'] ?? 0], ['moved', __('Moved locally'), $syncReport['moved']], ['updated', __('Updated cards'), $syncReport['updated']], ['deleted', __('Missing from Trello'), $syncReport['deleted']]] as [$key, $lbl, $val])
                             <button type="button" wire:click="setFilter('{{ $key }}')"
                                     class="ui-card p-2.5 text-left transition-colors hover:bg-sunken/50 {{ $activeFilter === $key ? 'border-ink' : '' }}">
-                                <span class="block truncate text-meta text-ink-3">{{ __($lbl) }}</span>
+                                <span class="block truncate text-meta text-ink-3">{{ $lbl }}</span>
                                 <div class="mt-0.5 flex items-baseline gap-1">
                                     <span class="text-section font-semibold tabular-nums text-ink">{{ $val }}</span>
                                     <span class="text-meta text-ink-3">{{ __('cards') }}</span>

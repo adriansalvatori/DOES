@@ -97,7 +97,7 @@
                                     @endif
                                     <x-ui.tag tone="neutral">{{ $task->type?->label() ?? $task->type }}</x-ui.tag>
                                 </div>
-                                <p class="mt-0.5 text-body text-ink-2">{{ $task->title }}</p>
+                                <p class="mt-0.5 text-body text-ink-2">{{ $task->display_title }}</p>
                             </div>
                             <x-ui.person :person="$task->assignee" size="sm" />
                         </div>
@@ -127,8 +127,8 @@
                     <label class="ui-label">{{ __('How was the block resolved or what action was taken?') }}</label>
 
                     <div class="flex flex-wrap gap-1.5">
-                        @foreach([['Medidas confirmadas y recibidas', 'Medidas confirmadas'], ['Cliente aprobó información', 'Cliente aprobó información'], ['Estimado aprobado', 'Estimado aprobado'], ['Resuelto por Atención a Clientes', 'Resuelto por Atención a Clientes']] as [$reason, $label])
-                            <button type="button" wire:click="selectPresetReason('{{ $reason }}')" class="ui-chip">{{ __($label) }}</button>
+                        @foreach([['Medidas confirmadas y recibidas', __('Measurements confirmed')], ['Cliente aprobó información', __('Client approved information')], ['Estimado aprobado', __('Estimate approved')], ['Resuelto por Atención a Clientes', __('Resolved by Customer Service')]] as [$reason, $label])
+                            <button type="button" wire:click="selectPresetReason('{{ $reason }}')" class="ui-chip">{{ $label }}</button>
                         @endforeach
                     </div>
 

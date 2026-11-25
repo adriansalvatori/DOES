@@ -275,7 +275,7 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('e.g. El Taco Loco restaurant…') }}"
+                                        placeholder="{{ __('e.g. Sunrise Diner restaurant…') }}"
                                         class="ui-input pr-8 placeholder:normal-case"
                                         x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                                     <button

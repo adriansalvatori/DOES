@@ -484,7 +484,7 @@
                                                         <div class="w-16 h-1 bg-ink rounded-full mx-auto"></div>
                                                     </div>
                                                     <p class="text-meta text-zinc-700 font-medium leading-tight">
-                                                        Consulta el estado de tus<br>pedidos en línea.
+                                                        {{ __('Check the status of your') }}<br>{{ __('orders online.') }}
                                                     </p>
 
                                                     {{-- QR Code with sunshine rays --}}
@@ -511,8 +511,8 @@
                                                     <div class="bg-ink rounded-full py-1.5 px-4 inline-flex items-center gap-2 text-white font-semibold text-meta">
                                                         <x-lucide-smartphone class="w-4 h-4 text-zinc-900" />
                                                         <div class="leading-tight text-left">
-                                                            <div>Escanea para acceder</div>
-                                                            <div>a tus órdenes</div>
+                                                            <div>{{ __('Scan to access') }}</div>
+                                                            <div>{{ __('your orders') }}</div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -700,7 +700,7 @@
                                                     type="text" 
                                                     wire:model.live.debounce.150ms="locations.{{ $index }}.name" 
                                                     placeholder="{{ __('Location name (e.g. Grayson)') }}"
-                                                    :size="Math.max(14, ({{ json_encode($location['name'] ?? '') }} || 'NOMBRE LOCACIÓN (EJ. GRAYSON)').length + 1)"
+                                                    :size="Math.max(14, ({{ json_encode($location['name'] ?? '') }} || @js(mb_strtoupper(__('Location name (e.g. Grayson)')))).length + 1)"
                                                     class="bg-transparent hover:bg-zinc-100/70 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs font-semibold text-zinc-900 focus:outline-none transition shrink-0 max-w-full"
                                                 />
 
@@ -973,7 +973,7 @@
                                                         type="text" 
                                                         wire:model.live.debounce.150ms="contacts.{{ $index }}.name" 
                                                         placeholder="{{ __('Contact name') }}"
-                                                        :size="Math.max(12, ({{ json_encode($contact['name'] ?? '') }} || 'NOMBRE DEL CONTACTO').length + 1)"
+                                                        :size="Math.max(12, ({{ json_encode($contact['name'] ?? '') }} || @js(mb_strtoupper(__('Contact name')))).length + 1)"
                                                         class="bg-transparent hover:bg-zinc-100/70 focus:bg-white border border-transparent hover:border-zinc-200/60 focus:border-zinc-300 focus:ring-2 focus:ring-zinc-900/5 rounded-md -mx-1 px-1 py-0.5 text-xs font-semibold text-zinc-900 focus:outline-none transition shrink-0 max-w-full"
                                                     />
                                                     <label class="inline-flex items-center gap-1 text-meta text-zinc-400 hover:text-zinc-600 cursor-pointer select-none shrink-0" title="{{ __('Mark as primary contact') }}">
@@ -1039,7 +1039,7 @@
                                                         <option value="any">{{ __('Any') }}</option>
                                                         <option value="whatsapp">WhatsApp</option>
                                                         <option value="call">{{ __('Call') }}</option>
-                                                        <option value="email">Email</option>
+                                                        <option value="email">{{ __('Email') }}</option>
                                                     </select>
                                                 </div>
                                                 <div class="flex items-center gap-1.5 text-meta text-zinc-500">

@@ -16,7 +16,7 @@
                     <option value="">{{ __('All channels') }}</option>
                     <option value="whatsapp">WhatsApp</option>
                     <option value="call">{{ __('Call') }}</option>
-                    <option value="email">Email</option>
+                    <option value="email">{{ __('Email') }}</option>
                     <option value="any">{{ __('Any') }}</option>
                 </select>
                 <select wire:model.live="languageFilter" class="ui-select w-44" aria-label="{{ __('Language') }}">

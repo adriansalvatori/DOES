@@ -128,7 +128,7 @@ class CsvReconciliationTest extends TestCase
 
         $component->call('openBatchConfirm', 'all_full')
             ->call('executeBatchApproval')
-            ->assertSee('actualizaron exitosamente');
+            ->assertSee('orders were updated successfully');
 
         $order->refresh();
 
@@ -141,7 +141,7 @@ class CsvReconciliationTest extends TestCase
 
         // 3. Date anomaly "GARANTIA" was text -> delivery_due_date is null and text is appended in parentheses
         $this->assertNull($order->delivery_due_date);
-        $this->assertStringContainsString('(Fecha entrega: GARANTIA)', $order->delivery_note);
+        $this->assertStringContainsString('(Delivery date: GARANTIA)', $order->delivery_note);
 
         // 4. Estimate was cleaned from "REVISED - 10348"
         $this->assertEquals('10348', $order->estimate_invoice_number);
@@ -175,7 +175,7 @@ class CsvReconciliationTest extends TestCase
 
         // Approve this partial match
         $component->call('approveSinglePartial', 'row_1')
-            ->assertSee('aprobada y actualizada correctamente');
+            ->assertSee('approved and updated successfully');
 
         $order->refresh();
         $this->assertEquals('RESTAURANTE EL SOL', $order->company_name); // unchanged
@@ -207,7 +207,7 @@ class CsvReconciliationTest extends TestCase
         ]);
 
         $component->call('linkAndApproveTrello', 'row_1')
-            ->assertSee('creada y vinculada con Trello exitosamente');
+            ->assertSee('created and linked with Trello successfully');
 
         $this->assertDatabaseHas('orders', [
             'trello_card_id' => '65abc1234567890123456789',
@@ -375,7 +375,7 @@ class CsvReconciliationTest extends TestCase
 
         // Call quickCreateClient
         $component->call('quickCreateClient', 'row_1')
-            ->assertSee('registrado exitosamente');
+            ->assertSee('registered successfully');
 
         $this->assertDatabaseHas('clients', [
             'name' => 'TAQUERIA LOS AMIGOS',
@@ -545,7 +545,7 @@ class CsvReconciliationTest extends TestCase
 
         // Call linkAllFoundTrello
         $component->call('linkAllFoundTrello')
-            ->assertSee('vincularon exitosamente');
+            ->assertSee('were linked successfully');
 
         $this->assertDatabaseHas('orders', ['wo_number' => 'WO 88001', 'trello_card_id' => 'card_batch_1']);
         $this->assertDatabaseHas('orders', ['wo_number' => 'WO 88002', 'trello_card_id' => 'card_batch_2']);
@@ -897,7 +897,7 @@ class CsvReconciliationTest extends TestCase
         // Try to reassign to 13599 (which is already taken)
         $component->set('reassignWoInputs.row_1', '13599')
             ->call('executeReassignWo', 'row_1')
-            ->assertSee('ya está asignado a otra orden');
+            ->assertSee('is already assigned to another order');
 
         // Partial match count must remain 1 (not resolved)
         $meta = $component->get('meta');

@@ -5,10 +5,8 @@ namespace App\Livewire\Clients;
 use App\Models\Client;
 use App\Models\Order;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Catálogo de Compañías')]
 class ClientIndex extends Component
 {
     public string $search = '';
@@ -59,6 +57,6 @@ class ClientIndex extends Component
         return view('livewire.clients.client-index', [
             'clients' => $clients,
             'totalClientsCount' => $totalClientsCount,
-        ])->layout('components.layouts.app');
+        ])->title(__('Company Catalog'))->layout('components.layouts.app');
     }
 }

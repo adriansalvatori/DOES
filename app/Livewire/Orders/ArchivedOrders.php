@@ -52,7 +52,7 @@ class ArchivedOrders extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'SUBSTATUS_CHANGED',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $prevSubVal ?: null,
             'new_value' => $newSubVal ?: null,
             'metadata' => ['description' => __('Substatus updated to: :status', ['status' => $subLabel])],
@@ -113,10 +113,10 @@ class ArchivedOrders extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'CORE_STATUS_CHANGED',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus->value,
             'new_value' => CoreStatus::EN_PRODUCCION->value,
-            'metadata' => ['comment' => 'Orden restaurada de Archivo a En Producción.'],
+            'metadata' => ['comment' => __('Order restored from Archive to In Production.')],
         ]);
 
         $this->dispatch('order-updated');

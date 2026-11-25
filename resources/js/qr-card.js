@@ -42,7 +42,7 @@ export async function downloadClientQrCard({ clientName, portalUrl, qrSvgDataUri
         ctx.drawImage(logoImg, logoX, logoY, logoWidth, logoHeight);
 
         // 3. Client Name (Uppercase, bold)
-        const cleanName = (clientName || 'CLIENTE').toUpperCase();
+        const cleanName = (clientName || window.kudosT('CLIENT')).toUpperCase();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
 
@@ -75,8 +75,8 @@ export async function downloadClientQrCard({ clientName, portalUrl, qrSvgDataUri
         // 5. Subtitle
         ctx.font = '500 23px "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.fillStyle = '#272626';
-        ctx.fillText('Consulta el estado de tus', width / 2, 415);
-        ctx.fillText('pedidos en línea.', width / 2, 448);
+        ctx.fillText(window.kudosT('Check the status of your'), width / 2, 415);
+        ctx.fillText(window.kudosT('orders online.'), width / 2, 448);
 
         // 6. QR Code Outer Container with Yellow Border & Soft Glow
         const boxSize = 400;
@@ -181,8 +181,8 @@ export async function downloadClientQrCard({ clientName, portalUrl, qrSvgDataUri
         ctx.fillStyle = '#18181b';
         ctx.font = '800 20px "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         const textCenterX = pillX + (pillWidth / 2) + 20;
-        ctx.fillText('Escanea para acceder', textCenterX, pillY + 34);
-        ctx.fillText('a tus órdenes', textCenterX, pillY + 58);
+        ctx.fillText(window.kudosT('Scan to access'), textCenterX, pillY + 34);
+        ctx.fillText(window.kudosT('your orders'), textCenterX, pillY + 58);
         ctx.restore();
 
         // 10. Footer Ribbon Decor (spans edge-to-edge at bottom)
@@ -206,7 +206,7 @@ export async function downloadClientQrCard({ clientName, portalUrl, qrSvgDataUri
 
     } catch (err) {
         console.error('Error generando tarjeta QR JPG:', err);
-        alert('No se pudo generar la tarjeta QR en JPG. Intenta de nuevo.');
+        alert(window.kudosT('The QR card could not be generated as JPG. Please try again.'));
     }
 }
 

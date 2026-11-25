@@ -77,7 +77,7 @@ class TrelloNativeMigrator
     {
         $boardId = $this->boardId();
         if ($boardId === '') {
-            throw new RuntimeException('No hay un tablero de Trello configurado.');
+            throw new RuntimeException(__('No Trello board is configured.'));
         }
 
         $cards = $this->trelloGet("/boards/{$boardId}/cards/all", [
@@ -409,7 +409,7 @@ class TrelloNativeMigrator
             ->get($url);
 
         if (! $response->successful()) {
-            throw new RuntimeException("Trello respondió HTTP {$response->status()} al descargar.");
+            throw new RuntimeException(__('Trello responded with HTTP :status while downloading.', ['status' => $response->status()]));
         }
 
         return [
@@ -527,7 +527,7 @@ class TrelloNativeMigrator
             ]));
 
         if (! $response->successful()) {
-            throw new RuntimeException("Trello respondió HTTP {$response->status()} en {$path}: ".$response->body());
+            throw new RuntimeException(__('Trello responded with HTTP :status at :path: :body', ['status' => $response->status(), 'path' => $path, 'body' => $response->body()]));
         }
 
         return $response->json() ?? [];

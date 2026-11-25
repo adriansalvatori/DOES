@@ -28,7 +28,7 @@ class SubstatusManagementTest extends TestCase
         $user = User::factory()->create();
         $response = $this->actingAs($user)->get('/settings/substatuses');
         $response->assertStatus(200);
-        $response->assertSee('Configuración de Subestatus');
+        $response->assertSee('Substatus Settings');
         $response->assertSee('PRUEBA SUBESTATUS');
     }
 

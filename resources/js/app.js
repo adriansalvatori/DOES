@@ -1,6 +1,20 @@
 import './qr-card.js';
 
 /**
+ * Translate a UI string using the dictionary rendered by the layout (window.KudosI18n).
+ * Keys are the English source text; falls back to the key when no translation is present.
+ */
+window.kudosT = function (key, replacements = {}) {
+    const dictionary = window.KudosI18n || {};
+    let text = Object.prototype.hasOwnProperty.call(dictionary, key) ? dictionary[key] : key;
+    Object.keys(replacements).forEach((name) => {
+        text = text.split(':' + name).join(replacements[name]);
+    });
+    return text;
+};
+
+
+/**
  * Ask before changing record data (WO, company name, contact details, address, linked client, prices).
  * Resolves true when the user confirms, false when they cancel.
  * Usage: KudosConfirmChange({ field: 'WO', from: '16412', to: '16413' }).then((ok) => { if (ok) { ... } });
@@ -59,10 +73,10 @@ window.KudosDirtyGuard = {
         if (this.isConfirmModalOpen) return;
         if (this.isDirty()) {
             this.openConfirmModal({
-                title: options.title || '¿Descartar cambios sin guardar?',
-                description: options.description || 'Tienes información o cambios editados sin guardar. Si sales ahora, estos cambios se perderán.',
-                confirmText: options.confirmText || 'Sí, descartar cambios',
-                cancelText: options.cancelText || 'Continuar editando',
+                title: options.title || window.kudosT('Discard unsaved changes?'),
+                description: options.description || window.kudosT('You have edited information or changes that are not saved. If you leave now, these changes will be lost.'),
+                confirmText: options.confirmText || window.kudosT('Yes, discard changes'),
+                cancelText: options.cancelText || window.kudosT('Keep editing'),
                 onConfirm: () => {
                     this.dirtyRegistry.clear();
                     this.updateGlobalState();
@@ -89,10 +103,10 @@ window.KudosDirtyGuard = {
 
         if (isCheckDirty) {
             this.openConfirmModal({
-                title: options.title || '¿Descartar cambios sin guardar?',
-                description: options.description || 'Tienes información editada sin guardar. Si sales ahora, se perderán los datos modificados.',
-                confirmText: options.confirmText || 'Sí, descartar cambios',
-                cancelText: options.cancelText || 'Continuar editando',
+                title: options.title || window.kudosT('Discard unsaved changes?'),
+                description: options.description || window.kudosT('You have unsaved edited information. If you leave now, the modified data will be lost.'),
+                confirmText: options.confirmText || window.kudosT('Yes, discard changes'),
+                cancelText: options.cancelText || window.kudosT('Keep editing'),
                 onConfirm: () => {
                     this.unregister(checkId);
                     actionCallback();
@@ -286,8 +300,8 @@ if (window.Livewire) {
 window.addEventListener('beforeunload', (event) => {
     if (window.KudosDirtyGuard.isDirty()) {
         event.preventDefault();
-        event.returnValue = 'Tienes cambios sin guardar.';
-        return 'Tienes cambios sin guardar.';
+        event.returnValue = window.kudosT('You have unsaved changes.');
+        return window.kudosT('You have unsaved changes.');
     }
 });
 
@@ -479,12 +493,12 @@ window.copyWoToClipboard = function(rawWoNumber, event = null) {
     doCopy().then(() => {
         window.dispatchEvent(new CustomEvent('toast', {
             detail: {
-                message: `WO #${numberToCopy} copiado al portapapeles`,
+                message: window.kudosT('WO #:number copied to clipboard', { number: numberToCopy }),
                 type: 'success'
             }
         }));
     }).catch(err => {
-        console.error('Error al copiar WO:', err);
+        console.error('Error copying WO:', err);
     });
 };
 
@@ -517,7 +531,7 @@ window.KudosNotifier = {
                 this.playChime();
                 this.showSystemNotification({
                     title: '🔔 Kudos DOES',
-                    body: '¡Notificaciones del sistema y sonido activados correctamente!',
+                    body: window.kudosT('System notifications and sound enabled successfully!'),
                 });
             }
             window.dispatchEvent(new CustomEvent('kudos-notification-permission-changed', { detail: { permission } }));

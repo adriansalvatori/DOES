@@ -185,7 +185,7 @@ class ClientFlyoutPanel extends Component
             ];
             $this->links = [
                 ['id' => null, 'label' => 'Brandbook', 'url' => '', 'department' => ''],
-                ['id' => null, 'label' => 'Assets / Recursos', 'url' => '', 'department' => ''],
+                ['id' => null, 'label' => __('Assets / Resources'), 'url' => '', 'department' => ''],
             ];
             $this->brandKit = [
                 'drive_url' => '',

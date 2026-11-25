@@ -59,11 +59,11 @@ class DemoDatabaseTest extends TestCase
         // API calls return error and don't contact Trello
         $lists = $trelloService->getBoardLists('dummy_board', 'dummy_key');
         $this->assertFalse($lists['success']);
-        $this->assertStringContainsString('desconectado', $lists['error']);
+        $this->assertStringContainsString('disconnected', $lists['error']);
 
         $cards = $trelloService->getBoardCards('dummy_board', 'dummy_key');
         $this->assertFalse($cards['success']);
-        $this->assertStringContainsString('desconectado', $cards['error']);
+        $this->assertStringContainsString('disconnected', $cards['error']);
     }
 
     public function test_clicking_demo_buttons_activates_demo_mode(): void

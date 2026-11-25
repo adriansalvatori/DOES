@@ -249,9 +249,9 @@ class Order extends Model
     public function getApprovalTypeLabelAttribute(): ?string
     {
         return match ($this->approval_type) {
-            'camila' => 'Aprobado por Camila',
-            'manager', 'gabriela' => 'Aprobado por '.Setting::getManagerName(),
-            'cliente' => 'Aprobado por Cliente',
+            'camila' => __('Approved by Camila'),
+            'manager', 'gabriela' => __('Approved by :name', ['name' => Setting::getManagerName()]),
+            'cliente' => __('Approved by Client'),
             default => $this->approval_type ? ucfirst((string) $this->approval_type) : null,
         };
     }
@@ -733,14 +733,14 @@ class Order extends Model
         OrderEvent::create([
             'order_id' => $this->id,
             'event_type' => 'ORDER_BLOCKED',
-            'actor' => $actor ?? auth()->user()?->name ?? 'Usuario',
+            'actor' => $actor ?? auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus?->value,
             'new_value' => CoreStatus::ENTRANTE->value,
             'metadata' => [
                 'substatus' => $substatus->value,
                 'reason' => $reason,
                 'reason_other' => $reasonOther,
-                'comment' => $comment ?? 'Orden marcada como Bloqueada.',
+                'comment' => $comment ?? __('Order marked as Blocked.'),
                 'customer_service_required' => $requireCS,
             ],
         ]);
@@ -775,9 +775,9 @@ class Order extends Model
         $diffInDays = max(1, (int) ceil($blockedAt->diffInDays($now)));
 
         if ($diffInHours < 24) {
-            $durationText = $diffInHours <= 1 ? __('less than 1 hour') : __(':hours horas', ['hours' => $diffInHours]);
+            $durationText = $diffInHours <= 1 ? __('less than 1 hour') : trans_choice(':count hour|:count hours', $diffInHours);
         } else {
-            $durationText = $diffInDays === 1 ? __('1 day') : __(':days days', ['days' => $diffInDays]);
+            $durationText = trans_choice(':count day|:count days', $diffInDays);
         }
 
         $designerStatus = $this->getDesignerOrdersReceivedStatus();
@@ -841,7 +841,7 @@ class Order extends Model
                 OrderEvent::create([
                     'order_id' => $this->id,
                     'event_type' => 'AUTOMATIC_TASK_TRIGGERED',
-                    'actor' => $actor ?? auth()->user()?->name ?? 'Usuario',
+                    'actor' => $actor ?? auth()->user()?->name ?? __('User'),
                     'new_value' => 'Poner en alta',
                     'metadata' => [
                         'task_title' => 'Poner en alta',
@@ -856,7 +856,7 @@ class Order extends Model
         OrderEvent::create([
             'order_id' => $this->id,
             'event_type' => 'ORDER_UNBLOCKED',
-            'actor' => $actor ?? auth()->user()?->name ?? 'Usuario',
+            'actor' => $actor ?? auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus?->value,
             'new_value' => $targetStatus->value,
             'metadata' => [

@@ -6,11 +6,9 @@ use App\Models\InstallationType;
 use App\Models\Order;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-#[Title('Configuración de Tipos de Instalación')]
 class InstallationTypes extends Component
 {
     public string $search = '';
@@ -228,6 +226,6 @@ class InstallationTypes extends Component
         return view('livewire.settings.installation-types', [
             'installationTypes' => $installationTypes,
             'ordersCountByInstallation' => $ordersCountByInstallation,
-        ]);
+        ])->title(__('Installation Types Settings'));
     }
 }

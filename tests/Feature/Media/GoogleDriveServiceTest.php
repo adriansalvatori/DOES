@@ -21,6 +21,7 @@ class GoogleDriveServiceTest extends TestCase
     {
         parent::setUp();
 
+        app()->setLocale('es');
         Http::preventStrayRequests();
         Cache::forget(GoogleDriveService::TOKEN_CACHE_KEY);
         $this->configureGoogleDrive();

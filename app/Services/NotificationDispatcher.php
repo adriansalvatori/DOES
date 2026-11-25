@@ -20,7 +20,9 @@ class NotificationDispatcher
         ?Order $order = null,
         ?string $detailText = null,
         ?User $actor = null,
-        bool $isUrgent = false
+        bool $isUrgent = false,
+        ?string $detailKey = null,
+        array $detailParams = []
     ): void {
         // 1. Check if event type is enabled in Admin settings
         $defaults = [
@@ -95,7 +97,9 @@ class NotificationDispatcher
             actorName: $actorName,
             isUrgent: $isUrgent,
             designerId: $designerId,
-            designerName: $designerName
+            designerName: $designerName,
+            detailKey: $detailKey,
+            detailParams: $detailParams
         );
 
         foreach ($recipients as $recipient) {

@@ -17,18 +17,24 @@ class SetAppLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->query('lang')
-            ?? session('locale')
-            ?? $request->cookie('app_locale')
-            ?? config('app.locale', 'es');
+        $supportedLocales = ['es', 'en'];
+        $defaultLocale = config('app.locale', 'en');
 
-        if (! in_array($locale, ['es', 'en'])) {
-            $locale = 'es';
-        }
+        $candidates = [
+            $request->query('lang'),
+            session('locale'),
+            rescue(fn () => $request->user()?->getPreference('locale'), null, false),
+            $request->cookie('app_locale'),
+        ];
+
+        $explicitLocale = collect($candidates)->first(fn ($candidate) => in_array($candidate, $supportedLocales, true));
+        $locale = $explicitLocale ?? (in_array($defaultLocale, $supportedLocales, true) ? $defaultLocale : 'en');
 
         App::setLocale($locale);
         Carbon::setLocale($locale);
-        session(['locale' => $locale]);
+        if ($explicitLocale !== null) {
+            session(['locale' => $explicitLocale]);
+        }
 
         return $next($request);
     }

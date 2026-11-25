@@ -586,7 +586,7 @@ class PricingIndex extends Component
         $this->editVariantFile = null;
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editVariantModalOpen = false;
-        $this->feedbackMessage = __('Subproducto actualizado correctamente.');
+        $this->feedbackMessage = __('Variant updated successfully.');
     }
 
     public function deleteVariant(int $variantId): void
@@ -597,7 +597,7 @@ class PricingIndex extends Component
         $variant->delete();
 
         unset($this->categoriesWithProducts, $this->products, $this->categories);
-        $this->feedbackMessage = __('Subproducto eliminado.');
+        $this->feedbackMessage = __('Variant deleted.');
     }
 
     public function openEditProductModal(int $productId): void
@@ -655,7 +655,7 @@ class PricingIndex extends Component
         $this->editProductFile = null;
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editProductModalOpen = false;
-        $this->feedbackMessage = __('Producto actualizado correctamente.');
+        $this->feedbackMessage = __('Product updated successfully.');
     }
 
     public function deleteProduct(int $productId): void
@@ -667,7 +667,7 @@ class PricingIndex extends Component
 
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editProductModalOpen = false;
-        $this->feedbackMessage = __('Producto y sus variantes eliminados.');
+        $this->feedbackMessage = __('Product and its variants deleted.');
     }
 
     public function openCreateCategoryModal(): void

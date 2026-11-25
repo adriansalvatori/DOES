@@ -57,12 +57,16 @@ class OrderObserver
             $prevLabel = $prevCore instanceof CoreStatus ? $prevCore->label() : (string) $prevCore;
             $newLabel = $order->core_status?->label() ?? (string) $order->core_status;
             $detail = $prevLabel ? "{$prevLabel} ➔ {$newLabel}" : $newLabel;
+            $prevValue = $prevCore instanceof CoreStatus ? $prevCore->value : ($prevCore ? (string) $prevCore : null);
+            $newValue = $order->core_status?->value ?? (string) $order->core_status;
 
             NotificationDispatcher::dispatch(
                 eventType: 'status_changed',
                 label: 'Status',
                 order: $order,
-                detailText: $detail
+                detailText: $detail,
+                detailKey: $prevValue ? ':from ➔ :to' : ':to',
+                detailParams: $prevValue ? ['from' => ['core_status' => $prevValue], 'to' => ['core_status' => $newValue]] : ['to' => ['core_status' => $newValue]]
             );
         }
 
@@ -79,6 +83,8 @@ class OrderObserver
                     label: 'Blocked',
                     order: $order,
                     detailText: $order->substatus?->label() ?? $newSubValue,
+                    detailKey: ':substatus',
+                    detailParams: ['substatus' => ['substatus' => $newSubValue]],
                     isUrgent: true
                 );
             } elseif (in_array($originalSubString, $blockedSubstatuses, true) && ! in_array($newSubValue, $blockedSubstatuses, true)) {
@@ -94,7 +100,8 @@ class OrderObserver
                     eventType: 'order_approved_alta',
                     label: 'Approved',
                     order: $order,
-                    detailText: 'Pendiente ALTA'
+                    detailText: __('Pending ALTA'),
+                    detailKey: 'Pending ALTA'
                 );
             }
 

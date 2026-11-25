@@ -315,7 +315,7 @@ class Index extends Component
             'new_value' => $order->core_status?->value,
             'metadata' => [
                 'comment' => $this->camilaComment,
-                'context' => 'Revisión Camila',
+                'context' => __('Camila review'),
             ],
         ]);
 
@@ -386,7 +386,7 @@ class Index extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_BLOCK_REVIEWED',
-            'actor' => Auth::user()?->name ?? 'Usuario',
+            'actor' => Auth::user()?->name ?? __('User'),
             'previous_value' => $order->substatus?->value,
             'new_value' => $order->substatus?->value,
             'metadata' => [

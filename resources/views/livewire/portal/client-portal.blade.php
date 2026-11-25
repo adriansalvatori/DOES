@@ -130,7 +130,7 @@
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center gap-1.5">
                             <span class="font-mono text-meta font-bold px-2 py-0.5 rounded-md bg-wo text-white">
-                                {{ $order->wo_number ?: 'SIN WO' }}
+                                {{ $order->wo_number ?: __('NO WO') }}
                             </span>
                             @if($order->approved)
                                 <span class="px-1.5 py-0.5 rounded bg-ok-soft text-ok text-meta font-semibold flex items-center gap-0.5">
@@ -220,7 +220,7 @@
             if ($cleanGeneralCs && strlen($cleanGeneralCs) === 10) {
                 $cleanGeneralCs = '1'.$cleanGeneralCs;
             }
-            $generalCsText = rawurlencode("Hola Kudos Print Media, soy {$client->name} y tengo una consulta sobre mis órdenes.");
+            $generalCsText = rawurlencode(__('Hello Kudos Print Media, I am :name and I have a question about my orders.', ['name' => $client->name]));
         @endphp
         <div class="p-3.5 bg-surface rounded-panel border border-line  flex items-center justify-between gap-3 text-meta">
             <div class="flex items-center gap-2.5 min-w-0">
@@ -295,7 +295,7 @@
                     <div class="space-y-1 min-w-0">
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-meta font-bold px-2 py-0.5 rounded-md bg-wo text-white">
-                                {{ $selectedOrder->wo_number ?: 'SIN WO' }}
+                                {{ $selectedOrder->wo_number ?: __('NO WO') }}
                             </span>
                             <span class="px-2.5 py-0.5 rounded-full text-meta font-medium border border-line bg-surface text-ink-2">
                                 {{ $selectedStatus['label'] }}
@@ -421,7 +421,7 @@
                         if ($cleanDesignerDigits && strlen($cleanDesignerDigits) === 10) {
                             $cleanDesignerDigits = '1'.$cleanDesignerDigits;
                         }
-                        $designerWaText = rawurlencode('Hola '.($assignedDesigner?->name ?: 'Diseñador').", soy cliente de Kudos y quisiera consultar sobre mi diseño para la orden {$selectedOrder->wo_number} ({$selectedOrder->clean_task_name}).");
+                        $designerWaText = rawurlencode(__('Hello :designer, I am a Kudos client and would like to ask about my design for order :wo (:task).', ['designer' => $assignedDesigner?->name ?: __('Designer'), 'wo' => $selectedOrder->wo_number, 'task' => $selectedOrder->clean_task_name]));
 
                         $designerHex = $assignedDesigner?->hex_color ?: match($assignedDesigner?->color_type) {
                             'magenta' => '#d946ef',
@@ -435,7 +435,7 @@
                         if ($cleanCsDigits && strlen($cleanCsDigits) === 10) {
                             $cleanCsDigits = '1'.$cleanCsDigits;
                         }
-                        $csWaText = rawurlencode("Hola Kudos Print Media (Atención al Cliente), quisiera consultar el estatus de mi orden {$selectedOrder->wo_number} ({$selectedOrder->clean_task_name}).");
+                        $csWaText = rawurlencode(__('Hello Kudos Print Media (Customer Service), I would like to check the status of my order :wo (:task).', ['wo' => $selectedOrder->wo_number, 'task' => $selectedOrder->clean_task_name]));
                     @endphp
 
                     <div class="bg-zinc-50/70 border border-line rounded-panel p-4 sm:p-5 space-y-3.5 ">

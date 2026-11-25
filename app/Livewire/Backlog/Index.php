@@ -299,7 +299,7 @@ class Index extends Component
             'updated' => $updatedCount,
             'deleted' => $deletedCount,
             'unchanged' => $unchangedCount,
-            'timestamp' => now()->format('d M, Y - h:i A'),
+            'timestamp' => now()->translatedFormat('d M, Y - h:i A'),
             'changes' => $changesList,
         ];
 
@@ -429,7 +429,7 @@ class Index extends Component
                     'task' => $res['task_name'] ?? 'Tarea',
                     'previous_status' => $res['previous_status'] ?? '',
                     'new_status' => $res['new_status'] ?? '',
-                    'details' => ! empty($res['details']) ? $res['details'] : ['Nueva tarjeta importada desde Trello'],
+                    'details' => ! empty($res['details']) ? $res['details'] : [__('New card imported from Trello')],
                 ];
             }
         }
@@ -446,7 +446,7 @@ class Index extends Component
             'updated' => 0,
             'deleted' => 0,
             'unchanged' => $skippedCount,
-            'timestamp' => now()->format('d M, Y - h:i A'),
+            'timestamp' => now()->translatedFormat('d M, Y - h:i A'),
             'changes' => $changesList,
         ];
 

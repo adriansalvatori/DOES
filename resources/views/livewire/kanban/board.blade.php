@@ -16,8 +16,8 @@
         @php
             $filterSubstatuses = \App\Models\Substatus::query()->orderBy('sort_order')->orderBy('id')->get();
             $substatusOptions = $filterSubstatuses->isNotEmpty()
-                ? $filterSubstatuses->mapWithKeys(fn ($s) => [$s->name => $s->name])->all()
-                : collect(\App\Enums\Substatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->value])->all();
+                ? $filterSubstatuses->mapWithKeys(fn ($s) => [$s->name => $s->label()])->all()
+                : collect(\App\Enums\Substatus::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all();
 
             $filters = [
                 ['model' => 'companyFilter', 'value' => $companyFilter, 'all' => __('Companies (All)'), 'chip' => __('Company'), 'search' => __('Search company...'), 'options' => collect($this->existingCompanies)->mapWithKeys(fn ($c) => [(string) $c => (string) $c])->all(), 'hidden' => false, 'id' => null],

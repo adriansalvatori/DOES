@@ -179,8 +179,8 @@
                     class="ui-chip" aria-pressed="{{ $isStageActive ? 'true' : 'false' }}">
                     <span class="truncate max-w-[140px]">{{ $stage->name }}</span>
                     @if($stage->due_date)
-                        <span class="text-meta opacity-70" title="{{ __('Due') }}: {{ $stage->due_date->format('d M, Y') }}">
-                            {{ $stage->due_date->format('d M') }}
+                        <span class="text-meta opacity-70" title="{{ __('Due') }}: {{ $stage->due_date->translatedFormat('d M, Y') }}">
+                            {{ $stage->due_date->translatedFormat('d M') }}
                         </span>
                     @endif
                     <span class="text-meta tabular-nums opacity-70">
@@ -371,7 +371,7 @@
                         type="button"
                         wire:click="toggleElementApproved({{ $element->id }})" 
                         class="w-4 h-4 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $element->is_approved ? 'bg-ok border-ok/30 text-white ' : 'border-line-strong hover:border-ok/30 bg-surface text-transparent hover:text-ok' }}"
-                        title="{{ $element->is_approved ? __('Item approved (:type) on :date. Click to uncheck', ['type' => $element->approval_type ?? 'OK', 'date' => $element->approved_at?->format('d M') ?? 'sin fecha']) : __('Mark approval for this item') }}">
+                        title="{{ $element->is_approved ? __('Item approved (:type) on :date. Click to uncheck', ['type' => $element->approval_type ?? 'OK', 'date' => $element->approved_at?->translatedFormat('d M') ?? 'sin fecha']) : __('Mark approval for this item') }}">
                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
                     </button>
 
@@ -434,7 +434,7 @@
                                 <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-ok" />
                                 <span>{{ $element->approval_type ?? __('Approved') }}</span>
                                 @if($element->approved_at)
-                                    <span class="font-normal text-ok">({{ $element->approved_at->format('d M') }})</span>
+                                    <span class="font-normal text-ok">({{ $element->approved_at->translatedFormat('d M') }})</span>
                                 @endif
                             </span>
                         @endif
@@ -525,7 +525,7 @@
                                 <input 
                                     type="text" 
                                     x-model="filePath" 
-                                    placeholder="\\servidor\Kudos\Clientes\...\arte.ai"
+                                    placeholder="{{ __('e.g. :path', ['path' => '\\\\server\\Kudos\\Clients\\...\\artwork.ai']) }}"
                                     class="w-full bg-canvas border border-line rounded-control p-2 font-mono text-xs text-ink placeholder:text-ink-3 focus:outline-none focus:border-line-strong"
                                 />
                                 <span class="text-meta text-ink-3 block">{{ __('Enter network path or shared folder for the print-ready file.') }}</span>

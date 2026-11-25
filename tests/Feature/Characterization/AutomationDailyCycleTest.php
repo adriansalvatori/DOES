@@ -490,7 +490,7 @@ class AutomationDailyCycleTest extends AutomationCharacterizationTestCase
         $this->assertSame('AutomationEngine', $event->actor);
         $this->assertSame(CoreStatus::TO_DO_TODAY->value, $event->previous_value);
         $this->assertSame(CoreStatus::ENVIADO_AL_CLIENTE->value, $event->new_value);
-        $this->assertSame('Enviar proof al cliente completed', $event->metadata['trigger']);
+        $this->assertSame('Send proof to client completed', $event->metadata['trigger']);
 
         $this->assertSame(1, $this->eventsOf($order, 'CORE_STATUS_CHANGED')->count());
         $this->assertSame(1, $this->eventsOf($order, 'ORDER_SENT_TO_CLIENT')->count());

@@ -9,7 +9,7 @@
         return ['tone' => 'danger', 'icon' => 'alert-circle', 'label' => __('Overdue :count d', ['count' => $days])];
     };
     $blockedTag = function ($order) {
-        $reason = $order->blocking_reason_other ?: $order->blocking_reason?->value;
+        $reason = $order->blocking_reason_other ?: $order->blocking_reason?->label();
 
         return ['tone' => 'warn', 'icon' => 'lock', 'label' => $reason ? __('Blocked').': '.$reason : __('Blocked')];
     };
@@ -111,7 +111,7 @@
                     @endforeach
                     @foreach($attentionTasks as $r)
                         @if($r['task']->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $r['task']->order, 'rowKey' => 'attn-task-'.$r['task']->id, 'tags' => $r['tags'], 'action' => $r['action'], 'line2' => $r['task']->title, 'person' => $r['task']->assignee ?? $r['task']->order->primary_designer])
+                            @include('livewire.dashboard.partials.row', ['order' => $r['task']->order, 'rowKey' => 'attn-task-'.$r['task']->id, 'tags' => $r['tags'], 'action' => $r['action'], 'line2' => $r['task']->display_title, 'person' => $r['task']->assignee ?? $r['task']->order->primary_designer])
                         @endif
                     @endforeach
                 </div>
@@ -128,7 +128,7 @@
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($toDoTodayTasks as $tTask)
                         @if($tTask->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $tTask->order, 'rowKey' => 'today-task-'.$tTask->id, 'line2' => $tTask->title, 'person' => $tTask->assignee ?? $tTask->order->primary_designer, 'toggle' => ['wire' => "completeTask({$tTask->id})", 'done' => false, 'title' => __('Complete subtask')]])
+                            @include('livewire.dashboard.partials.row', ['order' => $tTask->order, 'rowKey' => 'today-task-'.$tTask->id, 'line2' => $tTask->display_title, 'person' => $tTask->assignee ?? $tTask->order->primary_designer, 'toggle' => ['wire' => "completeTask({$tTask->id})", 'done' => false, 'title' => __('Complete subtask')]])
                         @endif
                     @endforeach
                     @foreach($toDoTodayOrders as $order)
@@ -163,7 +163,7 @@
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($camilaFollowUpTasks as $t)
                         @if($t->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'camila-task-'.$t->id, 'tags' => [$camilaTag], 'line2' => $t->title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Review now'), 'wire' => "openCamilaModal({$t->id})"]])
+                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'camila-task-'.$t->id, 'tags' => [$camilaTag], 'line2' => $t->display_title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Review now'), 'wire' => "openCamilaModal({$t->id})"]])
                         @endif
                     @endforeach
                 </div>
@@ -195,7 +195,7 @@
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($clientFollowUpTasks as $t)
                         @if($t->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'client-task-'.$t->id, 'tags' => [$clientTag], 'line2' => $t->title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Done'), 'wire' => "completeTask({$t->id})"]])
+                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'client-task-'.$t->id, 'tags' => [$clientTag], 'line2' => $t->display_title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Done'), 'wire' => "completeTask({$t->id})"]])
                         @endif
                     @endforeach
                 </div>

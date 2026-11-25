@@ -22,7 +22,7 @@ class InstallationTypesTest extends TestCase
 
         $response = $this->actingAs($user)->get('/settings/installation-types');
         $response->assertStatus(200);
-        $response->assertSee('Configuración de Tipos de Instalación');
+        $response->assertSee('Installation Types Settings');
         $response->assertSee('ENVIAR CURRIER');
         $response->assertSee('INSTALACION');
         $response->assertSee('BUSCAR PICASSO');

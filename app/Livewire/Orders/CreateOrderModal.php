@@ -418,8 +418,8 @@ class CreateOrderModal extends Component
         $this->validate([
             'onHoldReason' => 'required|string|min:3',
         ], [
-            'onHoldReason.required' => 'Debes ingresar un motivo para poner la orden en On Hold.',
-            'onHoldReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+            'onHoldReason.required' => __('You must enter a reason to put the order On Hold.'),
+            'onHoldReason.min' => __('The reason must be at least 3 characters.'),
         ]);
 
         $this->showOnHoldModal = false;
@@ -533,12 +533,12 @@ class CreateOrderModal extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'ORDER_DUPLICATED',
-                'actor' => auth()->user()?->name ?? 'Usuario',
+                'actor' => auth()->user()?->name ?? __('User'),
                 'previous_value' => null,
                 'new_value' => $order->core_status?->value,
                 'metadata' => [
                     'duplicated_from_id' => $this->originalOrderId,
-                    'comment' => "Duplicada a partir de la orden #{$this->originalOrderId}",
+                    'comment' => __('Duplicated from order #:id', ['id' => $this->originalOrderId]),
                 ],
             ]);
         }
@@ -547,7 +547,7 @@ class CreateOrderModal extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'MOVED_TO_ON_HOLD',
-                'actor' => auth()->user()?->name ?? 'Usuario',
+                'actor' => auth()->user()?->name ?? __('User'),
                 'previous_value' => null,
                 'new_value' => CoreStatus::ON_HOLD->value,
                 'metadata' => [
@@ -558,7 +558,7 @@ class CreateOrderModal extends Component
         }
 
         // Run automation hooks for new order
-        app(AutomationEngine::class)->handleOrderCreated($order, source: 'app', actor: auth()->user()?->name ?? 'Usuario');
+        app(AutomationEngine::class)->handleOrderCreated($order, source: 'app', actor: auth()->user()?->name ?? __('User'));
 
         if ($this->createOnTrello && empty($cleanTrelloId)) {
             app(TrelloSyncService::class)->createCardOnTrello($order);

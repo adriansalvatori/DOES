@@ -162,8 +162,8 @@ class TrelloSyncTest extends TestCase
 
         $this->assertEquals('updated', $res['action']);
         $this->assertNotEmpty($res['details']);
-        $this->assertStringContainsString('Fecha de entrega', implode(' ', $res['details']));
-        $this->assertStringContainsString('Tarea:', implode(' ', $res['details']));
+        $this->assertStringContainsString('Due date', implode(' ', $res['details']));
+        $this->assertStringContainsString('Task:', implode(' ', $res['details']));
     }
 
     public function test_save_settings_persists_board_id_and_token_in_database_and_dispatches_event(): void
@@ -253,7 +253,7 @@ class TrelloSyncTest extends TestCase
             ->assertSet('syncReport.moved', 0)
             ->assertSet('syncReport.updated', 0)
             ->assertSet('syncReport.deleted', 0)
-            ->assertSee('Sincronización completada: se importaron 1 tarjetas nuevas de Trello.');
+            ->assertSee('Sync completed: 1 new cards imported from Trello.');
 
         // Verify existing order was NOT modified at all
         $existingOrder->refresh();
@@ -312,7 +312,7 @@ class TrelloSyncTest extends TestCase
             ->assertSet('syncReport.show', true)
             ->assertSet('syncReport.added', 0)
             ->assertSet('syncReport.unchanged', 1)
-            ->assertSee('No hay tarjetas nuevas en Trello (1 tarjetas existentes ya están registradas).');
+            ->assertSee('There are no new cards in Trello (1 existing cards are already registered).');
     }
 
     public function test_sync_only_new_skips_and_canonicalizes_order_matched_by_shortlink(): void

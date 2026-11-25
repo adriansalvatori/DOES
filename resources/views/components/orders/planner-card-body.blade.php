@@ -47,7 +47,7 @@
                 <span class="text-body font-medium text-ink truncate min-w-0 {{ $strike }}" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
                 <x-orders.location :location="$order->location_text" class="shrink-0 max-w-[45%]" />
             </div>
-            <p class="text-body text-ink-2 truncate {{ $strike }}" title="{{ $task->title }}">{{ $task->title }}</p>
+            <p class="text-body text-ink-2 truncate {{ $strike }}" title="{{ $task->display_title }}">{{ $task->display_title }}</p>
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                 @if($order->task_name)
                     <span class="text-meta text-ink-3 truncate max-w-full" title="{{ $order->task_name }}">{{ $order->task_name }}</span>
@@ -77,7 +77,7 @@
         @else
             <div class="flex items-center gap-1.5 min-w-0">
                 <x-lucide-sticky-note class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                <span class="text-body font-medium text-ink truncate {{ $strike }}" title="{{ $task->title }}">{{ $task->title }}</span>
+                <span class="text-body font-medium text-ink truncate {{ $strike }}" title="{{ $task->display_title }}">{{ $task->display_title }}</span>
                 @if($urgent && ! $done)
                     <x-ui.tag tone="danger" icon="zap">{{ __('Urgent') }}</x-ui.tag>
                 @endif

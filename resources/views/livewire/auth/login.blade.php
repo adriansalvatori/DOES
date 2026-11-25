@@ -36,7 +36,7 @@
                             id="email" 
                             required 
                             autofocus 
-                            placeholder="tu.correo@kudos.com"
+                            placeholder="{{ __('your.email@kudos.com') }}"
                             class="ui-input pl-9 pr-3" />
                     </div>
                     @error('email')

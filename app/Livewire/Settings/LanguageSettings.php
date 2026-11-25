@@ -7,11 +7,11 @@ use Livewire\Component;
 
 class LanguageSettings extends Component
 {
-    public string $currentLocale = 'es';
+    public string $currentLocale = 'en';
 
     public function mount(): void
     {
-        $this->currentLocale = session('locale', config('app.locale', 'es'));
+        $this->currentLocale = session('locale', config('app.locale', 'en'));
     }
 
     public function setLocale(string $locale): void

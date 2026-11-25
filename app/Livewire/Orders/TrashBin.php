@@ -27,10 +27,10 @@ class TrashBin extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_RESTORED',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => 'TRASHED',
             'new_value' => $order->core_status?->value,
-            'metadata' => ['comment' => 'Orden restaurada desde la papelera.'],
+            'metadata' => ['comment' => __('Order restored from the trash.')],
         ]);
 
         session()->flash('message', __('Order \':company\' restored.', ['company' => $order->company_name]));

@@ -26,7 +26,7 @@ class AppBehaviorsDocs
                         'summary' => __('The main path each card follows on the Kanban board and in Trello.'),
                         'steps' => [
                             [
-                                'name' => __('1. Entrante (BLOCKED)'),
+                                'name' => __('1. Incoming (BLOCKED)'),
                                 'badge' => 'ENTRANTE',
                                 'badge_style' => 'bg-orange-50 text-orange-700 border-orange-200',
                                 'desc' => __('New cards entering the system. They usually need an initial review before being assigned to a designer\'s queue.'),
@@ -45,18 +45,18 @@ class AppBehaviorsDocs
                             ],
                             [
                                 'name' => __('4. In production'),
-                                'badge' => 'EN PRODUCCIÓN',
+                                'badge' => __('In production'),
                                 'badge_style' => 'bg-pink-50 text-pink-700 border-pink-200',
                                 'desc' => __('The order has moved to the physical/final production phase. The card\'s workspace stays active.'),
                             ],
                             [
                                 'name' => __('5. Internal review / Client'),
-                                'badge' => 'REVISIÓN',
+                                'badge' => __('Review'),
                                 'badge_style' => 'bg-purple-50 text-purple-700 border-purple-200',
                                 'desc' => __('Sent to Camila (internal supervision) or sent to the client. Can receive a Changes substatus.'),
                             ],
                             [
-                                'name' => __('6. Archivada'),
+                                'name' => __('6. Archived'),
                                 'badge' => 'ARCHIVED',
                                 'badge_style' => 'bg-stone-100 text-stone-600 border-stone-200',
                                 'desc' => __('Order completed successfully. It leaves the active operational views and is saved to the historical archive.'),
@@ -68,10 +68,10 @@ class AppBehaviorsDocs
             ],
             'subtasks' => [
                 'id' => 'subtasks',
-                'title' => __('Subtareas y Planificador Semanal'),
+                'title' => __('Subtasks and Weekly Planner'),
                 'icon' => 'list-checks',
                 'description' => __('How subtasks behave when scheduled for today and their impact on progress.'),
-                'badge' => 'Planificación',
+                'badge' => __('Planning'),
                 'articles' => [
                     [
                         'id' => 'subtasks-today',
@@ -101,7 +101,7 @@ class AppBehaviorsDocs
                 'title' => __('Substatuses and cross conditions'),
                 'icon' => 'tags',
                 'description' => __('How alerts, urgency flags and delivery times behave.'),
-                'badge' => 'Estados',
+                'badge' => __('Statuses'),
                 'articles' => [
                     [
                         'id' => 'substatus-behavior',
@@ -116,25 +116,25 @@ class AppBehaviorsDocs
                             ],
                             [
                                 'substatus' => 'ALMOST OVERDUE',
-                                'badge' => 'Casi Vencida',
+                                'badge' => __('Almost Overdue'),
                                 'badge_style' => 'bg-amber-50 text-amber-700 border-amber-200',
                                 'desc' => __('Activated automatically when less than 24 hours remain until the delivery date.'),
                             ],
                             [
                                 'substatus' => 'URGENTE',
-                                'badge' => 'URGENTE',
+                                'badge' => __('Urgent'),
                                 'badge_style' => 'bg-red-600 text-white border-red-700 font-extrabold animate-pulse',
                                 'desc' => __('High-priority visual indicator. Blinks red to alert the whole team.'),
                             ],
                             [
                                 'substatus' => 'BLOQUEADA / NO RESPUESTA',
-                                'badge' => 'Bloqueada',
+                                'badge' => __('Blocked'),
                                 'badge_style' => 'bg-orange-50 text-orange-700 border-orange-200',
                                 'desc' => __('The order can\'t move forward because client information, estimate approval or measurements are missing.'),
                             ],
                             [
                                 'substatus' => 'CAMBIOS CLIENTE / CAMBIOS CAMILA',
-                                'badge' => 'Cambios Cliente',
+                                'badge' => __('Client Revisions'),
                                 'badge_style' => 'bg-sky-50 text-sky-700 border-sky-200',
                                 'desc' => __('Applied when the card was sent back from review with remarks that need to be fixed.'),
                             ],
@@ -148,7 +148,7 @@ class AppBehaviorsDocs
                 'title' => __('Trello sync and mappings'),
                 'icon' => 'refresh-cw',
                 'description' => __('How two-way sync works and how to pause it.'),
-                'badge' => 'Integración',
+                'badge' => __('Integration'),
                 'articles' => [
                     [
                         'id' => 'sync-rules',
@@ -169,7 +169,7 @@ class AppBehaviorsDocs
                 'title' => __('Action Required section (Resolve)'),
                 'icon' => 'alert-triangle',
                 'description' => __('Handling cards that need manual attention or data fixes.'),
-                'badge' => 'Alertas',
+                'badge' => __('Alerts'),
                 'articles' => [
                     [
                         'id' => 'action-required-trigger',
@@ -186,10 +186,10 @@ class AppBehaviorsDocs
             ],
             'trash' => [
                 'id' => 'trash',
-                'title' => __('Papelera y Respaldos'),
+                'title' => __('Trash and Backups'),
                 'icon' => 'database',
                 'description' => __('Data security, recovery of deleted orders and backups.'),
-                'badge' => 'Sistema',
+                'badge' => __('System'),
                 'articles' => [
                     [
                         'id' => 'trash-backup-behavior',

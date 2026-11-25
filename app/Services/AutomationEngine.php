@@ -55,7 +55,7 @@ class AutomationEngine
             'last_meaningful_update' => now(),
         ]);
 
-        $resolvedActor = $actor ?: ($source === 'trello' ? 'Trello' : (auth()->user()?->name ?? 'Usuario'));
+        $resolvedActor = $actor ?: ($source === 'trello' ? 'Trello' : (auth()->user()?->name ?? __('User')));
 
         OrderEvent::create([
             'order_id' => $order->id,
@@ -317,9 +317,9 @@ class AutomationEngine
         $isUrgente = $order->isUrgente();
         $targetDate = $isUrgente ? now() : now()->addWeekdays(1);
         $approvalLabel = match ($approvalType) {
-            'camila' => 'Aprobado por Camila',
-            'manager', 'gabriela' => 'Aprobado por '.Setting::getManagerName(),
-            default => 'Aprobado por Cliente',
+            'camila' => __('Approved by Camila'),
+            'manager', 'gabriela' => __('Approved by :name', ['name' => Setting::getManagerName()]),
+            default => __('Approved by Client'),
         };
 
         if ($isUrgente) {
@@ -349,14 +349,14 @@ class AutomationEngine
             'ORDER_APPROVED'
         );
 
-        $actor = auth()->user()?->name ?? 'Usuario';
+        $actor = auth()->user()?->name ?? __('User');
 
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_APPROVED',
             'actor' => $actor,
             'previous_value' => 'approved: false',
-            'new_value' => "{$approvalLabel} (Medidas: ".($measuresConfirmed ? 'SÍ' : 'NO').', Estimado: '.($estimateApproved ? 'SÍ' : 'NO').($isUrgente ? ', URGENTE' : '').')',
+            'new_value' => "{$approvalLabel} (".__('Measures').': '.($measuresConfirmed ? __('YES') : __('NO')).', '.__('Estimate').': '.($estimateApproved ? __('YES') : __('NO')).($isUrgente ? ', '.__('URGENT') : '').')',
             'metadata' => [
                 'approval_type' => $approvalType,
                 'approval_type_label' => $approvalLabel,
@@ -466,7 +466,7 @@ class AutomationEngine
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'DELAY_RESOLVED',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => 'OVERDUE',
             'new_value' => 'Promised Date: '.$clientPromisedDate->toDateString(),
             'metadata' => ['reason' => $reason],
@@ -600,7 +600,7 @@ class AutomationEngine
                 'actor' => 'AutomationEngine',
                 'previous_value' => $previousStatus->value,
                 'new_value' => CoreStatus::ENVIADO_AL_CLIENTE->value,
-                'metadata' => ['trigger' => 'Enviar proof al cliente completed'],
+                'metadata' => ['trigger' => __('Send proof to client completed')],
             ]);
 
             $this->handleStatusChanged($order, $previousStatus, CoreStatus::ENVIADO_AL_CLIENTE, 'AutomationEngine');
@@ -833,7 +833,7 @@ class AutomationEngine
                     'previous_value' => $prevStatus->value,
                     'new_value' => CoreStatus::TO_DO_TODAY->value,
                     'metadata' => [
-                        'reason' => 'Subtarea reabierta/desmarcada para hoy, pedido devuelto a Working Today',
+                        'reason' => __('Subtask reopened/unchecked for today, order returned to Working Today'),
                         'task_id' => $uncompletedTodayWorkTasks->first()?->id,
                     ],
                 ]);
@@ -960,7 +960,7 @@ class AutomationEngine
                         'previous_value' => $prevStatus->value,
                         'new_value' => $returnStatus->value,
                         'metadata' => [
-                            'reason' => 'Subtareas completadas para hoy, pedido devuelto a su estado de origen',
+                            'reason' => __('Subtasks completed for today, order returned to its original status'),
                             'return_status' => $returnStatus->value,
                         ],
                     ]);
@@ -1025,7 +1025,7 @@ class AutomationEngine
                         'actor' => 'AutomationEngine',
                         'previous_value' => $prevStatus->value,
                         'new_value' => $targetStatus->value,
-                        'metadata' => ['reason' => 'Subtareas reprogramadas a fechas futuras; sin subtareas pendientes hoy'],
+                        'metadata' => ['reason' => __('Subtasks rescheduled to future dates; no pending subtasks today')],
                     ]);
                 }
             } else {

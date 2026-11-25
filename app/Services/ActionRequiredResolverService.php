@@ -41,7 +41,7 @@ class ActionRequiredResolverService
             }
 
             if ($order->substatus === Substatus::BLOQUEADA) {
-                $order->unblock(__('Medidas confirmadas manualmente'), $actor);
+                $order->unblock(__('Measurements confirmed manually'), $actor);
                 $resolved = true;
             }
         }
@@ -60,7 +60,7 @@ class ActionRequiredResolverService
                 'actor' => $actor,
                 'previous_value' => Substatus::FALTA_APROBACION_ESTIMADO->value,
                 'new_value' => $newSubstatus?->value ?? 'Ninguno',
-                'metadata' => ['reason' => 'Estimado aprobado manualmente'],
+                'metadata' => ['reason' => __('Estimate approved manually')],
             ]);
 
             $resolved = true;

@@ -58,7 +58,7 @@
                     <p class="text-meta text-ink-3 font-semibold">{{ __('Linked designer') }}</p>
                     <p class="text-xs font-semibold text-ink">{{ $user->designer->name }}</p>
                 </div>
-                <div class="w-4 h-4 rounded-full border border-stone-300 shrink-0" style="background-color: {{ $user->designer->hex_color ?? '#06b6d4' }}" title="{{ $user->designer->color_type ?? 'Color de diseñador' }}"></div>
+                <div class="w-4 h-4 rounded-full border border-stone-300 shrink-0" style="background-color: {{ $user->designer->hex_color ?? '#06b6d4' }}" title="{{ $user->designer->color_type ?? __('Designer color') }}"></div>
             </div>
         @endif
     </div>
@@ -135,17 +135,17 @@
                             selectedCountry: { name: 'Venezuela', code: 'VE', dial: '+58', flag: '🇻🇪', placeholder: '412 1234567' },
                             countries: [
                                 { name: 'Venezuela', code: 'VE', dial: '+58', flag: '🇻🇪', placeholder: '412 1234567' },
-                                { name: 'Estados Unidos', code: 'US', dial: '+1', flag: '🇺🇸', placeholder: '(555) 000-0000' },
+                                { name: @js(__('United States')), code: 'US', dial: '+1', flag: '🇺🇸', placeholder: '(555) 000-0000' },
                                 { name: 'Colombia', code: 'CO', dial: '+57', flag: '🇨🇴', placeholder: '300 123 4567' },
-                                { name: 'España', code: 'ES', dial: '+34', flag: '🇪🇸', placeholder: '612 34 56 78' },
-                                { name: 'México', code: 'MX', dial: '+52', flag: '🇲🇽', placeholder: '55 1234 5678' },
+                                { name: @js(__('Spain')), code: 'ES', dial: '+34', flag: '🇪🇸', placeholder: '612 34 56 78' },
+                                { name: @js(__('Mexico')), code: 'MX', dial: '+52', flag: '🇲🇽', placeholder: '55 1234 5678' },
                                 { name: 'Argentina', code: 'AR', dial: '+54', flag: '🇦🇷', placeholder: '11 1234-5678' },
                                 { name: 'Chile', code: 'CL', dial: '+56', flag: '🇨🇱', placeholder: '9 1234 5678' },
-                                { name: 'Perú', code: 'PE', dial: '+51', flag: '🇵🇪', placeholder: '912 345 678' },
+                                { name: @js(__('Peru')), code: 'PE', dial: '+51', flag: '🇵🇪', placeholder: '912 345 678' },
                                 { name: 'Ecuador', code: 'EC', dial: '+593', flag: '🇪🇨', placeholder: '99 123 4567' },
-                                { name: 'Panamá', code: 'PA', dial: '+507', flag: '🇵🇦', placeholder: '6123-4567' },
+                                { name: @js(__('Panama')), code: 'PA', dial: '+507', flag: '🇵🇦', placeholder: '6123-4567' },
                                 { name: 'Costa Rica', code: 'CR', dial: '+506', flag: '🇨🇷', placeholder: '8123 4567' },
-                                { name: 'República Dominicana', code: 'DO', dial: '+1', flag: '🇩🇴', placeholder: '809 123 4567' },
+                                { name: @js(__('Dominican Republic')), code: 'DO', dial: '+1', flag: '🇩🇴', placeholder: '809 123 4567' },
                                 { name: 'Uruguay', code: 'UY', dial: '+598', flag: '🇺🇾', placeholder: '91 234 567' },
                                 { name: 'Paraguay', code: 'PY', dial: '+595', flag: '🇵🇾', placeholder: '981 123456' },
                                 { name: 'Bolivia', code: 'BO', dial: '+591', flag: '🇧🇴', placeholder: '71234567' },
@@ -153,15 +153,15 @@
                                 { name: 'El Salvador', code: 'SV', dial: '+503', flag: '🇸🇻', placeholder: '7123 4567' },
                                 { name: 'Honduras', code: 'HN', dial: '+504', flag: '🇭🇳', placeholder: '9123-4567' },
                                 { name: 'Nicaragua', code: 'NI', dial: '+505', flag: '🇳🇮', placeholder: '8123 4567' },
-                                { name: 'Brasil', code: 'BR', dial: '+55', flag: '🇧🇷', placeholder: '11 91234-5678' },
-                                { name: 'Canadá', code: 'CA', dial: '+1', flag: '🇨🇦', placeholder: '(555) 000-0000' },
-                                { name: 'Reino Unido', code: 'GB', dial: '+44', flag: '🇬🇧', placeholder: '7911 123456' },
+                                { name: @js(__('Brazil')), code: 'BR', dial: '+55', flag: '🇧🇷', placeholder: '11 91234-5678' },
+                                { name: @js(__('Canada')), code: 'CA', dial: '+1', flag: '🇨🇦', placeholder: '(555) 000-0000' },
+                                { name: @js(__('United Kingdom')), code: 'GB', dial: '+44', flag: '🇬🇧', placeholder: '7911 123456' },
                                 { name: 'Portugal', code: 'PT', dial: '+351', flag: '🇵🇹', placeholder: '912 345 678' },
-                                { name: 'Francia', code: 'FR', dial: '+33', flag: '🇫🇷', placeholder: '6 12 34 56 78' },
-                                { name: 'Alemania', code: 'DE', dial: '+49', flag: '🇩🇪', placeholder: '151 12345678' },
-                                { name: 'Italia', code: 'IT', dial: '+39', flag: '🇮🇹', placeholder: '312 345 6789' },
-                                { name: 'Países Bajos', code: 'NL', dial: '+31', flag: '🇳🇱', placeholder: '6 12345678' },
-                                { name: 'Suiza', code: 'CH', dial: '+41', flag: '🇨🇭', placeholder: '78 123 45 67' },
+                                { name: @js(__('France')), code: 'FR', dial: '+33', flag: '🇫🇷', placeholder: '6 12 34 56 78' },
+                                { name: @js(__('Germany')), code: 'DE', dial: '+49', flag: '🇩🇪', placeholder: '151 12345678' },
+                                { name: @js(__('Italy')), code: 'IT', dial: '+39', flag: '🇮🇹', placeholder: '312 345 6789' },
+                                { name: @js(__('Netherlands')), code: 'NL', dial: '+31', flag: '🇳🇱', placeholder: '6 12345678' },
+                                { name: @js(__('Switzerland')), code: 'CH', dial: '+41', flag: '🇨🇭', placeholder: '78 123 45 67' },
                                 { name: 'Australia', code: 'AU', dial: '+61', flag: '🇦🇺', placeholder: '412 345 678' },
                                 { name: 'Puerto Rico', code: 'PR', dial: '+1', flag: '🇵🇷', placeholder: '787 123 4567' }
                             ],
@@ -298,7 +298,7 @@
                             <!-- Avatar Preview -->
                             <div x-data="{ imgError: false }" class="relative shrink-0 w-16 h-16 rounded-full overflow-hidden ring-2 ring-stone-300 bg-stone-200 flex items-center justify-center">
                                 @if ($avatar_file && ! $errors->has('avatar_file') && in_array(strtolower($avatar_file->getClientOriginalExtension()), ['jpg', 'jpeg', 'png', 'webp', 'gif']))
-                                    <img src="{{ $avatar_file->temporaryUrl() }}" alt="Preview" class="w-full h-full object-cover">
+                                    <img src="{{ $avatar_file->temporaryUrl() }}" alt="{{ __('Preview') }}" class="w-full h-full object-cover">
                                 @elseif ($avatar_url)
                                     <img src="{{ $avatar_url }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $user->name }}" class="w-full h-full object-cover">
                                     <span x-show="imgError" x-cloak class="text-stone-700 font-semibold text-lg select-none">{{ $user->initials }}</span>
@@ -339,7 +339,7 @@
                                 </div>
 
                                 <div class="flex items-center gap-3 text-meta text-ink-3">
-                                    <span>{{ __('Formats:') }} <strong>PNG, JPG o WEBP</strong> (máx. 3 MB)</span>
+                                    <span>{{ __('Formats:') }} <strong>PNG, JPG {{ __('or') }} WEBP</strong> {{ __('(max. 3 MB)') }}</span>
                                 </div>
 
                                 @error('avatar_file')
@@ -361,7 +361,7 @@
                                 <input 
                                     wire:model="avatar_url" 
                                     type="url" 
-                                    placeholder="https://ejemplo.com/avatar.jpg"
+                                    placeholder="https://example.com/avatar.jpg"
                                     class="ui-input font-mono" />
                                 <p class="text-meta text-ink-3">{{ __('Direct HTTP/HTTPS link to your image or an external avatar service.') }}</p>
                                 @error('avatar_url') <p class="text-meta text-red-600 mt-0.5">{{ $message }}</p> @enderror
@@ -415,7 +415,7 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="text-xs font-semibold text-ink">Español</p>
-                                        <p class="text-meta text-ink-3">Spanish (Predeterminado)</p>
+                                        <p class="text-meta text-ink-3">{{ __('Spanish (default)') }}</p>
                                     </div>
                                 </div>
                                 @if($locale === 'es')
@@ -437,7 +437,7 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="text-xs font-semibold text-ink">English</p>
-                                        <p class="text-meta text-ink-3">English Interface</p>
+                                        <p class="text-meta text-ink-3">{{ __('English interface') }}</p>
                                     </div>
                                 </div>
                                 @if($locale === 'en')
@@ -471,8 +471,8 @@
                         <select 
                             wire:model="date_format" 
                             class="ui-select">
-                            <option value="d/m/Y">DD/MM/YYYY (ej. 29/09/2026)</option>
-                            <option value="m/d/Y">MM/DD/YYYY (ej. 09/29/2026)</option>
+                            <option value="d/m/Y">DD/MM/YYYY ({{ __('e.g.') }} 29/09/2026)</option>
+                            <option value="m/d/Y">MM/DD/YYYY ({{ __('e.g.') }} 09/29/2026)</option>
                         </select>
                     </div>
 

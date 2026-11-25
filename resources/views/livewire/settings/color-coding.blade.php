@@ -124,7 +124,7 @@
                                 <span class="text-meta font-semibold" style="{{ $p['header_title_style'] }}">{{ $item['name'] }}</span>
                                 <span class="text-meta font-mono text-ink-3">WO-1082</span>
                             </div>
-                            <p class="text-body text-ink truncate">Supermercados Talpa — Rediseño de Etiquetas Promocionales</p>
+                            <p class="text-body text-ink truncate">{{ __('Talpa Supermarkets — Promotional label redesign') }}</p>
                             <div class="flex items-center justify-between pt-1 border-t border-black/5 text-meta text-ink-3">
                                 <span>{{ __('Today at 4:00 PM') }}</span>
                                 <button type="button" class="px-2 py-0.5 rounded-control font-medium text-meta" style="{{ $p['button_style'] }}">{{ __('Action') }}</button>

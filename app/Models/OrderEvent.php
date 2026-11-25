@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Services\ColorCodingService;
+use App\Support\SystemTaskTitle;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -227,6 +228,7 @@ class OrderEvent extends Model
             str_contains($type, 'ORDER_APPROVED') ||
             str_contains($type, 'APPROVAL_SUBMITTED') ||
             str_contains($newValLower, 'aprobado por') ||
+            str_contains($newValLower, 'approved by') ||
             str_contains($newValLower, 'aprobación recibida')
         ) {
             return __('Approval Received');
@@ -236,20 +238,20 @@ class OrderEvent extends Model
             return __('Order unblocked');
         }
         if (str_contains($type, 'AUTOMATIC_TASK') || str_contains($type, 'TASK_TRIGGERED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Task');
+            $taskTitle = SystemTaskTitle::translate($this->metadata['task_title'] ?? $this->new_value ?? __('Task'));
 
             return __('":title" added', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'SUBTASK_SCHEDULED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Task');
+            $taskTitle = SystemTaskTitle::translate($this->metadata['task_title'] ?? $this->new_value ?? __('Task'));
             $dateStr = isset($this->metadata['date']) ? $this->formatValueIfDate($this->metadata['date']) : '';
 
             return __('":title" scheduled', ['title' => $taskTitle]).($dateStr ? ' '.__('for').' '.$dateStr : '');
         }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Task');
+            $taskTitle = SystemTaskTitle::translate($this->metadata['task_title'] ?? $this->new_value ?? __('Task'));
 
-            return __('":title" completada', ['title' => $taskTitle]);
+            return __('":title" completed', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'ORDER_CREATED') || str_contains($type, 'CREATED')) {
             $source = $this->metadata['source'] ?? null;
@@ -279,7 +281,7 @@ class OrderEvent extends Model
             return __('Delay resolved');
         }
         if (str_contains($type, 'WO_UPDATED')) {
-            return __('WO actualizado (:new)', ['new' => $this->new_value]);
+            return __('WO updated (:new)', ['new' => $this->new_value]);
         }
         if (str_contains($type, 'DUPLICATED')) {
             return __('Order duplicated');
@@ -288,7 +290,7 @@ class OrderEvent extends Model
             return __('Attachment removed from Trello (:file)', ['file' => $this->previous_value ?? __('File')]);
         }
         if (str_contains($type, 'ATTACHMENT')) {
-            return __('Archivo adjuntado a Trello (:file)', ['file' => $this->new_value ?? __('File')]);
+            return __('File attached to Trello (:file)', ['file' => $this->new_value ?? __('File')]);
         }
         if (str_contains($type, 'COMMENT')) {
             $author = ! empty($this->actor)
@@ -297,7 +299,7 @@ class OrderEvent extends Model
 
             return $author
                 ? __('Comment from :user', ['user' => $author])
-                : __('Comentario');
+                : __('Comment');
         }
         if (str_contains($type, 'STATUS_CHANGED_VIA_TRELLO')) {
             $statusLabel = $this->formatValueIfDate($this->new_value);
@@ -305,7 +307,7 @@ class OrderEvent extends Model
                 $statusLabel = __('SENT TO PRODUCTION');
             }
 
-            return __('Estatus actualizado desde Trello (:status)', ['status' => $statusLabel]);
+            return __('Status updated from Trello (:status)', ['status' => $statusLabel]);
         }
         if (str_contains($type, 'DUE_DATE_CHANGED')) {
             $dateLabel = $this->formatValueIfDate($this->new_value);
@@ -320,10 +322,10 @@ class OrderEvent extends Model
                 $subEnum = Substatus::tryFrom($this->new_value);
                 $label = $subEnum ? $subEnum->label() : $this->new_value;
 
-                return __('Subestatus: :status', ['status' => $label]);
+                return __('Substatus: :status', ['status' => $label]);
             }
 
-            return __('Subestatus actualizado');
+            return __('Substatus updated');
         }
         if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
             $formatted = $this->formatValueIfDate($this->new_value);
@@ -339,7 +341,7 @@ class OrderEvent extends Model
 
     public function getDisplayDate(): string
     {
-        return $this->created_at ? $this->created_at->format('d M, g:i A') : '';
+        return $this->created_at ? $this->created_at->translatedFormat('d M, g:i A') : '';
     }
 
     public function getFormattedTitleHtml(): string

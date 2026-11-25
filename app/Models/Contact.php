@@ -92,18 +92,18 @@ class Contact extends Model
     {
         return match ($this->preferred_channel) {
             'whatsapp' => ['label' => 'WhatsApp', 'color' => 'emerald', 'icon' => 'message-circle'],
-            'call' => ['label' => 'Llamada', 'color' => 'blue', 'icon' => 'phone'],
+            'call' => ['label' => __('Call'), 'color' => 'blue', 'icon' => 'phone'],
             'email' => ['label' => 'Email', 'color' => 'amber', 'icon' => 'mail'],
-            default => ['label' => 'Cualquiera', 'color' => 'zinc', 'icon' => 'messages-square'],
+            default => ['label' => __('Any'), 'color' => 'zinc', 'icon' => 'messages-square'],
         };
     }
 
     public function getLanguageBadgeAttribute(): array
     {
         return match ($this->preferred_language) {
-            'en' => ['code' => 'EN', 'flag' => 'EN', 'label' => 'Inglés', 'color' => 'indigo'],
-            'both' => ['code' => 'ES / EN', 'flag' => 'ES / EN', 'label' => 'Bilingüe', 'color' => 'purple'],
-            default => ['code' => 'ES', 'flag' => 'ES', 'label' => 'Español', 'color' => 'stone'],
+            'en' => ['code' => 'EN', 'flag' => 'EN', 'label' => __('English'), 'color' => 'indigo'],
+            'both' => ['code' => 'ES / EN', 'flag' => 'ES / EN', 'label' => __('Bilingual'), 'color' => 'purple'],
+            default => ['code' => 'ES', 'flag' => 'ES', 'label' => __('Spanish'), 'color' => 'stone'],
         };
     }
 

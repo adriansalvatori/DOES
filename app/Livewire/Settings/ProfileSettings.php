@@ -34,7 +34,7 @@ class ProfileSettings extends Component
     public $avatar_file = null;
 
     // Environment Preferences
-    public string $locale = 'es';
+    public string $locale = 'en';
 
     public string $date_format = 'd/m/Y';
 
@@ -76,7 +76,7 @@ class ProfileSettings extends Component
 
             // User Preferences
             $prefs = $user->preferences ?? [];
-            $this->locale = session('locale', $prefs['locale'] ?? config('app.locale', 'es'));
+            $this->locale = session('locale', $prefs['locale'] ?? config('app.locale', 'en'));
             $this->date_format = $prefs['date_format'] ?? 'd/m/Y';
             $this->default_landing_page = $prefs['default_landing_page'] ?? 'dashboard';
         }

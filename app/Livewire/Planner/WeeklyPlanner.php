@@ -597,7 +597,7 @@ class WeeklyPlanner extends Component
                     'isOrderApproved' => $isOrderApproved,
                     'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Blocked')),
                     'approvalType' => $order->approval_type ?? __('Client'),
-                    'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previously'),
+                    'approvedAt' => $order->approved_at?->translatedFormat('d M, Y') ?? __('Previously'),
                 ];
                 $this->subtaskBlockResolution = ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS) ? 'unblock' : 'keep_blocked';
                 $this->subtaskApprovalImpact = ($category === SubtaskCategory::CLIENT_ADJUSTMENTS) ? 'invalidate' : 'keep';
@@ -617,10 +617,10 @@ class WeeklyPlanner extends Component
                     'event_type' => 'APPROVAL_RESET',
                     'actor' => auth()->user()?->name ?? __('Designer'),
                     'previous_value' => 'approved: true',
-                    'new_value' => 'approved: false (Anulada por nueva subtarea: '.$taskTitle.')',
+                    'new_value' => 'approved: false ('.__('Voided by new subtask: :title', ['title' => $taskTitle]).')',
                     'metadata' => [
                         'timestamp' => now()->toIso8601String(),
-                        'reason' => 'Subtarea creada invalida aprobación previa',
+                        'reason' => __('Subtask created, invalidating previous approval'),
                     ],
                 ]);
 
@@ -727,22 +727,22 @@ class WeeklyPlanner extends Component
                     'order_id' => $order->id,
                     'company_name' => $order->company_name,
                     'task_name' => $taskTitle,
-                    'scheduled_date' => $scheduledDate->format('d M, Y'),
-                    'current_due_date' => $order->current_due_date->format('d M, Y'),
+                    'scheduled_date' => $scheduledDate->translatedFormat('d M, Y'),
+                    'current_due_date' => $order->current_due_date->translatedFormat('d M, Y'),
                     'days_overdue' => max(1, $daysOverdue),
                 ];
                 $this->showSlaWarningModal = true;
                 session()->flash('warning', __('Heads up: subtask ":title" for :company is scheduled on :date, past the SLA deadline (:due).', [
                     'title' => $taskTitle,
                     'company' => $order->company_name,
-                    'date' => $scheduledDate->format('d M'),
-                    'due' => $order->current_due_date->format('d M'),
+                    'date' => $scheduledDate->translatedFormat('d M'),
+                    'due' => $order->current_due_date->translatedFormat('d M'),
                 ]));
             } else {
                 session()->flash('message', __('Subtask ":title" scheduled for :company on :date.', [
                     'title' => $taskTitle,
                     'company' => $order->company_name,
-                    'date' => $scheduledDate->format('d M'),
+                    'date' => $scheduledDate->translatedFormat('d M'),
                 ]));
             }
         } else {
@@ -769,7 +769,7 @@ class WeeklyPlanner extends Component
 
             session()->flash('message', __('Note ":title" created for :date.', [
                 'title' => $taskTitle,
-                'date' => $scheduledDate->format('d M'),
+                'date' => $scheduledDate->translatedFormat('d M'),
             ]));
         }
 
@@ -845,7 +845,7 @@ class WeeklyPlanner extends Component
             }
         }
 
-        $msg = __('Subtask ":title" rescheduled for :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]);
+        $msg = __('Subtask ":title" rescheduled for :date.', ['title' => $subtask->title, 'date' => $scheduledDate->translatedFormat('d M')]);
 
         if (! $subtask->isDone() && $subtask->order && ! $subtask->order->isSlaExempt() && ! $subtask->isFollowUp() && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
             $daysOverdue = (int) $subtask->order->current_due_date->diffInDays($scheduledDate);
@@ -853,15 +853,15 @@ class WeeklyPlanner extends Component
                 'order_id' => $subtask->order->id,
                 'company_name' => $subtask->order->company_name,
                 'task_name' => $subtask->title,
-                'scheduled_date' => $scheduledDate->format('d M, Y'),
-                'current_due_date' => $subtask->order->current_due_date->format('d M, Y'),
+                'scheduled_date' => $scheduledDate->translatedFormat('d M, Y'),
+                'current_due_date' => $subtask->order->current_due_date->translatedFormat('d M, Y'),
                 'days_overdue' => max(1, $daysOverdue),
             ];
             $this->showSlaWarningModal = true;
             session()->flash('warning', __('Heads up: subtask ":title" rescheduled to :date is past the SLA deadline (:due).', [
                 'title' => $subtask->title,
-                'date' => $scheduledDate->format('d M'),
-                'due' => $subtask->order->current_due_date->format('d M'),
+                'date' => $scheduledDate->translatedFormat('d M'),
+                'due' => $subtask->order->current_due_date->translatedFormat('d M'),
             ]));
         } else {
             session()->flash('message', $msg);
@@ -934,7 +934,7 @@ class WeeklyPlanner extends Component
         }
 
         $count = count($taskIds);
-        $dateFormatted = $targetDate ? $targetDate->format('d M') : '';
+        $dateFormatted = $targetDate ? $targetDate->translatedFormat('d M') : '';
         $msg = $targetDate
             ? ($count === 1 ? __('Subtask moved to :date', ['date' => $dateFormatted]) : __(':count subtasks moved to :date', ['count' => $count, 'date' => $dateFormatted]))
             : ($count === 1 ? __('Subtask reassigned') : __(':count subtasks reassigned', ['count' => $count]));
@@ -1063,7 +1063,7 @@ class WeeklyPlanner extends Component
                     'previous_value' => $previousOrderStatus?->value,
                     'new_value' => CoreStatus::EN_PRODUCCION->value,
                     'metadata' => [
-                        'trigger' => 'Subtarea Poner en Alta completada en Weekly Planner',
+                        'trigger' => __('Set for Print subtask completed in Weekly Planner'),
                         'task_id' => $subtask->id,
                         'task_title' => $subtask->title,
                     ],
@@ -1284,7 +1284,7 @@ class WeeklyPlanner extends Component
             'is_next_week' => true,
             'date' => $nextWeekMonday,
             'date_string' => $nextWeekMonday->toDateString(),
-            'range_label' => $nextWeekMonday->format('d M').' - '.$nextWeekFriday->format('d M'),
+            'range_label' => $nextWeekMonday->translatedFormat('d M').' - '.$nextWeekFriday->translatedFormat('d M'),
         ];
 
         $designerQuery = Designer::where('active', true)->internal()->with(['orders' => fn ($q) => $q->inWorkspace()->prioritizeUrgente()->with(['clientLocation', 'designers', 'designer'])]);
@@ -1360,8 +1360,8 @@ class WeeklyPlanner extends Component
                         'order_id' => $st->order->id,
                         'company_name' => $st->order->company_name,
                         'task_name' => $st->title,
-                        'scheduled_date' => $st->scheduled_date->format('d M, Y'),
-                        'current_due_date' => $st->order->current_due_date->format('d M, Y'),
+                        'scheduled_date' => $st->scheduled_date->translatedFormat('d M, Y'),
+                        'current_due_date' => $st->order->current_due_date->translatedFormat('d M, Y'),
                         'days_overdue' => $daysOverdue,
                         'is_work_task' => (bool) $st->is_work_task,
                         'is_system_task' => $st->isSystemTask(),
@@ -1385,8 +1385,8 @@ class WeeklyPlanner extends Component
                                 'order_id' => $ord->id,
                                 'company_name' => $ord->company_name,
                                 'task_name' => $ord->task_name ?? __('Main order'),
-                                'scheduled_date' => $ord->scheduled_date->format('d M, Y'),
-                                'current_due_date' => $ord->current_due_date->format('d M, Y'),
+                                'scheduled_date' => $ord->scheduled_date->translatedFormat('d M, Y'),
+                                'current_due_date' => $ord->current_due_date->translatedFormat('d M, Y'),
                                 'days_overdue' => $daysOverdue,
                             ]);
                         }

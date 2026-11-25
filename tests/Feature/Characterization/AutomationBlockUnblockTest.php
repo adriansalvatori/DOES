@@ -63,7 +63,7 @@ class AutomationBlockUnblockTest extends AutomationCharacterizationTestCase
 
         $order->block('FALTAN MEDIDAS');
 
-        $this->assertSame('Orden marcada como Bloqueada.', $this->eventsOf($order, 'ORDER_BLOCKED')->sole()->metadata['comment']);
+        $this->assertSame('Order marked as Blocked.', $this->eventsOf($order, 'ORDER_BLOCKED')->sole()->metadata['comment']);
         $this->assertSame(BlockingReason::FALTAN_MEDIDAS, $order->fresh()->blocking_reason);
     }
 
@@ -152,7 +152,7 @@ class AutomationBlockUnblockTest extends AutomationCharacterizationTestCase
 
         $order->block('FALTAN MEDIDAS');
 
-        $this->assertSame('Usuario', $this->eventsOf($order, 'ORDER_BLOCKED')->sole()->actor);
+        $this->assertSame('User', $this->eventsOf($order, 'ORDER_BLOCKED')->sole()->actor);
     }
 
     // ---- unblock() ---------------------------------------------------------------------------------
@@ -193,7 +193,7 @@ class AutomationBlockUnblockTest extends AutomationCharacterizationTestCase
     {
         return [
             'under an hour' => ['-30 minutes', 1, 'less than 1 hour', 1],
-            'a few hours' => ['-5 hours', 5, '5 horas', 1],
+            'a few hours' => ['-5 hours', 5, '5 hours', 1],
             'one day' => ['-1 day', 24, '1 day', 1],
             'several days' => ['-3 days', 72, '3 days', 3],
         ];

@@ -7,13 +7,11 @@ use App\Services\TrelloSyncService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 #[Layout('components.layouts.app')]
-#[Title('Conciliación CSV')]
 class CsvReconciliation extends Component
 {
     use WithFileUploads;
@@ -122,7 +120,7 @@ class CsvReconciliation extends Component
         $this->resetMessages();
 
         if (! $this->csvFile) {
-            $this->errorMessage = 'Por favor selecciona un archivo CSV válido.';
+            $this->errorMessage = __('Please select a valid CSV file.');
 
             return;
         }
@@ -157,9 +155,9 @@ class CsvReconciliation extends Component
             }
 
             $total = $this->meta['total_rows'] ?? 0;
-            $this->successMessage = "Archivo analizado exitosamente. Se procesaron {$total} filas.";
+            $this->successMessage = __('File analyzed successfully. :count rows were processed.', ['count' => $total]);
         } catch (\Throwable $e) {
-            $this->errorMessage = 'Error al analizar el archivo CSV: '.$e->getMessage();
+            $this->errorMessage = __('Error analyzing the CSV file: :error', ['error' => $e->getMessage()]);
         }
     }
 
@@ -232,7 +230,7 @@ class CsvReconciliation extends Component
                 $this->selectedPartial = [];
             }
         } else {
-            $this->errorMessage = $result['message'] ?? 'Ocurrió un error al procesar el lote.';
+            $this->errorMessage = $result['message'] ?? __('An error occurred while processing the batch.');
             $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
@@ -245,13 +243,13 @@ class CsvReconciliation extends Component
         $result = $service->applySinglePartialAndSyncCache($rowId);
 
         if ($result['success']) {
-            $msg = 'Orden aprobada y actualizada correctamente.';
+            $msg = __('Order approved and updated successfully.');
             $this->successMessage = $msg;
             $this->dispatch('toast', message: $msg);
             $this->meta = $service->getAnalysisMeta();
             $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
         } else {
-            $this->errorMessage = $result['message'] ?? 'Error al actualizar la orden.';
+            $this->errorMessage = $result['message'] ?? __('Error updating the order.');
             $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
@@ -262,7 +260,7 @@ class CsvReconciliation extends Component
         if ($service->discardPartialAndSyncCache($rowId)) {
             $this->meta = $service->getAnalysisMeta();
             $this->selectedPartial = array_values(array_diff($this->selectedPartial, [$rowId]));
-            $msg = 'Coincidencia descartada y movida a Sin Coincidencia para vincular vía Trello.';
+            $msg = __('Match discarded and moved to No Match to link via Trello.');
             $this->successMessage = $msg;
             $this->dispatch('toast', message: $msg);
         }
@@ -308,12 +306,12 @@ class CsvReconciliation extends Component
         $client = $service->quickCreateClientFromRow($rowId);
 
         if ($client) {
-            $msg = "Cliente \"{$client->name}\" registrado exitosamente en el catálogo oficial de Kudos.";
+            $msg = __('Client ":name" registered successfully in the official Kudos catalog.', ['name' => $client->name]);
             $this->successMessage = $msg;
             $this->dispatch('toast', message: $msg);
             $this->meta = $service->getAnalysisMeta();
         } else {
-            $this->errorMessage = 'No se pudo crear el cliente para esta orden.';
+            $this->errorMessage = __('Could not create the client for this order.');
             $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
@@ -327,7 +325,7 @@ class CsvReconciliation extends Component
 
         $url = trim($this->trelloInput[$rowId] ?? '');
         if (empty($url)) {
-            $this->trelloError[$rowId] = 'Por favor ingresa la URL de la tarjeta de Trello.';
+            $this->trelloError[$rowId] = __('Please enter the Trello card URL.');
             $this->trelloChecking[$rowId] = false;
 
             return;
@@ -341,7 +339,7 @@ class CsvReconciliation extends Component
         }
 
         if (! $cardId) {
-            $this->trelloError[$rowId] = 'Formato de URL de Trello inválido. Ejemplo: https://trello.com/c/5x8bZ9q1';
+            $this->trelloError[$rowId] = __('Invalid Trello URL format. Example: https://trello.com/c/5x8bZ9q1');
             $this->trelloChecking[$rowId] = false;
 
             return;
@@ -362,7 +360,7 @@ class CsvReconciliation extends Component
 
                 $this->trelloCardPreview[$rowId] = [
                     'id' => $card['id'],
-                    'name' => $card['name'] ?? 'Sin título',
+                    'name' => $card['name'] ?? __('Untitled'),
                     'desc' => $card['desc'] ?? '',
                     'url' => $card['shortUrl'] ?? "https://trello.com/c/{$card['id']}",
                     'is_closed' => (bool) ($card['closed'] ?? false),
@@ -371,10 +369,10 @@ class CsvReconciliation extends Component
                     'existing_order_id' => $dedup['order_id'],
                 ];
             } else {
-                $this->trelloError[$rowId] = 'No se pudo obtener información de la tarjeta en Trello. Verifica los permisos o el enlace.';
+                $this->trelloError[$rowId] = __('Could not get the card information from Trello. Check the permissions or the link.');
             }
         } catch (\Throwable $e) {
-            $this->trelloError[$rowId] = 'Error al consultar Trello: '.$e->getMessage();
+            $this->trelloError[$rowId] = __('Error querying Trello: :error', ['error' => $e->getMessage()]);
         } finally {
             $this->trelloChecking[$rowId] = false;
         }
@@ -393,10 +391,10 @@ class CsvReconciliation extends Component
                 $this->trelloCardPreview[$rowId] = $res['preview'];
                 $this->trelloInput[$rowId] = $res['preview']['url'];
             } else {
-                $this->trelloError[$rowId] = $res['message'] ?? 'No se encontró tarjeta en Trello.';
+                $this->trelloError[$rowId] = $res['message'] ?? __('No card found in Trello.');
             }
         } catch (\Throwable $e) {
-            $this->trelloError[$rowId] = 'Error al buscar en Trello: '.$e->getMessage();
+            $this->trelloError[$rowId] = __('Error searching Trello: :error', ['error' => $e->getMessage()]);
         } finally {
             $this->trelloChecking[$rowId] = false;
         }
@@ -426,10 +424,10 @@ class CsvReconciliation extends Component
                     $this->unmatchedFilter = 'with_match';
                 }
             } else {
-                $this->errorMessage = $res['message'] ?? 'Error durante la búsqueda en Trello.';
+                $this->errorMessage = $res['message'] ?? __('Error during the Trello search.');
             }
         } catch (\Throwable $e) {
-            $this->errorMessage = 'Error al consultar Trello: '.$e->getMessage();
+            $this->errorMessage = __('Error querying Trello: :error', ['error' => $e->getMessage()]);
         } finally {
             $this->isSearchingTrello = false;
         }
@@ -448,7 +446,7 @@ class CsvReconciliation extends Component
             $this->trelloCardPreview = [];
             $this->unmatchedFilter = 'all';
         } else {
-            $this->errorMessage = $res['message'] ?? 'Error al vincular tarjetas de Trello.';
+            $this->errorMessage = $res['message'] ?? __('Error linking Trello cards.');
             $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
@@ -459,7 +457,7 @@ class CsvReconciliation extends Component
 
         $preview = $this->trelloCardPreview[$rowId] ?? null;
         if (! $preview || empty($preview['id'])) {
-            $this->errorMessage = 'Por favor verifica la tarjeta de Trello antes de vincular.';
+            $this->errorMessage = __('Please verify the Trello card before linking.');
             $this->dispatch('toast', message: $this->errorMessage, type: 'error');
 
             return;
@@ -474,7 +472,7 @@ class CsvReconciliation extends Component
             $this->meta = $service->getAnalysisMeta();
             unset($this->trelloInput[$rowId], $this->trelloCardPreview[$rowId]);
         } else {
-            $this->errorMessage = $result['message'] ?? 'Error al vincular con Trello.';
+            $this->errorMessage = $result['message'] ?? __('Error linking with Trello.');
             $this->dispatch('toast', message: $this->errorMessage, type: 'error');
         }
     }
@@ -554,6 +552,6 @@ class CsvReconciliation extends Component
             'totalPages' => $tabData['totalPages'],
             'migrationHistory' => $this->migrationHistory,
             'unmatchedCounts' => $tabData['unmatchedCounts'] ?? ['total' => 0, 'with_match' => 0, 'without_match' => 0],
-        ]);
+        ])->title(__('CSV Reconciliation'));
     }
 }

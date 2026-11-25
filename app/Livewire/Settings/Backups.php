@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Settings;
 
+use App\Support\LocalizedNumber;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -133,8 +134,8 @@ class Backups extends Component
         return array_values(array_map(function (\SplFileInfo $file) {
             $bytes = $file->getSize();
             $formattedSize = $bytes >= 1048576
-                ? number_format($bytes / 1048576, 2).' MB'
-                : number_format($bytes / 1024, 2).' KB';
+                ? LocalizedNumber::format($bytes / 1048576, 2).' MB'
+                : LocalizedNumber::format($bytes / 1024, 2).' KB';
 
             $mtime = Carbon::createFromTimestamp($file->getMTime());
 

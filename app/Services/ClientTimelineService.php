@@ -102,7 +102,7 @@ class ClientTimelineService
 
                 $milestones->push([
                     'type' => 'changes_received',
-                    'title' => __('Cambios / comentarios recibidos'),
+                    'title' => __('Changes / comments received'),
                     'subtitle' => __('Your assigned designer is applying the changes'),
                     'date' => $eventDate,
                     'color' => 'purple',
@@ -141,8 +141,8 @@ class ClientTimelineService
                 $reason = $event->metadata['reason'] ?? $order->pause_reason ?? ($order->blocking_reason?->label() ?: __('Waiting for information or confirmation'));
                 $milestones->push([
                     'type' => 'on_hold',
-                    'title' => __('En pausa (On Hold)'),
-                    'subtitle' => __('Motivo: :reason', ['reason' => $reason]),
+                    'title' => __('Paused (On Hold)'),
+                    'subtitle' => __('Reason: :reason', ['reason' => $reason]),
                     'date' => $eventDate,
                     'color' => 'amber',
                     'icon' => 'pause-circle',
@@ -157,7 +157,7 @@ class ClientTimelineService
             if (str_contains($type, 'UNBLOCKED') || str_contains($type, 'DESBLOQUEA')) {
                 $milestones->push([
                     'type' => 'unblocked',
-                    'title' => __('Pausa resuelta / Trabajo reanudado'),
+                    'title' => __('Pause resolved / Work resumed'),
                     'subtitle' => __('The order was resumed and is under review'),
                     'date' => $eventDate,
                     'color' => 'emerald',
@@ -243,8 +243,8 @@ class ClientTimelineService
             $reason = $order->pause_reason ?: ($order->blocking_reason?->label() ?: __('Waiting for specifications or confirmation'));
             $milestones->push([
                 'type' => 'on_hold',
-                'title' => __('En pausa (On Hold)'),
-                'subtitle' => __('Motivo: :reason', ['reason' => $reason]),
+                'title' => __('Paused (On Hold)'),
+                'subtitle' => __('Reason: :reason', ['reason' => $reason]),
                 'date' => $order->updated_at,
                 'color' => 'amber',
                 'icon' => 'pause-circle',
@@ -340,7 +340,7 @@ class ClientTimelineService
             $palette = $cc->derivePalette($hex);
 
             return [
-                'label' => __('Esperando tu respuesta'),
+                'label' => __('Waiting for your response'),
                 'badge_class' => 'border font-semibold ring-2 ring-blue-500/20',
                 'badge_inline_style' => $palette['badge_style'],
                 'dot_color' => '',

@@ -942,7 +942,7 @@
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
                     <div class="flex items-center gap-1">
                         <flux:button wire:click="previousWeek" size="sm" variant="ghost" icon="chevron-left" aria-label="{{ __('Previous week') }}" :tooltip="__('Previous week')" />
-                        <span class="px-1 text-body font-medium text-ink tabular-nums select-none">{{ $startVal->format('d M') }} - {{ $endVal->format('d M') }}</span>
+                        <span class="px-1 text-body font-medium text-ink tabular-nums select-none">{{ $startVal->translatedFormat('d M') }} - {{ $endVal->translatedFormat('d M') }}</span>
                         <flux:button wire:click="nextWeek" size="sm" variant="ghost" icon="chevron-right" aria-label="{{ __('Next week') }}" :tooltip="__('Next week')" />
                     </div>
 
@@ -1062,7 +1062,7 @@
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex items-center gap-1 mb-0.5">
                                                     <span class="px-1.5 py-0.2 rounded text-meta font-semibold bg-stone-100 text-zinc-700 border border-stone-200 shrink-0">
-                                                        Workspace
+                                                        {{ __('Workspace') }}
                                                     </span>
                                                     @if($wOrder->wo_number)
                                                         <x-wo-badge :number="$wOrder->wo_number" variant="outline" prefix="#" class="text-meta" />
@@ -1137,7 +1137,7 @@
                                             <div class="min-w-0 flex-1">
                                                 <div class="flex items-center gap-1 mb-0.5">
                                                     <span class="px-1.5 py-0.2 rounded text-meta font-semibold bg-sunken text-ink-2 border border-line shrink-0">
-                                                        Backlog
+                                                        {{ __('Backlog') }}
                                                     </span>
                                                     @if($bOrder->wo_number)
                                                         <x-wo-badge :number="$bOrder->wo_number" variant="outline" prefix="#" class="text-meta" />
@@ -1190,7 +1190,7 @@
                     <div class="flex items-center justify-between pb-1">
                         <div class="flex items-center gap-2">
                             <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $designer->dot_color_class }}" style="{{ $designer->dot_inline_style }}"></span>
-                            <h3 class="font-semibold text-base text-zinc-900">Diseñador/a: {{ $designer->name }}</h3>
+                            <h3 class="font-semibold text-base text-zinc-900">{{ __('Designer:') }} {{ $designer->name }}</h3>
                         </div>
                     </div>
 
@@ -1259,13 +1259,13 @@
                                             </span>
                                             @if($isToday)
                                                 <span class="px-1 py-0.2 rounded bg-ink text-white text-meta font-semibold ">
-                                                    HOY
+                                                    {{ __('TODAY') }}
                                                 </span>
                                             @endif
                                         </div>
                                         <div class="flex items-center gap-1.5 shrink-0 ml-1">
                                             <span class="text-meta font-mono font-medium {{ $isToday ? 'text-ink-2 font-semibold' : 'text-zinc-400' }}">
-                                                {{ $isNextWeek ? $day['range_label'] : $day['date']->format('d M') }}
+                                                {{ $isNextWeek ? $day['range_label'] : $day['date']->translatedFormat('d M') }}
                                             </span>
                                             <span class="px-1.5 py-0.5 rounded bg-white text-meta font-mono text-zinc-600 border border-stone-200 font-semibold shrink-0">
                                                 {{ $daySubtasks->count() }}
@@ -1498,7 +1498,7 @@
                                                 @endif
                                             </div>
                                             <span class="text-meta font-mono text-zinc-400">
-                                                {{ $isNextWeek ? $day['range_label'] : $day['date']->format('d M') }}
+                                                {{ $isNextWeek ? $day['range_label'] : $day['date']->translatedFormat('d M') }}
                                             </span>
                                         </div>
 
@@ -2039,7 +2039,7 @@
                                                     +{{ $item['days_overdue'] }}d {{ __('Late') }}
                                                 </span>
                                                 <span class="text-meta text-zinc-400 block mt-0.5">
-                                                    SLA: {{ $item['current_due_date'] }}
+                                                    {{ __('SLA:') }} {{ $item['current_due_date'] }}
                                                 </span>
                                             </div>
                                             <div class="text-danger group-hover:text-danger transition-colors">

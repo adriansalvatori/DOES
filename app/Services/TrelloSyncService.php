@@ -125,7 +125,7 @@ class TrelloSyncService
     public function getBoardLists(string $boardId, string $apiKey, ?string $apiToken = null): array
     {
         if ($this->isDemoMode() || $this->isPaused()) {
-            return ['success' => false, 'paused' => true, 'error' => 'Trello API está desconectado o pausado.'];
+            return ['success' => false, 'paused' => true, 'error' => __('Trello API is disconnected or paused.')];
         }
 
         $boardId = $this->extractBoardId($boardId);
@@ -155,7 +155,7 @@ class TrelloSyncService
     public function getBoardCards(string $boardId, string $apiKey, ?string $apiToken = null): array
     {
         if ($this->isDemoMode() || $this->isPaused()) {
-            return ['success' => false, 'paused' => true, 'error' => 'Trello API está desconectado o pausado.'];
+            return ['success' => false, 'paused' => true, 'error' => __('Trello API is disconnected or paused.')];
         }
 
         $boardId = $this->extractBoardId($boardId);
@@ -248,7 +248,7 @@ class TrelloSyncService
         }
 
         $dueDate = ! empty($cardData['due']) ? substr($cardData['due'], 0, 10) : null;
-        $rawCardName = $cardData['name'] ?? 'Tarea de diseño';
+        $rawCardName = $cardData['name'] ?? __('Design task');
         $parsed = OrderTitleParserService::parse($rawCardName);
 
         if ($parsed['is_incompatible']) {
@@ -277,29 +277,29 @@ class TrelloSyncService
             // Track human-readable diff details before attributes are updated
             $oldDueDateStr = $existing->current_due_date ? $existing->current_due_date->toDateString() : null;
             if ($oldDueDateStr !== $dueDate) {
-                $oldStr = $existing->current_due_date ? Carbon::parse($existing->current_due_date)->format('d M') : 'Sin fecha';
-                $newStr = $dueDate ? Carbon::parse($dueDate)->format('d M') : 'Sin fecha';
-                $updateDetails[] = "Fecha de entrega: {$oldStr} ➔ {$newStr}";
+                $oldStr = $existing->current_due_date ? Carbon::parse($existing->current_due_date)->translatedFormat('d M') : __('No date');
+                $newStr = $dueDate ? Carbon::parse($dueDate)->translatedFormat('d M') : __('No date');
+                $updateDetails[] = __('Due date: :old ➔ :new', ['old' => $oldStr, 'new' => $newStr]);
             }
 
             if ($existing->designer_id !== $designerId) {
-                $oldDesigner = $existing->designer?->name ?? 'Sin asignar';
-                $newDesigner = $designerId ? (Designer::find($designerId)?->name ?? 'Sin asignar') : 'Sin asignar';
-                $updateDetails[] = "Diseñador: {$oldDesigner} ➔ {$newDesigner}";
+                $oldDesigner = $existing->designer?->name ?? __('Unassigned');
+                $newDesigner = $designerId ? (Designer::find($designerId)?->name ?? __('Unassigned')) : __('Unassigned');
+                $updateDetails[] = __('Designer: :old ➔ :new', ['old' => $oldDesigner, 'new' => $newDesigner]);
             }
 
             if ($existing->trello_title !== $parsed['trello_title']) {
                 if ($existing->task_name !== $parsed['task_name'] && ! empty($existing->task_name) && ! empty($parsed['task_name'])) {
-                    $updateDetails[] = "Tarea: {$existing->task_name} ➔ {$parsed['task_name']}";
+                    $updateDetails[] = __('Task: :old ➔ :new', ['old' => $existing->task_name, 'new' => $parsed['task_name']]);
                 } elseif ($existing->company_name !== $parsed['company_name'] && ! empty($existing->company_name) && ! empty($parsed['company_name'])) {
-                    $updateDetails[] = "Empresa: {$existing->company_name} ➔ {$parsed['company_name']}";
+                    $updateDetails[] = __('Company: :old ➔ :new', ['old' => $existing->company_name, 'new' => $parsed['company_name']]);
                 } else {
-                    $updateDetails[] = 'Título de tarjeta actualizado en Trello';
+                    $updateDetails[] = __('Card title updated in Trello');
                 }
             }
 
             if (! empty($parsed['responsible_person']) && $existing->responsible_person !== $parsed['responsible_person']) {
-                $updateDetails[] = 'Contacto: '.($existing->responsible_person ?: 'Sin contacto')." ➔ {$parsed['responsible_person']}";
+                $updateDetails[] = __('Contact: :old ➔ :new', ['old' => $existing->responsible_person ?: __('No contact'), 'new' => $parsed['responsible_person']]);
             }
 
             if ($existing->in_workspace) {
@@ -331,14 +331,14 @@ class TrelloSyncService
                 }
 
                 if (! empty($conflictFields)) {
-                    $trelloDesignerName = $designerId ? (Designer::find($designerId)?->name ?? 'Sin asignar') : 'Sin asignar';
+                    $trelloDesignerName = $designerId ? (Designer::find($designerId)?->name ?? __('Unassigned')) : __('Unassigned');
                     $trelloUpdatedAt = ! empty($cardData['dateLastActivity'])
-                        ? Carbon::parse($cardData['dateLastActivity'])->format('d M Y, h:i A')
+                        ? Carbon::parse($cardData['dateLastActivity'])->translatedFormat('d M Y, h:i A')
                         : 'N/A';
-                    $workspaceUpdatedAt = $existing->updated_at ? $existing->updated_at->format('d M Y, h:i A') : 'N/A';
+                    $workspaceUpdatedAt = $existing->updated_at ? $existing->updated_at->translatedFormat('d M Y, h:i A') : 'N/A';
 
-                    $wsDueDateStr = $existing->current_due_date ? $existing->current_due_date->format('d M Y') : 'Sin fecha';
-                    $trDueDateStr = $dueDate ? Carbon::parse($dueDate)->format('d M Y') : 'Sin fecha';
+                    $wsDueDateStr = $existing->current_due_date ? $existing->current_due_date->translatedFormat('d M Y') : __('No date');
+                    $trDueDateStr = $dueDate ? Carbon::parse($dueDate)->translatedFormat('d M Y') : __('No date');
 
                     return [
                         'order' => $existing,
@@ -355,9 +355,9 @@ class TrelloSyncService
                             'company_name' => $existing->company_name,
                             'task_name' => $existing->task_name,
                             'wo_number' => $existing->wo_number,
-                            'designer_name' => $existing->designer?->name ?? 'Sin asignar',
+                            'designer_name' => $existing->designer?->name ?? __('Unassigned'),
                             'due_date' => $wsDueDateStr,
-                            'core_status' => $existing->core_status?->label() ?? 'Sin estado',
+                            'core_status' => $existing->core_status?->label() ?? __('No status'),
                             'responsible_person' => $existing->responsible_person ?: 'Sin contacto',
                             'is_client_linked' => ! empty($existing->client_id),
                             'client_name' => $existing->client?->name ?? null,
@@ -418,7 +418,7 @@ class TrelloSyncService
                     $action = 'updated';
                 }
                 if ($existing->pending_wo_number !== $pendingWoNumber) {
-                    $updateDetails[] = "Nueva WO detectada en Trello: {$trelloWo}";
+                    $updateDetails[] = __('New WO detected in Trello: :wo', ['wo' => $trelloWo]);
                 }
             } elseif ($existing->wo_number === $trelloWo) {
                 // Already in sync, clear any stale pending WO
@@ -428,7 +428,7 @@ class TrelloSyncService
             }
 
             if ($action === 'updated' && empty($updateDetails)) {
-                $updateDetails[] = 'Datos de tarjeta actualizados';
+                $updateDetails[] = __('Card data updated');
             }
         }
 
@@ -497,7 +497,7 @@ class TrelloSyncService
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'STATUS_CHANGED_VIA_TRELLO',
-                    'actor' => 'Sincronización Trello',
+                    'actor' => __('Trello Sync'),
                     'previous_value' => $existing->core_status?->value,
                     'new_value' => $targetStatus->value,
                     'metadata' => [
@@ -578,10 +578,10 @@ class TrelloSyncService
                 $changesList[] = [
                     'order_id' => $delOrder->id,
                     'action' => 'completed',
-                    'company' => $delOrder->company_name ?: 'Empresa',
-                    'task' => $delOrder->task_name ?: 'Tarea',
-                    'previous_status' => $previousStatus?->label() ?: 'En Producción',
-                    'new_status' => 'Completada (Falta en Trello)',
+                    'company' => $delOrder->company_name ?: __('Company'),
+                    'task' => $delOrder->task_name ?: __('Task'),
+                    'previous_status' => $previousStatus?->label() ?: __('In Production'),
+                    'new_status' => __('Completed (Missing in Trello)'),
                 ];
             } else {
                 $delOrder->update(['is_missing_from_trello' => true]);
@@ -589,10 +589,10 @@ class TrelloSyncService
                 $changesList[] = [
                     'order_id' => $delOrder->id,
                     'action' => 'deleted',
-                    'company' => $delOrder->company_name ?: 'Empresa',
-                    'task' => $delOrder->task_name ?: 'Tarea',
+                    'company' => $delOrder->company_name ?: __('Company'),
+                    'task' => $delOrder->task_name ?: __('Task'),
                     'previous_status' => $previousStatus?->label() ?: 'Tablero Trello',
-                    'new_status' => 'Falta en Trello (Marcada como faltante)',
+                    'new_status' => __('Missing in Trello (Marked as missing)'),
                 ];
             }
         }
@@ -940,7 +940,7 @@ class TrelloSyncService
         if ($this->isPaused()) {
             Log::info("Trello card creation skipped for order {$order->id}: Trello sync is currently paused.");
 
-            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+            return ['success' => false, 'paused' => true, 'error' => __('Trello sync is currently paused.')];
         }
 
         $apiKey = $apiKey ?: Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
@@ -950,7 +950,7 @@ class TrelloSyncService
         if (! $apiToken) {
             Log::info("Trello card creation skipped for order {$order->id}: No API token set.");
 
-            return ['success' => false, 'error' => 'No hay Token de API de Trello configurado.'];
+            return ['success' => false, 'error' => __('No Trello API token is configured.')];
         }
 
         try {
@@ -967,7 +967,7 @@ class TrelloSyncService
             }
 
             if (! $targetListId) {
-                return ['success' => false, 'error' => 'No se pudo determinar la lista de Trello de destino.'];
+                return ['success' => false, 'error' => __('Could not determine the target Trello list.')];
             }
 
             $params = [
@@ -1018,7 +1018,7 @@ class TrelloSyncService
     {
         $cardId = trim($cardId);
         if (empty($cardId)) {
-            return ['success' => false, 'error' => 'No card ID specified.', 'comments' => []];
+            return ['success' => false, 'error' => __('No card ID specified.'), 'comments' => []];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
@@ -1139,21 +1139,21 @@ class TrelloSyncService
         if ($this->isPaused()) {
             Log::info("Trello comment skipped for card {$cardId}: Trello sync is currently paused.");
 
-            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+            return ['success' => false, 'paused' => true, 'error' => __('Trello sync is currently paused.')];
         }
 
         $cardId = trim($cardId);
         $text = trim($text);
 
         if (empty($cardId) || empty($text)) {
-            return ['success' => false, 'error' => 'Card ID and comment text are required.'];
+            return ['success' => false, 'error' => __('Card ID and comment text are required.')];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
 
         if (! $apiToken) {
-            return ['success' => false, 'error' => 'Se requiere Token de Usuario Trello para agregar comentarios.'];
+            return ['success' => false, 'error' => __('A Trello user token is required to add comments.')];
         }
 
         $authorName = $authorName ?: auth()->user()?->name;
@@ -1225,19 +1225,19 @@ class TrelloSyncService
         if ($this->isPaused()) {
             Log::info("Trello comment delete skipped for action {$actionId}: Trello sync is currently paused.");
 
-            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+            return ['success' => false, 'paused' => true, 'error' => __('Trello sync is currently paused.')];
         }
 
         $actionId = trim($actionId);
         if (empty($actionId)) {
-            return ['success' => false, 'error' => 'Action ID is required.'];
+            return ['success' => false, 'error' => __('Action ID is required.')];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
 
         if (! $apiToken) {
-            return ['success' => false, 'error' => 'Se requiere Token de Usuario Trello para eliminar comentarios.'];
+            return ['success' => false, 'error' => __('A Trello user token is required to delete comments.')];
         }
 
         $params = [
@@ -1268,19 +1268,19 @@ class TrelloSyncService
         if ($this->isPaused()) {
             Log::info("Trello comment update skipped for action {$actionId}: Trello sync is currently paused.");
 
-            return ['success' => false, 'paused' => true, 'error' => 'La sincronización con Trello está pausada actualmente.'];
+            return ['success' => false, 'paused' => true, 'error' => __('Trello sync is currently paused.')];
         }
 
         $actionId = trim($actionId);
         if (empty($actionId)) {
-            return ['success' => false, 'error' => 'Action ID is required.'];
+            return ['success' => false, 'error' => __('Action ID is required.')];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
 
         if (! $apiToken) {
-            return ['success' => false, 'error' => 'Se requiere Token de Usuario Trello para actualizar comentarios.'];
+            return ['success' => false, 'error' => __('A Trello user token is required to update comments.')];
         }
 
         $params = [
@@ -1345,7 +1345,7 @@ class TrelloSyncService
     {
         $cardId = trim($cardId);
         if (empty($cardId)) {
-            return ['success' => false, 'error' => 'No card ID specified.', 'card' => null];
+            return ['success' => false, 'error' => __('No card ID specified.'), 'card' => null];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
@@ -1396,7 +1396,7 @@ class TrelloSyncService
     public function searchCards(string $query, ?string $boardId = null, ?string $apiKey = null, ?string $apiToken = null): array
     {
         if ($this->isDemoMode()) {
-            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.', 'cards' => []];
+            return ['success' => false, 'error' => __('Trello API is disconnected in demo mode.'), 'cards' => []];
         }
 
         $query = trim($query);
@@ -1411,7 +1411,7 @@ class TrelloSyncService
         $apiToken = $apiToken ?: Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
 
         if (empty($apiKey) || empty($apiToken)) {
-            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.', 'cards' => []];
+            return ['success' => false, 'error' => __('Trello API key or token not configured.'), 'cards' => []];
         }
 
         $params = [
@@ -1468,7 +1468,7 @@ class TrelloSyncService
     public function fetchAllBoardCardsForLookup(?string $boardId = null, ?string $apiKey = null, ?string $apiToken = null, bool $forceFresh = false): array
     {
         if ($this->isDemoMode()) {
-            return ['success' => false, 'error' => 'Trello API está desconectado en el modo demostración.', 'cards' => []];
+            return ['success' => false, 'error' => __('Trello API is disconnected in demo mode.'), 'cards' => []];
         }
 
         $boardId = $boardId ?: Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '597266b10db2cbf2568cda54')));
@@ -1478,7 +1478,7 @@ class TrelloSyncService
         $apiToken = $apiToken ?: Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
 
         if (empty($apiKey) || empty($apiToken)) {
-            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.', 'cards' => []];
+            return ['success' => false, 'error' => __('Trello API key or token not configured.'), 'cards' => []];
         }
 
         $cacheKey = "trello_board_cards_lookup_{$boardId}";
@@ -1517,7 +1517,7 @@ class TrelloSyncService
                 if (! $response->successful()) {
                     Log::error("Trello API error fetching board cards on page {$page}: ".$response->body());
                     if (empty($allCards)) {
-                        return ['success' => false, 'error' => 'Error al conectar con Trello: '.$response->status(), 'cards' => []];
+                        return ['success' => false, 'error' => __('Error connecting to Trello: :status', ['status' => $response->status()]), 'cards' => []];
                     }
                     break;
                 }
@@ -1559,7 +1559,7 @@ class TrelloSyncService
     {
         $cardId = trim($cardId);
         if (empty($cardId)) {
-            return ['success' => false, 'error' => 'No card ID specified.', 'attachments' => []];
+            return ['success' => false, 'error' => __('No card ID specified.'), 'attachments' => []];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
@@ -1727,18 +1727,18 @@ class TrelloSyncService
     ): array {
         $cardId = trim($cardId);
         if (empty($cardId)) {
-            return ['success' => false, 'error' => 'No card ID specified.'];
+            return ['success' => false, 'error' => __('No card ID specified.')];
         }
 
         if (! file_exists($filePath) || ! is_readable($filePath)) {
-            return ['success' => false, 'error' => 'El archivo no existe o no se puede leer.'];
+            return ['success' => false, 'error' => __('The file does not exist or cannot be read.')];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
 
         if (empty($apiKey) || empty($apiToken)) {
-            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.'];
+            return ['success' => false, 'error' => __('Trello API key or token not configured.')];
         }
 
         $fileName = $fileName ?: basename($filePath);
@@ -1750,7 +1750,7 @@ class TrelloSyncService
 
         $fileHandle = fopen($filePath, 'r');
         if (! $fileHandle) {
-            return ['success' => false, 'error' => 'No se pudo abrir el archivo para lectura.'];
+            return ['success' => false, 'error' => __('Could not open the file for reading.')];
         }
 
         try {
@@ -1806,14 +1806,14 @@ class TrelloSyncService
         $attachmentId = trim($attachmentId);
 
         if (empty($cardId) || empty($attachmentId)) {
-            return ['success' => false, 'error' => 'Card ID y Attachment ID son requeridos.'];
+            return ['success' => false, 'error' => __('Card ID and Attachment ID are required.')];
         }
 
         $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
         $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
 
         if (empty($apiKey) || empty($apiToken)) {
-            return ['success' => false, 'error' => 'Trello API Key o Token no configurados.'];
+            return ['success' => false, 'error' => __('Trello API key or token not configured.')];
         }
 
         $queryParams = [
@@ -1855,7 +1855,7 @@ class TrelloSyncService
     {
         $url = trim($url);
         if (empty($url)) {
-            return ['success' => false, 'error' => 'No URL specified.'];
+            return ['success' => false, 'error' => __('No URL specified.')];
         }
 
         $apiKey = Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));

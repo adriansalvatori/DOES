@@ -40,7 +40,7 @@ class ContactDirectoryTest extends TestCase
         $this->actingAs($this->user)
             ->get('/contacts')
             ->assertStatus(200)
-            ->assertSee('Directorio de Clientes')
+            ->assertSee('Client Directory')
             ->assertSee('VALENTINA MORALES');
     }
 

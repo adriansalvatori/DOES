@@ -733,6 +733,6 @@ class TrelloCardCommentsTest extends TestCase
             'event_type' => 'COMMENT_ADDED',
             'actor' => null,
         ]);
-        $this->assertEquals('Comentario', $eventAnonymous->getFormattedTitle());
+        $this->assertEquals('Comment', $eventAnonymous->getFormattedTitle());
     }
 }

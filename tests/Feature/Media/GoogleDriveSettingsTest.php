@@ -23,6 +23,8 @@ class GoogleDriveSettingsTest extends TestCase
     {
         parent::setUp();
 
+        app()->setLocale('es');
+        $this->withSession(['locale' => 'es']);
         Http::preventStrayRequests();
         Cache::forget(GoogleDriveService::TOKEN_CACHE_KEY);
         $this->configureGoogleDrive(connected: false);

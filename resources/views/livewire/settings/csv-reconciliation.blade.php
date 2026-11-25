@@ -3,10 +3,10 @@
     <x-ui.page-header :title="__('Reconciliation & CSV migration')" :subtitle="__('Compare your orders CSV with the current database, review matches across 3 levels and apply silent updates.')">
         <x-slot:actions>
             @if($hasAnalysis)
-                <flux:button wire:click="clearCurrentAnalysis" variant="outline" size="sm" icon="arrow-up-tray">{{ __('Subir Otro CSV') }}</flux:button>
+                <flux:button wire:click="clearCurrentAnalysis" variant="outline" size="sm" icon="arrow-up-tray">{{ __('Upload another CSV') }}</flux:button>
             @endif
 
-            <flux:button wire:click="setTab('history')" :variant="$activeTab === 'history' ? 'primary' : 'outline'" size="sm" icon="clock">{{ __('Historial & Deshacer') }}</flux:button>
+            <flux:button wire:click="setTab('history')" :variant="$activeTab === 'history' ? 'primary' : 'outline'" size="sm" icon="clock">{{ __('History & undo') }}</flux:button>
         </x-slot:actions>
     </x-ui.page-header>
 
@@ -52,7 +52,7 @@
                         <p class="text-xs font-semibold text-zinc-700">
                             {{ __('Click to select or drag your CSV file here') }}
                         </p>
-                        <p class="text-meta text-zinc-400 mt-1">Archivos .csv de hasta 30MB</p>
+                        <p class="text-meta text-zinc-400 mt-1">{{ __('.csv files up to 30MB') }}</p>
                     </div>
                     <input type="file" wire:model="csvFile" accept=".csv,text/csv,text/plain" class="hidden" />
                 </label>
@@ -68,15 +68,15 @@
                 <span class="text-meta font-semibold text-zinc-400 block mb-2">{{ __('Process guarantees') }}</span>
                 <div class="flex items-start gap-2 text-xs text-zinc-600">
                     <x-lucide-shield-check class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>100% Silencioso (Zero-Automation):</strong> Sin alertas por email, sin notificaciones internas y sin disparar llamadas salientes a Trello.</span>
+                    <span><strong>{{ __('100% silent (zero automation):') }}</strong> {{ __('No email alerts, no internal notifications and no outgoing calls to Trello.') }}</span>
                 </div>
                 <div class="flex items-start gap-2 text-xs text-zinc-600">
                     <x-lucide-database class="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Snapshot Automático:</strong> Se genera un respaldo de base de datos antes de cada aprobación masiva con capacidad de restaurar en 1 clic.</span>
+                    <span><strong>{{ __('Automatic snapshot:') }}</strong> {{ __('A database backup is created before every bulk approval, restorable in one click.') }}</span>
                 </div>
                 <div class="flex items-start gap-2 text-xs text-zinc-600">
                     <x-lucide-lock class="w-4 h-4 text-stone-500 shrink-0 mt-0.5" />
-                    <span><strong>Inmutabilidad:</strong> Los nombres de empresa y tarea en la base de datos se conservan íntegros.</span>
+                    <span><strong>{{ __('Immutability:') }}</strong> {{ __('Company and task names in the database are kept intact.') }}</span>
                 </div>
             </div>
         </div>
@@ -89,7 +89,7 @@
             <!-- Total Rows -->
             <div class="bg-white border border-line rounded-card p-4">
                 <div class="flex items-center justify-between">
-                    <span class="text-xs font-medium text-zinc-500">{{ __('Total en CSV') }}</span>
+                    <span class="text-xs font-medium text-zinc-500">{{ __('Total in CSV') }}</span>
                     <x-lucide-file-text class="w-4 h-4 text-zinc-400" />
                 </div>
                 <div class="text-title font-semibold text-zinc-900 mt-1">
@@ -109,13 +109,13 @@
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                         {{ __('1. Full Match') }}
                     </span>
-                    <span class="text-meta font-semibold px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-control">Batch</span>
+                    <span class="text-meta font-semibold px-1.5 py-0.5 bg-emerald-50 text-emerald-700 rounded-control">{{ __('Batch') }}</span>
                 </div>
                 <div class="text-title font-semibold text-emerald-700 mt-1">
                     {{ $meta['full_match_count'] ?? 0 }}
                 </div>
                 <div class="text-meta text-emerald-600/80 mt-0.5">
-                    {{ __('WO exacto + Similitud ≥ 75%') }}
+                    {{ __('Exact WO + similarity ≥ 75%') }}
                 </div>
             </div>
 
@@ -128,13 +128,13 @@
                         <span class="w-2 h-2 rounded-full bg-amber-500"></span>
                         {{ __('2. Partial Match') }}
                     </span>
-                    <span class="text-meta font-semibold px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-control">Revisar</span>
+                    <span class="text-meta font-semibold px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-control">{{ __('Review') }}</span>
                 </div>
                 <div class="text-title font-semibold text-amber-700 mt-1">
                     {{ $meta['partial_match_count'] ?? 0 }}
                 </div>
                 <div class="text-meta text-amber-600/80 mt-0.5">
-                    {{ __('Divergencia o match difuso') }}
+                    {{ __('Divergence or fuzzy match') }}
                 </div>
             </div>
 
@@ -147,7 +147,7 @@
                         <span class="w-2 h-2 rounded-full bg-slate-400"></span>
                         {{ __('3. No match') }}
                     </span>
-                    <span class="text-meta font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded-control">Trello Link</span>
+                    <span class="text-meta font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded-control">{{ __('Trello link') }}</span>
                 </div>
                 <div class="text-title font-semibold text-slate-700 mt-1">
                     {{ $meta['unmatched_count'] ?? 0 }}
@@ -278,7 +278,7 @@
                                         wire:click="setTab('partial_match')" 
                                         class="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-card text-xs transition cursor-pointer inline-flex items-center gap-1.5">
                                         <x-lucide-alert-triangle class="w-3.5 h-3.5" />
-                                        <span>{{ __('Ir a Coincidencias Parciales (:count)', ['count' => $meta['partial_match_count']]) }}</span>
+                                        <span>{{ __('Go to partial matches (:count)', ['count' => $meta['partial_match_count']]) }}</span>
                                     </button>
                                 @endif
                                 @if(($meta['unmatched_count'] ?? 0) > 0)
@@ -306,7 +306,7 @@
                                     <th class="px-4 py-3">{{ __('Company (DB)') }}</th>
                                     <th class="px-4 py-3">{{ __('Task (DB)') }}</th>
                                     <th class="px-4 py-3">{{ __('Proposed changes from CSV') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Similitud') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Similarity') }}</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-stone-100">
@@ -348,7 +348,7 @@
                                                 @endif
 
                                                 @if(!empty($row['extracted_contact']))
-                                                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Contacto / Responsable') }}">
+                                                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Contact / Owner') }}">
                                                         <x-lucide-user class="w-2.5 h-2.5 text-zinc-400" />
                                                         <span>{{ $row['extracted_contact'] }}</span>
                                                     </span>
@@ -367,7 +367,7 @@
                                                 {{ $row['db_task'] ?? '' }}
                                             </div>
                                             @if(!empty($row['clean_task']) && $row['clean_task'] !== ($row['db_task'] ?? ''))
-                                                <div class="text-meta text-zinc-400 italic truncate mt-0.5" title="Tarea limpia en CSV: {{ $row['clean_task'] }}">
+                                                <div class="text-meta text-zinc-400 italic truncate mt-0.5" title="{{ __('Clean task in CSV: :task', ['task' => $row['clean_task']]) }}">
                                                     CSV: {{ $row['clean_task'] }}
                                                 </div>
                                             @endif
@@ -379,10 +379,10 @@
                                                 <div class="flex flex-wrap gap-1.5 max-w-lg">
                                                     @foreach($row['diffs'] as $key => $diff)
                                                         @if(!empty($diff['is_smart_merge']))
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-meta font-medium bg-purple-50 text-purple-900 border border-purple-200" title="{{ $diff['field'] }}: {{ $diff['current'] }} ➔ {{ $diff['proposed'] }} (Fusión Inteligente)">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-meta font-medium bg-purple-50 text-purple-900 border border-purple-200" title="{{ $diff['field'] }}: {{ $diff['current'] }} ➔ {{ $diff['proposed'] }} ({{ __('Smart merge') }})">
                                                                 <strong class="font-semibold text-purple-700">{{ $diff['field'] }}:</strong>
                                                                 <span class="truncate max-w-[150px] font-semibold">{{ $diff['proposed'] }}</span>
-                                                                <span class="text-meta font-semibold bg-purple-200/80 text-purple-900 px-1 py-0.2 rounded">Fusión</span>
+                                                                <span class="text-meta font-semibold bg-purple-200/80 text-purple-900 px-1 py-0.2 rounded">{{ __('Merge') }}</span>
                                                             </span>
                                                         @else
                                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-meta font-medium bg-emerald-50 text-emerald-800 border border-emerald-200/60" title="{{ $diff['field'] }}: {{ $diff['current'] }} ➔ {{ $diff['proposed'] }}">
@@ -397,7 +397,7 @@
                                         <td class="px-4 py-3 text-right whitespace-nowrap">
                                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-meta font-semibold bg-emerald-100 text-emerald-800">
                                                 <x-lucide-check-circle-2 class="w-3 h-3 text-emerald-600" />
-                                                <span>{{ __('WO Exacto') }}</span>
+                                                <span>{{ __('Exact WO') }}</span>
                                             </span>
                                         </td>
                                     </tr>
@@ -475,7 +475,7 @@
                                                     {{ $row['wo_number'] }}
                                                 </span>
                                                 <span class="text-meta font-semibold px-2 py-0.5 rounded-full {{ ($row['match_type'] ?? '') === 'wo_conflict' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800' }}">
-                                                    {{ $row['similarity'] }}% {{ __('Similitud') }}
+                                                    {{ $row['similarity'] }}% {{ __('Similarity') }}
                                                 </span>
                                                 <span class="text-meta text-zinc-500 font-medium">
                                                     {{ $row['reason'] }}
@@ -493,12 +493,12 @@
 
                                                 <!-- CSV Proposal -->
                                                 <div class="space-y-1 border-t sm:border-t-0 sm:border-l border-stone-200/80 pt-2 sm:pt-0 sm:pl-3">
-                                                    <span class="text-meta font-semibold text-amber-600 block">{{ __('Propuesta en CSV') }}</span>
+                                                    <span class="text-meta font-semibold text-amber-600 block">{{ __('Proposed in CSV') }}</span>
                                                     <p class="font-semibold text-amber-950 truncate" title="{{ $row['csv_company'] ?? '' }}">{{ $row['csv_company'] ?? '' }}</p>
                                                     <p class="text-amber-900/80 text-meta line-clamp-2" title="{{ $row['csv_task'] ?? '' }}">{{ $row['csv_task'] ?? '' }}</p>
                                                     @if(!empty($row['clean_task']) && $row['clean_task'] !== ($row['csv_task'] ?? ''))
-                                                        <p class="text-meta text-zinc-400 italic truncate" title="Tarea limpia: {{ $row['clean_task'] }}">
-                                                            Limpia: {{ $row['clean_task'] }}
+                                                        <p class="text-meta text-zinc-400 italic truncate" title="{{ __('Clean task: :task', ['task' => $row['clean_task']]) }}">
+                                                            {{ __('Clean:') }} {{ $row['clean_task'] }}
                                                         </p>
                                                     @endif
 
@@ -524,7 +524,7 @@
                                                         @endif
 
                                                         @if(!empty($row['extracted_contact']))
-                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Contacto / Responsable') }}">
+                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Contact / Owner') }}">
                                                                 <x-lucide-user class="w-2.5 h-2.5 text-zinc-400" />
                                                                 <span>{{ $row['extracted_contact'] }}</span>
                                                             </span>
@@ -543,13 +543,13 @@
                                             <!-- Proposed diffs badges -->
                                             @if(!empty($row['diffs']))
                                                 <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                                                    <span class="text-meta font-semibold text-zinc-400">{{ __('Actualizaciones:') }}</span>
+                                                    <span class="text-meta font-semibold text-zinc-400">{{ __('Updates:') }}</span>
                                                     @foreach($row['diffs'] as $diff)
                                                         @if(!empty($diff['is_smart_merge']))
-                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-meta font-medium bg-purple-50 text-purple-900 border border-purple-200" title="{{ $diff['field'] }}: {{ $diff['current'] }} ➔ {{ $diff['proposed'] }} (Fusión Inteligente)">
+                                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-meta font-medium bg-purple-50 text-purple-900 border border-purple-200" title="{{ $diff['field'] }}: {{ $diff['current'] }} ➔ {{ $diff['proposed'] }} ({{ __('Smart merge') }})">
                                                                 <strong class="font-semibold text-purple-700">{{ $diff['field'] }}:</strong>
                                                                 <span class="truncate max-w-[140px] font-semibold">{{ $diff['proposed'] }}</span>
-                                                                <span class="text-meta font-semibold bg-purple-200/80 text-purple-900 px-1 py-0.2 rounded">Fusión</span>
+                                                                <span class="text-meta font-semibold bg-purple-200/80 text-purple-900 px-1 py-0.2 rounded">{{ __('Merge') }}</span>
                                                             </span>
                                                         @else
                                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-control text-meta font-medium bg-stone-100 text-zinc-800 border border-stone-200" title="{{ $diff['field'] }}: {{ $diff['current'] }} ➔ {{ $diff['proposed'] }}">
@@ -575,7 +575,7 @@
                                             <x-lucide-git-merge class="w-3.5 h-3.5" wire:loading.remove wire:target="approveSinglePartial('{{ $row['row_id'] }}')" />
                                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="approveSinglePartial('{{ $row['row_id'] }}')" />
                                             <span wire:loading.remove wire:target="approveSinglePartial('{{ $row['row_id'] }}')">{{ __('Merge (same order)') }}</span>
-                                            <span wire:loading wire:target="approveSinglePartial('{{ $row['row_id'] }}')">{{ __('Mezclando...') }}</span>
+                                            <span wire:loading wire:target="approveSinglePartial('{{ $row['row_id'] }}')">{{ __('Merging...') }}</span>
                                         </button>
 
                                         @if(($row['match_type'] ?? '') === 'wo_conflict')
@@ -586,7 +586,7 @@
                                                 title="{{ __('They are not the same: the CSV has the correct WO. Assign the new WO to the DB order to create the CSV one and resolve the conflict') }}"
                                                 class="px-3 py-1.5 {{ !empty($activeReassignRows[$row['row_id']]) ? 'bg-amber-600 text-white font-semibold' : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold' }} text-xs rounded-card transition flex items-center justify-center gap-1.5 cursor-pointer">
                                                 <x-lucide-hash class="w-3.5 h-3.5 {{ !empty($activeReassignRows[$row['row_id']]) ? 'text-white' : 'text-amber-600' }}" />
-                                                <span>{{ !empty($activeReassignRows[$row['row_id']]) ? __('Close assignment') : __('Asignar WO a BD') }}</span>
+                                                <span>{{ !empty($activeReassignRows[$row['row_id']]) ? __('Close assignment') : __('Assign WO in DB') }}</span>
                                             </button>
                                         @else
                                             <!-- Action for Secondary match: Descartar -->
@@ -639,7 +639,7 @@
                                                 <x-lucide-check-circle-2 class="w-3.5 h-3.5" wire:loading.remove wire:target="executeReassignWo('{{ $row['row_id'] }}')" />
                                                 <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="executeReassignWo('{{ $row['row_id'] }}')" />
                                                 <span wire:loading.remove wire:target="executeReassignWo('{{ $row['row_id'] }}')">{{ __('Save and resolve') }}</span>
-                                                <span wire:loading wire:target="executeReassignWo('{{ $row['row_id'] }}')">{{ __('Guardando...') }}</span>
+                                                <span wire:loading wire:target="executeReassignWo('{{ $row['row_id'] }}')">{{ __('Saving...') }}</span>
                                             </button>
                                             <button 
                                                 type="button" 
@@ -780,12 +780,12 @@
                                                     {{ $row['raw_wo'] }}
                                                 </span>
                                             @endif
-                                            <h4 class="font-semibold text-sm text-zinc-900">{{ $row['csv_company'] ?: 'Empresa sin nombre' }}</h4>
+                                            <h4 class="font-semibold text-sm text-zinc-900">{{ $row['csv_company'] ?: __('Unnamed company') }}</h4>
                                         </div>
-                                        <p class="text-xs text-zinc-600">{{ $row['csv_task'] ?: 'Tarea sin especificar' }}</p>
+                                        <p class="text-xs text-zinc-600">{{ $row['csv_task'] ?: __('Unspecified task') }}</p>
                                         @if(!empty($row['clean_task']) && $row['clean_task'] !== $row['csv_task'])
-                                            <p class="text-meta text-zinc-400 italic" title="Tarea limpia: {{ $row['clean_task'] }}">
-                                                Limpia: {{ $row['clean_task'] }}
+                                            <p class="text-meta text-zinc-400 italic" title="{{ __('Clean task: :task', ['task' => $row['clean_task']]) }}">
+                                                {{ __('Clean:') }} {{ $row['clean_task'] }}
                                             </p>
                                         @endif
 
@@ -811,7 +811,7 @@
                                             @endif
 
                                             @if(!empty($row['extracted_contact']))
-                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Contacto / Responsable') }}">
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Contact / Owner') }}">
                                                     <x-lucide-user class="w-2.5 h-2.5 text-zinc-400" />
                                                     <span>{{ $row['extracted_contact'] }}</span>
                                                 </span>
@@ -835,7 +835,7 @@
                                         @endif
                                         @if(!empty($row['parsed_data']['delivery_due_date']))
                                             <span class="px-2 py-0.5 bg-stone-100 rounded-control">
-                                                Entrega: {{ $row['parsed_data']['delivery_due_date'] }}
+                                                {{ __('Delivery:') }} {{ $row['parsed_data']['delivery_due_date'] }}
                                             </span>
                                         @endif
                                     </div>
@@ -844,10 +844,10 @@
                                 @if(!empty($row['parsed_data']['production_note']) || !empty($row['parsed_data']['delivery_note']))
                                     <div class="bg-stone-50 p-2.5 rounded-card text-meta text-zinc-600 border border-stone-200/60 space-y-1">
                                         @if(!empty($row['parsed_data']['production_note']))
-                                            <p><strong>Nota Producción:</strong> {{ $row['parsed_data']['production_note'] }}</p>
+                                            <p><strong>{{ __('Production note:') }}</strong> {{ $row['parsed_data']['production_note'] }}</p>
                                         @endif
                                         @if(!empty($row['parsed_data']['delivery_note']))
-                                            <p><strong>Nota Entrega:</strong> {{ $row['parsed_data']['delivery_note'] }}</p>
+                                            <p><strong>{{ __('Delivery note:') }}</strong> {{ $row['parsed_data']['delivery_note'] }}</p>
                                         @endif
                                     </div>
                                 @endif
@@ -859,7 +859,7 @@
                                         <input 
                                             type="url" 
                                             wire:model="trelloInput.{{ $row['row_id'] }}" 
-                                            placeholder="https://trello.com/c/5x8bZ9q1 o ID de tarjeta..." 
+                                            placeholder="{{ __('https://trello.com/c/5x8bZ9q1 or card ID...') }}" 
                                             class="ui-input pl-9 pr-3" />
                                     </div>
 
@@ -879,7 +879,7 @@
                                         wire:loading.attr="disabled"
                                         class="px-3.5 py-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer shrink-0">
                                         <x-lucide-check class="w-3.5 h-3.5" />
-                                        <span>{{ __('Verificar Enlace') }}</span>
+                                        <span>{{ __('Verify link') }}</span>
                                     </button>
                                 </div>
 
@@ -898,12 +898,12 @@
                                             <div class="flex flex-wrap items-center gap-1.5">
                                                 <span class="text-meta font-semibold text-blue-600 flex items-center gap-1">
                                                     <x-lucide-check-circle-2 class="w-3.5 h-3.5" />
-                                                    {{ __('Tarjeta Encontrada') }}
+                                                    {{ __('Card found') }}
                                                 </span>
 
                                                 @if(!empty($trelloCardPreview[$row['row_id']]['is_closed']))
                                                     <span class="px-1.5 py-0.5 rounded text-meta font-semibold bg-amber-100 text-amber-800 border border-amber-200" title="{{ __('This card is archived in Trello') }}">
-                                                        📦 {{ __('Archivada en Trello') }}
+                                                        📦 {{ __('Archived in Trello') }}
                                                     </span>
                                                 @endif
 
@@ -932,7 +932,7 @@
                                             <x-lucide-link class="w-3.5 h-3.5" />
                                             <span>
                                                 @if(($trelloCardPreview[$row['row_id']]['dedup_action'] ?? '') === 'reuse_existing')
-                                                    {{ __('Actualizar & Fusionar en BD') }}
+                                                    {{ __('Update & merge into DB') }}
                                                 @else
                                                     {{ __('Create in Backlog') }}
                                                 @endif
@@ -1050,7 +1050,7 @@
                                 <th class="px-4 py-3">{{ __('Type') }}</th>
                                 <th class="px-4 py-3">{{ __('Run by') }}</th>
                                 <th class="px-4 py-3">{{ __('Approved orders') }}</th>
-                                <th class="px-4 py-3">{{ __('Respaldo Snapshot') }}</th>
+                                <th class="px-4 py-3">{{ __('Snapshot backup') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Status') }}</th>
                             </tr>
                         </thead>
@@ -1059,7 +1059,7 @@
                                 <tr class="hover:bg-stone-50/50 transition">
                                     <td class="px-4 py-3 font-mono font-medium text-zinc-900">
                                         <div>{{ $item['id'] }}</div>
-                                        <div class="text-meta text-zinc-400 font-sans">{{ \Carbon\Carbon::parse($item['created_at'])->format('d M Y, h:i A') }}</div>
+                                        <div class="text-meta text-zinc-400 font-sans">{{ \Carbon\Carbon::parse($item['created_at'])->translatedFormat('d M Y, h:i A') }}</div>
                                     </td>
                                     <td class="px-4 py-3">
                                         <span class="inline-flex items-center px-2 py-0.5 rounded-control text-meta font-semibold bg-stone-100 text-zinc-700 ">
@@ -1079,12 +1079,12 @@
                                         @if(($item['status'] ?? '') === 'applied')
                                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-meta font-semibold bg-emerald-100 text-emerald-800">
                                                 <x-lucide-check class="w-3 h-3" />
-                                                {{ __('Aplicado') }}
+                                                {{ __('Applied') }}
                                             </span>
                                         @else
                                             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-meta font-semibold bg-amber-100 text-amber-800">
                                                 <x-lucide-undo class="w-3 h-3" />
-                                                {{ __('Revertido') }}
+                                                {{ __('Reverted') }}
                                             </span>
                                         @endif
                                     </td>
@@ -1109,8 +1109,8 @@
                 </div>
 
                 <div class="bg-stone-50 rounded-card p-3 text-xs text-zinc-600 border border-stone-200/60 space-y-1">
-                    <p>• <strong>Zero-Automation:</strong> Ningún observador ni webhook notificará a los diseñadores.</p>
-                    <p>• <strong>Respaldo:</strong> Podrás revertir este lote desde la pestaña de Historial si lo necesitas.</p>
+                    <p>• <strong>{{ __('Zero automation:') }}</strong> {{ __('No observer or webhook will notify the designers.') }}</p>
+                    <p>• <strong>{{ __('Backup:') }}</strong> {{ __('You can revert this batch from the History tab if needed.') }}</p>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-2">

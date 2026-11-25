@@ -65,7 +65,7 @@
                         <input
                             type="text"
                             wire:model="manager_name"
-                            placeholder="Ej: Gabriela"
+                            placeholder="{{ __('e.g. Gabriela') }}"
                             class="ui-input"
                         />
                     </div>

@@ -37,7 +37,7 @@ class OverviewTest extends TestCase
         $response = $this->actingAs($this->user)
             ->get('/overview')
             ->assertStatus(200)
-            ->assertSee('Overview Operativo');
+            ->assertSee('Operational Overview');
 
         libxml_use_internal_errors(true);
         $dom = new \DOMDocument;

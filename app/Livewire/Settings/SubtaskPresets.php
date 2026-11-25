@@ -6,11 +6,9 @@ use App\Models\SubtaskPreset;
 use App\Models\SystemTaskConfig;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-#[Title('Configuración de Subtareas y Tareas del Sistema')]
 class SubtaskPresets extends Component
 {
     public string $search = '';
@@ -62,7 +60,7 @@ class SubtaskPresets extends Component
     {
         $config = SystemTaskConfig::findOrFail($id);
         $config->update(['is_active' => ! $config->is_active]);
-        session()->flash('message', "Estado de '{$config->title}' actualizado correctamente.");
+        session()->flash('message', __('Status of \':title\' updated successfully.', ['title' => $config->title]));
     }
 
     public function openCreateModal(): void
@@ -96,12 +94,12 @@ class SubtaskPresets extends Component
         if ($this->editingId) {
             $preset = SubtaskPreset::findOrFail($this->editingId);
             $preset->update($validated);
-            session()->flash('message', 'Plantilla de subtarea actualizada correctamente.');
+            session()->flash('message', __('Subtask template updated successfully.'));
         } else {
             SubtaskPreset::query()->increment('sort_order');
             $validated['sort_order'] = 1;
             SubtaskPreset::create($validated);
-            session()->flash('message', 'Nueva plantilla de subtarea creada correctamente.');
+            session()->flash('message', __('New subtask template created successfully.'));
         }
 
         $this->showModal = false;
@@ -112,7 +110,7 @@ class SubtaskPresets extends Component
     {
         $preset = SubtaskPreset::findOrFail($id);
         $preset->update(['is_active' => ! $preset->is_active]);
-        session()->flash('message', 'Estado de la subtarea actualizado.');
+        session()->flash('message', __('Subtask status updated.'));
     }
 
     public function updateOrder(array $orderedIds): void
@@ -120,7 +118,7 @@ class SubtaskPresets extends Component
         foreach ($orderedIds as $index => $id) {
             SubtaskPreset::where('id', $id)->update(['sort_order' => $index + 1]);
         }
-        session()->flash('message', 'Orden de las subtareas actualizado.');
+        session()->flash('message', __('Subtask order updated.'));
     }
 
     public function moveUp(int $id): void
@@ -155,7 +153,7 @@ class SubtaskPresets extends Component
     {
         $preset = SubtaskPreset::findOrFail($id);
         $preset->delete();
-        session()->flash('message', 'Plantilla de subtarea eliminada correctamente.');
+        session()->flash('message', __('Subtask template deleted successfully.'));
     }
 
     public function closeModal(): void
@@ -180,6 +178,6 @@ class SubtaskPresets extends Component
         return view('livewire.settings.subtask-presets', [
             'presets' => $presets,
             'systemTaskConfigs' => $systemTaskConfigs,
-        ]);
+        ])->title(__('Subtask and System Task Settings'));
     }
 }

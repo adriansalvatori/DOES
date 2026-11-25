@@ -70,7 +70,7 @@
                     </div>
 
                     <div class="min-w-0">
-                        <h4 class="font-medium text-body text-ink break-words">{{ $task->title }}</h4>
+                        <h4 class="font-medium text-body text-ink break-words">{{ $task->display_title }}</h4>
                         @if($task->order)
                             <p class="text-meta text-ink-3 truncate mt-0.5 flex items-center gap-1.5">
                                 @if($task->order->wo_number)

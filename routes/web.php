@@ -136,13 +136,13 @@ Route::middleware(['auth'])->group(function () {
         }
 
         if (! $isAllowed) {
-            abort(403, 'Host not allowed for Trello proxy.');
+            abort(403, __('Host not allowed for Trello proxy.'));
         }
 
         $res = app(TrelloSyncService::class)->proxyAttachment($url);
 
         if (! $res['success']) {
-            abort(404, $res['error'] ?? 'Attachment not found');
+            abort(404, $res['error'] ?? __('Attachment not found'));
         }
 
         $response = response($res['content'])

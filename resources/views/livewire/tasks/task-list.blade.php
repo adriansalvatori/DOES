@@ -49,7 +49,7 @@
                                     <x-lucide-check class="h-3 w-3" />
                                 </button>
                             </td>
-                            <td class="font-medium {{ $done ? 'ui-done' : '' }}">{{ __($task->title) }}</td>
+                            <td class="font-medium {{ $done ? 'ui-done' : '' }}">{{ $task->display_title }}</td>
                             <td class="text-ink-2">{{ $task->order?->company_name }}</td>
                             <td>
                                 @if($task->assignee)

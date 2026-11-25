@@ -19,7 +19,7 @@
             @endif
 
             <span x-show="sidebarOpen" x-transition.opacity class="truncate text-[11px] font-medium">
-                {{ $isPaused ? __('Sync Trello: Pausado') : __('Sync Trello: Activo') }}
+                {{ $isPaused ? __('Trello sync: Paused') : __('Trello sync: Active') }}
             </span>
         </div>
 
@@ -37,7 +37,7 @@
             <div class="flex items-center justify-between">
                 <span class="font-semibold flex items-center gap-1">
                     <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600" />
-                    {{ __('Sync Reactivado') }}
+                    {{ __('Sync resumed') }}
                 </span>
                 <button wire:click="dismissPrompt" class="text-emerald-700 hover:text-emerald-900 font-bold px-1">✕</button>
             </div>
@@ -46,7 +46,7 @@
             </p>
             <a href="/trello-sync" wire:navigate class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline">
                 <x-lucide-arrow-right class="w-3 h-3" />
-                {{ __('Ir a Conciliar / Sincronizar Tablero') }}
+                {{ __('Go to Reconcile / Sync Board') }}
             </a>
         </div>
     @endif

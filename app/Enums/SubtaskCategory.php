@@ -39,7 +39,7 @@ enum SubtaskCategory: string
         return match ($this) {
             self::NEW_DESIGN => __('Previous status'),
             self::CLIENT_ADJUSTMENTS => __('To client'),
-            self::CAMILA_ADJUSTMENTS => __('A Camila'),
+            self::CAMILA_ADJUSTMENTS => __('To Camila'),
             self::PRODUCTION_ADJUSTMENTS => __('To production'),
             self::MANAGEMENT => __('No change'),
         };

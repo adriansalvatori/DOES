@@ -6,6 +6,7 @@ use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\SubtaskCategory;
 use App\Services\AutomationEngine;
+use App\Support\SystemTaskTitle;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -63,6 +64,14 @@ class RelatedTask extends Model
         }
 
         return SubtaskCategory::detectFromContext($this->title ?? '', $this->order);
+    }
+
+    /**
+     * The title translated into the reader's locale when it is one the system generated.
+     */
+    public function getDisplayTitleAttribute(): string
+    {
+        return (string) SystemTaskTitle::translate($this->title);
     }
 
     public function getIsWorkTaskAttribute(): bool
@@ -133,7 +142,7 @@ class RelatedTask extends Model
                     ->exists();
 
                 if (! $alreadyLogged) {
-                    $actor = $task->trigger_type ? 'AutomationEngine' : (auth()->user()?->name ?? 'Sistema');
+                    $actor = $task->trigger_type ? 'AutomationEngine' : (auth()->user()?->name ?? __('System'));
                     $taskTypeStr = is_string($task->type) ? $task->type : $task->type?->value;
 
                     OrderEvent::create([
@@ -421,11 +430,11 @@ class RelatedTask extends Model
     public function colorCodingLabel(): string
     {
         return match ($this->colorCodingKey()) {
-            'urgent' => __('Urgente / Atraso'),
+            'urgent' => __('Urgent / Overdue'),
             'production' => __('Production files / Production'),
             'client' => __('Client / Follow-up'),
             'camila' => __('Camila / QA'),
-            'blocked' => __('Bloqueado / Resolver'),
+            'blocked' => __('Blocked / Resolve'),
             default => __('System'),
         };
     }
@@ -434,10 +443,10 @@ class RelatedTask extends Model
     {
         return match ($this->colorCodingKey()) {
             'urgent' => __('Urgent'),
-            'production' => __('ALTA'),
+            'production' => __('Print'),
             'client' => __('Client'),
             'camila' => __('QA'),
-            'blocked' => __('Bloqueo'),
+            'blocked' => __('Block'),
             default => __('System'),
         };
     }

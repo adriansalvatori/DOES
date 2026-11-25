@@ -10,8 +10,8 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         @foreach ([
-            ['code' => 'es', 'name' => 'Español', 'note' => 'Spanish (Default)', 'desc' => 'Interfaz nativa en español con términos y flujos adaptados al equipo de diseño.'],
-            ['code' => 'en', 'name' => 'English', 'note' => 'Inglés', 'desc' => 'Full English interface translation for international team members and partners.'],
+            ['code' => 'es', 'name' => 'Español', 'note' => __('Spanish (default)'), 'desc' => __('Native Spanish interface with terms and flows adapted to the design team.')],
+            ['code' => 'en', 'name' => 'English', 'note' => __('English'), 'desc' => __('Full English interface translation for international team members and partners.')],
         ] as $lang)
             <button
                 type="button"

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Domain\Delivery\Models\Deliverable;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -25,6 +27,10 @@ class User extends Authenticatable
         'avatar_url',
         'active',
         'last_login_at',
+        'wip_limit',
+        'is_reviewer',
+        'is_lead',
+        'designer_id',
     ];
 
     protected $hidden = [
@@ -46,12 +52,25 @@ class User extends Authenticatable
             'preferences' => 'array',
             'active' => 'boolean',
             'last_login_at' => 'datetime',
+            'wip_limit' => 'integer',
+            'is_reviewer' => 'boolean',
+            'is_lead' => 'boolean',
         ];
     }
 
     public function designer(): HasOne
     {
         return $this->hasOne(Designer::class);
+    }
+
+    public function assignedDeliverables(): HasMany
+    {
+        return $this->hasMany(Deliverable::class, 'assignee_id');
+    }
+
+    public function isCustomerService(): bool
+    {
+        return $this->role === UserRole::CUSTOMER_SERVICE;
     }
 
     public function isAdmin(): bool

@@ -129,7 +129,7 @@
                                                 <span 
                                                     :class="preset.is_work_task ? 'bg-sunken text-ink-2 border-line' : 'bg-sunken text-ink-2 border-line'"
                                                     class="px-1 py-0.2 rounded text-meta font-semibold border">
-                                                    <span x-text="preset.is_work_task ? 'Trabajo' : 'Gestión'"></span>
+                                                    <span x-text="preset.is_work_task ? @js(__('Work')) : @js(__('Management'))"></span>
                                                 </span>
                                                 <span class="text-meta text-ink-2 font-medium opacity-0 group-hover:opacity-100 transition">
                                                     ↵

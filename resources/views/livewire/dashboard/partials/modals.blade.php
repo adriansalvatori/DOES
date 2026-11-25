@@ -22,7 +22,7 @@
                     <div class="rounded-card bg-sunken p-3 space-y-1.5">
                         <div class="flex items-center justify-between gap-2">
                             <span class="text-meta text-ink-3">{{ __('Current block reason') }}</span>
-                            <x-ui.tag tone="warn">{{ $resolveOrder->blocking_reason?->value ?? ($resolveOrder->substatus ? $resolveOrder->substatus->value : __('BLOCKED')) }}</x-ui.tag>
+                            <x-ui.tag tone="warn">{{ $resolveOrder->blocking_reason?->label() ?? ($resolveOrder->substatus ? $resolveOrder->substatus->label() : __('Blocked')) }}</x-ui.tag>
                         </div>
                         @if($resolveOrder->blocking_reason_other)
                             <p class="text-body text-ink">{{ $resolveOrder->blocking_reason_other }}</p>
@@ -94,7 +94,7 @@
                             <span class="text-meta text-ink-3">{{ __('Task to complete') }}</span>
                             <x-ui.tag tone="info">{{ $camilaOrder->core_status?->value ?? 'ENVIADO_A_CAMILA' }}</x-ui.tag>
                         </div>
-                        <p class="text-body text-ink">{{ $camilaTask?->title ?? __('Design review') }}</p>
+                        <p class="text-body text-ink">{{ $camilaTask?->display_title ?? __('Design review') }}</p>
                         <div class="text-meta text-ink-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                             <span>{{ __('Designer') }}: <x-ui.person :person="$camilaOrder->primary_designer" size="sm" show-name class="inline-flex align-middle" /></span>
                             <span>{{ __('Internal review #') }}: {{ ($camilaOrder->internal_revision_count ?? 0) + 1 }}</span>

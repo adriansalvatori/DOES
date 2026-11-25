@@ -17,7 +17,7 @@ class SyncOverviewExcelDataTest extends TestCase
         $this->assertEquals('CANCELADA', Substatus::CANCELADA->label());
         $this->assertEquals(CoreStatus::ARCHIVED, Substatus::CANCELADA->defaultCoreStatus());
 
-        $this->assertEquals('NO REALIZADA / TRANSFERIDA', Substatus::NO_REALIZADA_TRANSFERIDA->label());
+        $this->assertEquals('NOT DONE / TRANSFERRED', Substatus::NO_REALIZADA_TRANSFERIDA->label());
         $this->assertEquals(CoreStatus::ARCHIVED, Substatus::NO_REALIZADA_TRANSFERIDA->defaultCoreStatus());
 
         // Ticket has lavender styling

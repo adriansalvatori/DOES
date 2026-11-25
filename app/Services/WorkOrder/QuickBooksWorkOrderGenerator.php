@@ -20,7 +20,7 @@ class QuickBooksWorkOrderGenerator implements WorkOrderNumberGenerator
     public function generateNext(array $context = []): string
     {
         // TODO: Implement integration with QuickBooks Online API using $context['company_name'], etc.
-        throw new RuntimeException('La integración con QuickBooks para generar WO numbers aún no está configurada.');
+        throw new RuntimeException(__('The QuickBooks integration to generate WO numbers is not configured yet.'));
     }
 
     /**

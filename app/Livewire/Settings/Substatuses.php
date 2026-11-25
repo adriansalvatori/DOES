@@ -8,11 +8,9 @@ use App\Models\Substatus;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
 #[Layout('components.layouts.app')]
-#[Title('Configuración de Subestatus')]
 class Substatuses extends Component
 {
     public string $search = '';
@@ -164,12 +162,12 @@ class Substatuses extends Component
                 Order::where('origin_substatus', $oldName)->update(['origin_substatus' => $validated['name']]);
             }
 
-            session()->flash('message', 'Subestatus actualizado correctamente.');
+            session()->flash('message', __('Substatus updated successfully.'));
         } else {
             $maxSort = Substatus::max('sort_order') ?? 0;
             $validated['sort_order'] = $maxSort + 1;
             Substatus::create($validated);
-            session()->flash('message', 'Nuevo subestatus creado correctamente.');
+            session()->flash('message', __('New substatus created successfully.'));
         }
 
         $this->showModal = false;
@@ -181,13 +179,13 @@ class Substatuses extends Component
         $sub = Substatus::findOrFail($id);
 
         if ($sub->is_system) {
-            session()->flash('error', 'Los subestatus del sistema no pueden eliminarse.');
+            session()->flash('error', __('System substatuses cannot be deleted.'));
 
             return;
         }
 
         $sub->delete();
-        session()->flash('message', 'Subestatus eliminado correctamente.');
+        session()->flash('message', __('Substatus deleted successfully.'));
     }
 
     public function reorderSubstatuses(array $orderedIds): void
@@ -298,6 +296,6 @@ class Substatuses extends Component
             'globalSubstatuses' => $globalSubstatuses,
             'coreStatuses' => $coreStatusesForDisplay,
             'dropdownStatuses' => $dropdownStatuses,
-        ]);
+        ])->title(__('Substatus Settings'));
     }
 }

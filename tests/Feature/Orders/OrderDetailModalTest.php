@@ -363,7 +363,7 @@ class OrderDetailModalTest extends TestCase
         $fresh = $order->fresh();
         $this->assertTrue($fresh->approved);
         $this->assertEquals('camila', $fresh->approval_type);
-        $this->assertEquals('Aprobado por Camila', $fresh->approval_type_label);
+        $this->assertEquals('Approved by Camila', $fresh->approval_type_label);
         $this->assertEquals('Visto bueno dado directamente por Camila vía chat interno.', $fresh->approval_note);
         $this->assertNotNull($fresh->approved_at);
 
@@ -411,7 +411,7 @@ class OrderDetailModalTest extends TestCase
         $fresh = $order->fresh();
         $this->assertTrue($fresh->approved);
         $this->assertEquals('cliente', $fresh->approval_type);
-        $this->assertEquals('Aprobado por Cliente', $fresh->approval_type_label);
+        $this->assertEquals('Approved by Client', $fresh->approval_type_label);
         $this->assertNotNull($fresh->approval_image_path);
         Storage::disk('public')->assertExists($fresh->approval_image_path);
 
@@ -457,18 +457,18 @@ class OrderDetailModalTest extends TestCase
         $fresh = $order->fresh();
         $this->assertTrue($fresh->approved);
         $this->assertEquals('manager', $fresh->approval_type);
-        $this->assertEquals('Aprobado por Gabriela', $fresh->approval_type_label);
+        $this->assertEquals('Approved by Gabriela', $fresh->approval_type_label);
         $this->assertEquals('Aprobado directamente por Gabriela según visto bueno gerencial.', $fresh->approval_note);
 
         $event = $order->events()->where('event_type', 'ORDER_APPROVED')->first();
         $this->assertNotNull($event);
         $this->assertEquals('manager', $event->metadata['approval_type']);
-        $this->assertEquals('Aprobado por Gabriela', $event->metadata['approval_type_label']);
+        $this->assertEquals('Approved by Gabriela', $event->metadata['approval_type_label']);
         $this->assertEquals(__('Approval Received'), $event->getFormattedTitle());
 
         // Dynamic change of manager name via settings updates label
         Setting::set('manager_name', 'Gabriela Requena');
-        $this->assertEquals('Aprobado por Gabriela Requena', $fresh->fresh()->approval_type_label);
+        $this->assertEquals('Approved by Gabriela Requena', $fresh->fresh()->approval_type_label);
     }
 
     public function test_approval_for_urgent_order_assigns_today_to_task_and_sla(): void

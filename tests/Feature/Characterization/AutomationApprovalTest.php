@@ -99,8 +99,8 @@ class AutomationApprovalTest extends AutomationCharacterizationTestCase
 
         $event = $this->eventsOf($order, 'ORDER_APPROVED')->sole();
         $this->assertTrue($event->metadata['is_urgente']);
-        $this->assertSame('Order approved (Aprobado por Cliente) - Urgent same-day SLA set', $event->metadata['sla_message']);
-        $this->assertStringEndsWith(', URGENTE)', $event->new_value);
+        $this->assertSame('Order approved (Approved by Client) - Urgent same-day SLA set', $event->metadata['sla_message']);
+        $this->assertStringEndsWith(', URGENT)', $event->new_value);
     }
 
     public function test_approval_logs_the_event_and_due_date_history_without_a_due_date_changed_event(): void
@@ -110,16 +110,16 @@ class AutomationApprovalTest extends AutomationCharacterizationTestCase
         $this->engine()->processApproval($order, true, true, 'camila', 'Ok', 'approvals/proof.png');
 
         $event = $this->eventsOf($order, 'ORDER_APPROVED')->sole();
-        $this->assertSame('Usuario', $event->actor);
+        $this->assertSame('User', $event->actor);
         $this->assertSame('approved: false', $event->previous_value);
-        $this->assertSame('Aprobado por Camila (Medidas: SÍ, Estimado: SÍ)', $event->new_value);
+        $this->assertSame('Approved by Camila (Measures: YES, Estimate: YES)', $event->new_value);
         $this->assertSame('camila', $event->metadata['approval_type']);
-        $this->assertSame('Aprobado por Camila', $event->metadata['approval_type_label']);
+        $this->assertSame('Approved by Camila', $event->metadata['approval_type_label']);
         $this->assertSame('Ok', $event->metadata['approval_note']);
         $this->assertSame('/storage/approvals/proof.png', $event->metadata['approval_image']);
         $this->assertSame('2026-10-01', $event->metadata['new_due_date']);
         $this->assertFalse($event->metadata['is_urgente']);
-        $this->assertSame('Order approved (Aprobado por Camila) - 24 hour SLA set', $event->metadata['sla_message']);
+        $this->assertSame('Order approved (Approved by Camila) - 24 hour SLA set', $event->metadata['sla_message']);
 
         $history = DueDateHistory::where('order_id', $order->id)->sole();
         $this->assertSame('ORDER_APPROVED', $history->trigger_event);
@@ -131,9 +131,9 @@ class AutomationApprovalTest extends AutomationCharacterizationTestCase
     public static function approvalTypeLabels(): array
     {
         return [
-            'cliente' => ['cliente', 'Aprobado por Cliente'],
-            'camila' => ['camila', 'Aprobado por Camila'],
-            'unknown falls back to client' => ['other', 'Aprobado por Cliente'],
+            'cliente' => ['cliente', 'Approved by Client'],
+            'camila' => ['camila', 'Approved by Camila'],
+            'unknown falls back to client' => ['other', 'Approved by Client'],
         ];
     }
 
@@ -149,7 +149,7 @@ class AutomationApprovalTest extends AutomationCharacterizationTestCase
 
     public function test_manager_and_gabriela_approval_use_the_configured_manager_name(): void
     {
-        $expected = 'Aprobado por '.Setting::getManagerName();
+        $expected = 'Approved by '.Setting::getManagerName();
         foreach (['manager', 'gabriela'] as $type) {
             $order = $this->pendingOrder();
 

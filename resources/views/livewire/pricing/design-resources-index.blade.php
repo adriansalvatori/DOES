@@ -126,7 +126,7 @@
                 <div class="space-y-3">
                     <div>
                         <label class="ui-label">{{ __('Product / supplier page URL') }}</label>
-                        <input type="url" wire:model="editWebsiteUrl" placeholder="https://proveedor.com/producto" class="ui-input">
+                        <input type="url" wire:model="editWebsiteUrl" placeholder="https://supplier.example.com/product" class="ui-input">
                         @error('editWebsiteUrl') <span class="text-meta text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div>
@@ -136,7 +136,7 @@
                     </div>
                     <div>
                         <label class="ui-label">{{ __('Templates / technical templates link') }}</label>
-                        <input type="url" wire:model="editTemplateUrl" placeholder="https://proveedor.com/templates/archivo.pdf" class="ui-input">
+                        <input type="url" wire:model="editTemplateUrl" placeholder="https://supplier.example.com/templates/file.pdf" class="ui-input">
                         @error('editTemplateUrl') <span class="text-meta text-danger">{{ $message }}</span> @enderror
                     </div>
                     <div>

@@ -33,13 +33,13 @@ class ColorCodingService
             'camila' => [
                 'category' => 'supervision',
                 'category_name' => __('Supervision and QA'),
-                'name' => __('Camila (QA & Revisiones)'),
+                'name' => __('Camila (QA & Reviews)'),
                 'description' => __('Affects the "Internal review" column, the "Camila changes" substatus, the Dashboard tracking panel and quality control notifications.'),
                 'default_hex' => '#a855f7', // Purple
                 'icon' => 'user-check',
                 'affects' => [
-                    __('Columna Kanban: ENVIADO A CAMILA'),
-                    __('Subestatus: CAMBIOS CAMILA'),
+                    __('Kanban column: :name', ['name' => 'ENVIADO A CAMILA']),
+                    __('Substatus: :name', ['name' => 'CAMBIOS CAMILA']),
                     __('Dashboard: Camila\'s tab, counter and tasks'),
                     __('Camila\'s review modal and notes'),
                 ],
@@ -54,8 +54,8 @@ class ColorCodingService
                 'icon' => 'printer',
                 'affects' => [
                     __('Kanban column: IN PRODUCTION'),
-                    __('Subestatus: PONER EN ALTA'),
-                    __('Subestatus: ENVIADO EN ALTA'),
+                    __('Substatus: :name', ['name' => 'PONER EN ALTA']),
+                    __('Substatus: :name', ['name' => 'ENVIADO EN ALTA']),
                     __('Substatus: PRODUCTION ADJUSTMENTS'),
                     __('Dashboard: Ready for production files and Production files forecast tabs'),
                 ],
@@ -69,7 +69,7 @@ class ColorCodingService
                 'default_hex' => '#F3A8FF', // Soft Magenta
                 'icon' => 'crown',
                 'affects' => [
-                    __('Columna Kanban: EURALIZ ORDERS RECEIVED'),
+                    __('Kanban column: :name', ['name' => 'EURALIZ ORDERS RECEIVED']),
                     __('Designer: Euralíz (dot, badge and initials)'),
                     __('Weekly Planner: Euralíz\'s column and cards'),
                 ],
@@ -83,7 +83,7 @@ class ColorCodingService
                 'default_hex' => '#5FE9B5', // Mint / Emerald
                 'icon' => 'palette',
                 'affects' => [
-                    __('Columna Kanban: ADRIAN ORDERS RECEIVED'),
+                    __('Kanban column: :name', ['name' => 'ADRIAN ORDERS RECEIVED']),
                     __('Designer: Adrián (dot, badge and initials)'),
                     __('Weekly Planner: Adrián\'s column and cards'),
                 ],
@@ -97,7 +97,7 @@ class ColorCodingService
                 'default_hex' => '#52EAFD', // Cyan / Sky
                 'icon' => 'palette',
                 'affects' => [
-                    __('Columna Kanban: CESAR ORDERS RECEIVED'),
+                    __('Kanban column: :name', ['name' => 'CESAR ORDERS RECEIVED']),
                     __('Designer: César (dot, badge and initials)'),
                     __('Weekly Planner: César\'s column and cards'),
                 ],
@@ -124,7 +124,7 @@ class ColorCodingService
                 'default_hex' => '#22c55e', // Green
                 'icon' => 'calendar-check',
                 'affects' => [
-                    __('Columna Kanban: TO DO TODAY'),
+                    __('Kanban column: :name', ['name' => 'TO DO TODAY']),
                     __('Badge for work active today'),
                     __('Weekly Planner: Tasks scheduled for the day'),
                 ],
@@ -138,8 +138,8 @@ class ColorCodingService
                 'default_hex' => '#f97316', // Orange
                 'icon' => 'alert-triangle',
                 'affects' => [
-                    __('Columna Kanban: ENTRANTE (Bloqueada)'),
-                    __('Subestatus: BLOQUEADA'),
+                    __('Kanban column: :name', ['name' => 'ENTRANTE (Bloqueada)']),
+                    __('Substatus: :name', ['name' => 'BLOQUEADA']),
                     __('Substatus: MISSING ESTIMATE APPROVAL'),
                     __('Substatus: MISSING INFORMATION'),
                 ],
@@ -154,16 +154,16 @@ class ColorCodingService
                 'icon' => 'message-square',
                 'affects' => [
                     __('Kanban column: SENT TO CLIENT'),
-                    __('Subestatus: WAITING FOR CLIENT'),
+                    __('Substatus: :name', ['name' => 'WAITING FOR CLIENT']),
                     __('Substatus: CLIENT CHANGES'),
-                    __('Subestatus: ESPERANDO RESPUESTA'),
+                    __('Substatus: :name', ['name' => 'ESPERANDO RESPUESTA']),
                 ],
                 'presets' => ['#3b82f6', '#2563eb', '#1d4ed8', '#0ea5e9', '#0284c7', '#6366f1'],
             ],
             'urgent' => [
                 'category' => 'workflow',
                 'category_name' => __('Workflow'),
-                'name' => __('Urgente & Atraso Preventivo'),
+                'name' => __('Urgent & Preventive Overdue'),
                 'description' => __('Affects automatic delay subtasks, priority alerts and tasks marked as urgent.'),
                 'default_hex' => '#ef4444', // Red
                 'icon' => 'alert-circle',
@@ -182,10 +182,10 @@ class ColorCodingService
                 'default_hex' => '#64748b', // Slate
                 'icon' => 'headphones',
                 'affects' => [
-                    __('Columna Kanban: ON HOLD'),
-                    __('Subestatus: CUSTOMER SERVICE REQUIRED'),
-                    __('Subestatus: NO RESPUESTA'),
-                    __('Subestatus: PAUSADO'),
+                    __('Kanban column: :name', ['name' => 'ON HOLD']),
+                    __('Substatus: :name', ['name' => 'CUSTOMER SERVICE REQUIRED']),
+                    __('Substatus: :name', ['name' => 'NO RESPUESTA']),
+                    __('Substatus: :name', ['name' => 'PAUSADO']),
                 ],
                 'presets' => ['#64748b', '#475569', '#334155', '#71717a', '#78716c', '#ea580c'],
             ],

@@ -257,7 +257,7 @@ class Board extends Component
 
         if ($newStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
             $this->dispatch('open-order-detail', orderId: $orderId, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.', type: 'info');
+            $this->dispatch('toast', message: __('The order requires approval before being sent to Production.'), type: 'info');
 
             return;
         }
@@ -279,7 +279,7 @@ class Board extends Component
         }
 
         // Run local workflow automations
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? 'Usuario');
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? __('User'));
 
         // Optionally attempt Trello sync in background without interrupting UI
         $freshOrder = $order->fresh();
@@ -296,7 +296,7 @@ class Board extends Component
         }
 
         $this->syncChangedColumns();
-        session()->flash('message', "Orden {$order->company_name} movida a {$newStatus->label()}.");
+        session()->flash('message', __('Order :name moved to :status.', ['name' => $order->company_name, 'status' => $newStatus->label()]));
     }
 
     public function confirmBlock()
@@ -324,7 +324,7 @@ class Board extends Component
 
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden {$order->company_name} marcada como Bloqueada.");
+        session()->flash('message', __('Order :name marked as Blocked.', ['name' => $order->company_name]));
     }
 
     public function cancelBlock()
@@ -360,7 +360,7 @@ class Board extends Component
             'archived_at' => now(),
         ]);
 
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, CoreStatus::ARCHIVED, auth()->user()?->name ?? 'Usuario');
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, CoreStatus::ARCHIVED, auth()->user()?->name ?? __('User'));
 
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
@@ -385,8 +385,8 @@ class Board extends Component
         $this->validate([
             'unblockReason' => 'required|string|min:3',
         ], [
-            'unblockReason.required' => 'Ingresa el motivo o forma en que se resolvió el bloqueo.',
-            'unblockReason.min' => 'El motivo debe contener al menos 3 caracteres.',
+            'unblockReason.required' => __('Enter the reason or way the block was resolved.'),
+            'unblockReason.min' => __('The reason must be at least 3 characters.'),
         ]);
 
         $order = Order::findOrFail($this->pendingUnblockOrderId);
@@ -398,7 +398,7 @@ class Board extends Component
 
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden {$order->company_name} desbloqueada y devuelta a la lista del diseñador.");
+        session()->flash('message', __('Order :name unblocked and returned to the designer\'s list.', ['name' => $order->company_name]));
     }
 
     public function cancelUnblock()
@@ -417,8 +417,8 @@ class Board extends Component
         $this->validate([
             'onHoldReason' => 'required|string|min:3',
         ], [
-            'onHoldReason.required' => 'Debes ingresar un motivo para poner la orden en On Hold.',
-            'onHoldReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+            'onHoldReason.required' => __('You must enter a reason to put the order On Hold.'),
+            'onHoldReason.min' => __('The reason must be at least 3 characters.'),
         ]);
 
         $order = Order::findOrFail($this->pendingOnHoldOrderId);
@@ -428,13 +428,13 @@ class Board extends Component
         $order->update(['core_status' => $newStatus]);
 
         // Run local workflow automations
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? 'Usuario');
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? __('User'));
 
         // Log event in OrderEvent with reason
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'MOVED_TO_ON_HOLD',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus->value,
             'new_value' => $newStatus->value,
             'metadata' => [
@@ -461,7 +461,7 @@ class Board extends Component
 
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden {$order->company_name} movida a On Hold.");
+        session()->flash('message', __('Order :name moved to On Hold.', ['name' => $order->company_name]));
     }
 
     public function cancelOnHold()
@@ -488,8 +488,8 @@ class Board extends Component
         $this->validate([
             'resumeReason' => 'required|string|min:3',
         ], [
-            'resumeReason.required' => 'Debes ingresar un motivo para reanudar la orden.',
-            'resumeReason.min' => 'El motivo debe tener al menos 3 caracteres.',
+            'resumeReason.required' => __('You must enter a reason to resume the order.'),
+            'resumeReason.min' => __('The reason must be at least 3 characters.'),
         ]);
 
         $order = Order::findOrFail($this->pendingResumeOrderId);
@@ -499,7 +499,7 @@ class Board extends Component
         if ($newStatus === CoreStatus::EN_PRODUCCION && ! $order->approved) {
             $this->showResumeModal = false;
             $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-            $this->dispatch('toast', message: 'La orden requiere aprobación antes de ser enviada a Producción.', type: 'info');
+            $this->dispatch('toast', message: __('The order requires approval before being sent to Production.'), type: 'info');
 
             return;
         }
@@ -519,12 +519,12 @@ class Board extends Component
             $order->update(['core_status' => $newStatus]);
         }
 
-        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? 'Usuario');
+        app(AutomationEngine::class)->handleStatusChanged($order, $previousStatus, $newStatus, auth()->user()?->name ?? __('User'));
 
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'RESUMED_FROM_ON_HOLD',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus ? $previousStatus->value : null,
             'new_value' => $newStatus->value,
             'metadata' => [
@@ -548,7 +548,7 @@ class Board extends Component
         $this->cancelResume();
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden {$order->company_name} reanudada.");
+        session()->flash('message', __('Order :name resumed.', ['name' => $order->company_name]));
     }
 
     public function duplicateOrder($orderId)
@@ -571,15 +571,15 @@ class Board extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'ORDER_TRASHED',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $order->core_status?->value,
             'new_value' => 'TRASHED',
-            'metadata' => ['comment' => 'Orden movida a la papelera.'],
+            'metadata' => ['comment' => __('Order moved to the trash.')],
         ]);
 
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        session()->flash('message', "Orden '{$order->company_name}' enviada a la papelera.");
+        session()->flash('message', __('Order \':name\' sent to the trash.', ['name' => $order->company_name]));
     }
 
     public function toggleTaskComplete($taskId)
@@ -593,7 +593,7 @@ class Board extends Component
 
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        session()->flash('message', "Tarea '{$task->title}' actualizada.");
+        session()->flash('message', __('Task \':title\' updated.', ['title' => $task->title]));
     }
 
     public function deleteTask($taskId)
@@ -604,7 +604,7 @@ class Board extends Component
             $task->delete();
             $this->syncChangedColumns();
             $this->dispatch('order-updated');
-            session()->flash('message', "Tarea '{$taskTitle}' eliminada.");
+            session()->flash('message', __('Task \':title\' deleted.', ['title' => $taskTitle]));
         }
     }
 

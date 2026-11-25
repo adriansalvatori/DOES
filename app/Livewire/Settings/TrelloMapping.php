@@ -98,7 +98,7 @@ class TrelloMapping extends Component
             }
         }
 
-        session()->flash('message', 'Mapeo detectado automáticamente basado en los nombres de las listas de Trello.');
+        session()->flash('message', __('Mapping auto-detected based on the Trello list names.'));
     }
 
     public function saveMappings(): void
@@ -119,7 +119,7 @@ class TrelloMapping extends Component
             );
         }
 
-        session()->flash('message', 'Mapeo de listas guardado exitosamente.');
+        session()->flash('message', __('List mapping saved successfully.'));
         $this->dispatch('mappings-saved');
     }
 

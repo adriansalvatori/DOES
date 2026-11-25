@@ -1012,7 +1012,7 @@ class OverviewIndex extends Component
 
         $order->update(['review_status' => $status]);
         $this->clearOverviewCache();
-        $this->syncTrelloAndLog($order, 'REVIEW_STATUS_CHANGED', 'Revisión actualizada: '.($status ?? 'Ninguna'));
+        $this->syncTrelloAndLog($order, 'REVIEW_STATUS_CHANGED', __('Review updated: :status', ['status' => $status ?? __('None')]));
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Review status updated.'));
     }
@@ -1035,7 +1035,7 @@ class OverviewIndex extends Component
         $order->save();
 
         $this->clearOverviewCache();
-        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Tipo de instalación actualizado: '.($clean ?? 'Vacío'));
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', __('Installation type updated: :value', ['value' => $clean ?? __('Empty value')]));
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Installation updated.'));
     }
@@ -1058,7 +1058,7 @@ class OverviewIndex extends Component
 
         $this->clearOverviewCache();
         $types = $order->installation_types_list;
-        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación actualizada: '.(empty($types) ? 'Vacío' : implode(', ', $types)));
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', __('Installation updated: :value', ['value' => empty($types) ? __('Empty value') : implode(', ', $types)]));
         $this->dispatch('order-updated', source: 'OverviewIndex');
         $this->dispatch('toast', message: __('Installation updated.'));
     }
@@ -1081,7 +1081,7 @@ class OverviewIndex extends Component
         $order->save();
 
         $this->clearOverviewCache();
-        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación actualizada: '.(empty($cleanTypes) ? 'Vacío' : implode(', ', $cleanTypes)));
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', __('Installation updated: :value', ['value' => empty($cleanTypes) ? __('Empty value') : implode(', ', $cleanTypes)]));
         $this->dispatch('order-updated', source: 'OverviewIndex');
         $this->dispatch('toast', message: __('Installation updated.'));
     }
@@ -1103,7 +1103,7 @@ class OverviewIndex extends Component
         $order->save();
 
         $this->clearOverviewCache();
-        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación eliminada');
+        $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', __('Installation removed'));
         $this->dispatch('order-updated', source: 'OverviewIndex');
         $this->dispatch('toast', message: __('Installation cleared.'));
     }
@@ -1130,7 +1130,7 @@ class OverviewIndex extends Component
             $order->save();
             $order->applySubstatusStatusRules();
             $label = $substatus->label();
-            $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', 'Bandera actualizada: '.$label, $newSubVal, $prevSubVal);
+            $this->syncTrelloAndLog($order, 'FLAG_TOGGLED', __('Flag updated: :label', ['label' => $label]), $newSubVal, $prevSubVal);
         } else {
             $isArchivedSub = \App\Models\Substatus::isArchivedSubstatus($substatus);
             $previousStatus = $order->core_status;
@@ -1152,7 +1152,7 @@ class OverviewIndex extends Component
             }
 
             $label = $substatus instanceof Substatus ? $substatus->label() : ($substatusValue ?? 'Ninguno');
-            $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', 'Subestatus actualizado a: '.$label, $newSubVal, $prevSubVal);
+            $this->syncTrelloAndLog($order, 'SUBSTATUS_CHANGED', __('Substatus updated to: :label', ['label' => $label]), $newSubVal, $prevSubVal);
             app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
         }
 
@@ -1219,7 +1219,7 @@ class OverviewIndex extends Component
             $order->update(['designer_id' => null]);
         }
 
-        $this->syncTrelloAndLog($order, 'DESIGNER_ASSIGNED', 'Diseñador asignado actualizado');
+        $this->syncTrelloAndLog($order, 'DESIGNER_ASSIGNED', __('Assigned designer updated'));
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Designer updated.'));
@@ -1233,7 +1233,7 @@ class OverviewIndex extends Component
         }
 
         $order->update(['in_workspace' => true]);
-        $this->syncTrelloAndLog($order, 'MOVED_TO_WORKSPACE', 'Orden movida al workspace activo');
+        $this->syncTrelloAndLog($order, 'MOVED_TO_WORKSPACE', __('Order moved to the active workspace'));
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Order moved to the active Workspace.'));
@@ -1247,7 +1247,7 @@ class OverviewIndex extends Component
         }
 
         $order->update(['in_workspace' => false]);
-        $this->syncTrelloAndLog($order, 'MOVED_TO_BACKLOG', 'Orden movida al backlog');
+        $this->syncTrelloAndLog($order, 'MOVED_TO_BACKLOG', __('Order moved to the backlog'));
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Order moved to the Backlog.'));
@@ -1258,7 +1258,7 @@ class OverviewIndex extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => $eventType,
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $previousValue,
             'new_value' => $newValue,
             'metadata' => ['description' => $description],
@@ -1475,7 +1475,7 @@ class OverviewIndex extends Component
             'appliedFilters' => $this->appliedFilters,
             'ordersState' => $this->buildOrdersState($orders),
         ], $this->metrics))->layout('components.layouts.app', [
-            'title' => 'Overview Operativo',
+            'title' => __('Operational Overview'),
             'noPadding' => true,
         ]);
     }

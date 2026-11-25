@@ -177,7 +177,7 @@ class OrderDetailModal extends Component
     // Delay fields
     public $clientPromisedDate;
 
-    public $delayReason = 'Correo de atraso enviado y nueva fecha acordada con cliente';
+    public $delayReason = '';
 
     // New task fields
     public $newTaskTitle = '';
@@ -267,6 +267,7 @@ class OrderDetailModal extends Component
         $this->orderId = $orderId;
         $this->clientPromisedDate = now()->addWeekdays(2)->toDateString();
         $this->newTaskDate = now()->toDateString();
+        $this->delayReason = __('Overdue email sent and new date agreed with client');
     }
 
     #[On('open-order-detail')]
@@ -402,13 +403,13 @@ class OrderDetailModal extends Component
             $this->trelloComments = $panel['comments']['comments'];
         } else {
             $this->trelloComments = [];
-            $this->trelloCommentError = $panel['comments']['error'] ?? 'Error al obtener comentarios de Trello.';
+            $this->trelloCommentError = $panel['comments']['error'] ?? __('Error fetching comments from Trello.');
         }
 
         if ($panel['details']['success'] ?? false) {
             $this->trelloDescription = $panel['details']['card']['desc'] ?? null;
         } else {
-            $this->trelloDetailsError = $panel['details']['error'] ?? 'Error al obtener detalles de la tarjeta de Trello.';
+            $this->trelloDetailsError = $panel['details']['error'] ?? __('Error fetching Trello card details.');
         }
 
         $this->trelloAttachments = ($panel['attachments']['success'] ?? false)
@@ -457,7 +458,7 @@ class OrderDetailModal extends Component
         if ($cardRes['success']) {
             $this->trelloDescription = $cardRes['card']['desc'] ?? null;
         } else {
-            $this->trelloDetailsError = $cardRes['error'] ?? 'Error al obtener detalles de la tarjeta de Trello.';
+            $this->trelloDetailsError = $cardRes['error'] ?? __('Error fetching Trello card details.');
         }
 
         if ($attachRes['success']) {
@@ -509,7 +510,7 @@ class OrderDetailModal extends Component
 
         $order = Order::find($this->orderId);
         if (! $order || ! $order->trello_card_id) {
-            $this->attachmentUploadError = 'Esta orden no tiene una tarjeta de Trello vinculada.';
+            $this->attachmentUploadError = __('This order has no linked Trello card.');
             $this->attachmentFiles = [];
 
             return;
@@ -525,7 +526,7 @@ class OrderDetailModal extends Component
         $this->isUploadingAttachment = true;
         $this->attachmentUploadError = null;
 
-        $authorName = auth()->user()?->name ?? 'Usuario';
+        $authorName = auth()->user()?->name ?? __('User');
         $service = app(TrelloSyncService::class);
         $successCount = 0;
         $errors = [];
@@ -578,16 +579,16 @@ class OrderDetailModal extends Component
         if ($successCount > 0) {
             $this->loadTrelloDetails();
             if ($successCount === 1) {
-                $this->dispatch('toast', message: "Archivo '{$lastSuccessFileName}' adjuntado a la tarjeta de Trello exitosamente.");
+                $this->dispatch('toast', message: __('File \':name\' attached to the Trello card successfully.', ['name' => $lastSuccessFileName]));
             } else {
-                $this->dispatch('toast', message: "Se adjuntaron {$successCount} archivos a la tarjeta de Trello exitosamente.");
+                $this->dispatch('toast', message: __(':count files were attached to the Trello card successfully.', ['count' => $successCount]));
             }
             $this->dispatch('order-updated');
         }
 
         if (! empty($errors)) {
             $this->attachmentUploadError = implode("\n", $errors);
-            $this->dispatch('toast', message: 'Hubo problemas al subir algunos archivos: '.implode(', ', $errors));
+            $this->dispatch('toast', message: __('There were problems uploading some files: :errors', ['errors' => implode(', ', $errors)]));
         }
 
         $this->attachmentFiles = [];
@@ -605,7 +606,7 @@ class OrderDetailModal extends Component
 
         $order = Order::find($this->orderId);
         if (! $order || ! $order->trello_card_id) {
-            $this->attachmentUploadError = 'Esta orden no tiene una tarjeta de Trello vinculada.';
+            $this->attachmentUploadError = __('This order has no linked Trello card.');
             $this->attachmentFile = null;
 
             return;
@@ -635,7 +636,7 @@ class OrderDetailModal extends Component
             );
 
             if ($res['success']) {
-                $authorName = auth()->user()?->name ?? 'Usuario';
+                $authorName = auth()->user()?->name ?? __('User');
 
                 OrderEvent::create([
                     'order_id' => $order->id,
@@ -658,11 +659,11 @@ class OrderDetailModal extends Component
                 );
 
                 $this->loadTrelloDetails();
-                $this->dispatch('toast', message: "Archivo '{$fileName}' adjuntado a la tarjeta de Trello exitosamente.");
+                $this->dispatch('toast', message: __('File \':name\' attached to the Trello card successfully.', ['name' => $fileName]));
                 $this->dispatch('order-updated');
             } else {
-                $this->attachmentUploadError = $res['error'] ?? 'Error al subir el archivo a Trello.';
-                $this->dispatch('toast', message: 'Error al adjuntar archivo a Trello: '.($res['error'] ?? 'Error desconocido'));
+                $this->attachmentUploadError = $res['error'] ?? __('Error uploading the file to Trello.');
+                $this->dispatch('toast', message: __('Error attaching file to Trello: :error', ['error' => $res['error'] ?? __('Unknown error')]));
             }
         } catch (\Throwable $e) {
             $this->attachmentUploadError = $e->getMessage();
@@ -681,7 +682,7 @@ class OrderDetailModal extends Component
 
         $order = Order::find($this->orderId);
         if (! $order || ! $order->trello_card_id) {
-            $this->dispatch('toast', message: 'Esta orden no tiene una tarjeta de Trello vinculada.');
+            $this->dispatch('toast', message: __('This order has no linked Trello card.'));
 
             return;
         }
@@ -691,7 +692,7 @@ class OrderDetailModal extends Component
             $res = $service->deleteCardAttachment($order->trello_card_id, $attachmentId);
 
             if ($res['success']) {
-                $authorName = auth()->user()?->name ?? 'Usuario';
+                $authorName = auth()->user()?->name ?? __('User');
                 $displayName = ! empty($fileName) ? $fileName : 'Archivo adjunto';
 
                 OrderEvent::create([
@@ -708,10 +709,10 @@ class OrderDetailModal extends Component
                 ]);
 
                 $this->loadTrelloDetails();
-                $this->dispatch('toast', message: "Archivo '{$displayName}' eliminado de la tarjeta de Trello.");
+                $this->dispatch('toast', message: __('File \':name\' removed from the Trello card.', ['name' => $displayName]));
                 $this->dispatch('order-updated');
             } else {
-                $this->dispatch('toast', message: 'Error al eliminar archivo de Trello: '.($res['error'] ?? 'Error desconocido'));
+                $this->dispatch('toast', message: __('Error removing file from Trello: :error', ['error' => $res['error'] ?? __('Unknown error')]));
             }
         } catch (\Throwable $e) {
             $this->dispatch('toast', message: 'Error: '.$e->getMessage());
@@ -808,7 +809,7 @@ class OrderDetailModal extends Component
         if ($res['success']) {
             $this->trelloComments = $res['comments'];
         } else {
-            $this->trelloCommentError = $res['error'] ?? 'Error al obtener comentarios de Trello.';
+            $this->trelloCommentError = $res['error'] ?? __('Error fetching comments from Trello.');
         }
     }
 
@@ -1122,7 +1123,7 @@ class OrderDetailModal extends Component
             }
             if (empty($alt)) {
                 $path = parse_url($src, PHP_URL_PATH);
-                $alt = $path ? basename($path) : __('Foto');
+                $alt = $path ? basename($path) : __('Photo');
             }
 
             // Check if URL is from Trello hosts and needs proxy
@@ -1352,7 +1353,7 @@ class OrderDetailModal extends Component
         }
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? __('User'));
         }
 
         app(AutomationEngine::class)->checkAndCreateOverdueTask($order->fresh());
@@ -1502,7 +1503,7 @@ class OrderDetailModal extends Component
         $this->editSubstatus = $subEnum instanceof Substatus ? $subEnum->value : (string) $subEnum;
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? __('User'));
         }
 
         $freshOrder = $order->fresh();
@@ -1561,13 +1562,13 @@ class OrderDetailModal extends Component
         $this->editCoreStatus = $newCoreStatus->value;
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? __('User'));
         }
 
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'MOVED_TO_ON_HOLD',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus ? $previousStatus->value : null,
             'new_value' => $newCoreStatus->value,
             'metadata' => [
@@ -1654,13 +1655,13 @@ class OrderDetailModal extends Component
         }
 
         if ($previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? __('User'));
         }
 
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'RESUMED_FROM_ON_HOLD',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $previousStatus ? $previousStatus->value : null,
             'new_value' => $newCoreStatus->value,
             'metadata' => [
@@ -1738,7 +1739,7 @@ class OrderDetailModal extends Component
             return;
         }
 
-        $oldWo = $order->wo_number ?: 'Sin WO / WO 0000';
+        $oldWo = $order->wo_number ?: __('No WO / WO 0000');
         $newWo = $order->pending_wo_number;
 
         $order->update([
@@ -1753,11 +1754,11 @@ class OrderDetailModal extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'WO_UPDATED_FROM_TRELLO',
-            'actor' => auth()->user()?->name ?? 'Usuario',
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => $oldWo,
             'new_value' => $newWo,
             'metadata' => [
-                'source' => 'Aceptado por usuario en Detalle de Tarjeta',
+                'source' => __('Accepted by user in Card Detail'),
             ],
         ]);
 
@@ -1977,7 +1978,7 @@ class OrderDetailModal extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'SUBSTATUS_CHANGED',
-                'actor' => auth()->user()?->name ?? 'Usuario',
+                'actor' => auth()->user()?->name ?? __('User'),
                 'previous_value' => $prevSubVal ?: null,
                 'new_value' => $newSubVal ?: null,
                 'metadata' => [
@@ -1993,18 +1994,18 @@ class OrderDetailModal extends Component
                 'Manual due date update in detail modal',
                 'MANUAL_UPDATE',
                 null,
-                auth()->user()?->name ?? 'Usuario'
+                auth()->user()?->name ?? __('User')
             );
         }
 
         if ($newCoreStatus && $previousStatus !== $newCoreStatus) {
-            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? 'Usuario');
+            app(AutomationEngine::class)->handleStatusChanged($order->fresh(), $previousStatus, $newCoreStatus, auth()->user()?->name ?? __('User'));
 
             if ($newCoreStatus === CoreStatus::ON_HOLD && ! empty($this->onHoldReason)) {
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'MOVED_TO_ON_HOLD',
-                    'actor' => auth()->user()?->name ?? 'Usuario',
+                    'actor' => auth()->user()?->name ?? __('User'),
                     'previous_value' => $previousStatus ? $previousStatus->value : null,
                     'new_value' => $newCoreStatus->value,
                     'metadata' => [
@@ -2018,7 +2019,7 @@ class OrderDetailModal extends Component
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'RESUMED_FROM_ON_HOLD',
-                    'actor' => auth()->user()?->name ?? 'Usuario',
+                    'actor' => auth()->user()?->name ?? __('User'),
                     'previous_value' => $previousStatus ? $previousStatus->value : null,
                     'new_value' => $newCoreStatus->value,
                     'metadata' => [
@@ -2076,7 +2077,7 @@ class OrderDetailModal extends Component
             'new_value' => $newOrder->core_status?->value,
             'metadata' => [
                 'duplicated_from_id' => $original->id,
-                'comment' => "Duplicada a partir de la orden #{$original->id} ({$original->company_name})",
+                'comment' => __('Duplicated from order #:id (:name)', ['id' => $original->id, 'name' => $original->company_name]),
             ],
         ]);
 
@@ -2487,7 +2488,7 @@ class OrderDetailModal extends Component
                 'isOrderApproved' => $isOrderApproved,
                 'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Blocked')),
                 'approvalType' => $order->approval_type ?? __('Client'),
-                'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previously'),
+                'approvedAt' => $order->approved_at?->translatedFormat('d M, Y') ?? __('Previously'),
             ];
             $this->subtaskBlockResolution = ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS) ? 'unblock' : 'keep_blocked';
             $this->subtaskApprovalImpact = ($category === SubtaskCategory::CLIENT_ADJUSTMENTS) ? 'invalidate' : 'keep';
@@ -2540,12 +2541,12 @@ class OrderDetailModal extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'APPROVAL_RESET',
-                'actor' => auth()->user()?->name ?? 'Usuario',
+                'actor' => auth()->user()?->name ?? __('User'),
                 'previous_value' => 'approved: true',
-                'new_value' => 'approved: false (Anulada por nueva subtarea: '.$rawTitle.')',
+                'new_value' => 'approved: false ('.__('Voided by new subtask: :title', ['title' => $rawTitle]).')',
                 'metadata' => [
                     'timestamp' => now()->toIso8601String(),
-                    'reason' => 'Subtarea creada invalida aprobación previa',
+                    'reason' => __('Subtask created, invalidating previous approval'),
                 ],
             ]);
 
@@ -2595,7 +2596,7 @@ class OrderDetailModal extends Component
                     $order->fresh(),
                     $previousStatus,
                     CoreStatus::TO_DO_TODAY,
-                    auth()->user()?->name ?? 'Usuario'
+                    auth()->user()?->name ?? __('User')
                 );
             } elseif ($order->core_status !== CoreStatus::ON_HOLD && $order->core_status !== CoreStatus::EN_PRODUCCION) {
                 $previousStatus = $order->core_status;
@@ -2621,7 +2622,7 @@ class OrderDetailModal extends Component
                         $order->fresh(),
                         $previousStatus,
                         CoreStatus::TO_DO_TODAY,
-                        auth()->user()?->name ?? 'Usuario'
+                        auth()->user()?->name ?? __('User')
                     );
                 }
             }
@@ -2727,7 +2728,7 @@ class OrderDetailModal extends Component
                             $order->fresh(),
                             $previousStatus,
                             CoreStatus::TO_DO_TODAY,
-                            auth()->user()?->name ?? 'Usuario'
+                            auth()->user()?->name ?? __('User')
                         );
                     }
                 }
@@ -2742,7 +2743,7 @@ class OrderDetailModal extends Component
             }
 
             $this->dispatch('order-updated');
-            session()->flash('message', $parsedDate ? __('Subtask date updated to :date.', ['date' => Carbon::parse($parsedDate)->format('d M')]) : __('Subtask date removed.'));
+            session()->flash('message', $parsedDate ? __('Subtask date updated to :date.', ['date' => Carbon::parse($parsedDate)->translatedFormat('d M')]) : __('Subtask date removed.'));
         }
     }
 
@@ -2871,7 +2872,7 @@ class OrderDetailModal extends Component
                                     $order,
                                     $previousOrderStatus,
                                     CoreStatus::EN_PRODUCCION,
-                                    auth()->user()?->name ?? 'Usuario'
+                                    auth()->user()?->name ?? __('User')
                                 );
                                 $order->update([
                                     'substatus' => Substatus::ENVIADO_EN_ALTA,
@@ -2884,11 +2885,11 @@ class OrderDetailModal extends Component
                             OrderEvent::create([
                                 'order_id' => $order->id,
                                 'event_type' => 'MOVED_TO_PRODUCTION',
-                                'actor' => auth()->user()?->name ?? 'Usuario',
+                                'actor' => auth()->user()?->name ?? __('User'),
                                 'previous_value' => $previousOrderStatus?->value,
                                 'new_value' => CoreStatus::EN_PRODUCCION->value,
                                 'metadata' => [
-                                    'trigger' => 'Subtarea Poner en Alta completada',
+                                    'trigger' => __('Set for Print subtask completed'),
                                     'task_id' => $task->id,
                                     'task_title' => $task->title,
                                 ],

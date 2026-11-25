@@ -122,7 +122,7 @@ class ClientPortal extends Component
             'reviewCount' => $reviewCount,
             'productionCount' => $productionCount,
             'holdCount' => $holdCount,
-        ])->layout('components.layouts.portal', ['title' => 'Mis Órdenes · '.$client->name]);
+        ])->layout('components.layouts.portal', ['title' => __('My Orders · :name', ['name' => $client->name])]);
     }
 
     public static function formatDisplayPhone(?string $phone): string

@@ -92,7 +92,7 @@ class ClientPortalTest extends TestCase
         Livewire::test(ClientPortal::class, ['token' => $client->portal_token])
             ->assertSee('ROLLUP BANNER GAINESVILLE')
             ->assertSee('WO 16362')
-            ->assertSee('Esperando tu respuesta')
+            ->assertSee('Waiting for your response')
             ->assertSee('WINDOW GRAPHICS')
             ->assertSee(__('In Production'))
             ->assertDontSee('OLD ARCHIVED PROJECT');
@@ -146,7 +146,7 @@ class ClientPortalTest extends TestCase
             ->assertSee('Order timeline')
             ->assertSee('Order received and started')
             ->assertSee('Design sent for your review')
-            ->assertSee('Cambios / comentarios recibidos')
+            ->assertSee('Changes / comments received')
             ->call('closeOrder')
             ->assertSet('selectedOrderId', null);
     }
@@ -211,7 +211,7 @@ class ClientPortalTest extends TestCase
 
         $holdMilestone = $timeline->firstWhere('type', 'on_hold');
         $this->assertNotNull($holdMilestone);
-        $this->assertStringContainsString('En pausa', $holdMilestone['title']);
+        $this->assertStringContainsString('Paused', $holdMilestone['title']);
         $this->assertStringContainsString('Esperando confirmación de medidas', $holdMilestone['subtitle']);
     }
 

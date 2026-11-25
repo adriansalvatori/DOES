@@ -64,7 +64,7 @@ class OrderReconciliationService
     public function analyzeCsv(string $filePath, float $similarityThreshold = 0.75): array
     {
         if (! File::exists($filePath)) {
-            throw new \InvalidArgumentException("El archivo CSV no existe en la ruta: {$filePath}");
+            throw new \InvalidArgumentException(__('The CSV file does not exist at path: :path', ['path' => $filePath]));
         }
 
         $rows = $this->parseCsvFile($filePath);
@@ -176,7 +176,7 @@ class OrderReconciliationService
 
             // Append any non-location/non-contact details to production note
             if (! empty($compPatterns['extracted_detail'])) {
-                $detailAppend = "(Detalle: {$compPatterns['extracted_detail']})";
+                $detailAppend = '('.__('Detail: :detail', ['detail' => $compPatterns['extracted_detail']]).')';
                 $parsedRow['production_note'] = $parsedRow['production_note'] ? ($parsedRow['production_note'].' '.$detailAppend) : $detailAppend;
             }
 
@@ -252,7 +252,7 @@ class OrderReconciliationService
                         'resolved_client_name' => $parsedRow['resolved_client_name'],
                         'typo_detected' => $parsedRow['typo_detected'],
                         'similarity' => round($compSim * 100, 1),
-                        'reason' => "⚠️ Mismo WO ({$csvWo}), pero la empresa en BD ({$matchedOrder->company_name}) difiere de ({$csvCompany})",
+                        'reason' => '⚠️ '.__('Same WO (:wo), but the company in the DB (:db_company) differs from (:csv_company)', ['wo' => $csvWo, 'db_company' => $matchedOrder->company_name, 'csv_company' => $csvCompany]),
                         'match_type' => 'wo_conflict',
                         'parsed_data' => $parsedRow,
                         'diffs' => $diffs,
@@ -290,7 +290,7 @@ class OrderReconciliationService
                                         if ($taskScore >= 0.40) {
                                             $bestCandidate = $candidateOrder;
                                             $bestScore = round(($taskScore * 100), 1);
-                                            $bestReason = "Mismo cliente oficial ({$resolvedClient->name}), tarea compatible (".round($taskScore * 100)."%) y fecha cercana ({$daysDiff}d de diferencia)";
+                                            $bestReason = __('Same official client (:client), compatible task (:score%) and close date (:days d apart)', ['client' => $resolvedClient->name, 'score' => round($taskScore * 100), 'days' => $daysDiff]);
                                             break;
                                         }
                                     }
@@ -308,7 +308,7 @@ class OrderReconciliationService
                 $partialMatches[] = [
                     'row_id' => $rowId,
                     'order_id' => $bestCandidate->id,
-                    'wo_number' => ! empty($parsedRow['raw_wo']) ? ('WO '.$parsedRow['normalized_wo']) : ($bestCandidate->wo_number ? ($bestCandidate->wo_number.' (en BD)') : 'Sin WO'),
+                    'wo_number' => ! empty($parsedRow['raw_wo']) ? ('WO '.$parsedRow['normalized_wo']) : ($bestCandidate->wo_number ? ($bestCandidate->wo_number.' ('.__('in DB').')') : __('No WO')),
                     'db_company' => $bestCandidate->company_name,
                     'db_task' => $bestCandidate->task_name,
                     'csv_company' => $csvCompany,
@@ -450,7 +450,7 @@ class OrderReconciliationService
         $parsedProdProc = null;
         $prodProcNoteAppend = null;
         if (! empty($rawProdProc)) {
-            $dateResult = $this->parseDateOrNote($rawProdProc, 'Fecha producción');
+            $dateResult = $this->parseDateOrNote($rawProdProc, __('Production date'));
             $parsedProdProc = $dateResult['date'];
             if ($dateResult['note_append']) {
                 $prodProcNoteAppend = $dateResult['note_append'];
@@ -467,7 +467,7 @@ class OrderReconciliationService
         $parsedDeliveryDate = null;
         $deliveryDateNoteAppend = null;
         if (! empty($rawDeliveryDate)) {
-            $dateResult = $this->parseDateOrNote($rawDeliveryDate, 'Fecha entrega');
+            $dateResult = $this->parseDateOrNote($rawDeliveryDate, __('Delivery date'));
             $parsedDeliveryDate = $dateResult['date'];
             if ($dateResult['note_append']) {
                 $deliveryDateNoteAppend = $dateResult['note_append'];
@@ -484,7 +484,7 @@ class OrderReconciliationService
         $parsedEmailDate = null;
         $emailDateNoteAppend = null;
         if (! empty($rawEmailDate)) {
-            $dateResult = $this->parseDateOrNote($rawEmailDate, 'Email');
+            $dateResult = $this->parseDateOrNote($rawEmailDate, __('Email'));
             $parsedEmailDate = $dateResult['date'];
             if ($dateResult['note_append']) {
                 $emailDateNoteAppend = $dateResult['note_append'];
@@ -727,7 +727,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['production_processed_at']) && $order->production_processed_at?->format('Y-m-d') !== $parsed['production_processed_at']) {
             $diffs['production_processed_at'] = [
-                'field' => 'Fecha Procesado',
+                'field' => __('Date processed'),
                 'current' => $order->production_processed_at?->format('Y-m-d') ?? '-',
                 'proposed' => $parsed['production_processed_at'],
             ];
@@ -735,7 +735,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['delivery_due_date']) && $order->delivery_due_date?->format('Y-m-d') !== $parsed['delivery_due_date']) {
             $diffs['delivery_due_date'] = [
-                'field' => 'Fecha Entrega',
+                'field' => __('Delivery date'),
                 'current' => $order->delivery_due_date?->format('Y-m-d') ?? '-',
                 'proposed' => $parsed['delivery_due_date'],
             ];
@@ -743,7 +743,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['email_date']) && $order->email_date?->format('Y-m-d') !== $parsed['email_date']) {
             $diffs['email_date'] = [
-                'field' => 'Fecha Email',
+                'field' => __('Email date'),
                 'current' => $order->email_date?->format('Y-m-d') ?? '-',
                 'proposed' => $parsed['email_date'],
             ];
@@ -751,7 +751,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['substatus']) && $order->substatus?->value !== $parsed['substatus']) {
             $diffs['substatus'] = [
-                'field' => 'Subestatus',
+                'field' => __('Substatus'),
                 'current' => $order->substatus?->value ?? '-',
                 'proposed' => $parsed['substatus'],
             ];
@@ -759,15 +759,15 @@ class OrderReconciliationService
 
         if (! empty($parsed['designer_id']) && $order->designer_id !== $parsed['designer_id']) {
             $diffs['designer_id'] = [
-                'field' => 'Diseñador',
-                'current' => $order->designer?->name ?? 'Sin asignar',
+                'field' => __('Designer'),
+                'current' => $order->designer?->name ?? __('Unassigned'),
                 'proposed' => Designer::find($parsed['designer_id'])?->name ?? ('ID '.$parsed['designer_id']),
             ];
         }
 
         if (! empty($parsed['production_note']) && trim((string) $order->production_note) !== $parsed['production_note']) {
             $diffs['production_note'] = [
-                'field' => 'Notas de Producción',
+                'field' => __('Production notes'),
                 'current' => $order->production_note ? Str::limit($order->production_note, 35) : '-',
                 'proposed' => Str::limit($parsed['production_note'], 35),
             ];
@@ -775,7 +775,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['delivery_note']) && trim((string) $order->delivery_note) !== $parsed['delivery_note']) {
             $diffs['delivery_note'] = [
-                'field' => 'Notas de Entrega',
+                'field' => __('Delivery notes'),
                 'current' => $order->delivery_note ? Str::limit($order->delivery_note, 35) : '-',
                 'proposed' => Str::limit($parsed['delivery_note'], 35),
             ];
@@ -783,7 +783,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['estimate_invoice_number']) && $order->estimate_invoice_number !== $parsed['estimate_invoice_number']) {
             $diffs['estimate_invoice_number'] = [
-                'field' => 'Estimado / Factura',
+                'field' => __('Estimate / Invoice'),
                 'current' => $order->estimate_invoice_number ?? '-',
                 'proposed' => $parsed['estimate_invoice_number'],
             ];
@@ -791,7 +791,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['review_status']) && $order->review_status !== $parsed['review_status']) {
             $diffs['review_status'] = [
-                'field' => 'Revisión',
+                'field' => __('Review'),
                 'current' => $order->review_status ?? '-',
                 'proposed' => $parsed['review_status'],
             ];
@@ -799,7 +799,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['installation_type']) && $order->installation_type !== $parsed['installation_type']) {
             $diffs['installation_type'] = [
-                'field' => 'Instalación',
+                'field' => __('Installation'),
                 'current' => $order->installation_type ?? '-',
                 'proposed' => $parsed['installation_type'],
             ];
@@ -807,23 +807,23 @@ class OrderReconciliationService
 
         if ($parsed['overview_checked'] && ! $order->overview_checked) {
             $diffs['overview_checked'] = [
-                'field' => 'Overview Checked',
-                'current' => 'No',
-                'proposed' => 'Sí',
+                'field' => __('Overview Checked'),
+                'current' => __('No'),
+                'proposed' => __('Yes'),
             ];
         }
 
         if (! empty($parsed['resolved_client_name']) && empty($order->client_id)) {
             $diffs['client'] = [
-                'field' => 'Cliente Oficial',
+                'field' => __('Official client'),
                 'current' => $order->client?->name ?? '-',
-                'proposed' => $parsed['resolved_client_name'].(! empty($parsed['typo_detected']) ? ' (Typo corregido)' : ''),
+                'proposed' => $parsed['resolved_client_name'].(! empty($parsed['typo_detected']) ? ' ('.__('Typo corrected').')' : ''),
             ];
         }
 
         if (! empty($parsed['extracted_contact']) && empty($order->responsible_person)) {
             $diffs['responsible_person'] = [
-                'field' => 'Contacto / Resp.',
+                'field' => __('Contact / Resp.'),
                 'current' => $order->responsible_person ?? '-',
                 'proposed' => $parsed['extracted_contact'],
             ];
@@ -831,7 +831,7 @@ class OrderReconciliationService
 
         if (! empty($parsed['extracted_location']) && empty($order->location_name)) {
             $diffs['location_name'] = [
-                'field' => 'Locación',
+                'field' => __('Location'),
                 'current' => $order->location_name ?? '-',
                 'proposed' => $parsed['extracted_location'],
             ];
@@ -845,7 +845,7 @@ class OrderReconciliationService
             $mergedTask = $this->mergeTaskNames($dbTask, $csvTask);
             if (! empty($mergedTask) && mb_strtolower($dbTask) !== mb_strtolower($mergedTask)) {
                 $diffs['task_name'] = [
-                    'field' => 'Nombre de Tarea',
+                    'field' => __('Task name'),
                     'current' => $dbTask ?: '-',
                     'proposed' => $mergedTask,
                     'is_smart_merge' => true,
@@ -1520,7 +1520,7 @@ class OrderReconciliationService
     public function applyBatchUpdates(array $itemsToUpdate, string $batchType = 'full_match'): array
     {
         if (empty($itemsToUpdate)) {
-            return ['success' => false, 'message' => 'No hay órdenes seleccionadas para actualizar.'];
+            return ['success' => false, 'message' => __('No orders selected to update.')];
         }
 
         // 1. Create safety backup snapshot
@@ -1646,7 +1646,7 @@ class OrderReconciliationService
             'success' => true,
             'updated_count' => $updatedCount,
             'backup_file' => $backupFile,
-            'message' => "Se actualizaron exitosamente {$updatedCount} órdenes de forma silenciosa.",
+            'message' => __(':count orders were updated successfully in the background.', ['count' => $updatedCount]),
         ];
     }
 
@@ -1664,7 +1664,7 @@ class OrderReconciliationService
         if ($existingByTrello) {
             return [
                 'action_type' => 'reuse_existing',
-                'reason' => "Esta tarjeta ya está vinculada a la orden #{$existingByTrello->id} (".($existingByTrello->wo_number ?: 'Sin WO previo').') en el sistema. Se actualizará sin duplicar.',
+                'reason' => __('This card is already linked to order #:id (:wo) in the system. It will be updated without duplicating.', ['id' => $existingByTrello->id, 'wo' => $existingByTrello->wo_number ?: __('No previous WO')]),
                 'order_id' => $existingByTrello->id,
             ];
         }
@@ -1678,7 +1678,7 @@ class OrderReconciliationService
             if ($existingByWo) {
                 return [
                     'action_type' => 'reuse_existing',
-                    'reason' => "Ya existe la orden #{$existingByWo->id} ({$existingByWo->wo_number}) en la base de datos. Se le asignará esta tarjeta de Trello sin duplicar.",
+                    'reason' => __('Order #:id (:wo) already exists in the database. This Trello card will be assigned to it without duplicating.', ['id' => $existingByWo->id, 'wo' => $existingByWo->wo_number]),
                     'order_id' => $existingByWo->id,
                 ];
             }
@@ -1687,7 +1687,7 @@ class OrderReconciliationService
         // Level 3: 100% Brand New Order
         return [
             'action_type' => 'create_new',
-            'reason' => 'Tarjeta no encontrada en la base de datos local. Se creará como nueva orden en Backlog.',
+            'reason' => __('Card not found in the local database. It will be created as a new order in the Backlog.'),
             'order_id' => null,
         ];
     }
@@ -1807,7 +1807,7 @@ class OrderReconciliationService
 
         $cached = $this->getCachedAnalysis();
         if (! $cached || empty($cached['unmatched'])) {
-            return ['success' => false, 'message' => 'No hay análisis activo.'];
+            return ['success' => false, 'message' => __('No active analysis.')];
         }
 
         $target = null;
@@ -1819,14 +1819,14 @@ class OrderReconciliationService
         }
 
         if (! $target) {
-            return ['success' => false, 'message' => 'Fila no encontrada en lista sin coincidencia.'];
+            return ['success' => false, 'message' => __('Row not found in the no-match list.')];
         }
 
         $rawWo = $target['parsed_data']['raw_wo'] ?? ($target['raw_wo'] ?? '');
         $normWo = $this->normalizeWo($rawWo);
 
         if (empty($normWo)) {
-            return ['success' => false, 'message' => 'Esta orden no tiene número de WO en el CSV para buscar en Trello.'];
+            return ['success' => false, 'message' => __('This order has no WO number in the CSV to search for in Trello.')];
         }
 
         $trelloService = app(TrelloSyncService::class);
@@ -1863,14 +1863,14 @@ class OrderReconciliationService
         }
 
         if (! $bestCard) {
-            return ['success' => false, 'message' => "No se encontró ninguna tarjeta en Trello con el WO '{$normWo}'."];
+            return ['success' => false, 'message' => __('No Trello card was found with WO \':wo\'.', ['wo' => $normWo])];
         }
 
         $dedup = $this->inspectTrelloCardDeduplication($bestCard['id'], $normWo, $target['clean_company'] ?? '');
 
         $preview = [
             'id' => $bestCard['id'],
-            'name' => $bestCard['name'] ?? 'Sin título',
+            'name' => $bestCard['name'] ?? __('Untitled'),
             'desc' => $bestCard['desc'] ?? '',
             'url' => $bestCard['shortUrl'] ?? "https://trello.com/c/{$bestCard['id']}",
             'is_closed' => (bool) ($bestCard['closed'] ?? false),
@@ -1904,7 +1904,7 @@ class OrderReconciliationService
 
         $cached = $this->getCachedAnalysis();
         if (! $cached || empty($cached['unmatched'])) {
-            return ['success' => false, 'message' => 'No hay órdenes sin coincidencia disponibles.'];
+            return ['success' => false, 'message' => __('No unmatched orders available.')];
         }
 
         $trelloService = app(TrelloSyncService::class);
@@ -1943,7 +1943,7 @@ class OrderReconciliationService
 
                     $preview = [
                         'id' => $bestCard['id'],
-                        'name' => $bestCard['name'] ?? 'Sin título',
+                        'name' => $bestCard['name'] ?? __('Untitled'),
                         'desc' => $bestCard['desc'] ?? '',
                         'url' => $bestCard['shortUrl'] ?? "https://trello.com/c/{$bestCard['id']}",
                         'is_closed' => (bool) ($bestCard['closed'] ?? false),
@@ -1989,7 +1989,7 @@ class OrderReconciliationService
 
                     $preview = [
                         'id' => $bestCard['id'],
-                        'name' => $bestCard['name'] ?? 'Sin título',
+                        'name' => $bestCard['name'] ?? __('Untitled'),
                         'desc' => $bestCard['desc'] ?? '',
                         'url' => $bestCard['shortUrl'] ?? "https://trello.com/c/{$bestCard['id']}",
                         'is_closed' => (bool) ($bestCard['closed'] ?? false),
@@ -2018,7 +2018,7 @@ class OrderReconciliationService
             'found_count' => $foundCount,
             'reused_count' => $reusedCount,
             'new_count' => $newCount,
-            'message' => "Búsqueda instantánea completada: Se revisaron {$totalChecked} órdenes con WO y se localizaron {$foundCount} tarjetas en Trello ({$reusedCount} para actualizar existentes, {$newCount} nuevas en Backlog).",
+            'message' => __('Instant search completed: :checked orders with WO were reviewed and :found cards were located in Trello (:reused to update existing, :new new in Backlog).', ['checked' => $totalChecked, 'found' => $foundCount, 'reused' => $reusedCount, 'new' => $newCount]),
         ];
     }
 
@@ -2029,7 +2029,7 @@ class OrderReconciliationService
     {
         $cached = $this->getCachedAnalysis();
         if (! $cached || empty($cached['unmatched'])) {
-            return ['success' => false, 'message' => 'No hay órdenes sin coincidencia.'];
+            return ['success' => false, 'message' => __('No unmatched orders.')];
         }
 
         $foundRows = [];
@@ -2040,7 +2040,7 @@ class OrderReconciliationService
         }
 
         if (empty($foundRows)) {
-            return ['success' => false, 'message' => 'No hay tarjetas de Trello localizadas pendientes de vincular.'];
+            return ['success' => false, 'message' => __('There are no located Trello cards pending to link.')];
         }
 
         $backupFile = $this->createSafetyBackup();
@@ -2091,7 +2091,7 @@ class OrderReconciliationService
             'linked_count' => count($linkedOrderIds),
             'reused_count' => $reusedCount,
             'new_count' => $newCount,
-            'message' => 'Se vincularon exitosamente '.count($linkedOrderIds)." órdenes ({$reusedCount} existentes actualizadas, {$newCount} nuevas en Backlog) sin duplicados.",
+            'message' => __(':count orders were linked successfully (:reused existing updated, :new new in Backlog) without duplicates.', ['count' => count($linkedOrderIds), 'reused' => $reusedCount, 'new' => $newCount]),
         ];
     }
 
@@ -2195,7 +2195,7 @@ class OrderReconciliationService
             } else {
                 // Create new Order with in_workspace = false (Backlog inbox)
                 $isNew = true;
-                $cardName = $cardDetails['name'] ?? ($parsedData['task_name'] ?: 'Orden desde Trello');
+                $cardName = $cardDetails['name'] ?? ($parsedData['task_name'] ?: __('Order from Trello'));
 
                 $createData = [
                     'trello_card_id' => $cleanCardId,
@@ -2267,8 +2267,8 @@ class OrderReconciliationService
             'order_id' => $order->id,
             'order_wo' => $order->wo_number,
             'message' => $isNew
-                ? "Orden #{$order->id} creada y vinculada con Trello exitosamente."
-                : "Orden existente #{$order->id} (".($order->wo_number ?: 'Sin WO previo').') actualizada y vinculada con Trello sin duplicar.',
+                ? __('Order #:id created and linked with Trello successfully.', ['id' => $order->id])
+                : __('Existing order #:id (:wo) updated and linked with Trello without duplicating.', ['id' => $order->id, 'wo' => $order->wo_number ?: __('No previous WO')]),
         ];
     }
 
@@ -2306,7 +2306,7 @@ class OrderReconciliationService
     {
         $history = $this->getMigrationHistory();
         if (empty($history)) {
-            return ['success' => false, 'message' => 'No hay migraciones registradas para revertir.'];
+            return ['success' => false, 'message' => __('No migrations recorded to revert.')];
         }
 
         // Find latest applied migration
@@ -2321,19 +2321,19 @@ class OrderReconciliationService
         }
 
         if (! $targetMigration || ! isset($targetMigration['backup_file'])) {
-            return ['success' => false, 'message' => 'No se encontró ninguna migración activa que pueda ser revertida.'];
+            return ['success' => false, 'message' => __('No active migration was found that can be reverted.')];
         }
 
         $backupDir = config('database.backup_path', storage_path('app/backups'));
         $backupPath = $backupDir.'/'.$targetMigration['backup_file'];
 
         if (! File::exists($backupPath)) {
-            return ['success' => false, 'message' => "El archivo de respaldo ({$targetMigration['backup_file']}) no existe en el servidor."];
+            return ['success' => false, 'message' => __('The backup file (:file) does not exist on the server.', ['file' => $targetMigration['backup_file']])];
         }
 
         $dbPath = config('database.connections.sqlite.database');
         if (! $dbPath || ! File::exists($dbPath)) {
-            return ['success' => false, 'message' => 'Ruta de la base de datos principal no encontrada.'];
+            return ['success' => false, 'message' => __('Main database path not found.')];
         }
 
         // 1. Create a safeguard snapshot of current state before rollback
@@ -2342,7 +2342,7 @@ class OrderReconciliationService
 
         // 2. Restore pre-migration database snapshot
         if (! File::copy($backupPath, $dbPath)) {
-            return ['success' => false, 'message' => 'Error al restaurar el archivo de base de datos desde el respaldo.'];
+            return ['success' => false, 'message' => __('Error restoring the database file from the backup.')];
         }
 
         // 3. Update history entry
@@ -2355,7 +2355,7 @@ class OrderReconciliationService
 
         return [
             'success' => true,
-            'message' => "La migración '{$targetMigration['id']}' fue revertida con éxito. La base de datos ha vuelto al estado previo a la migración.",
+            'message' => __('Migration \':id\' was reverted successfully. The database is back to its pre-migration state.', ['id' => $targetMigration['id']]),
         ];
     }
 
@@ -2531,7 +2531,7 @@ class OrderReconciliationService
     {
         $cached = $this->getCachedAnalysis();
         if (! $cached) {
-            return ['success' => false, 'message' => 'No hay análisis activo en servidor.'];
+            return ['success' => false, 'message' => __('No active analysis on the server.')];
         }
 
         $itemsToUpdate = [];
@@ -2554,7 +2554,7 @@ class OrderReconciliationService
         }
 
         if (empty($itemsToUpdate)) {
-            return ['success' => false, 'message' => 'No hay órdenes seleccionadas para procesar.'];
+            return ['success' => false, 'message' => __('No orders selected to process.')];
         }
 
         $res = $this->applyBatchUpdates($itemsToUpdate, $batchType);
@@ -2586,7 +2586,7 @@ class OrderReconciliationService
     {
         $cached = $this->getCachedAnalysis();
         if (! $cached) {
-            return ['success' => false, 'message' => 'No hay análisis activo.'];
+            return ['success' => false, 'message' => __('No active analysis.')];
         }
 
         $target = null;
@@ -2598,7 +2598,7 @@ class OrderReconciliationService
         }
 
         if (! $target) {
-            return ['success' => false, 'message' => 'Fila no encontrada.'];
+            return ['success' => false, 'message' => __('Row not found.')];
         }
 
         $res = $this->applyBatchUpdates([$target], 'single_partial');
@@ -2661,7 +2661,7 @@ class OrderReconciliationService
     {
         $cached = $this->getCachedAnalysis();
         if (! $cached) {
-            return ['success' => false, 'message' => 'No hay análisis activo.'];
+            return ['success' => false, 'message' => __('No active analysis.')];
         }
 
         $target = null;
@@ -2673,7 +2673,7 @@ class OrderReconciliationService
         }
 
         if (! $target) {
-            return ['success' => false, 'message' => 'Registro no encontrado en lista sin coincidencia.'];
+            return ['success' => false, 'message' => __('Record not found in the no-match list.')];
         }
 
         $res = $this->linkTrelloCard($target['parsed_data'], $trelloCardId, $cardDetails);
@@ -2699,7 +2699,7 @@ class OrderReconciliationService
     {
         $cached = $this->getCachedAnalysis();
         if (! $cached) {
-            return ['success' => false, 'message' => 'No hay análisis activo.'];
+            return ['success' => false, 'message' => __('No active analysis.')];
         }
 
         $target = null;
@@ -2711,19 +2711,19 @@ class OrderReconciliationService
         }
 
         if (! $target) {
-            return ['success' => false, 'message' => 'Registro no encontrado en coincidencias parciales.'];
+            return ['success' => false, 'message' => __('Record not found in partial matches.')];
         }
 
         $orderId = $target['order_id'] ?? null;
         $parsed = $target['parsed_data'] ?? null;
 
         if (! $orderId || ! $parsed) {
-            return ['success' => false, 'message' => 'Datos incompletos para resolver el conflicto.'];
+            return ['success' => false, 'message' => __('Incomplete data to resolve the conflict.')];
         }
 
         $existingOrder = Order::find($orderId);
         if (! $existingOrder) {
-            return ['success' => false, 'message' => 'La orden en base de datos ya no existe.'];
+            return ['success' => false, 'message' => __('The order in the database no longer exists.')];
         }
 
         // Validate new WO for DB order if specified
@@ -2744,7 +2744,7 @@ class OrderReconciliationService
                 if ($conflictExists) {
                     return [
                         'success' => false,
-                        'message' => "El número WO {$normNewDbWo} ya está asignado a otra orden en la base de datos.",
+                        'message' => __('WO number :wo is already assigned to another order in the database.', ['wo' => $normNewDbWo]),
                     ];
                 }
 
@@ -2771,7 +2771,7 @@ class OrderReconciliationService
                     'client_id' => $parsed['resolved_client_id'] ?? null,
                     'responsible_person' => $parsed['extracted_contact'] ?? null,
                     'location_name' => $parsed['extracted_location'] ?? null,
-                    'task_name' => $parsed['clean_task'] ?: ($parsed['task_name'] ?: 'Orden desde CSV'),
+                    'task_name' => $parsed['clean_task'] ?: ($parsed['task_name'] ?: __('Order from CSV')),
                     'in_workspace' => false,
                     'core_status' => CoreStatus::ENTRANTE->value,
                     'substatus' => $parsed['substatus'] ?? null,
@@ -2803,16 +2803,16 @@ class OrderReconciliationService
             $cached['meta']['partial_match_count'] = count($cached['partial_matches']);
             $this->storeAnalysisCache($cached);
 
-            $dbWoMsg = $assignedDbWo ? "actualizada con {$assignedDbWo}" : 'dejada Sin WO';
+            $dbWoMsg = $assignedDbWo ? __('updated with :wo', ['wo' => $assignedDbWo]) : __('left with no WO');
 
             return [
                 'success' => true,
-                'message' => "Conflicto resuelto: {$csvWoFormatted} asignada a {$parsed['company_name']} y orden anterior en BD {$dbWoMsg}.",
+                'message' => __('Conflict resolved: :wo assigned to :company and previous DB order :db_wo.', ['wo' => $csvWoFormatted, 'company' => $parsed['company_name'], 'db_wo' => $dbWoMsg]),
             ];
         } catch (\Throwable $e) {
             return [
                 'success' => false,
-                'message' => 'Error al resolver el conflicto: '.$e->getMessage(),
+                'message' => __('Error resolving the conflict: :error', ['error' => $e->getMessage()]),
             ];
         }
     }

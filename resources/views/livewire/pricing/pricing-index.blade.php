@@ -294,7 +294,7 @@
 
                     <div>
                         <label class="ui-label">
-                            {{ __('Costo Material / Proveedor ($)') }}
+                            {{ __('Material / supplier cost ($)') }}
                         </label>
                         <input 
                             type="number" 
@@ -421,7 +421,7 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Possible sizes') }} (separados por coma)</label>
+                        <label class="ui-label">{{ __('Possible sizes') }} {{ __('(comma separated)') }}</label>
                         <input 
                             type="text" 
                             wire:model="newSizes"
@@ -567,7 +567,7 @@
                             <input 
                                 type="text" 
                                 wire:model="newVariantWebsiteUrl"
-                                placeholder="https://4over.com/producto..."
+                                placeholder="https://4over.com/product..."
                                 class="ui-input"
                             >
                             @error('newVariantWebsiteUrl') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -655,7 +655,7 @@
                                 <input 
                                     type="text" 
                                     wire:model.live="newVariantImageUrl"
-                                    placeholder="https://ejemplo.com/subproducto.jpg"
+                                    placeholder="https://example.com/sub-product.jpg"
                                     class="ui-input"
                                 >
                             </div>
@@ -746,7 +746,7 @@
                             <input 
                                 type="text" 
                                 wire:model="editVariantWebsiteUrl"
-                                placeholder="https://4over.com/producto..."
+                                placeholder="https://4over.com/product..."
                                 class="ui-input"
                             >
                             @error('editVariantWebsiteUrl') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -834,7 +834,7 @@
                                 <input 
                                     type="text" 
                                     wire:model.live="editVariantImageUrl"
-                                    placeholder="https://ejemplo.com/subproducto.jpg"
+                                    placeholder="https://example.com/sub-product.jpg"
                                     class="ui-input"
                                 >
                             </div>
@@ -903,7 +903,7 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="ui-label">{{ __('Costo ($)') }} *</label>
+                            <label class="ui-label">{{ __('Cost ($)') }} *</label>
                             <input 
                                 type="number" 
                                 step="0.01"
@@ -1022,7 +1022,7 @@
                                 <input 
                                     type="text" 
                                     wire:model.live="newCategoryImageUrl"
-                                    placeholder="https://ejemplo.com/portada.jpg"
+                                    placeholder="https://example.com/cover.jpg"
                                     class="ui-input"
                                 >
                             </div>
@@ -1147,7 +1147,7 @@
                                 <input 
                                     type="text" 
                                     wire:model.live="editCategoryImageUrl"
-                                    placeholder="https://ejemplo.com/portada-categoria.jpg"
+                                    placeholder="https://example.com/category-cover.jpg"
                                     class="ui-input"
                                 >
                             </div>
@@ -1243,7 +1243,7 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Possible sizes') }} (separados por coma)</label>
+                        <label class="ui-label">{{ __('Possible sizes') }} {{ __('(comma separated)') }}</label>
                         <input 
                             type="text" 
                             wire:model="editProductSizes"
@@ -1312,7 +1312,7 @@
                                 <input 
                                     type="text" 
                                     wire:model.live="editProductImageUrl"
-                                    placeholder="https://ejemplo.com/producto.jpg"
+                                    placeholder="https://example.com/product.jpg"
                                     class="ui-input"
                                 >
                             </div>

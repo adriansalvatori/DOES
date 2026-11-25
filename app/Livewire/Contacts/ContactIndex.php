@@ -6,10 +6,8 @@ use App\Models\Client;
 use App\Models\Contact;
 use App\Models\Order;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Directorio de Clientes')]
 class ContactIndex extends Component
 {
     public string $search = '';
@@ -93,6 +91,6 @@ class ContactIndex extends Component
             'contacts' => $contacts,
             'totalContactsCount' => $totalContactsCount,
             'allClients' => $allClients,
-        ])->layout('components.layouts.app');
+        ])->title(__('Client Directory'))->layout('components.layouts.app');
     }
 }

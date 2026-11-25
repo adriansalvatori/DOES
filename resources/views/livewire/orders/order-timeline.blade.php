@@ -62,7 +62,7 @@
                                             <div class="space-y-0.5 text-meta text-ink-3">
                                                 @if(is_array($event->metadata) && isset($event->metadata['from_list']) && isset($event->metadata['to_list']))
                                                     <div class="flex items-center gap-1 pt-0.5">
-                                                        <span>Trello:</span>
+                                                        <span>{{ __('Trello:') }}</span>
                                                         <span class="text-ink-3">{{ $event->metadata['from_list'] }}</span>
                                                         <span class="text-ink-3">→</span>
                                                         <span class="text-ink-2 font-medium">{{ $event->metadata['to_list'] }}</span>
@@ -238,7 +238,7 @@
                                                 {{ __('Delivery Target') }} {{ $order->isOverdue() ? '(' . __('Past due') . ')' : '(' . __('On track') . ')' }}
                                             </h5>
                                             <span class="text-meta font-mono font-semibold {{ $order->isOverdue() ? 'text-danger' : 'text-ok' }}">
-                                                {{ $order->current_due_date->format('d M, g:i A') }}
+                                                {{ $order->current_due_date->translatedFormat('d M, g:i A') }}
                                             </span>
                                         </div>
                                     </div>

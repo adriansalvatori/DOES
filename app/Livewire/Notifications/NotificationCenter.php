@@ -3,6 +3,7 @@
 namespace App\Livewire\Notifications;
 
 use App\Models\Order;
+use App\Notifications\SystemNotification;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -73,6 +74,11 @@ class NotificationCenter extends Component
         // Fetch notifications
         $allNotifications = $user->notifications()
             ->get()
+            ->each(function ($n): void {
+                $data = $n->data ?? [];
+                $data['detail_text'] = SystemNotification::localizedDetail($data);
+                $n->data = $data;
+            })
             ->filter(function ($n) use ($user, $isLeadOrManager, $designerOrderIds) {
                 $data = $n->data ?? [];
 
@@ -151,7 +157,7 @@ class NotificationCenter extends Component
 
                 $bodyParts = array_filter([
                     $detailText,
-                    $actorName ? "por {$actorName}" : null,
+                    $actorName ? __('by :name', ['name' => $actorName]) : null,
                 ]);
                 $notifBody = implode(' • ', $bodyParts);
                 if (empty($notifBody)) {

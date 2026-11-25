@@ -83,7 +83,7 @@ class SupportTaskLifecycleTest extends TestCase
         $this->makeTask($order);
 
         $event = OrderEvent::where('order_id', $order->id)->where('event_type', 'AUTOMATIC_TASK_TRIGGERED')->first();
-        $this->assertSame('Sistema', $event->actor);
+        $this->assertSame('System', $event->actor);
         $this->assertSame('SYSTEM_AUTOMATION', $event->metadata['trigger_type']);
         $this->assertSame('normal', $event->metadata['priority']);
     }

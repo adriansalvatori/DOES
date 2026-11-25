@@ -51,6 +51,16 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => UserRole::SALES]);
     }
 
+    public function customerService(): static
+    {
+        return $this->state(fn () => ['role' => UserRole::CUSTOMER_SERVICE]);
+    }
+
+    public function reviewer(): static
+    {
+        return $this->state(fn () => ['is_reviewer' => true]);
+    }
+
     public function admin(): static
     {
         return $this->state(fn () => ['role' => UserRole::ADMIN]);

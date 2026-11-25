@@ -509,11 +509,11 @@ class SubtaskWeeklyPlannerTest extends TestCase
         Livewire::test(WeeklyPlanner::class)
             ->assertSet('showSystemTasks', true)
             ->assertSee('Confirmar medidas')
-            ->assertSee('Enviar correo de atraso preventivo')
+            ->assertSee('Send preventive overdue email')
             ->call('toggleShowSystemTasks')
             ->assertSet('showSystemTasks', false)
             ->assertDontSee('Confirmar medidas')
-            ->assertDontSee('Enviar correo de atraso preventivo')
+            ->assertDontSee('Send preventive overdue email')
             ->assertSee('Diseño Banner');
 
         $this->assertEquals(false, session('weekly_planner_show_system_tasks'));
@@ -546,12 +546,12 @@ class SubtaskWeeklyPlannerTest extends TestCase
         Livewire::test(WeeklyPlanner::class)
             ->set('selectedWeekStart', '2026-09-28')
             ->assertSet('showSystemTasks', true)
-            ->assertSee('Enviar correo bienvenida/orden nueva')
-            ->assertSee('Enviar correo de atraso preventivo')
+            ->assertSee('Send welcome/new order email')
+            ->assertSee('Send preventive overdue email')
             ->call('toggleShowSystemTasks')
             ->assertSet('showSystemTasks', false)
-            ->assertDontSee('Enviar correo bienvenida/orden nueva')
-            ->assertDontSee('Enviar correo de atraso preventivo');
+            ->assertDontSee('Send welcome/new order email')
+            ->assertDontSee('Send preventive overdue email');
     }
 
     public function test_weekly_planner_workspace_orders_list_includes_and_searches_locations(): void
@@ -1068,7 +1068,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertDontSee('OPTIMUM ARCHIVED')
-            ->assertDontSee('Enviar correo de atraso preventivo');
+            ->assertDontSee('Send preventive overdue email');
     }
 
     public function test_archived_order_past_user_subtasks_rollover_to_monday(): void
@@ -1134,7 +1134,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
         $this->assertDatabaseHas('related_tasks', ['id' => $automatedTask->id]);
 
         Livewire::test(WeeklyPlanner::class)
-            ->assertDontSee('Enviar correo de atraso preventivo');
+            ->assertDontSee('Send preventive overdue email');
     }
 
     public function test_can_update_subtask_category_in_weekly_planner(): void
@@ -1233,7 +1233,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->set('selectedDesignerFilter', (string) $designer->id)
             ->assertSee('To client')
             ->call('plannerChrome')
-            ->assertReturned(fn ($html) => str_contains($html, 'Trabajo'));
+            ->assertReturned(fn ($html) => str_contains($html, 'Work'));
     }
 
     public function test_adding_work_subtask_for_today_to_order_in_enviado_al_cliente_resets_sla_to_two_days_and_does_not_trigger_sla_warning_modal(): void
