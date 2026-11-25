@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\App;
+use Livewire\Blaze\Blaze;
 use Tests\TestCase;
 
 class DesignSystemComponentsTest extends TestCase
@@ -27,6 +28,19 @@ class DesignSystemComponentsTest extends TestCase
         Carbon::setTestNow();
 
         parent::tearDown();
+    }
+
+    public function test_translated_component_output_follows_the_locale_under_blaze(): void
+    {
+        $this->assertTrue(Blaze::optimize()->shouldCompile(resource_path('views/components/orders/location.blade.php')));
+
+        App::setLocale('es');
+        $this->blade('<x-orders.location location="Sede Norte" />')->assertSee('Locación: Sede Norte', false);
+        $this->blade('<x-ui.person name="" />')->assertSee('Sin Asignar');
+
+        App::setLocale('en');
+        $this->blade('<x-orders.location location="Sede Norte" />')->assertSee('Location: Sede Norte', false);
+        $this->blade('<x-ui.person name="" />')->assertSee('Unassigned');
     }
 
     public function test_tag_maps_each_tone_to_its_health_color(): void
@@ -143,7 +157,9 @@ class DesignSystemComponentsTest extends TestCase
         $this->assertStringContainsString('Coral Way', $html);
         $this->assertStringContainsString('text-pin', $html);
         $this->assertStringContainsString('Atrasada 2 d', $html);
-        $this->assertStringContainsString('data-flux-dropdown', $html);
+        // The card opens the board's single shared menu instead of rendering its own dropdown.
+        $this->assertStringContainsString("\$dispatch('kanban-card-menu'", $html);
+        $this->assertStringNotContainsString('data-flux-dropdown', $html);
         $this->assertStringNotContainsString('animate-ping', $html);
         $this->assertStringNotContainsString('<select', $html);
     }

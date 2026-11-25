@@ -7,6 +7,7 @@ use App\Enums\Substatus;
 use App\Enums\SubtaskCategory;
 use App\Enums\UserRole;
 use App\Livewire\Orders\OrderDetailModal;
+use App\Livewire\Orders\OrderTimeline;
 use App\Models\Client;
 use App\Models\Designer;
 use App\Models\Order;
@@ -546,8 +547,7 @@ class OrderDetailModalTest extends TestCase
         $this->assertEquals('Aprobación Recibida', $event3->getFormattedTitle());
         $this->assertEquals('Aprobación Recibida', $event4->getFormattedTitle());
 
-        Livewire::test(OrderDetailModal::class)
-            ->call('openModal', $order->id)
+        Livewire::test(OrderTimeline::class, ['orderId' => $order->id])
             ->assertSee('Aprobación Recibida')
             ->assertSee('Historial')
             ->assertSee('timeline-scrollbar');
@@ -632,8 +632,7 @@ class OrderDetailModalTest extends TestCase
         $this->assertStringContainsString('bg-orange-500', $statusEvent->getNodeColorClass());
         $this->assertStringContainsString('bg-purple-500', $autoTaskEvent->getNodeColorClass());
 
-        Livewire::test(OrderDetailModal::class)
-            ->call('openModal', $order->id)
+        Livewire::test(OrderTimeline::class, ['orderId' => $order->id])
             ->assertSee('Orden creada desde la app')
             ->assertSee('Orden creada desde Trello')
             ->assertSee('Orden ON HOLD')
@@ -684,8 +683,7 @@ class OrderDetailModalTest extends TestCase
         $this->assertCount(1, $timelineEvents);
         $this->assertEquals('ORDER_APPROVED', $timelineEvents->first()->event_type);
 
-        Livewire::test(OrderDetailModal::class)
-            ->call('openModal', $order->id)
+        Livewire::test(OrderTimeline::class, ['orderId' => $order->id])
             ->assertSee('Aprobación Recibida')
             ->assertSee('Aprobado por Cliente')
             ->assertSee('SLA: 2026-09-30')

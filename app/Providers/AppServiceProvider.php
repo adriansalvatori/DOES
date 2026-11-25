@@ -11,6 +11,7 @@ use App\Services\WorkOrder\QuickBooksWorkOrderGenerator;
 use App\Services\WorkOrder\SequentialWorkOrderGenerator;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Blaze\Blaze;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +38,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Order::observe(OrderObserver::class);
         RelatedTask::observe(RelatedTaskObserver::class);
+
+        Blaze::optimize()
+            ->in(resource_path('views/components'), compile: true, memo: false, fold: false)
+            ->in(resource_path('views/components/layouts'), compile: false, memo: false, fold: false);
 
         if ($this->app->environment('production')) {
             URL::forceScheme('https');

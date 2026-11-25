@@ -4,8 +4,10 @@ namespace App\Livewire\Kanban;
 
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
+use App\Livewire\Kanban\Concerns\BuildsKanbanOrdersQuery;
 use App\Models\Designer;
 use App\Models\Order;
+use App\Models\OrderElement;
 use App\Models\OrderEvent;
 use App\Models\RelatedTask;
 use App\Models\Substatus as SubstatusModel;
@@ -16,10 +18,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
 class Board extends Component
 {
+    use BuildsKanbanOrdersQuery;
+
     public $search = '';
 
     public $designerFilter = 'all';
@@ -72,12 +77,117 @@ class Board extends Component
 
     public bool $showStandaloneTaskCards = false;
 
+    /**
+     * Last fingerprint of each column's cards, keyed by CoreStatus value.
+     *
+     * @var array<string, string>
+     */
+    public array $columnFingerprints = [];
+
     public function mount(): void
     {
         $user = Auth::user();
         if ($user && $user->isDesigner() && $user->designer) {
             $this->designerFilter = (string) $user->designer->id;
         }
+
+        $this->columnFingerprints = $this->computeColumnFingerprints();
+    }
+
+    /**
+     * Ask only the columns whose cards changed to re-render. Answers with no HTML
+     * while nothing changed, so it is cheap to poll and to run after any event.
+     */
+    #[Renderless]
+    #[On('order-updated')]
+    #[On('task-added')]
+    public function syncChangedColumns(): void
+    {
+        $current = $this->computeColumnFingerprints();
+
+        foreach ($current as $columnValue => $fingerprint) {
+            if (($this->columnFingerprints[$columnValue] ?? null) !== $fingerprint) {
+                $this->dispatch('kanban-column-refresh.'.$columnValue);
+            }
+        }
+
+        $this->columnFingerprints = $current;
+    }
+
+    /**
+     * Filters live here but each column renders itself, so hand them over on change.
+     */
+    public function updated(string $property): void
+    {
+        if (in_array($property, ['search', 'designerFilter', 'substatusFilter', 'companyFilter', 'responsibleFilter', 'showStandaloneTaskCards'], true)) {
+            $this->dispatch('kanban-filters-changed', filters: [
+                'search' => (string) $this->search,
+                'designerFilter' => (string) $this->designerFilter,
+                'substatusFilter' => (string) $this->substatusFilter,
+                'companyFilter' => (string) $this->companyFilter,
+                'responsibleFilter' => (string) $this->responsibleFilter,
+                'showStandaloneTaskCards' => $this->showStandaloneTaskCards,
+            ]);
+            $this->columnFingerprints = $this->computeColumnFingerprints();
+        }
+    }
+
+    /**
+     * @return array<int, CoreStatus>
+     */
+    public function allColumns(): array
+    {
+        return array_merge(
+            [CoreStatus::ENTRANTE],
+            CoreStatus::designerQueueStatuses(),
+            [
+                CoreStatus::TO_DO_TODAY,
+                CoreStatus::ENVIADO_A_CAMILA,
+                CoreStatus::ENVIADO_AL_CLIENTE,
+                CoreStatus::ON_HOLD,
+                CoreStatus::EN_PRODUCCION,
+                CoreStatus::ARCHIVED,
+            ]
+        );
+    }
+
+    /**
+     * One hash per column covering its orders, their tasks and their elements.
+     *
+     * @return array<string, string>
+     */
+    protected function computeColumnFingerprints(): array
+    {
+        $orderRows = $this->ordersQuery(withRelations: false)
+            ->reorder()
+            ->select(['id', 'core_status', 'updated_at'])
+            ->get();
+
+        $stamps = fn (string $model) => $model::query()
+            ->selectRaw('order_id, count(*) as total, max(updated_at) as stamp')
+            ->groupBy('order_id')
+            ->get()
+            ->keyBy('order_id');
+
+        $taskStamps = $stamps(RelatedTask::class);
+        $elementStamps = $stamps(OrderElement::class);
+
+        $parts = [];
+        foreach ($orderRows as $row) {
+            $key = $row->core_status instanceof CoreStatus ? $row->core_status->value : (string) $row->core_status;
+            $task = $taskStamps->get($row->id);
+            $element = $elementStamps->get($row->id);
+            $parts[$key][] = $row->id.':'.$row->updated_at?->timestamp.':'.$task?->total.'/'.$task?->stamp.':'.$element?->total.'/'.$element?->stamp;
+        }
+
+        $allTasks = $taskStamps->count().'/'.$taskStamps->max('stamp');
+        $fingerprints = [];
+        foreach ($this->allColumns() as $column) {
+            $extra = in_array($column, [CoreStatus::ENTRANTE, CoreStatus::TO_DO_TODAY], true) ? $allTasks : '';
+            $fingerprints[$column->value] = md5($extra.'|'.implode('|', $parts[$column->value] ?? []));
+        }
+
+        return $fingerprints;
     }
 
     public function toggleStandaloneTaskCards(): void
@@ -185,6 +295,7 @@ class Board extends Component
             }
         }
 
+        $this->syncChangedColumns();
         session()->flash('message', "Orden {$order->company_name} movida a {$newStatus->label()}.");
     }
 
@@ -211,6 +322,7 @@ class Board extends Component
         $this->blockComment = '';
         $this->requireCustomerService = false;
 
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         session()->flash('message', "Orden {$order->company_name} marcada como Bloqueada.");
     }
@@ -252,6 +364,7 @@ class Board extends Component
 
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         $this->dispatch('toast', message: __('Orden archivada exitosamente.'));
     }
@@ -283,6 +396,7 @@ class Board extends Component
         $this->pendingUnblockOrderId = null;
         $this->unblockReason = '';
 
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         session()->flash('message', "Orden {$order->company_name} desbloqueada y devuelta a la lista del diseñador.");
     }
@@ -345,6 +459,7 @@ class Board extends Component
         $this->pendingOnHoldOrderId = null;
         $this->onHoldReason = '';
 
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         session()->flash('message', "Orden {$order->company_name} movida a On Hold.");
     }
@@ -431,6 +546,7 @@ class Board extends Component
         }
 
         $this->cancelResume();
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         session()->flash('message', "Orden {$order->company_name} reanudada.");
     }
@@ -461,15 +577,9 @@ class Board extends Component
             'metadata' => ['comment' => 'Orden movida a la papelera.'],
         ]);
 
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         session()->flash('message', "Orden '{$order->company_name}' enviada a la papelera.");
-    }
-
-    #[On('order-updated')]
-    #[On('task-added')]
-    public function refreshBoard()
-    {
-        // Automatically re-renders board when tasks or orders are created/updated
     }
 
     public function toggleTaskComplete($taskId)
@@ -481,6 +591,7 @@ class Board extends Component
             $task->update(['status' => 'done', 'completed_at' => now()]);
         }
 
+        $this->syncChangedColumns();
         $this->dispatch('order-updated');
         session()->flash('message', "Tarea '{$task->title}' actualizada.");
     }
@@ -491,72 +602,16 @@ class Board extends Component
         if ($task) {
             $taskTitle = $task->title;
             $task->delete();
+            $this->syncChangedColumns();
             $this->dispatch('order-updated');
             session()->flash('message', "Tarea '{$taskTitle}' eliminada.");
         }
     }
 
-    public function toggleDoneToday($orderId)
-    {
-        $order = Order::findOrFail($orderId);
-        $newDoneToday = ! $order->done_today;
-        $order->update(['done_today' => $newDoneToday]);
-        if ($newDoneToday) {
-            app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
-        }
-        $this->dispatch('order-updated');
-    }
-
     #[Computed]
     public function orders(): Collection
     {
-        $query = Order::inWorkspace()->prioritizeUrgente()->with(['designer', 'designers', 'relatedTasks.assignee', 'clientLocation', 'stages', 'elements']);
-
-        if (! empty($this->search)) {
-            $query->search($this->search);
-        }
-
-        if ($this->designerFilter !== 'all') {
-            $query->where(function ($q) {
-                $q->where('designer_id', $this->designerFilter)
-                    ->orWhereHas('designers', fn ($dq) => $dq->where('designers.id', $this->designerFilter));
-            });
-        }
-
-        if ($this->substatusFilter !== 'all') {
-            $query->where('substatus', $this->substatusFilter);
-        }
-
-        if ($this->companyFilter !== 'all') {
-            $query->where('company_name', $this->companyFilter);
-        }
-
-        if ($this->responsibleFilter !== 'all') {
-            $query->where('responsible_person', $this->responsibleFilter);
-        }
-
-        return $query->get();
-    }
-
-    #[Computed]
-    public function relatedTasks(): Collection
-    {
-        if (! $this->showStandaloneTaskCards) {
-            return collect();
-        }
-
-        $tasksQuery = RelatedTask::whereHas('order', function ($q) {
-            $q->inWorkspace()->whereNotIn('core_status', [CoreStatus::ARCHIVED->value, CoreStatus::ON_HOLD->value]);
-            if ($this->designerFilter !== 'all') {
-                $q->where('designer_id', $this->designerFilter);
-            }
-        })->with(['order', 'assignee']);
-
-        if (! empty($this->search)) {
-            $tasksQuery->search($this->search);
-        }
-
-        return $tasksQuery->get();
+        return $this->ordersQuery()->get();
     }
 
     #[Computed]
@@ -601,18 +656,7 @@ class Board extends Component
 
     public function render()
     {
-        $allColumns = array_merge(
-            [CoreStatus::ENTRANTE],
-            CoreStatus::designerQueueStatuses(),
-            [
-                CoreStatus::TO_DO_TODAY,
-                CoreStatus::ENVIADO_A_CAMILA,
-                CoreStatus::ENVIADO_AL_CLIENTE,
-                CoreStatus::ON_HOLD,
-                CoreStatus::EN_PRODUCCION,
-                CoreStatus::ARCHIVED,
-            ]
-        );
+        $allColumns = $this->allColumns();
 
         $columns = match ($this->columnGroup) {
             'incoming' => array_merge([CoreStatus::ENTRANTE], CoreStatus::designerQueueStatuses()),

@@ -9,11 +9,18 @@ use App\Models\Order;
 use App\Models\OrderEvent;
 use App\Models\Substatus as SubstatusModel;
 use App\Services\AutomationEngine;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class ArchivedOrders extends Component
 {
+    use WithPagination;
+
+    private const ORDERS_PER_PAGE = 25;
+
     public string $search = '';
 
     public string $designerFilter = 'all';
@@ -21,6 +28,8 @@ class ArchivedOrders extends Component
     public string $timeFilter = 'all'; // all, this_month, this_week
 
     public string $substatusFilter = 'all'; // all, finalizada, cancelada, no_responsive
+
+    public int $productionLimit = 25;
 
     public bool $showArchiveModal = false;
 
@@ -120,9 +129,29 @@ class ArchivedOrders extends Component
         // Livewire listener to automatically re-render when orders are archived
     }
 
-    public function render()
+    public function showMoreProduction(): void
     {
-        $query = Order::archived()->with(['designer', 'designers'])->orderByDesc('archived_at');
+        $this->productionLimit += 25;
+    }
+
+    /**
+     * Resets every per-designer paginator when a filter changes.
+     */
+    public function updated(string $property): void
+    {
+        if (in_array($property, ['search', 'designerFilter', 'timeFilter', 'substatusFilter'], true)) {
+            $this->paginators = [];
+        }
+    }
+
+    /**
+     * Archived orders matching the page filters (without designer grouping).
+     *
+     * @return Builder<Order>
+     */
+    protected function filteredArchivedQuery(): Builder
+    {
+        $query = Order::archived();
 
         if (! empty($this->search)) {
             $query->search($this->search);
@@ -155,75 +184,95 @@ class ArchivedOrders extends Component
             };
         }
 
-        $allArchived = $query->get();
-        $totalArchivedCount = $allArchived->count();
+        return $query;
+    }
 
-        // Calculate substatus breakdown counts across all archived orders
-        $unfilteredArchived = Order::archived()->get();
-        $successfulCount = $unfilteredArchived->filter(fn ($o) => $o->substatus === Substatus::FINALIZADA || ($o->substatus?->value ?? '') === Substatus::FINALIZADA->value)->count();
-        $canceledCount = $unfilteredArchived->filter(fn ($o) => in_array($o->substatus, [
+    /**
+     * SQL expression equal to Order::days_to_close (whole days from start to archive, never negative).
+     */
+    protected function daysToCloseSql(): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return 'MAX(0, CAST(julianday(date(archived_at)) - julianday(date(COALESCE(start_date, created_at))) AS INTEGER))';
+        }
+
+        return 'GREATEST(0, DATEDIFF(DATE(archived_at), DATE(COALESCE(start_date, created_at))))';
+    }
+
+    /**
+     * @return array{count: int, avg_days: float, revisions: int}
+     */
+    protected function aggregateFor(Builder $query): array
+    {
+        $row = $query
+            ->selectRaw('COUNT(*) as total, AVG(CASE WHEN archived_at IS NOT NULL THEN '.$this->daysToCloseSql().' END) as avg_days, COALESCE(SUM(client_revision_count), 0) as revisions')
+            ->reorder()
+            ->first();
+
+        return [
+            'count' => (int) $row->total,
+            'avg_days' => round((float) $row->avg_days, 1),
+            'revisions' => (int) $row->revisions,
+        ];
+    }
+
+    public function render()
+    {
+        $global = $this->aggregateFor($this->filteredArchivedQuery());
+        $totalArchivedCount = $global['count'];
+
+        $substatusCounts = Order::archived()
+            ->selectRaw('substatus, COUNT(*) as total')
+            ->groupBy('substatus')
+            ->pluck('total', 'substatus');
+        $countSubstatuses = fn (array $substatuses) => (int) collect($substatuses)->sum(fn (Substatus $sub) => $substatusCounts[$sub->value] ?? 0);
+        $successfulCount = $countSubstatuses([Substatus::FINALIZADA]);
+        $canceledCount = $countSubstatuses([
             Substatus::CANCELADA,
             Substatus::CANCELADA_POR_CLIENTE,
             Substatus::CANCELADA_POR_CAMILA,
             Substatus::NO_REALIZADA_TRANSFERIDA,
-        ], true) || in_array($o->substatus?->value ?? '', [
-            Substatus::CANCELADA->value,
-            Substatus::CANCELADA_POR_CLIENTE->value,
-            Substatus::CANCELADA_POR_CAMILA->value,
-            Substatus::NO_REALIZADA_TRANSFERIDA->value,
-        ], true))->count();
-        $nonResponsiveCount = $unfilteredArchived->filter(fn ($o) => $o->substatus === Substatus::CLIENTE_NO_RESPONSIVE || ($o->substatus?->value ?? '') === Substatus::CLIENTE_NO_RESPONSIVE->value)->count();
+        ]);
+        $nonResponsiveCount = $countSubstatuses([Substatus::CLIENTE_NO_RESPONSIVE]);
 
-        // Group archived orders by designer
         $designers = Designer::where('active', true)->internal()->get();
         $designerStats = [];
 
         foreach ($designers as $des) {
-            $desOrders = $allArchived->filter(function ($o) use ($des) {
-                return $o->designer_id == $des->id || $o->designers->contains('id', $des->id);
+            $designerQuery = fn () => $this->filteredArchivedQuery()->where(function ($q) use ($des) {
+                $q->where('designer_id', $des->id)
+                    ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $des->id));
             });
 
-            $desCount = $desOrders->count();
-            $percentage = $totalArchivedCount > 0 ? round(($desCount / $totalArchivedCount) * 100, 1) : 0;
-            $avgDays = $desCount > 0 ? round($desOrders->avg('days_to_close'), 1) : 0;
-            $totalRevisions = (int) $desOrders->sum('client_revision_count');
+            $aggregate = $this->aggregateFor($designerQuery());
 
             $designerStats[] = [
                 'designer' => $des,
-                'count' => $desCount,
-                'percentage' => $percentage,
-                'avg_days' => $avgDays,
-                'total_revisions' => $totalRevisions,
-                'orders' => $desOrders,
+                'count' => $aggregate['count'],
+                'percentage' => $totalArchivedCount > 0 ? round(($aggregate['count'] / $totalArchivedCount) * 100, 1) : 0,
+                'avg_days' => $aggregate['avg_days'],
+                'total_revisions' => $aggregate['revisions'],
+                'orders' => $aggregate['count'] > 0
+                    ? $designerQuery()->with('clientLocation')->orderByDesc('archived_at')->paginate(self::ORDERS_PER_PAGE, ['*'], 'designer'.$des->id)
+                    : collect(),
             ];
         }
 
-        // Unassigned archived orders
-        $unassignedOrders = $allArchived->filter(function ($o) {
-            return is_null($o->designer_id) && $o->designers->isEmpty();
-        });
-
-        // Orders currently in production for right-side column
         $inProductionOrders = Order::inWorkspace()
             ->where('core_status', CoreStatus::EN_PRODUCCION)
-            ->with(['designer', 'designers'])
+            ->with(['designer'])
             ->orderByDesc('updated_at')
             ->get();
 
-        // Global Turnaround Average
-        $globalAvgTurnaround = $totalArchivedCount > 0 ? round($allArchived->avg('days_to_close'), 1) : 0;
-
         return view('livewire.orders.archived-orders', [
-            'archivedOrders' => $allArchived,
             'totalArchivedCount' => $totalArchivedCount,
             'successfulCount' => $successfulCount,
             'canceledCount' => $canceledCount,
             'nonResponsiveCount' => $nonResponsiveCount,
             'designerStats' => $designerStats,
-            'unassignedOrders' => $unassignedOrders,
             'inProductionOrders' => $inProductionOrders,
             'designers' => $designers,
-            'globalAvgTurnaround' => $globalAvgTurnaround,
+            'globalAvgTurnaround' => $global['avg_days'],
             'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
             'pendingArchiveOrder' => $this->pendingArchiveOrderId ? Order::find($this->pendingArchiveOrderId) : null,
         ])->layout('components.layouts.app', ['title' => __('Órdenes archivadas').' - '.config('app.name')]);

@@ -38,7 +38,7 @@
         }
     }" 
     @click.outside="open = false" 
-    wire:poll.30s>
+    wire:poll.30s.visible>
     
     <!-- Bell trigger -->
     <button

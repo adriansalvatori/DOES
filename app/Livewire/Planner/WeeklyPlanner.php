@@ -15,7 +15,9 @@ use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -30,10 +32,87 @@ class WeeklyPlanner extends Component
     #[On('subtask-restored')]
     public function refreshPlanner(): void
     {
-        // Automatically re-renders planner view when orders or subtasks are created, updated, duplicated, or deleted
+        $this->skipRenderWhenUnchanged();
+    }
+
+    /**
+     * Cheap poll target: re-render only when the planner data changed since the last render.
+     */
+    public function pollPlanner(): void
+    {
+        $this->skipRenderWhenUnchanged();
+    }
+
+    /**
+     * Cheap summary of everything the grid depends on; equal fingerprints mean the HTML would be identical.
+     */
+    protected function plannerFingerprint(): string
+    {
+        $orders = DB::table('orders')->selectRaw('count(*) as total, max(updated_at) as latest, sum(in_workspace) as workspace')->whereNull('deleted_at')->first();
+        $tasks = DB::table('related_tasks')->selectRaw('count(*) as total, max(updated_at) as latest')->whereNull('deleted_at')->first();
+        $assignments = DB::table('designer_order')->selectRaw('count(*) as total, max(updated_at) as latest')->first();
+
+        return md5(json_encode([$orders, $tasks, $assignments, now()->toDateString()]));
+    }
+
+    protected function skipRenderWhenUnchanged(): void
+    {
+        if ($this->renderedFingerprint !== '' && $this->renderedFingerprint === $this->plannerFingerprint()) {
+            $this->skipRender();
+        }
+    }
+
+    /**
+     * Modals, toasts, bulk bar and inline-creator template; loaded once after mount so grid updates stay small.
+     */
+    #[Renderless]
+    public function plannerChrome(): string
+    {
+        return view('livewire.planner.partials.chrome', [
+            'designers' => Designer::where('active', true)->internal()->get(),
+            'allDesigners' => Designer::where('active', true)->internal()->get(),
+            'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
+        ])->render();
+    }
+
+    /**
+     * Orders offered by the inline subtask creators; fetched on demand so it never travels with the grid HTML.
+     *
+     * @return array<int, array<string, string>>
+     */
+    #[Renderless]
+    public function workspaceOrdersForPicker(): array
+    {
+        return Order::inWorkspace()
+            ->with(['clientLocation', 'designers:designers.id'])
+            ->prioritizeUrgente()
+            ->orderBy('company_name')
+            ->get()
+            ->map(function ($o) {
+                $loc = $o->location_text ?? '';
+                $text = $o->company_name
+                    .($loc ? ' ('.$loc.')' : '')
+                    .($o->task_name ? ' - '.$o->task_name : '');
+
+                return [
+                    'id' => (string) $o->id,
+                    'company' => $o->company_name,
+                    'location' => $loc,
+                    'task' => $o->task_name ?? '',
+                    'wo_number' => $o->wo_number ?? '',
+                    'trello_card_title' => $o->trello_title ?? $o->trello_card_title ?? '',
+                    'responsible_person' => $o->responsible_person ?? '',
+                    'text' => $text,
+                    'designer_id' => (string) ($o->designer_id ?? $o->designers->first()?->id ?? ''),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     public $selectedWeekStart;
+
+    public string $renderedFingerprint = '';
 
     #[Url(as: 'designer')]
     public $selectedDesignerFilter = 'all';
@@ -1245,56 +1324,6 @@ class WeeklyPlanner extends Component
             }
         }
 
-        $unscheduledOrders = Order::inWorkspace()
-            ->prioritizeUrgente()
-            ->whereNotIn('core_status', [CoreStatus::EN_PRODUCCION, CoreStatus::ON_HOLD])
-            ->when($this->selectedDesignerFilter !== 'all', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('designer_id', $this->selectedDesignerFilter)
-                        ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $this->selectedDesignerFilter));
-                });
-            })
-            ->when(! $this->unscheduledSearch, fn ($q) => $q->whereNull('scheduled_date'))
-            ->when($this->unscheduledSearch, fn ($q) => $q->search($this->unscheduledSearch))
-            ->orderByRaw('current_due_date IS NULL, current_due_date ASC')
-            ->get();
-
-        $workspaceOrders = Order::inWorkspace()
-            ->prioritizeUrgente()
-            ->when($this->selectedDesignerFilter !== 'all', function ($q) {
-                $q->where(function ($sub) {
-                    $sub->where('designer_id', $this->selectedDesignerFilter)
-                        ->orWhereHas('designers', fn ($d) => $d->where('designers.id', $this->selectedDesignerFilter));
-                });
-            })
-            ->orderBy('company_name')
-            ->get();
-
-        $allWorkspaceOrders = Order::inWorkspace()
-            ->with(['clientLocation'])
-            ->prioritizeUrgente()
-            ->orderBy('company_name')
-            ->get();
-
-        $workspaceOrdersList = $allWorkspaceOrders->map(function ($o) {
-            $loc = $o->location_text ?? '';
-            $text = $o->company_name
-                .($loc ? ' ('.$loc.')' : '')
-                .($o->task_name ? ' - '.$o->task_name : '');
-
-            return [
-                'id' => (string) $o->id,
-                'company' => $o->company_name,
-                'location' => $loc,
-                'task' => $o->task_name ?? '',
-                'wo_number' => $o->wo_number ?? '',
-                'trello_card_title' => $o->trello_title ?? $o->trello_card_title ?? '',
-                'responsible_person' => $o->responsible_person ?? '',
-                'text' => $text,
-                'designer_id' => (string) ($o->designer_id ?? $o->designers->first()?->id ?? ''),
-            ];
-        })->values();
-
         $backlogOrders = collect();
         if (! empty($this->backlogSearch)) {
             $backlogOrders = Order::inBacklog()
@@ -1366,6 +1395,8 @@ class WeeklyPlanner extends Component
             }
         }
 
+        $this->renderedFingerprint = $this->plannerFingerprint();
+
         $daysWithNextWeek = array_merge($days, [$nextWeekItem]);
 
         return view('livewire.planner.weekly-planner', [
@@ -1375,9 +1406,6 @@ class WeeklyPlanner extends Component
             'designers' => $designers,
             'allDesigners' => Designer::where('active', true)->internal()->get(),
             'subtasks' => $subtasks,
-            'unscheduledOrders' => $unscheduledOrders,
-            'workspaceOrders' => $workspaceOrders,
-            'workspaceOrdersList' => $workspaceOrdersList,
             'workspaceSearchResults' => $workspaceSearchResults,
             'backlogOrders' => $backlogOrders,
             'slaBreachedList' => $slaBreachedList,

@@ -479,9 +479,9 @@ class OverviewIndex extends Component
     // Pagination / Chunked Loading (batches of 100 in background)
     public int $perPage = 0;
 
-    public int $loadedCount = 100;
+    public int $loadedCount = 40;
 
-    public const CHUNK_SIZE = 100;
+    public const CHUNK_SIZE = 40;
 
     public function loadNextChunk(): void
     {
@@ -991,6 +991,11 @@ class OverviewIndex extends Component
         $this->syncTrelloAndLog($order, 'ORDER_UPDATED', "Campo {$field} actualizado", $prevVal, $value);
         $this->clearOverviewCache();
         $this->dispatch('toast', message: __('Guardado.'));
+
+        if ($field !== 'wo_number') {
+            // The cell already shows the saved value; only a new WO swaps its input for the WO badge.
+            $this->skipRender();
+        }
     }
 
     #[Renderless]

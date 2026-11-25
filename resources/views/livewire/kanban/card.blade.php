@@ -51,30 +51,15 @@
             </div>
 
             <div @click.stop class="opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition">
-                <flux:dropdown position="bottom" align="end">
-                    <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" :tooltip="__('Acciones')" aria-label="{{ __('Acciones') }}" />
-                    <flux:menu>
-                        <flux:menu.submenu :heading="__('Mover a...')" icon="arrows-right-left">
-                            @foreach($allColumns as $columnOption)
-                                @if($columnOption !== $order->core_status)
-                                    <flux:menu.item wire:click="moveOrder({{ $order->id }}, {{ \Illuminate\Support\Js::from($columnOption->value) }})">{{ $columnOption->label() }}</flux:menu.item>
-                                @endif
-                            @endforeach
-                        </flux:menu.submenu>
-                        <flux:menu.item icon="document-duplicate" wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })">{{ __('Duplicar Orden') }}</flux:menu.item>
-                        @if($order->trello_url)
-                            <flux:menu.item icon="arrow-top-right-on-square" href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer">{{ __('Abrir en Trello') }}</flux:menu.item>
-                        @endif
-                        @if(auth()->user()?->canDeleteOrders())
-                            <flux:menu.separator />
-                            <flux:menu.item
-                                variant="danger"
-                                icon="trash"
-                                wire:click="trashOrder({{ $order->id }})"
-                                wire:confirm="{{ __('¿Enviar esta orden a la papelera (archivar en Trello)?') }}">{{ __('Enviar a la papelera (archivar)') }}</flux:menu.item>
-                        @endif
-                    </flux:menu>
-                </flux:dropdown>
+                <button
+                    type="button"
+                    class="size-6 rounded-control inline-flex items-center justify-center text-ink-3 hover:text-ink hover:bg-sunken transition cursor-pointer focus-visible:outline-2 focus-visible:outline-gold"
+                    title="{{ __('Acciones') }}"
+                    aria-label="{{ __('Acciones') }}"
+                    aria-haspopup="menu"
+                    @click.stop="$dispatch('kanban-card-menu', { orderId: {{ $order->id }}, status: {{ \Illuminate\Support\Js::from($order->core_status?->value) }}, trelloUrl: {{ \Illuminate\Support\Js::from($order->trello_url) }}, anchor: $el })">
+                    <x-lucide-ellipsis class="w-4 h-4" aria-hidden="true" />
+                </button>
             </div>
         </div>
     </div>
@@ -150,7 +135,7 @@
 
             @if($isBlocked)
                 <button
-                    wire:click="openUnblockModal({{ $order->id }})"
+                    wire:click="$parent.openUnblockModal({{ $order->id }})"
                     @click.stop
                     type="button"
                     class="inline-flex items-center gap-1 h-6 px-2 rounded-control border border-line-strong bg-surface text-meta font-medium text-ink hover:bg-sunken transition cursor-pointer"
@@ -173,7 +158,7 @@
                 <div class="flex items-center justify-between gap-1.5 px-1.5 py-1 rounded-control hover:bg-sunken text-body min-w-0">
                     <div class="flex items-center gap-1.5 min-w-0">
                         <button
-                            wire:click="toggleTaskComplete({{ $task->id }})"
+                            wire:click="$parent.toggleTaskComplete({{ $task->id }})"
                             @click.stop
                             type="button"
                             class="w-3.5 h-3.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-ok border-ok text-white' : 'border-line-strong hover:border-ok bg-surface text-transparent' }}"
@@ -187,7 +172,7 @@
                         <span class="text-meta text-ink-3">{{ $task->type === \App\Enums\RelatedTaskType::SUBTASK ? __('Subtarea') : __('Acción') }}</span>
                         @if($task->type === \App\Enums\RelatedTaskType::SUBTASK)
                             <button
-                                wire:click="deleteTask({{ $task->id }})"
+                                wire:click="$parent.deleteTask({{ $task->id }})"
                                 wire:confirm="{{ __('¿Eliminar esta subtarea?') }}"
                                 @click.stop
                                 type="button"

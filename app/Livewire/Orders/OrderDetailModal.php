@@ -22,14 +22,16 @@ use App\Models\SubtaskPreset;
 use App\Services\AutomationEngine;
 use App\Services\ClientMatchingService;
 use App\Services\NotificationDispatcher;
-use App\Services\OrderTitleParserService;
 use App\Services\SlaEngine;
 use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -292,7 +294,7 @@ class OrderDetailModal extends Component
             $this->isEditing = false;
         }
 
-        $this->refreshTrelloData();
+        $this->deferTrelloData();
 
         if ($openApproval) {
             $this->openApprovalModal($targetStatus);
@@ -349,10 +351,80 @@ class OrderDetailModal extends Component
         $this->dispatch('open-client-flyout', clientId: $targetClientId);
     }
 
+    /**
+     * Reset the Trello-backed state and ask the browser to fetch it in a follow-up request,
+     * so painting the modal never waits on Trello.
+     */
+    protected function deferTrelloData(): void
+    {
+        $this->trelloComments = [];
+        $this->trelloCommentError = null;
+        $this->trelloDescription = null;
+        $this->trelloAttachments = [];
+        $this->trelloDetailsError = null;
+
+        $hasTrelloCard = $this->orderId
+            && filled(Order::whereKey($this->orderId)->value('trello_card_id'));
+
+        $this->isLoadingTrelloComments = $hasTrelloCard;
+        $this->isLoadingTrelloDetails = $hasTrelloCard;
+
+        if ($hasTrelloCard) {
+            $this->js('$wire.loadTrelloPanelData('.(int) $this->orderId.')');
+        }
+    }
+
+    /**
+     * Follow-up request after the modal is painted: load comments, description and attachments in parallel.
+     */
+    public function loadTrelloPanelData(?int $forOrderId = null): void
+    {
+        if (! $this->orderId || ($forOrderId !== null && (int) $forOrderId !== (int) $this->orderId)) {
+            return;
+        }
+
+        $cardId = Order::whereKey($this->orderId)->value('trello_card_id');
+        if (blank($cardId)) {
+            $this->isLoadingTrelloComments = false;
+            $this->isLoadingTrelloDetails = false;
+
+            return;
+        }
+
+        $panel = app(TrelloSyncService::class)->getCardPanelData($cardId);
+
+        $this->isLoadingTrelloComments = false;
+        $this->isLoadingTrelloDetails = false;
+        $this->trelloCommentError = null;
+        $this->trelloDetailsError = null;
+
+        if ($panel['comments']['success'] ?? false) {
+            $this->trelloComments = $panel['comments']['comments'];
+        } else {
+            $this->trelloComments = [];
+            $this->trelloCommentError = $panel['comments']['error'] ?? 'Error al obtener comentarios de Trello.';
+        }
+
+        if ($panel['details']['success'] ?? false) {
+            $this->trelloDescription = $panel['details']['card']['desc'] ?? null;
+        } else {
+            $this->trelloDetailsError = $panel['details']['error'] ?? 'Error al obtener detalles de la tarjeta de Trello.';
+        }
+
+        $this->trelloAttachments = ($panel['attachments']['success'] ?? false)
+            ? ($panel['attachments']['attachments'] ?? [])
+            : [];
+    }
+
+    /**
+     * Manual refresh from the UI: bypass the short-lived read cache.
+     */
     public function refreshTrelloData()
     {
-        $this->loadTrelloComments();
-        $this->loadTrelloDetails();
+        $cardId = $this->orderId ? Order::whereKey($this->orderId)->value('trello_card_id') : null;
+        app(TrelloSyncService::class)->forgetCardReadCache($cardId);
+
+        $this->loadTrelloPanelData();
     }
 
     public function loadTrelloDetails()
@@ -920,6 +992,7 @@ class OrderDetailModal extends Component
         $res = app(TrelloSyncService::class)->deleteCardComment($actionId);
 
         if ($res['success']) {
+            app(TrelloSyncService::class)->forgetCardReadCache($order->trello_card_id);
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'TRELLO_COMMENT_DELETED',
@@ -941,6 +1014,11 @@ class OrderDetailModal extends Component
     }
 
     public function renderCommentMarkdown(?string $text, ?string $commentId = null): string
+    {
+        return self::formatCommentMarkdown($text, $commentId);
+    }
+
+    public static function formatCommentMarkdown(?string $text, ?string $commentId = null): string
     {
         if (empty($text)) {
             return '';
@@ -1156,6 +1234,7 @@ class OrderDetailModal extends Component
                 'message' => __('No se pudo actualizar el checklist en Trello: :error', ['error' => $res['error'] ?? __('Error desconocido')]),
             ]);
         } else {
+            app(TrelloSyncService::class)->forgetCardReadCache(Order::whereKey($this->orderId)->value('trello_card_id'));
             $this->dispatch('order-updated');
         }
     }
@@ -1280,14 +1359,7 @@ class OrderDetailModal extends Component
 
         $freshOrder = $order->fresh();
         if ($freshOrder && $freshOrder->trello_card_id) {
-            try {
-                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
-                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
-                if ($success) {
-                    $freshOrder->update(['trello_title' => $pushedTitle]);
-                }
-            } catch (\Throwable $e) {
-            }
+            app(TrelloSyncService::class)->updateCardOnTrelloAfterResponse($freshOrder->id);
         }
 
         $this->dispatch('order-updated');
@@ -1435,14 +1507,7 @@ class OrderDetailModal extends Component
 
         $freshOrder = $order->fresh();
         if ($freshOrder && $freshOrder->trello_card_id) {
-            try {
-                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
-                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
-                if ($success) {
-                    $freshOrder->update(['trello_title' => $pushedTitle]);
-                }
-            } catch (\Throwable $e) {
-            }
+            app(TrelloSyncService::class)->updateCardOnTrelloAfterResponse($freshOrder->id);
         }
 
         $this->closeModal();
@@ -1515,14 +1580,7 @@ class OrderDetailModal extends Component
 
         $freshOrder = $order->fresh();
         if ($freshOrder && $freshOrder->trello_card_id) {
-            try {
-                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
-                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
-                if ($success) {
-                    $freshOrder->update(['trello_title' => $pushedTitle]);
-                }
-            } catch (\Throwable $e) {
-            }
+            app(TrelloSyncService::class)->updateCardOnTrelloAfterResponse($freshOrder->id);
         }
 
         $this->onHoldReason = '';
@@ -1615,14 +1673,7 @@ class OrderDetailModal extends Component
 
         $freshOrder = $order->fresh();
         if ($freshOrder && $freshOrder->trello_card_id) {
-            try {
-                $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
-                $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
-                if ($success) {
-                    $freshOrder->update(['trello_title' => $pushedTitle]);
-                }
-            } catch (\Throwable $e) {
-            }
+            app(TrelloSyncService::class)->updateCardOnTrelloAfterResponse($freshOrder->id);
         }
 
         $this->resumeReason = '';
@@ -1984,11 +2035,7 @@ class OrderDetailModal extends Component
         // Safely sync updated title to Trello if card is linked
         $freshOrder = $order->fresh();
         if ($freshOrder && $freshOrder->trello_card_id) {
-            $pushedTitle = OrderTitleParserService::buildTitle($freshOrder);
-            $success = app(TrelloSyncService::class)->updateCardOnTrello($freshOrder);
-            if ($success) {
-                $freshOrder->update(['trello_title' => $pushedTitle]);
-            }
+            app(TrelloSyncService::class)->updateCardOnTrelloAfterResponse($freshOrder->id);
         }
 
         $this->isEditing = false;
@@ -2883,70 +2930,119 @@ class OrderDetailModal extends Component
             ]);
         }
 
-        $order = $this->orderId
-            ? Order::with(['designer', 'client.locations', 'client.contacts', 'relatedTasks.assignee', 'events', 'dueDateHistories'])->find($this->orderId)
-            : null;
+        $order = $this->orderRecord;
+        $isEditing = (bool) $this->isEditing;
 
-        $client = ! empty($this->editCompanyName)
-            ? Client::with(['locations', 'contacts'])->where('name', mb_strtoupper(trim($this->editCompanyName), 'UTF-8'))->first()
-            : ($order?->client ?? null);
+        $client = null;
+        $clientLocations = [];
+        $clientContacts = collect();
+        if ($isEditing) {
+            $client = ! empty($this->editCompanyName)
+                ? Client::with(['locations', 'contacts'])->where('name', mb_strtoupper(trim($this->editCompanyName), 'UTF-8'))->first()
+                : ($order?->client ?? null);
 
-        $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
-        $clientContacts = $client ? $client->contacts->pluck('name')->filter()->toArray() : [];
+            $clientLocations = $client ? $client->locations->pluck('name')->filter()->toArray() : [];
+            $clientContacts = $client ? $client->contacts : collect();
+        }
 
         $validSubstatuses = app(StatusTransitionService::class)->getValidSubstatuses($this->editCoreStatus ?: $order?->core_status);
 
-        $clientOtherActiveOrders = collect();
-        if ($order && $order->client_id) {
-            $rawOtherOrders = Order::where('client_id', $order->client_id)
-                ->where('id', '!=', $order->id)
-                ->where('in_workspace', true)
-                ->where('core_status', '!=', CoreStatus::ARCHIVED)
-                ->with(['designer', 'clientLocation'])
-                ->get();
-            $clientOtherActiveOrders = $this->sortOrdersCollection($rawOtherOrders, $this->activeOrdersSortField, $this->activeOrdersSortDirection);
-        }
-
-        $selectedContact = $this->editContactId
-            ? Contact::find($this->editContactId)
-            : (! empty($this->editResponsiblePerson) ? Contact::where('name', mb_strtoupper(trim($this->editResponsiblePerson), 'UTF-8'))->first() : ($order?->contact ?? null));
-
         return view('livewire.orders.order-detail-modal', [
             'order' => $order,
-            'clientOtherActiveOrders' => $clientOtherActiveOrders,
-            'designers' => Designer::where('active', true)->get(),
-            'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
+            'designers' => $this->activeDesigners,
+            'subtaskPresets' => $this->activeSubtaskPresets,
             'coreStatuses' => CoreStatus::cases(),
             'substatuses' => $validSubstatuses,
             'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
-            'existingCompanies' => Order::inWorkspace()
-                ->whereNotNull('company_name')
-                ->where('company_name', '!=', '')
-                ->distinct()
-                ->orderBy('company_name')
-                ->pluck('company_name'),
-            'existingResponsibles' => Order::inWorkspace()
-                ->whereNotNull('responsible_person')
-                ->where('responsible_person', '!=', '')
-                ->distinct()
-                ->orderBy('responsible_person')
-                ->pluck('responsible_person'),
-            'existingLocations' => Order::whereNotNull('location_name')
-                ->where('location_name', '!=', '')
-                ->distinct()
-                ->orderBy('location_name')
-                ->pluck('location_name'),
+            'existingCompanies' => $this->existingCompanies,
+            'existingResponsibles' => $this->existingResponsibles,
+            'existingLocations' => $isEditing ? $this->existingLocations : collect(),
             'clientLocations' => $clientLocations,
-            'clientContacts' => $client ? $client->contacts : collect(),
-            'directoryContacts' => Contact::orderBy('name')->get(),
-            'selectedContact' => $selectedContact,
-            'availableTrelloCards' => Order::whereNotNull('trello_card_id')
-                ->where('trello_card_id', '!=', '')
-                ->orderBy('trello_created_at', 'desc')
-                ->take(100)
-                ->get(['id', 'trello_card_id', 'company_name', 'task_name', 'trello_title', 'wo_number']),
+            'clientContacts' => $clientContacts,
+            'directoryContacts' => $isEditing ? Contact::orderBy('name')->get() : collect(),
+            'availableTrelloCards' => $isEditing
+                ? Order::whereNotNull('trello_card_id')
+                    ->where('trello_card_id', '!=', '')
+                    ->orderBy('trello_created_at', 'desc')
+                    ->take(100)
+                    ->get(['id', 'trello_card_id', 'company_name', 'task_name', 'trello_title', 'wo_number'])
+                : collect(),
             'managerName' => Setting::getManagerName(),
         ]);
+    }
+
+    /**
+     * The order shown in the modal with the relations the view needs (one query set per request).
+     */
+    #[Computed]
+    public function orderRecord(): ?Order
+    {
+        if (! $this->orderId) {
+            return null;
+        }
+
+        $relations = ['designer', 'relatedTasks.assignee', 'events', 'dueDateHistories'];
+        $relations[] = $this->isEditing ? 'client.locations' : 'client';
+        if ($this->isEditing) {
+            $relations[] = 'client.contacts';
+        }
+
+        return Order::with($relations)->find($this->orderId);
+    }
+
+    #[Computed]
+    public function activeDesigners(): Collection
+    {
+        return Designer::where('active', true)->get();
+    }
+
+    #[Computed]
+    public function activeSubtaskPresets(): Collection
+    {
+        return SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get();
+    }
+
+    /**
+     * Autocomplete directory of company names (cached briefly; suggestions only).
+     *
+     * @return SupportCollection<int, string>
+     */
+    #[Computed(persist: true, seconds: 120)]
+    public function existingCompanies(): SupportCollection
+    {
+        return Order::inWorkspace()
+            ->whereNotNull('company_name')
+            ->where('company_name', '!=', '')
+            ->distinct()
+            ->orderBy('company_name')
+            ->pluck('company_name');
+    }
+
+    /**
+     * @return SupportCollection<int, string>
+     */
+    #[Computed(persist: true, seconds: 120)]
+    public function existingResponsibles(): SupportCollection
+    {
+        return Order::inWorkspace()
+            ->whereNotNull('responsible_person')
+            ->where('responsible_person', '!=', '')
+            ->distinct()
+            ->orderBy('responsible_person')
+            ->pluck('responsible_person');
+    }
+
+    /**
+     * @return SupportCollection<int, string>
+     */
+    #[Computed(persist: true, seconds: 120)]
+    public function existingLocations(): SupportCollection
+    {
+        return Order::whereNotNull('location_name')
+            ->where('location_name', '!=', '')
+            ->distinct()
+            ->orderBy('location_name')
+            ->pluck('location_name');
     }
 
     public function createContactForCompany(string $name): void

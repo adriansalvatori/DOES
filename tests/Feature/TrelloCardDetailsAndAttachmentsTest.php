@@ -99,6 +99,7 @@ class TrelloCardDetailsAndAttachmentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertSet('isLoadingTrelloDetails', false)
             ->assertSet('trelloDescription', 'Descripción detallada de la orden en Trello')
             ->assertCount('trelloAttachments', 1)

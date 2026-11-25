@@ -63,7 +63,10 @@ class PlannerRedesignTest extends TestCase
         $target = now()->startOfWeek()->addDays(2)->toDateString();
 
         Livewire::test(WeeklyPlanner::class)
-            ->assertSeeHtml("reorderSubtasks([{$task->id}], '{$target}', {$designer->id})")
+            ->assertSeeHtml('data-task-id="'.$task->id.'"')
+            ->assertSeeHtml('data-designer-id="'.$designer->id.'"')
+            ->assertSeeHtml('data-planner-shared-menu')
+            ->assertSeeHtml($target)
             ->call('reorderSubtasks', [$task->id], $target, $designer->id);
 
         $this->assertSame($target, $task->fresh()->scheduled_date->toDateString());

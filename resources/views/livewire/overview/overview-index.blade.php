@@ -1142,6 +1142,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-stone-100 font-medium text-meta">
+                    @php ob_start(); @endphp
                     @forelse($orders as $order)
                         @php
                             $subVal = $order->substatus?->value ?? (is_string($order->substatus) ? $order->substatus : null);
@@ -1607,6 +1608,7 @@
                             </td>
                         </tr>
                     @endforelse
+                    @php echo \App\Support\CompactHtml::compact(ob_get_clean()); @endphp
                 </tbody>
             </table>
 

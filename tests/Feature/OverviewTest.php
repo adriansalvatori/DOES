@@ -290,8 +290,9 @@ class OverviewTest extends TestCase
 
     public function test_overview_loads_records_in_chunks_progressively(): void
     {
-        // Create 150 orders to test chunking
-        for ($i = 1; $i <= 150; $i++) {
+        $chunk = OverviewIndex::CHUNK_SIZE;
+
+        for ($i = 1; $i <= $chunk + 20; $i++) {
             Order::create([
                 'wo_number' => sprintf('WO %05d', $i + 10000),
                 'task_name' => "Chunk Task {$i}",
@@ -303,10 +304,10 @@ class OverviewTest extends TestCase
 
         Livewire::actingAs($this->user)
             ->test(OverviewIndex::class)
-            ->assertSet('loadedCount', 100)
+            ->assertSet('loadedCount', $chunk)
             ->assertViewHas('hasMore', true)
             ->call('loadNextChunk')
-            ->assertSet('loadedCount', 200)
+            ->assertSet('loadedCount', $chunk * 2)
             ->assertViewHas('hasMore', false);
     }
 

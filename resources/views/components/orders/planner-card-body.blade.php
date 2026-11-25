@@ -93,5 +93,5 @@
     @if($designer)
         <x-ui.person :person="$designer" size="sm" />
     @endif
-    <x-orders.planner-task-menu :task="$task" :days="$days" :next-week="$nextWeek" :designer-id="$designer?->id" />
+    <x-orders.planner-task-menu :task="$task" :designer-id="$designer?->id" />
 </div>

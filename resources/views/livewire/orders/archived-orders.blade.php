@@ -1,3 +1,19 @@
+@assets
+<script>
+    window.fillSubstatusOptions = (select) => {
+        const template = document.getElementById('archived-substatus-options');
+        if (!template || select.options.length > 1) return;
+        const current = select.dataset.current;
+        const currentOption = select.options[0].cloneNode(true);
+        select.innerHTML = template.innerHTML;
+        if (![...select.options].some(option => option.value === current)) {
+            select.prepend(currentOption);
+        }
+        select.value = current;
+    };
+</script>
+@endassets
+
 <div class="h-full flex flex-col gap-4 min-h-0 overflow-y-auto custom-vertical-scrollbar">
     @if(session()->has('message'))
         <div x-data="{ show: true }" x-show="show" class="flex shrink-0 items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2 text-body text-ink">
@@ -165,13 +181,13 @@
     <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 2xl:grid-cols-3">
         <!-- Archived orders by designer -->
         <div class="space-y-4 2xl:col-span-2">
-            @if($archivedOrders->isEmpty())
+            @if($totalArchivedCount === 0)
                 <div class="ui-card">
                     <x-ui.empty icon="archive-restore" :title="__('No hay órdenes archivadas')" :description="$emptyHint" />
                 </div>
             @else
                 @foreach($designerStats as $ds)
-                    @if($ds['orders']->isNotEmpty())
+                    @if($ds['count'] > 0)
                         <section class="ui-card overflow-hidden" wire:key="arch-group-{{ $ds['designer']->id }}">
                             <div class="flex items-center justify-between border-b border-line px-4 py-3">
                                 <div class="flex items-center gap-2">
@@ -209,10 +225,10 @@
                                                 </td>
                                                 <td class="whitespace-nowrap text-ink-2">{{ $order->archived_at ? $order->archived_at->translatedFormat('d M Y') : '—' }}</td>
                                                 <td x-on:click.stop="" class="whitespace-nowrap">
-                                                    <select wire:change="updateSubstatus({{ $order->id }}, $event.target.value)" class="ui-select h-7 w-44 text-meta" aria-label="{{ __('Resultado') }}">
-                                                        @foreach($archivedSubstatuses as $archSub)
-                                                            <option value="{{ $archSub->name }}" @selected($subVal === $archSub->name)>{{ $archSub->label() }}</option>
-                                                        @endforeach
+                                                    <select wire:change="updateSubstatus({{ $order->id }}, $event.target.value)"
+                                                            x-data x-on:pointerenter="fillSubstatusOptions($el)" x-on:focus="fillSubstatusOptions($el)"
+                                                            data-current="{{ $subVal }}" class="ui-select h-7 w-44 text-meta" aria-label="{{ __('Resultado') }}">
+                                                        <option value="{{ $subVal }}" selected>{{ $archivedSubstatuses->firstWhere('name', $subVal)?->label() ?? $subVal }}</option>
                                                     </select>
                                                 </td>
                                                 <td class="is-num text-ink-2">{{ $order->days_to_close ?? 0 }}</td>
@@ -228,6 +244,9 @@
                                     </tbody>
                                 </table>
                             </div>
+                            @if($ds['orders']->hasPages())
+                                <div class="border-t border-line px-4 py-2">{{ $ds['orders']->links(data: ['scrollTo' => false]) }}</div>
+                            @endif
                         </section>
                     @endif
                 @endforeach
@@ -260,7 +279,7 @@
                 </div>
 
                 <div class="max-h-[calc(100vh-380px)] space-y-2 overflow-y-auto custom-vertical-scrollbar">
-                    @forelse($inProductionOrders as $order)
+                    @forelse($inProductionOrders->take($productionLimit) as $order)
                         <div wire:key="prod-{{ $order->id }}" draggable="true" @dragstart="event.dataTransfer.setData('text/plain', '{{ $order->id }}')"
                              class="cursor-grab rounded-control border border-line bg-surface p-3 transition-colors hover:border-line-strong active:cursor-grabbing">
                             <div class="flex items-start justify-between gap-2">
@@ -279,10 +298,19 @@
                     @empty
                         <p class="rounded-control border border-dashed border-line p-6 text-center text-body text-ink-3">{{ __('No hay órdenes en producción actualmente.') }}</p>
                     @endforelse
+                    @if($inProductionOrders->count() > $productionLimit)
+                        <button type="button" wire:click="showMoreProduction" class="ui-btn ui-btn-secondary ui-btn-sm w-full">{{ __('Ver más') }}</button>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
+
+    <template id="archived-substatus-options">
+        @foreach($archivedSubstatuses as $archSub)
+            <option value="{{ $archSub->name }}">{{ $archSub->label() }}</option>
+        @endforeach
+    </template>
 
     @include('livewire.orders.partials.archive-modal', [
         'targetOrder' => $pendingArchiveOrder ?? null,

@@ -221,7 +221,13 @@ class PricingIndex extends Component
             $query->search($this->search);
         }
 
-        return $query->get();
+        $products = $query->get();
+
+        foreach ($products as $product) {
+            $product->variants->each(fn (ProductVariant $variant) => $variant->setRelation('product', $product));
+        }
+
+        return $products;
     }
 
     #[Computed]

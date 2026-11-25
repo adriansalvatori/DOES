@@ -10,13 +10,24 @@ use App\Models\Setting;
 use App\Models\TrelloListMapping;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class TrelloSyncService
 {
     public const PAUSE_CACHE_KEY = 'trello_sync_paused';
+
+    public const HTTP_TIMEOUT_SECONDS = 5;
+
+    public const HTTP_CONNECT_TIMEOUT_SECONDS = 3;
+
+    public const READ_CACHE_TTL_SECONDS = 60;
 
     protected string $baseUrl = 'https://api.trello.com/1';
 
@@ -124,7 +135,7 @@ class TrelloSyncService
         }
 
         try {
-            $response = Http::get("{$this->baseUrl}/boards/{$boardId}/lists", $params);
+            $response = $this->http(30)->get("{$this->baseUrl}/boards/{$boardId}/lists", $params);
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json()];
@@ -158,7 +169,7 @@ class TrelloSyncService
         }
 
         try {
-            $response = Http::get("{$this->baseUrl}/boards/{$boardId}/cards", $params);
+            $response = $this->http(30)->get("{$this->baseUrl}/boards/{$boardId}/cards", $params);
 
             if ($response->successful()) {
                 return ['success' => true, 'data' => $response->json()];
@@ -628,6 +639,30 @@ class TrelloSyncService
      * Safely update a single card on Trello (Push to Trello name, due date, and list position).
      * Strictly targets Active Workspace Orders (Backlog cards are never pushed).
      */
+    /**
+     * Push an order to Trello once the HTTP response has been sent (sync in tests), so the user never waits on Trello.
+     * Identical payloads already pushed in this request (e.g. by the OrderObserver) are skipped.
+     */
+    public function updateCardOnTrelloAfterResponse(int $orderId): void
+    {
+        $push = function () use ($orderId): void {
+            try {
+                $order = Order::find($orderId);
+                if ($order && $order->trello_card_id) {
+                    $this->updateCardOnTrello($order);
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Deferred Trello push failed for order #{$orderId}: ".$e->getMessage());
+            }
+        };
+
+        if (app()->environment('testing')) {
+            $push();
+        } else {
+            app()->terminating($push);
+        }
+    }
+
     public function updateCardOnTrello(Order $order, ?string $apiKey = null, ?string $apiToken = null, ?string $boardId = null): bool
     {
         if ($this->isPaused()) {
@@ -681,9 +716,18 @@ class TrelloSyncService
                 }
             }
 
-            $response = Http::put("{$this->baseUrl}/cards/{$order->trello_card_id}", $params);
+            $payloadHash = md5(json_encode([$order->id, $order->trello_card_id, Arr::except($params, ['key', 'token'])]));
+            $pushLedger = $this->pushLedger();
+            $lastPush = $pushLedger[$order->id] ?? null;
+            if ($lastPush && $lastPush['hash'] === $payloadHash && now()->timestamp - $lastPush['at'] <= 10) {
+                return true;
+            }
+
+            $response = $this->http()->put("{$this->baseUrl}/cards/{$order->trello_card_id}", $params);
 
             if ($response->successful()) {
+                $pushLedger[$order->id] = ['hash' => $payloadHash, 'at' => now()->timestamp];
+                $this->forgetCardReadCache($order->trello_card_id);
                 $order->updateQuietly(['trello_title' => $pushedTitle]);
 
                 return true;
@@ -725,11 +769,13 @@ class TrelloSyncService
         }
 
         try {
-            $response = Http::put("{$this->baseUrl}/cards/{$cleanCardId}", [
+            $response = $this->http()->put("{$this->baseUrl}/cards/{$cleanCardId}", [
                 'key' => $apiKey,
                 'token' => $apiToken,
                 'name' => trim($newTitle),
             ]);
+
+            $this->forgetCardReadCache($cleanCardId);
 
             return $response->successful();
         } catch (\Throwable $e) {
@@ -765,7 +811,7 @@ class TrelloSyncService
         }
 
         try {
-            $response = Http::withQueryParameters([
+            $response = $this->http()->withQueryParameters([
                 'key' => $apiKey,
                 'token' => $apiToken,
             ])->put("{$this->baseUrl}/cards/{$cleanCardId}", [
@@ -773,6 +819,7 @@ class TrelloSyncService
             ]);
 
             if ($response->successful()) {
+                $this->forgetCardReadCache($cleanCardId);
                 Log::info("Trello card {$cleanCardId} archived successfully.");
 
                 return true;
@@ -814,7 +861,7 @@ class TrelloSyncService
         }
 
         try {
-            $response = Http::withQueryParameters([
+            $response = $this->http()->withQueryParameters([
                 'key' => $apiKey,
                 'token' => $apiToken,
             ])->put("{$this->baseUrl}/cards/{$cleanCardId}", [
@@ -822,6 +869,7 @@ class TrelloSyncService
             ]);
 
             if ($response->successful()) {
+                $this->forgetCardReadCache($cleanCardId);
                 Log::info("Trello card {$cleanCardId} unarchived successfully.");
 
                 return true;
@@ -863,7 +911,7 @@ class TrelloSyncService
         }
 
         try {
-            $response = Http::withQueryParameters([
+            $response = $this->http()->withQueryParameters([
                 'key' => $apiKey,
                 'token' => $apiToken,
             ])->delete("{$this->baseUrl}/cards/{$cleanCardId}");
@@ -937,7 +985,7 @@ class TrelloSyncService
                 $params['desc'] = "Creado desde KUDOSDOES Workspace.\nCliente: {$order->company_name}\nTarea: {$order->task_name}";
             }
 
-            $response = Http::post("{$this->baseUrl}/cards", $params);
+            $response = $this->http()->post("{$this->baseUrl}/cards", $params);
 
             if ($response->successful()) {
                 $data = $response->json();
@@ -981,9 +1029,30 @@ class TrelloSyncService
             $params['token'] = $apiToken;
         }
 
-        try {
-            $response = Http::get("{$this->baseUrl}/cards/{$cardId}/actions", $params);
+        $cacheKey = $this->readCacheKey('comments', $cardId);
+        if (is_array($cached = Cache::get($cacheKey))) {
+            return $cached;
+        }
 
+        try {
+            $response = $this->http()->get("{$this->baseUrl}/cards/{$cardId}/actions", $params);
+
+            return $this->parseCommentsResponse($response, $cardId, $cacheKey);
+        } catch (\Exception $e) {
+            Log::error("Trello API error fetching card comments for {$cardId}: ".$e->getMessage());
+
+            return ['success' => false, 'status' => 500, 'error' => $e->getMessage(), 'comments' => []];
+        }
+    }
+
+    /**
+     * Turn a Trello comment-actions response into the comments payload (cached on success).
+     *
+     * @return array{success: bool, comments: array, error?: string, status?: int}
+     */
+    protected function parseCommentsResponse(Response $response, string $cardId, string $cacheKey): array
+    {
+        try {
             if ($response->successful()) {
                 $actions = $response->json();
                 $comments = [];
@@ -1048,7 +1117,10 @@ class TrelloSyncService
                     ];
                 }
 
-                return ['success' => true, 'comments' => $comments];
+                $result = ['success' => true, 'comments' => $comments];
+                Cache::put($cacheKey, $result, self::READ_CACHE_TTL_SECONDS);
+
+                return $result;
             }
 
             return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'comments' => []];
@@ -1105,9 +1177,10 @@ class TrelloSyncService
         ];
 
         try {
-            $response = Http::post("{$this->baseUrl}/cards/{$cardId}/actions/comments", $params);
+            $response = $this->http()->post("{$this->baseUrl}/cards/{$cardId}/actions/comments", $params);
 
             if ($response->successful()) {
+                $this->forgetCardReadCache($cardId);
                 $action = $response->json();
                 $creator = $action['memberCreator'] ?? [];
                 $avatar = ! empty($creator['avatarUrl'])
@@ -1173,7 +1246,7 @@ class TrelloSyncService
         ];
 
         try {
-            $response = Http::delete("{$this->baseUrl}/actions/{$actionId}", $params);
+            $response = $this->http()->delete("{$this->baseUrl}/actions/{$actionId}", $params);
 
             if ($response->successful()) {
                 return ['success' => true];
@@ -1216,7 +1289,7 @@ class TrelloSyncService
         ];
 
         try {
-            $response = Http::asJson()->put("{$this->baseUrl}/actions/{$actionId}", array_merge($params, [
+            $response = $this->http()->asJson()->put("{$this->baseUrl}/actions/{$actionId}", array_merge($params, [
                 'text' => $newText,
             ]));
 
@@ -1225,7 +1298,7 @@ class TrelloSyncService
             }
 
             // Fallback to /actions/{id}/text if /actions/{id} returns an error
-            $fallbackResponse = Http::asJson()->put("{$this->baseUrl}/actions/{$actionId}/text", array_merge($params, [
+            $fallbackResponse = $this->http()->asJson()->put("{$this->baseUrl}/actions/{$actionId}/text", array_merge($params, [
                 'value' => $newText,
             ]));
 
@@ -1283,19 +1356,35 @@ class TrelloSyncService
             $params['token'] = $apiToken;
         }
 
+        $cacheKey = $this->readCacheKey('details', $cardId);
+        if (is_array($cached = Cache::get($cacheKey))) {
+            return $cached;
+        }
+
         try {
-            $response = Http::get("{$this->baseUrl}/cards/{$cardId}", $params);
+            $response = $this->http()->get("{$this->baseUrl}/cards/{$cardId}", $params);
 
-            if ($response->successful()) {
-                return ['success' => true, 'card' => $response->json()];
-            }
-
-            return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'card' => null];
+            return $this->parseDetailsResponse($response, $cacheKey);
         } catch (\Exception $e) {
             Log::error("Trello API error fetching card details for {$cardId}: ".$e->getMessage());
 
             return ['success' => false, 'status' => 500, 'error' => $e->getMessage(), 'card' => null];
         }
+    }
+
+    /**
+     * @return array{success: bool, card: ?array, error?: string, status?: int}
+     */
+    protected function parseDetailsResponse(Response $response, string $cacheKey): array
+    {
+        if ($response->successful()) {
+            $result = ['success' => true, 'card' => $response->json()];
+            Cache::put($cacheKey, $result, self::READ_CACHE_TTL_SECONDS);
+
+            return $result;
+        }
+
+        return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'card' => null];
     }
 
     /**
@@ -1481,19 +1570,146 @@ class TrelloSyncService
             $params['token'] = $apiToken;
         }
 
+        $cacheKey = $this->readCacheKey('attachments', $cardId);
+        if (is_array($cached = Cache::get($cacheKey))) {
+            return $cached;
+        }
+
         try {
-            $response = Http::get("{$this->baseUrl}/cards/{$cardId}/attachments", $params);
+            $response = $this->http()->get("{$this->baseUrl}/cards/{$cardId}/attachments", $params);
 
-            if ($response->successful()) {
-                return ['success' => true, 'attachments' => $response->json()];
-            }
-
-            return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'attachments' => []];
+            return $this->parseAttachmentsResponse($response, $cardId, $cacheKey);
         } catch (\Exception $e) {
             Log::error("Trello API error fetching card attachments for {$cardId}: ".$e->getMessage());
 
             return ['success' => false, 'status' => 500, 'error' => $e->getMessage(), 'attachments' => []];
         }
+    }
+
+    /**
+     * @return array{success: bool, attachments: array, error?: string, status?: int}
+     */
+    protected function parseAttachmentsResponse(Response $response, string $cardId, string $cacheKey): array
+    {
+        if ($response->successful()) {
+            $result = ['success' => true, 'attachments' => $response->json()];
+            Cache::put($cacheKey, $result, self::READ_CACHE_TTL_SECONDS);
+
+            return $result;
+        }
+
+        return ['success' => false, 'status' => $response->status(), 'error' => $response->body(), 'attachments' => []];
+    }
+
+    /**
+     * Fetch comments, description and attachments of a card in one parallel round trip
+     * (only the resources missing from the short-lived cache hit Trello).
+     *
+     * @return array{comments: array, details: array, attachments: array}
+     */
+    public function getCardPanelData(string $cardId, ?string $apiKey = null, ?string $apiToken = null): array
+    {
+        $cardId = trim($cardId);
+        $apiKey = $apiKey ?: config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'));
+        $apiToken = $apiToken ?: config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET')));
+        $auth = ['key' => $apiKey] + ($apiToken ? ['token' => $apiToken] : []);
+
+        $results = [];
+        $missing = [];
+        foreach (['comments', 'details', 'attachments'] as $resource) {
+            $cached = $cardId === '' ? null : Cache::get($this->readCacheKey($resource, $cardId));
+            if (is_array($cached)) {
+                $results[$resource] = $cached;
+            } else {
+                $missing[] = $resource;
+            }
+        }
+
+        if ($missing === []) {
+            return $results;
+        }
+
+        $urls = [
+            'comments' => ["{$this->baseUrl}/cards/{$cardId}/actions", $auth + ['filter' => 'commentCard']],
+            'details' => ["{$this->baseUrl}/cards/{$cardId}", $auth],
+            'attachments' => ["{$this->baseUrl}/cards/{$cardId}/attachments", $auth + ['fields' => 'all']],
+        ];
+
+        try {
+            $responses = Http::pool(function (Pool $pool) use ($missing, $urls) {
+                foreach ($missing as $resource) {
+                    $pool->as($resource)->timeout(self::HTTP_TIMEOUT_SECONDS)
+                        ->connectTimeout(self::HTTP_CONNECT_TIMEOUT_SECONDS)
+                        ->get($urls[$resource][0], $urls[$resource][1]);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::error("Trello API error fetching panel data for {$cardId}: ".$e->getMessage());
+            $responses = [];
+        }
+
+        foreach ($missing as $resource) {
+            $response = $responses[$resource] ?? null;
+            $cacheKey = $this->readCacheKey($resource, $cardId);
+            if (! $response instanceof Response) {
+                $message = $response instanceof \Throwable ? $response->getMessage() : 'No response from Trello.';
+                $results[$resource] = match ($resource) {
+                    'comments' => ['success' => false, 'status' => 500, 'error' => $message, 'comments' => []],
+                    'details' => ['success' => false, 'status' => 500, 'error' => $message, 'card' => null],
+                    default => ['success' => false, 'status' => 500, 'error' => $message, 'attachments' => []],
+                };
+
+                continue;
+            }
+
+            $results[$resource] = match ($resource) {
+                'comments' => $this->parseCommentsResponse($response, $cardId, $cacheKey),
+                'details' => $this->parseDetailsResponse($response, $cacheKey),
+                default => $this->parseAttachmentsResponse($response, $cardId, $cacheKey),
+            };
+        }
+
+        return $results;
+    }
+
+    /**
+     * Drop the cached Trello reads (comments, description, attachments) of a card.
+     */
+    public function forgetCardReadCache(?string $cardId): void
+    {
+        $cardId = trim((string) $cardId);
+        if ($cardId === '') {
+            return;
+        }
+
+        foreach (['comments', 'details', 'attachments'] as $resource) {
+            Cache::forget($this->readCacheKey($resource, $cardId));
+        }
+    }
+
+    /**
+     * Per-request record of the last payload pushed for each order, used to avoid pushing the same payload twice.
+     */
+    protected function pushLedger(): \ArrayObject
+    {
+        if (! app()->bound('trello.push-ledger')) {
+            app()->instance('trello.push-ledger', new \ArrayObject);
+        }
+
+        return app('trello.push-ledger');
+    }
+
+    protected function readCacheKey(string $resource, string $cardId): string
+    {
+        return "trello_card_{$resource}_{$cardId}";
+    }
+
+    /**
+     * Pending HTTP request with a short timeout so Trello can never stall a user request for long.
+     */
+    protected function http(int $timeout = self::HTTP_TIMEOUT_SECONDS): PendingRequest
+    {
+        return Http::timeout($timeout)->connectTimeout(self::HTTP_CONNECT_TIMEOUT_SECONDS);
     }
 
     /**
@@ -1545,11 +1761,13 @@ class TrelloSyncService
 
             $url = "{$this->baseUrl}/cards/{$cardId}/attachments?".http_build_query($queryParams);
 
-            $response = Http::attach('file', $fileHandle, $fileName, $headers)
+            $response = $this->http(30)->attach('file', $fileHandle, $fileName, $headers)
                 ->timeout(60)
                 ->post($url);
 
             if ($response->successful()) {
+                $this->forgetCardReadCache($cardId);
+
                 return ['success' => true, 'attachment' => $response->json()];
             }
 
@@ -1606,9 +1824,11 @@ class TrelloSyncService
         try {
             $url = "{$this->baseUrl}/cards/{$cardId}/attachments/{$attachmentId}?".http_build_query($queryParams);
 
-            $response = Http::timeout(30)->delete($url);
+            $response = $this->http(30)->delete($url);
 
             if ($response->successful()) {
+                $this->forgetCardReadCache($cardId);
+
                 return ['success' => true];
             }
 
@@ -1642,12 +1862,12 @@ class TrelloSyncService
         $apiToken = Setting::get('trello_user_token', config('services.trello.token', env('TRELLO_USER_TOKEN', env('TRELLO_API_SECRET'))));
 
         try {
-            $response = Http::withHeaders([
+            $response = $this->http(15)->withHeaders([
                 'Authorization' => "OAuth oauth_consumer_key=\"{$apiKey}\", oauth_token=\"{$apiToken}\"",
             ])->get($url);
 
             if (! $response->successful()) {
-                $response = Http::get($url, [
+                $response = $this->http(15)->get($url, [
                     'key' => $apiKey,
                     'token' => $apiToken,
                 ]);

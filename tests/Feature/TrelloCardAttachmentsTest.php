@@ -127,6 +127,7 @@ class TrelloCardAttachmentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertSet('trelloAttachments', [])
             ->set('attachmentFile', $fakePdf)
             ->assertDispatched('toast')
@@ -208,6 +209,7 @@ class TrelloCardAttachmentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertCount('trelloAttachments', 1)
             ->call('deleteAttachment', 'attach_to_remove', 'logo_antiguo.png')
             ->assertDispatched('toast')
@@ -283,6 +285,7 @@ class TrelloCardAttachmentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertSet('trelloAttachments', [])
             ->set('attachmentFiles', [$fakePdf, $fakeImage])
             ->assertDispatched('toast')
@@ -347,6 +350,7 @@ class TrelloCardAttachmentsTest extends TestCase
 
         $test = Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertCount('trelloAttachments', 2)
             ->call('downloadAllAttachments');
 
@@ -381,6 +385,7 @@ class TrelloCardAttachmentsTest extends TestCase
 
         $component = Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->set('attachmentUploadError', 'Error al subir archivo')
             ->assertSet('attachmentUploadError', 'Error al subir archivo');
 
@@ -398,6 +403,7 @@ class TrelloCardAttachmentsTest extends TestCase
         // Reopen modal -> errors must be cleared
         $component->set('attachmentUploadError', 'Error previo')
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertSet('attachmentUploadError', null)
             ->assertHasNoErrors();
     }

@@ -448,7 +448,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         $component->call('deleteSubtask', $subtask->id)
             ->assertSet('recentlyDeletedSubtaskIds', [(int) $subtask->id])
-            ->assertSeeHtml('Subtarea');
+            ->call('plannerChrome')
+            ->assertReturned(fn ($html) => str_contains($html, 'Subtarea'));
 
         $this->assertSoftDeleted('related_tasks', ['id' => $subtask->id]);
 
@@ -564,7 +565,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
         ]);
 
         Livewire::test(WeeklyPlanner::class)
-            ->assertViewHas('workspaceOrdersList', function ($list) use ($orderWithLocation) {
+            ->call('workspaceOrdersForPicker')
+            ->assertReturned(function ($list) use ($orderWithLocation) {
                 $item = collect($list)->firstWhere('id', (string) $orderWithLocation->id);
 
                 return $item !== null
@@ -703,7 +705,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertOk()
-            ->assertSee('PAST PENDING COMPANY');
+            ->call('workspaceOrdersForPicker')
+            ->assertReturned(fn ($list) => collect($list)->contains('company', 'PAST PENDING COMPANY'));
     }
 
     public function test_unapproved_order_with_poner_en_alta_subtask_triggers_approval_modal_and_cannot_be_completed_in_weekly_planner(): void
@@ -1025,7 +1028,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
         ]);
 
         Livewire::test(WeeklyPlanner::class)
-            ->assertViewHas('workspaceOrdersList', function ($list) use ($order) {
+            ->call('workspaceOrdersForPicker')
+            ->assertReturned(function ($list) use ($order) {
                 $item = collect($list)->firstWhere('id', (string) $order->id);
 
                 return $item !== null
@@ -1228,7 +1232,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
             ->set('viewMode', 'by_designer')
             ->set('selectedDesignerFilter', (string) $designer->id)
             ->assertSee('Al Cliente')
-            ->assertSee('Trabajo');
+            ->call('plannerChrome')
+            ->assertReturned(fn ($html) => str_contains($html, 'Trabajo'));
     }
 
     public function test_adding_work_subtask_for_today_to_order_in_enviado_al_cliente_resets_sla_to_two_days_and_does_not_trigger_sla_warning_modal(): void

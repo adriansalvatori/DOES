@@ -461,7 +461,7 @@ class Index extends Component
 
     protected function getFilteredQuery()
     {
-        $query = Order::inBacklog()->prioritizeUrgente()->with(['designer', 'designers']);
+        $query = Order::inBacklog()->prioritizeUrgente()->with(['designer', 'designers', 'contact', 'client.contacts', 'clientLocation']);
 
         if (! empty($this->search)) {
             $query->search($this->search);
@@ -496,7 +496,7 @@ class Index extends Component
     public function render()
     {
         $orders = $this->getFilteredQuery()->paginate($this->perPage);
-        $newTrelloOrders = Order::inBacklog()->newFromTrello()->prioritizeUrgente()->with(['designer', 'designers'])->get();
+        $newTrelloOrders = Order::inBacklog()->newFromTrello()->prioritizeUrgente()->with(['designer', 'designers', 'contact', 'client.contacts', 'clientLocation'])->get();
         $backlogTotalCount = Order::inBacklog()->count();
         $activeWorkspaceCount = Order::inWorkspace()->count();
 

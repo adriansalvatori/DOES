@@ -138,6 +138,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertSet('isLoadingTrelloComments', false)
             ->assertCount('trelloComments', 1)
             ->set('newTrelloComment', 'Comentario publicado desde el modal')
@@ -171,6 +172,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->set('newTrelloComment', 'Comentario via postComment alias')
             ->call('postComment')
             ->assertSet('newTrelloComment', '');
@@ -298,6 +300,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->set('newTrelloComment', 'Listo para montaje')
             ->call('addTrelloComment')
             ->assertSet('newTrelloComment', '');
@@ -362,6 +365,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertCount('trelloComments', 1)
             ->call('deleteTrelloComment', 'action_to_delete');
 
@@ -453,6 +457,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->set('newTrelloComment', 'Por favor revisar colores')
             ->set('commentPhotos', [$fakePhoto])
             ->call('addTrelloComment')
@@ -502,6 +507,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->set('newTrelloComment', '')
             ->set('commentPhotos', [$fakePhoto])
             ->call('addTrelloComment')
@@ -703,6 +709,7 @@ class TrelloCardCommentsTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
+            ->call('loadTrelloPanelData')
             ->assertSee("\$wire.uploadMultiple(\n                                                'commentPhotos'", false)
             ->assertDontSee('syncPhotosToInput', false);
     }

@@ -378,12 +378,16 @@ class ContactFlyoutPanel extends Component
                 ->get();
         }
 
-        $allClientsQuery = Client::query()->orderBy('name');
-        if (! empty(trim($this->clientSearch))) {
-            $term = '%'.trim($this->clientSearch).'%';
-            $allClientsQuery->where('name', 'like', $term);
+        $allClients = collect();
+
+        if ($this->isOpen) {
+            $allClientsQuery = Client::query()->orderBy('name');
+            if (! empty(trim($this->clientSearch))) {
+                $term = '%'.trim($this->clientSearch).'%';
+                $allClientsQuery->where('name', 'like', $term);
+            }
+            $allClients = $allClientsQuery->take(20)->get();
         }
-        $allClients = $allClientsQuery->take(20)->get();
 
         $allOtherContacts = $currentContact
             ? Contact::where('id', '!=', $currentContact->id)->orderBy('name')->take(30)->get()
