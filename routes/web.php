@@ -236,3 +236,5 @@ if ($livewirePreviewPath !== '/livewire/preview-file/{filename}') {
     Route::get('/livewire/preview-file/{filename}', $handleFilePreview)
         ->middleware(['web']);
 }
+
+require __DIR__.'/rebuild.php';

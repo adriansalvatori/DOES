@@ -44,7 +44,7 @@ class BusinessCalendar
     }
 
     /**
-     * Adds business days to the date. A weekend start counts from the next business day.
+     * Adds business days to the date. The first business day counted is the one after the start.
      */
     public function addBusinessDays(CarbonInterface $date, int $days): CarbonImmutable
     {
