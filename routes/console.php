@@ -1,5 +1,6 @@
 <?php
 
+use App\Support\TrelloCutover;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -9,5 +10,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('db:backup')->daily();
-Schedule::command('orders:run-daily-automations')->dailyAt('07:00');
-Schedule::command('trello:sync')->everyFifteenMinutes();
+Schedule::command('deliverables:daily-cycle')->dailyAt('07:00');
+Schedule::command('deliverables:daily-cycle --no-notify')->dailyAt('14:30');
+Schedule::command('trello:sync')->everyFifteenMinutes()->skip(fn (): bool => TrelloCutover::isComplete());

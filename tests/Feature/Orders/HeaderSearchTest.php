@@ -56,7 +56,7 @@ class HeaderSearchTest extends TestCase
             ->set('search', '9988')
             ->assertViewHas('workOrders', fn ($rows) => $rows->pluck('id')->all() === [$match->id] && ! $rows->contains('id', $backlog->id))
             ->assertSee('WO 9988')
-            ->assertSeeHtml(route('v2.work-orders.show', $match));
+            ->assertSeeHtml(route('work-orders.show', $match));
     }
 
     public function test_searches_deliverables_by_name_with_multi_word_tokens(): void

@@ -19,8 +19,6 @@ class TutorialModeTest extends TestCase
         $response->assertStatus(200);
         $response->assertDontSee('Modo Demo', false);
         $response->assertDontSee('tour-demo-btn', false);
-        $response->assertSee('tour-dashboard-stats', false);
-        $response->assertSee('tour-designer-pills', false);
     }
 
     public function test_all_demo_acts_routes_have_tour_targets(): void
@@ -28,13 +26,7 @@ class TutorialModeTest extends TestCase
         $user = User::factory()->create();
 
         $routesWithTargets = [
-            '/' => 'tour-dashboard-stats',
-            '/trello-sync' => 'tour-trello-sync-header',
-            '/kanban' => 'tour-kanban-header',
-            '/resolver' => 'tour-resolver-header',
-            '/planner' => 'tour-planner-header',
             '/clients' => 'tour-client-header',
-            '/analytics' => 'tour-analytics-header',
         ];
 
         foreach ($routesWithTargets as $route => $targetId) {

@@ -24,8 +24,9 @@ class SettingsPagesRedesignTest extends TestCase
             'settings.language',
             'settings.notifications',
             'settings.profile',
-            'settings.substatuses',
-            'settings.subtasks',
+            'settings.reasons',
+            'settings.task-templates',
+            'settings.board',
             'settings.users',
         ];
 

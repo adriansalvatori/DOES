@@ -9,7 +9,6 @@ use App\Application\Delivery\Queries\BacklogQuery;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\WorkOrder;
-use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
@@ -77,7 +76,7 @@ class BacklogPage extends Component
     #[Computed]
     public function designerOptions(): array
     {
-        return User::query()->where('active', true)->where('role', UserRole::DESIGNER->value)->orderBy('name')->pluck('name', 'id')->all();
+        return User::query()->designTeam()->orderBy('name')->pluck('name', 'id')->all();
     }
 
     public function moveToIntake(int $workOrderId): void

@@ -1,5 +1,5 @@
 <div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pb-6">
-    <x-ui.page-header :title="__('Today')" :subtitle="ucfirst($today->translatedFormat('l, j F')).' · '.auth()->user()->name">
+    <x-ui.page-header :title="__('Today')" :subtitle="ucfirst($today->isoFormat('dddd, LL')).' · '.auth()->user()->name">
         @if($this->isManager)
             <x-slot:toolbar>
                 <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="{{ __('Team') }}">

@@ -14,9 +14,11 @@ use Illuminate\Database\Eloquent\Builder;
 class BoardQuery
 {
     /**
-     * Blocked cards are never shown to designers. Each column returns at most `$columnCap` cards plus its real total.
+     * Blocked cards are never shown to designers. Each column returns at most its cap in cards plus its real total.
+     *
+     * @param  int|array<string, int>  $columnCap  One cap for every column, or caps by status code (25 when a status has none).
      */
-    public function run(User $viewer, Area $area, BoardFilters $filters = new BoardFilters, int $columnCap = 25): BoardResult
+    public function run(User $viewer, Area $area, BoardFilters $filters = new BoardFilters, int|array $columnCap = BoardLimits::DEFAULT_COLUMN_CAP): BoardResult
     {
         $statuses = DeliverableStatus::inArea($area);
 
@@ -42,7 +44,7 @@ class BoardQuery
                         fn (Builder $query) => $query->orderByRaw('due_target IS NULL')->orderBy('due_target'),
                     )
                     ->orderBy('id')
-                    ->limit($columnCap)
+                    ->limit(is_array($columnCap) ? ($columnCap[$status->value] ?? BoardLimits::DEFAULT_COLUMN_CAP) : $columnCap)
                     ->get();
 
             $columns[] = new BoardColumn($status, $total, $cards);

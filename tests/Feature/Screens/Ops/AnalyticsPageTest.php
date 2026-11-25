@@ -29,10 +29,10 @@ class AnalyticsPageTest extends DeliveryTestCase
 
     public function test_designers_get_403_everyone_else_can_open_it(): void
     {
-        $this->actingAs(User::factory()->designer()->create())->get(route('v2.analytics'))->assertForbidden();
+        $this->actingAs(User::factory()->designer()->create())->get(route('analytics'))->assertForbidden();
 
         foreach ([$this->manager(), User::factory()->admin()->create(), $this->customerService(), User::factory()->sales()->create()] as $user) {
-            $this->actingAs($user)->get(route('v2.analytics'))->assertOk();
+            $this->actingAs($user)->get(route('analytics'))->assertOk();
         }
     }
 
@@ -51,6 +51,33 @@ class AnalyticsPageTest extends DeliveryTestCase
         $this->assertSame(3.0, $cycle['in_design']['days']);
         $this->assertSame(2, $cycle['in_design']['stays']);
         $this->assertSame(1.0, $cycle['internal_review']['days']);
+        $this->assertSame(0, $cycle['ready']['stays']);
+    }
+
+    public function test_cycle_time_also_reads_legacy_status_history_before_the_first_native_move(): void
+    {
+        $legacyEvent = fn (Deliverable $deliverable, string $to, string $at) => DB::table('order_events')->insert([
+            'order_id' => $deliverable->id,
+            'event_type' => 'CORE_STATUS_CHANGED',
+            'actor' => 'User/Automation',
+            'new_value' => $to,
+            'created_at' => $at,
+            'updated_at' => $at,
+        ]);
+
+        $a = $this->deliverable(DeliverableStatus::DONE);
+        $legacyEvent($a, 'TO DO TODAY', '2026-09-20 09:00:00');
+        $legacyEvent($a, 'ENVIADO AL CLIENTE', '2026-09-22 09:00:00');
+        $legacyEvent($a, 'ON HOLD', '2026-09-23 09:00:00');
+        $legacyEvent($a, 'ARCHIVED', '2026-09-26 09:00:00');
+        $this->move($a, DeliverableStatus::READY, '2026-10-01 09:00:00');
+        $legacyEvent($a, 'ENTRANTE', '2026-10-02 09:00:00');
+
+        $cycle = collect((new AnalyticsMetrics)->cycleTimePerColumn())->keyBy(fn ($row) => $row['status']->value);
+
+        $this->assertSame(2.0, $cycle['in_design']['days']);
+        $this->assertSame(1.0, $cycle['client_review']['days']);
+        $this->assertSame(0, $cycle['intake']['stays']);
         $this->assertSame(0, $cycle['ready']['stays']);
     }
 

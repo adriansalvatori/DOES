@@ -256,7 +256,7 @@ class DeliverablePanel extends Component
             ->where(fn ($query) => $query
                 ->where('is_reviewer', true)
                 ->orWhere('is_lead', true)
-                ->orWhereIn('role', [UserRole::ADMIN->value, UserRole::COORDINATOR->value]))
+                ->orWhere(fn ($staff) => $staff->withAnyRole(UserRole::ADMIN, UserRole::COORDINATOR)))
             ->orderBy('name')
             ->get(['id', 'name']);
     }
@@ -821,7 +821,7 @@ class DeliverablePanel extends Component
     {
         $user = auth()->user();
 
-        if ($user === null || $user->role !== UserRole::DESIGNER) {
+        if ($user === null || ! $user->isDesigner()) {
             return false;
         }
 

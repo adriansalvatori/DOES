@@ -3,20 +3,12 @@
 use App\Http\Controllers\GoogleDriveAuthController;
 use App\Http\Controllers\MediaController;
 use App\Livewire\Auth\Login;
-use App\Livewire\Backlog\Index as BacklogIndex;
 use App\Livewire\Clients\ClientIndex;
 use App\Livewire\Contacts\ContactIndex;
-use App\Livewire\Dashboard\Analytics;
-use App\Livewire\Dashboard\Index;
-use App\Livewire\Kanban\Board;
-use App\Livewire\Orders\ArchivedOrders;
 use App\Livewire\Orders\TrashBin;
-use App\Livewire\Overview\OverviewIndex;
-use App\Livewire\Planner\WeeklyPlanner;
 use App\Livewire\Portal\ClientPortal;
 use App\Livewire\Pricing\DesignResourcesIndex;
 use App\Livewire\Pricing\PricingIndex;
-use App\Livewire\Resolver\ResolverList;
 use App\Livewire\Settings\Backups;
 use App\Livewire\Settings\ColorCoding;
 use App\Livewire\Settings\CsvReconciliation;
@@ -27,12 +19,7 @@ use App\Livewire\Settings\LanguageSettings;
 use App\Livewire\Settings\NotificationSettings;
 use App\Livewire\Settings\ProfileSettings;
 use App\Livewire\Settings\SettingsIndex;
-use App\Livewire\Settings\Substatuses;
-use App\Livewire\Settings\SubtaskPresets;
-use App\Livewire\Settings\TrelloMapping;
-use App\Livewire\Settings\TrelloSync;
 use App\Livewire\Settings\UserManagement;
-use App\Livewire\Tasks\TaskList;
 use App\Models\User;
 use App\Services\DemoEnvironmentService;
 use App\Services\TrelloSyncService;
@@ -78,33 +65,20 @@ Route::get('/demo-login/{role}', function (string $role) {
         cookie()->queue(cookie()->forever('kudos_demo_mode', '1'));
     }
 
-    return redirect()->route('dashboard');
+    return redirect()->route('today');
 })->name('demo.direct-login');
 
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
-    Route::get('/', Index::class)->name('dashboard');
-    Route::get('/overview', OverviewIndex::class)->name('overview');
     Route::get('/pricing', PricingIndex::class)->name('pricing');
     Route::get('/design-resources', DesignResourcesIndex::class)->name('design-resources');
     Route::get('/contacts', ContactIndex::class)->name('contacts');
     Route::get('/clients', ClientIndex::class)->name('clients');
-    Route::get('/analytics', Analytics::class)->name('analytics');
-    Route::get('/backlog', BacklogIndex::class)->name('backlog');
-    Route::get('/kanban', Board::class)->name('kanban');
-    Route::get('/archived', ArchivedOrders::class)->name('archived');
-    Route::get('/planner', WeeklyPlanner::class)->name('planner');
-    Route::get('/tasks', TaskList::class)->name('tasks');
-    Route::get('/resolver', ResolverList::class)->name('resolver');
-    Route::get('/trello-sync', TrelloSync::class)->name('trello-sync');
     Route::get('/settings', SettingsIndex::class)->name('settings.index');
     Route::get('/settings/documentation', Documentation::class)->name('settings.documentation');
     Route::get('/settings/color-coding', ColorCoding::class)->name('settings.color-coding');
     Route::get('/settings/language', LanguageSettings::class)->name('settings.language');
-    Route::get('/settings/substatuses', Substatuses::class)->name('settings.substatuses');
     Route::get('/settings/installation-types', InstallationTypes::class)->name('settings.installation-types');
-    Route::get('/settings/subtasks', SubtaskPresets::class)->name('settings.subtasks');
-    Route::get('/settings/trello-mapping', TrelloMapping::class)->name('settings.trello-mapping');
     Route::get('/settings/csv-reconciliation', CsvReconciliation::class)->name('settings.csv-reconciliation');
     Route::get('/settings/backups', Backups::class)->name('settings.backups');
     Route::get('/settings/profile', ProfileSettings::class)->name('settings.profile');
@@ -114,6 +88,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings/google-drive/connect', [GoogleDriveAuthController::class, 'redirect'])->name('google-drive.connect');
     Route::get('/settings/google-drive/callback', [GoogleDriveAuthController::class, 'callback'])->name('google-drive.callback');
     Route::get('/trash', TrashBin::class)->name('trash');
+
+    require __DIR__.'/rebuild.php';
 
     Route::get('/media/{media}/file', [MediaController::class, 'file'])->name('media.file');
     Route::get('/media/{media}/thumbnail', [MediaController::class, 'thumbnail'])->name('media.thumbnail');
@@ -187,7 +163,7 @@ Route::get($livewireUpdatePath, function (Request $request) {
         return redirect()->to($referer);
     }
 
-    return redirect()->route('dashboard');
+    return redirect()->route('today');
 });
 
 Route::get('/livewire/update', function (Request $request) {
@@ -196,7 +172,7 @@ Route::get('/livewire/update', function (Request $request) {
         return redirect()->to($referer);
     }
 
-    return redirect()->route('dashboard');
+    return redirect()->route('today');
 });
 
 // Robust file preview route handler for Livewire uploads (handles proxy/SSL environments and inline disposition)
@@ -236,5 +212,3 @@ if ($livewirePreviewPath !== '/livewire/preview-file/{filename}') {
     Route::get('/livewire/preview-file/{filename}', $handleFilePreview)
         ->middleware(['web']);
 }
-
-require __DIR__.'/rebuild.php';

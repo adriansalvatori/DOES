@@ -4,6 +4,7 @@ namespace App\Livewire\Board;
 
 use App\Application\Delivery\Data\BoardColumn;
 use App\Application\Delivery\Data\BoardFilters;
+use App\Application\Delivery\Queries\BoardLimits;
 use App\Application\Delivery\Queries\BoardQuery;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Models\Designer;
@@ -18,23 +19,41 @@ class BoardSnapshot
 {
     private const RESULTS = 'board.snapshot.results';
 
+    private const CAPS = 'board.snapshot.column-caps';
+
     private const COLORS = 'board.snapshot.designer-colors';
 
+    /**
+     * The column's cards. One run per area and filter set serves every column at its Board & WIP cap; a column that
+     * asked for more cards (Show more) gets its own run.
+     */
     public static function column(User $viewer, DeliverableStatus $status, BoardFilters $filters, int $cap): BoardColumn
     {
-        $key = implode('|', [
+        $area = $status->area();
+        $baseKey = implode('|', [
             $viewer->getKey(),
-            $status->area()->value,
+            $area->value,
             $filters->assigneeId,
             $filters->clientId,
             implode(',', array_map(fn ($flag): string => $flag->value, $filters->flags)),
             $filters->search,
-            $cap,
         ]);
 
         $attributes = request()->attributes;
         $results = $attributes->get(self::RESULTS, []);
-        $result = $results[$key] ??= app(BoardQuery::class)->run($viewer, $status->area(), $filters, $cap);
+
+        $key = $baseKey;
+        $caps = [];
+        foreach (DeliverableStatus::inArea($area) as $areaStatus) {
+            $caps[$areaStatus->value] = self::cap($areaStatus);
+        }
+
+        if ($cap > $caps[$status->value]) {
+            $key = $baseKey.'|'.$status->value.'|'.$cap;
+            $caps[$status->value] = $cap;
+        }
+
+        $result = $results[$key] ??= app(BoardQuery::class)->run($viewer, $area, $filters, $caps);
         $attributes->set(self::RESULTS, $results);
 
         foreach ($result->columns as $column) {
@@ -44,6 +63,23 @@ class BoardSnapshot
         }
 
         return new BoardColumn($status, 0, collect());
+    }
+
+    /**
+     * Cards a column shows per page, from Board & WIP. Settings are read once per request.
+     */
+    public static function cap(DeliverableStatus $status): int
+    {
+        $attributes = request()->attributes;
+
+        if (! $attributes->has(self::CAPS)) {
+            $limits = app(BoardLimits::class);
+            $attributes->set(self::CAPS, collect(DeliverableStatus::cases())
+                ->mapWithKeys(fn (DeliverableStatus $each): array => [$each->value => $limits->columnCap($each)])
+                ->all());
+        }
+
+        return $attributes->get(self::CAPS)[$status->value];
     }
 
     /**
@@ -72,5 +108,6 @@ class BoardSnapshot
     public static function flush(): void
     {
         request()->attributes->remove(self::RESULTS);
+        request()->attributes->remove(self::CAPS);
     }
 }

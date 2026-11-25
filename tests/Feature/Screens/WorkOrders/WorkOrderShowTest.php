@@ -64,7 +64,7 @@ class WorkOrderShowTest extends TestCase
         $this->piece($workOrder, DeliverableStatus::IN_DESIGN, ['task_name' => 'Top sign']);
 
         foreach (['admin', 'coordinator', 'designer', 'sales', 'customerService'] as $role) {
-            $this->actingAs(User::factory()->{$role}()->create())->get(route('v2.work-orders.show', $workOrder))
+            $this->actingAs(User::factory()->{$role}()->create())->get(route('work-orders.show', $workOrder))
                 ->assertOk()->assertSee('WO 15741')->assertSee('Talpa')->assertSee('Marietta')->assertSee('EST-4821')->assertSee('Installation')->assertSee('Top sign')
                 ->assertSee('Open client portal');
         }

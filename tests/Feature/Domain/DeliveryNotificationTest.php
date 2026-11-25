@@ -106,6 +106,16 @@ class DeliveryNotificationTest extends DeliveryTestCase
         $this->assertCount(1, $this->bell($service, 'order_blocked'));
     }
 
+    public function test_a_block_notification_carries_the_reason_code_for_the_bell(): void
+    {
+        $manager = $this->manager();
+        $service = $this->customerService();
+
+        app(BlockDeliverable::class)($this->deliverable(DeliverableStatus::IN_DESIGN), BlockReason::MISSING_LOGO, null, $this->designer(), $service);
+
+        $this->assertSame('missing_logo', $this->bell($manager, 'order_blocked')[0]['detail_params']['block_reason']);
+    }
+
     public function test_a_manager_who_owns_the_block_is_notified_once(): void
     {
         $manager = $this->manager();

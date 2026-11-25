@@ -2,6 +2,8 @@
 
 namespace App\Domain\Delivery\Enums;
 
+use App\Application\Delivery\Queries\WorkflowLabels;
+
 enum HoldReason: string
 {
     case PAUSED = 'paused';
@@ -11,6 +13,6 @@ enum HoldReason: string
 
     public function label(): string
     {
-        return __('enums.hold_reason.'.$this->value);
+        return app(WorkflowLabels::class)->label('hold_reason', $this->value);
     }
 }

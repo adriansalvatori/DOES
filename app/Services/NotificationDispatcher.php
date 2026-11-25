@@ -62,7 +62,7 @@ class NotificationDispatcher
         // - Designer assigned to the order (if applicable)
         $query = User::where('active', true)
             ->where(function ($q) use ($order) {
-                $q->whereIn('role', [UserRole::ADMIN->value, UserRole::COORDINATOR->value])
+                $q->withAnyRole(UserRole::ADMIN, UserRole::COORDINATOR)
                     ->orWhereHas('designer', function ($dq) {
                         $dq->where('is_lead', true);
                     });

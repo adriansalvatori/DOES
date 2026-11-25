@@ -2,6 +2,8 @@
 
 namespace App\Domain\Delivery\Enums;
 
+use App\Application\Delivery\Queries\WorkflowLabels;
+
 enum CloseReason: string
 {
     case COMPLETED = 'completed';
@@ -13,6 +15,6 @@ enum CloseReason: string
 
     public function label(): string
     {
-        return __('enums.close_reason.'.$this->value);
+        return app(WorkflowLabels::class)->label('close_reason', $this->value);
     }
 }

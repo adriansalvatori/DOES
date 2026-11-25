@@ -20,8 +20,6 @@ use Livewire\Component;
  */
 class Column extends Component
 {
-    public const PAGE_SIZE = 25;
-
     public string $status;
 
     public ?int $assigneeId = null;
@@ -68,6 +66,15 @@ class Column extends Component
         return DeliverableStatus::from($this->status);
     }
 
+    /**
+     * Cards per page: the cap set in Board & WIP for this column.
+     */
+    #[Computed]
+    public function pageSize(): int
+    {
+        return BoardSnapshot::cap($this->statusEnum);
+    }
+
     #[Computed]
     public function column(): BoardColumn
     {
@@ -78,7 +85,7 @@ class Column extends Component
             search: $this->search !== '' ? $this->search : null,
         );
 
-        return BoardSnapshot::column(auth()->user(), $this->statusEnum, $filters, self::PAGE_SIZE * $this->pagesShown);
+        return BoardSnapshot::column(auth()->user(), $this->statusEnum, $filters, $this->pageSize * $this->pagesShown);
     }
 
     /**

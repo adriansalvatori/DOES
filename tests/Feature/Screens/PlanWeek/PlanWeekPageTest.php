@@ -60,8 +60,8 @@ class PlanWeekPageTest extends TestCase
 
     public function test_sales_and_customer_service_are_forbidden(): void
     {
-        $this->actingAs(User::factory()->sales()->create())->get(route('v2.plan-week'))->assertForbidden();
-        $this->actingAs(User::factory()->customerService()->create())->get(route('v2.plan-week'))->assertForbidden();
+        $this->actingAs(User::factory()->sales()->create())->get(route('plan-week'))->assertForbidden();
+        $this->actingAs(User::factory()->customerService()->create())->get(route('plan-week'))->assertForbidden();
     }
 
     public function test_backlog_is_sorted_by_promised_date_and_blocked_items_are_greyed_and_not_draggable(): void

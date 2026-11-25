@@ -33,8 +33,7 @@ class IndexTest extends TestCase
         $this->actingAs($user)
             ->get('/')
             ->assertStatus(200)
-            ->assertSee(__('Today'))
-            ->assertSee('tour-dashboard-stats', false);
+            ->assertSee(__('Today'));
 
         Livewire::actingAs($user)
             ->test(Index::class)

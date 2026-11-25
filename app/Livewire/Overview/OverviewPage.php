@@ -50,7 +50,7 @@ class OverviewPage extends Component
     public function mount(): void
     {
         $user = Auth::user();
-        abort_unless($user !== null && in_array($user->role, [UserRole::ADMIN, UserRole::COORDINATOR], true), 403);
+        abort_unless($user !== null && $user->hasRole(UserRole::ADMIN, UserRole::COORDINATOR), 403);
     }
 
     public function updating(string $property): void

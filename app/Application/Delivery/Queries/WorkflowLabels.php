@@ -11,8 +11,7 @@ class WorkflowLabels
 {
     public const LOCALES = ['en', 'es'];
 
-    /** @var array<string, array<string, WorkflowLabel>>|null */
-    private ?array $rows = null;
+    private const CACHE = 'workflow.labels.rows';
 
     public function label(string $kind, string $code, ?string $locale = null): string
     {
@@ -51,12 +50,33 @@ class WorkflowLabels
     }
 
     /**
+     * Drops the per-request cache. Called whenever a label row changes.
+     */
+    public static function forget(): void
+    {
+        request()->attributes->remove(self::CACHE);
+    }
+
+    /**
+     * One read per request, shared by every instance, so enum labels in a list never query one by one.
+     *
      * @return array<string, array<string, WorkflowLabel>>
      */
     private function rows(): array
     {
-        return $this->rows ??= WorkflowLabel::query()->get()->groupBy('kind')
-            ->map(fn ($labels) => $labels->keyBy('code')->all())
-            ->all();
+        $attributes = request()->attributes;
+
+        if (! $attributes->has(self::CACHE)) {
+            // Without the table (before migrating, or in database-less unit tests) the built-in lang labels apply.
+            $attributes->set(self::CACHE, rescue(
+                fn (): array => WorkflowLabel::query()->get()->groupBy('kind')
+                    ->map(fn ($labels) => $labels->keyBy('code')->all())
+                    ->all(),
+                [],
+                false,
+            ));
+        }
+
+        return $attributes->get(self::CACHE);
     }
 }

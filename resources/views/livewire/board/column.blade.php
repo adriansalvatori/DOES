@@ -62,7 +62,7 @@
         @if($column->hiddenCount() > 0)
             <button type="button" wire:click="showMore" wire:loading.attr="disabled" wire:target="showMore"
                     class="w-full h-8 rounded-control border border-line bg-surface hover:bg-sunken text-meta font-medium text-ink-2 transition cursor-pointer">
-                {{ __('Show :count more', ['count' => min($column->hiddenCount(), \App\Livewire\Board\Column::PAGE_SIZE)]) }}
+                {{ __('Show :count more', ['count' => min($column->hiddenCount(), $this->pageSize)]) }}
                 <span class="text-ink-3 tabular-nums">({{ $column->hiddenCount() }})</span>
             </button>
         @endif

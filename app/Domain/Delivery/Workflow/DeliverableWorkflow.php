@@ -25,6 +25,7 @@ use App\Infrastructure\Legacy\LegacyProjection;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -306,7 +307,7 @@ class DeliverableWorkflow
     /**
      * Required gate tasks that lead to a status.
      *
-     * @return \Illuminate\Support\Collection<int, Task>
+     * @return Collection<int, Task>
      */
     public function requiredGates(Deliverable $deliverable, DeliverableStatus $advancesTo)
     {

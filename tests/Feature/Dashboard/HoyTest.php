@@ -96,7 +96,7 @@ class HoyTest extends TestCase
         $this->actingAs($user)->get('/')
             ->assertOk()
             ->assertSee('<title>'.__('Today'), false)
-            ->assertSee(now()->locale(app()->getLocale())->translatedFormat(app()->getLocale() === 'es' ? 'l j \d\e F' : 'l, F j'));
+            ->assertSee(ucfirst(now()->locale(app()->getLocale())->isoFormat('dddd, LL')));
     }
 
     public function test_designers_do_not_get_the_resolver_segment(): void

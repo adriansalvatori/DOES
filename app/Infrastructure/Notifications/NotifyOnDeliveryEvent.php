@@ -116,7 +116,7 @@ class NotifyOnDeliveryEvent implements ShouldQueue
     {
         $reason = $event->block->reason->label();
 
-        $this->send('order_blocked', 'Blocked', $event->deliverable, $reason, $event->actor, urgent: true, detailKey: ':reason', detailParams: ['reason' => $reason]);
+        $this->send('order_blocked', 'Blocked', $event->deliverable, $reason, $event->actor, urgent: true, detailKey: ':reason', detailParams: $this->blockParams($event, $reason));
         $this->notifyBlockOwner($event, $reason);
     }
 
@@ -143,7 +143,7 @@ class NotifyOnDeliveryEvent implements ShouldQueue
             return;
         }
 
-        $alreadyNotified = in_array($owner->role, [UserRole::ADMIN, UserRole::COORDINATOR], true) || (bool) $owner->designer?->is_lead;
+        $alreadyNotified = $owner->hasRole(UserRole::ADMIN, UserRole::COORDINATOR) || (bool) $owner->designer?->is_lead;
         if ($alreadyNotified) {
             return;
         }
@@ -161,8 +161,18 @@ class NotifyOnDeliveryEvent implements ShouldQueue
             designerId: $order->designer_id,
             designerName: $order->designer?->name,
             detailKey: ':reason',
-            detailParams: ['reason' => $reason],
+            detailParams: $this->blockParams($event, $reason),
         ));
+    }
+
+    /**
+     * The block reason code travels with the rendered text so the bell can show it in the reader's language.
+     *
+     * @return array{reason: string, block_reason: string}
+     */
+    private function blockParams(DeliverableBlocked $event, string $reason): array
+    {
+        return ['reason' => $reason, 'block_reason' => $event->block->reason->value];
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Domain\Delivery\Support\Roles;
 use App\Models\User;
 
 /**
@@ -21,44 +22,43 @@ class NavigationService
     public function primaryGroups(?User $user): array
     {
         $isDesigner = (bool) $user?->isDesigner();
-        $isSales = (bool) $user?->isSales();
+        $isManager = Roles::isManager($user);
+        $isAdminOrCoordinator = (bool) ($user?->isAdmin() || $user?->isCoordinator());
+        $canResolve = $isAdminOrCoordinator || Roles::isCustomerService($user);
 
         return $this->filterGroups([
             [
-                $this->item(__('Today'), __('Operational Control Center'), '/', '/', 'sun', true),
+                $this->item(__('Today'), __('Today'), '/', '/', 'sun', true),
+                $this->item(__('Board'), __('Board'), '/board', 'board*', 'kanban', true),
+                $this->item(__('Plan week'), __('Plan week'), '/plan-week', 'plan-week*', 'calendar-days', $isManager),
+                $this->item(__('Work orders'), __('Work orders'), '/work-orders', 'work-orders*', 'clipboard-list', true),
+                $this->item(__('Resolver'), __('Resolver'), '/resolver', 'resolver*', 'life-buoy', $canResolve),
+                $this->item(__('Overview'), __('Operations overview'), '/overview', 'overview*', 'table-properties', $isAdminOrCoordinator),
                 $this->item(__('Analytics'), __('Analytics Dashboard'), '/analytics', 'analytics*', 'bar-chart-3', ! $isDesigner),
             ],
             [
-                $this->item(__('Kanban Board'), __('Kanban Board'), '/kanban', 'kanban*', 'kanban', true),
-                $this->item(__('Weekly Planner'), __('Weekly Planner'), '/planner', 'planner*', 'calendar-days', true),
-                $this->item(__('Overview'), __('Operations overview'), '/overview', 'overview*', 'table-properties', ! $isDesigner),
-            ],
-            [
-                $this->item(__('Client directory'), __('Client directory'), '/contacts', 'contacts*', 'users', true),
                 $this->item(__('Companies'), __('Companies'), '/clients', 'clients*', 'building-2', true),
-                $this->item(__('Archived'), __('Archived Orders'), '/archived', 'archived*', 'archive', true),
-                $this->item(__('Trash'), __('Recycling Bin'), '/trash', 'trash*', 'trash-2', ! $isDesigner && ! $isSales),
+                $this->item(__('Contacts'), __('Client directory'), '/contacts', 'contacts*', 'users', true),
             ],
             [
                 $this->item(__('Pricing & Calculator'), __('Pricing & Calculator'), '/pricing', 'pricing*', 'badge-percent', true),
                 $this->item(__('Design Resources'), __('Design Resources'), '/design-resources', 'design-resources*', 'folder-down', true),
             ],
+            [
+                $this->item(__('Backlog'), __('Order Backlog'), '/backlog', 'backlog*', 'box', $isAdminOrCoordinator),
+                $this->item(__('Trash'), __('Recycling Bin'), '/trash', 'trash*', 'trash-2', $isAdminOrCoordinator),
+            ],
         ]);
     }
 
     /**
-     * Links docked at the bottom of the sidebar, above the account menu.
+     * Links docked at the bottom of the sidebar, above the account menu (the Settings link is added by the layout).
      *
      * @return array<int, array{label: string, title: string, href: string, pattern: string, icon: string}>
      */
     public function bottomItems(?User $user): array
     {
-        $canSync = (bool) ($user?->isAdmin() || $user?->isCoordinator());
-
-        return $this->filterItems([
-            $this->item(__('Backlog'), __('Order Backlog'), '/backlog', 'backlog*', 'box', true),
-            $this->item(__('Sync'), __('Trello Sync'), '/trello-sync', 'trello-sync*', 'refresh-cw', $canSync),
-        ]);
+        return [];
     }
 
     /**
@@ -92,9 +92,10 @@ class NavigationService
                 'key' => 'workflow',
                 'label' => __('Workflow'),
                 'items' => [
-                    $this->item(__('Substatuses'), __('Substatus Configuration'), '/settings/substatuses', 'settings/substatuses*', 'tags', $canConfigureWorkflow, __('Reasons and secondary states for an order.')),
+                    $this->item(__('Reasons & flags'), __('Reasons & flags'), '/settings/reasons', 'settings/reasons*', 'tags', $canConfigureWorkflow, __('Block, hold and close reasons, and the flags on a work order.')),
+                    $this->item(__('Task templates'), __('Task templates'), '/settings/task-templates', 'settings/task-templates*', 'list-checks', $canConfigureWorkflow, __('Tasks created with every work order.')),
+                    $this->item(__('Board & WIP'), __('Board & WIP limits'), '/settings/board', 'settings/board*', 'kanban', $canConfigureWorkflow, __('Column limits and how the board behaves.')),
                     $this->item(__('Installation'), __('Installation type settings'), '/settings/installation-types', 'settings/installation-types*', 'truck', $canConfigureWorkflow, __('Available installation types.')),
-                    $this->item(__('Subtask Templates'), __('Subtask Templates'), '/settings/subtasks', 'settings/subtasks*', 'list-checks', $canConfigureWorkflow, __('Subtasks created with every order.')),
                     $this->item(__('Color coding'), __('Color customization'), '/settings/color-coding', 'settings/color-coding*', 'palette', $canConfigureWorkflow, __('Colors for the people on the team.')),
                 ],
             ],
@@ -103,8 +104,6 @@ class NavigationService
                 'label' => __('Integrations'),
                 'items' => [
                     $this->item(__('Google Drive'), __('Google Drive'), '/settings/google-drive', 'settings/google-drive*', 'hard-drive', $isAdmin, __('Google account where files are stored.')),
-                    $this->item(__('Trello List Mapping'), __('Trello List Mapping'), '/settings/trello-mapping', 'settings/trello-mapping*', 'sliders', $isAdmin, __('Which Trello list matches each status.')),
-                    $this->item(__('Sync'), __('Trello Sync'), '/trello-sync', 'trello-sync*', 'refresh-cw', $canConfigureWorkflow, __('Trello credentials and sync.')),
                 ],
             ],
             [

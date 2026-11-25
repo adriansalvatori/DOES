@@ -15,6 +15,7 @@ use App\Enums\BlockingReason;
 use App\Enums\CoreStatus;
 use App\Enums\Substatus;
 use App\Services\TrelloSyncService;
+use App\Support\TrelloCutover;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -291,7 +292,7 @@ class LegacyProjection
      */
     private function queueTrelloPush(int $orderId): void
     {
-        if (isset($this->pendingTrelloPush[$orderId])) {
+        if (TrelloCutover::isComplete() || isset($this->pendingTrelloPush[$orderId])) {
             return;
         }
 

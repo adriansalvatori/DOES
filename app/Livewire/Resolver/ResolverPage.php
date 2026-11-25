@@ -90,7 +90,7 @@ class ResolverPage extends Component
     {
         return User::query()
             ->where('active', true)
-            ->whereIn('role', [UserRole::CUSTOMER_SERVICE->value, UserRole::COORDINATOR->value, UserRole::ADMIN->value])
+            ->withAnyRole(UserRole::CUSTOMER_SERVICE, UserRole::COORDINATOR, UserRole::ADMIN)
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn (User $user): array => ['id' => $user->id, 'name' => $user->name])

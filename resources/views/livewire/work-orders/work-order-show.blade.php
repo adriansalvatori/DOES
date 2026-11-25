@@ -85,7 +85,7 @@
      }">
     <x-ui.page-header :title="$clientName ?: __('No client')" :subtitle="__('Work order')">
         <x-slot:actions>
-            <a href="{{ route('v2.work-orders.index') }}" wire:navigate class="ui-btn ui-btn-ghost">{{ __('All work orders') }}</a>
+            <a href="{{ route('work-orders.index') }}" wire:navigate class="ui-btn ui-btn-ghost">{{ __('All work orders') }}</a>
             @if($this->canEdit)
                 <button type="button" class="ui-btn ui-btn-secondary" x-on:click="startEdit()" x-show="! editing">{{ __('Edit details') }}</button>
             @endif

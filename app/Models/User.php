@@ -7,6 +7,7 @@ use App\Domain\Delivery\Models\Deliverable;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\AsEnumCollection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -23,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'roles',
         'phone',
         'preferences',
         'avatar_url',
@@ -50,6 +52,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => UserRole::class,
+            'roles' => AsEnumCollection::of(UserRole::class),
             'preferences' => 'array',
             'active' => 'boolean',
             'last_login_at' => 'datetime',
@@ -57,6 +60,30 @@ class User extends Authenticatable
             'is_reviewer' => 'boolean',
             'is_lead' => 'boolean',
         ];
+    }
+
+    /**
+     * Keep `role` (the primary role) in step with the `roles` list.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (User $user): void {
+            if ($user->isDirty('role') && ! $user->isDirty('roles')) {
+                $user->roles = null;
+
+                return;
+            }
+
+            if ($user->isDirty('roles')) {
+                $list = $user->roleList();
+
+                if ($list === []) {
+                    $user->roles = null;
+                } else {
+                    $user->role = UserRole::primaryOf($list);
+                }
+            }
+        });
     }
 
     public function designer(): HasOne
@@ -70,6 +97,21 @@ class User extends Authenticatable
     }
 
     /**
+     * Users holding any of the given roles, in the primary column or the roles list.
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeWithAnyRole(Builder $query, UserRole ...$roles): Builder
+    {
+        return $query->where(function (Builder $holders) use ($roles): void {
+            foreach ($roles as $role) {
+                $holders->orWhere('role', $role->value)->orWhereJsonContains('roles', $role->value);
+            }
+        });
+    }
+
+    /**
      * Active people who design: users with the designer role plus the design lead (Euralíz is an admin and the lead).
      *
      * @param  Builder<User>  $query
@@ -79,32 +121,75 @@ class User extends Authenticatable
     {
         return $query
             ->where('active', true)
-            ->where(fn (Builder $team) => $team->where('role', UserRole::DESIGNER->value)->orWhere('is_lead', true));
+            ->where(fn (Builder $team) => $team
+                ->where('role', UserRole::DESIGNER->value)
+                ->orWhereJsonContains('roles', UserRole::DESIGNER->value)
+                ->orWhere('is_lead', true));
+    }
+
+    /**
+     * Every role the user holds; falls back to the primary role while `roles` is empty.
+     *
+     * @return list<UserRole>
+     */
+    public function roleList(): array
+    {
+        $roles = $this->roles?->filter()->values()->all() ?? [];
+
+        if ($roles !== []) {
+            return $roles;
+        }
+
+        return $this->role instanceof UserRole ? [$this->role] : [];
+    }
+
+    public function hasRole(UserRole|string ...$roles): bool
+    {
+        $held = array_map(fn (UserRole $role): string => $role->value, $this->roleList());
+
+        foreach ($roles as $role) {
+            if (in_array($role instanceof UserRole ? $role->value : $role, $held, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function isCustomerService(): bool
     {
-        return $this->role === UserRole::CUSTOMER_SERVICE;
+        return $this->hasRole(UserRole::CUSTOMER_SERVICE);
     }
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::ADMIN;
+        return $this->hasRole(UserRole::ADMIN);
     }
 
     public function isCoordinator(): bool
     {
-        return $this->role === UserRole::COORDINATOR;
+        return $this->hasRole(UserRole::COORDINATOR);
     }
 
+    /**
+     * Designer-only: has the designer role and no admin or coordinator role (drives the "own work only" restrictions).
+     */
     public function isDesigner(): bool
     {
-        return $this->role === UserRole::DESIGNER;
+        return $this->hasRole(UserRole::DESIGNER) && ! $this->hasRole(UserRole::ADMIN, UserRole::COORDINATOR);
+    }
+
+    /**
+     * Whether the person does design work, whatever else they are (designer role or design lead).
+     */
+    public function designs(): bool
+    {
+        return $this->hasRole(UserRole::DESIGNER) || (bool) $this->is_lead;
     }
 
     public function isSales(): bool
     {
-        return $this->role === UserRole::SALES;
+        return $this->hasRole(UserRole::SALES);
     }
 
     public function isLeadDesigner(): bool
@@ -125,13 +210,6 @@ class User extends Authenticatable
     public function canManagePricing(): bool
     {
         return $this->isAdmin() || $this->isCoordinator();
-    }
-
-    public function hasRole(UserRole|string $role): bool
-    {
-        $roleValue = $role instanceof UserRole ? $role->value : $role;
-
-        return $this->role?->value === $roleValue;
     }
 
     public function getInitialsAttribute(): string

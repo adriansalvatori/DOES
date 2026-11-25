@@ -116,7 +116,7 @@
                         @foreach($workOrders as $workOrder)
                             <a
                                 wire:key="palette-wo-{{ $workOrder->id }}"
-                                href="{{ route('v2.work-orders.show', $workOrder) }}"
+                                href="{{ route('work-orders.show', $workOrder) }}"
                                 wire:navigate
                                 data-palette-item
                                 role="option"

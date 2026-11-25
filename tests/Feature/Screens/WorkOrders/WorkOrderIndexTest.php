@@ -45,7 +45,7 @@ class WorkOrderIndexTest extends TestCase
         $this->workOrder('Kuyen');
 
         foreach (['admin', 'coordinator', 'designer', 'sales', 'customerService'] as $role) {
-            $this->actingAs(User::factory()->{$role}()->create())->get(route('v2.work-orders.index'))->assertOk()->assertSee('Kuyen');
+            $this->actingAs(User::factory()->{$role}()->create())->get(route('work-orders.index'))->assertOk()->assertSee('Kuyen');
         }
     }
 
@@ -94,7 +94,7 @@ class WorkOrderIndexTest extends TestCase
         $workOrder = $this->workOrder('Kuyen');
 
         Livewire::actingAs(User::factory()->admin()->create())->test(WorkOrderIndex::class)
-            ->assertSeeHtml(route('v2.work-orders.show', $workOrder))
+            ->assertSeeHtml(route('work-orders.show', $workOrder))
             ->assertSeeHtml('open-create-work-order');
     }
 

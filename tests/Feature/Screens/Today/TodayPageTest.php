@@ -57,7 +57,7 @@ class TodayPageTest extends TestCase
         $blocked = $this->deliverable(DeliverableStatus::IN_DESIGN, ['assignee_id' => $designer->id, 'planned_for' => '2026-11-25', 'task_name' => 'Blocked piece']);
         Block::factory()->create(['deliverable_id' => $blocked->id]);
 
-        $this->actingAs($designer)->get(route('v2.today'))->assertOk()->assertSee('Planned piece')->assertDontSee('Blocked piece');
+        $this->actingAs($designer)->get(route('today'))->assertOk()->assertSee('Planned piece')->assertDontSee('Blocked piece');
 
         Livewire::actingAs($designer)->test(DesignerSection::class, ['designerId' => $designer->id])
             ->assertSee('Acme Signs LLC')->assertSee('→ Internal review')->assertSee('1 / 4');
@@ -167,7 +167,7 @@ class TodayPageTest extends TestCase
         Block::factory()->create(['deliverable_id' => $blocked->id]);
 
         Livewire::actingAs($service)->test(CustomerServiceSection::class)
-            ->assertSee('Acme Signs LLC')->assertSee(route('v2.resolver'), false);
+            ->assertSee('Acme Signs LLC')->assertSee(route('resolver'), false);
     }
 
     public function test_sales_user_gets_the_empty_state(): void
@@ -184,8 +184,8 @@ class TodayPageTest extends TestCase
 
         foreach (['en', 'es'] as $locale) {
             app()->setLocale($locale);
-            $this->actingAs($camila)->get(route('v2.today'))->assertOk()->assertDontSee('enums.');
-            $this->actingAs($designer)->get(route('v2.today'))->assertOk()->assertDontSee('enums.');
+            $this->actingAs($camila)->get(route('today'))->assertOk()->assertDontSee('enums.');
+            $this->actingAs($designer)->get(route('today'))->assertOk()->assertDontSee('enums.');
         }
     }
 

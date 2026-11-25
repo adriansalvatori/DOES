@@ -107,8 +107,8 @@ class DeliverablePanelTest extends TestCase
         $html = $this->panel($this->manager(), $deliverable)->html();
 
         $this->assertStringContainsString('bg-wo', $html);
-        if (Route::has('v2.work-orders.show')) {
-            $this->assertStringContainsString(route('v2.work-orders.show', $deliverable->workOrder), $html);
+        if (Route::has('work-orders.show')) {
+            $this->assertStringContainsString(route('work-orders.show', $deliverable->workOrder), $html);
         }
     }
 

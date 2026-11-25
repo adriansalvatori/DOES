@@ -37,18 +37,47 @@ class NavigationShellTest extends TestCase
         $navigation = app(NavigationService::class);
 
         $adminHrefs = $this->hrefs(array_merge(...$navigation->primaryGroups(User::factory()->admin()->make())));
-        $this->assertContains('/analytics', $adminHrefs);
-        $this->assertContains('/overview', $adminHrefs);
-        $this->assertContains('/trash', $adminHrefs);
+        foreach (['/', '/board', '/plan-week', '/work-orders', '/resolver', '/overview', '/analytics', '/clients', '/contacts', '/pricing', '/design-resources', '/backlog', '/trash'] as $href) {
+            $this->assertContains($href, $adminHrefs);
+        }
 
         $designerHrefs = $this->hrefs(array_merge(...$navigation->primaryGroups(User::factory()->designer()->make())));
-        $this->assertNotContains('/analytics', $designerHrefs);
-        $this->assertNotContains('/overview', $designerHrefs);
-        $this->assertNotContains('/trash', $designerHrefs);
-        $this->assertContains('/kanban', $designerHrefs);
+        $this->assertSame(['/', '/board', '/work-orders', '/clients', '/contacts', '/pricing', '/design-resources'], $designerHrefs);
+
+        $leadDesignerHrefs = $this->hrefs(array_merge(...$navigation->primaryGroups(User::factory()->designer()->make(['is_lead' => true]))));
+        $this->assertContains('/plan-week', $leadDesignerHrefs);
 
         $salesHrefs = $this->hrefs(array_merge(...$navigation->primaryGroups(User::factory()->sales()->make())));
+        $this->assertContains('/analytics', $salesHrefs);
         $this->assertNotContains('/trash', $salesHrefs);
+        $this->assertNotContains('/resolver', $salesHrefs);
+        $this->assertNotContains('/plan-week', $salesHrefs);
+
+        $customerServiceHrefs = $this->hrefs(array_merge(...$navigation->primaryGroups(User::factory()->customerService()->make())));
+        $this->assertContains('/resolver', $customerServiceHrefs);
+        $this->assertNotContains('/overview', $customerServiceHrefs);
+        $this->assertNotContains('/backlog', $customerServiceHrefs);
+
+        $coordinatorHrefs = $this->hrefs(array_merge(...$navigation->primaryGroups(User::factory()->coordinator()->make())));
+        foreach (['/plan-week', '/resolver', '/overview', '/backlog', '/trash'] as $href) {
+            $this->assertContains($href, $coordinatorHrefs);
+        }
+    }
+
+    public function test_navigation_no_longer_offers_the_trello_screens(): void
+    {
+        $navigation = app(NavigationService::class);
+        $admin = User::factory()->admin()->make();
+
+        $hrefs = $this->hrefs([
+            ...array_merge(...$navigation->primaryGroups($admin)),
+            ...$navigation->bottomItems($admin),
+            ...array_merge(...array_column($navigation->settingsGroups($admin), 'items')),
+        ]);
+
+        foreach (['/trello-sync', '/settings/trello-mapping', '/kanban', '/planner', '/archived', '/settings/substatuses', '/settings/subtasks'] as $legacy) {
+            $this->assertNotContains($legacy, $hrefs);
+        }
     }
 
     public function test_settings_groups_follow_role_permissions(): void
@@ -59,7 +88,10 @@ class NavigationShellTest extends TestCase
         $this->assertSame(['account', 'team', 'workflow', 'integrations', 'data', 'help'], $adminKeys);
 
         $coordinatorGroups = $navigation->settingsGroups(User::factory()->coordinator()->make());
-        $this->assertSame(['account', 'workflow', 'integrations'], array_column($coordinatorGroups, 'key'));
+        $this->assertSame(['account', 'workflow'], array_column($coordinatorGroups, 'key'));
+        $this->assertContains('/settings/reasons', $this->hrefs($coordinatorGroups[1]['items']));
+        $this->assertContains('/settings/task-templates', $this->hrefs($coordinatorGroups[1]['items']));
+        $this->assertContains('/settings/board', $this->hrefs($coordinatorGroups[1]['items']));
 
         $designerGroups = $navigation->settingsGroups(User::factory()->designer()->make());
         $this->assertSame(['account'], array_column($designerGroups, 'key'));
@@ -103,7 +135,7 @@ class NavigationShellTest extends TestCase
             ->assertSee(__('Search or jump to…'))
             ->assertSee(__('New work order'))
             ->assertSee('href="/settings"', false)
-            ->assertSee('href="/kanban"', false)
+            ->assertSee('href="/board"', false)
             ->assertDontSee(__('Traer Nuevas'))
             ->set('search', '16412')
             ->assertSee('WO 16412');
@@ -114,7 +146,7 @@ class NavigationShellTest extends TestCase
         $this->actingAs(User::factory()->designer()->create());
 
         Livewire::test(HeaderSearch::class)
-            ->assertSee('href="/kanban"', false)
+            ->assertSee('href="/board"', false)
             ->assertDontSee('href="/settings/backups"', false)
             ->assertDontSee('href="/analytics"', false);
     }

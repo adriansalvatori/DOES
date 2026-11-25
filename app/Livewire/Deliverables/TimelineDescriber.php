@@ -46,6 +46,10 @@ final class TimelineDescriber
             'receipt_logged' => __('Receipt logged (:method)', ['method' => self::enumLabel(FulfillmentMethod::class, $new)]),
             'carried_over' => __('Carried over to :date', ['date' => (string) $new]),
             'alert_resolved' => __('Alert resolved: :alert', ['alert' => self::enumLabel(AlertKind::class, $previous)]),
+            'reviewer_changed' => __('Reviewer changed: :from → :to', ['from' => $previous ?? __('(empty)'), 'to' => $new ?? __('(empty)')]),
+            'due_target_changed' => __('Due target changed: :from → :to', ['from' => $previous ?? __('(empty)'), 'to' => $new ?? __('(empty)')]),
+            'comment_added' => __('Comment added'),
+            'file_attached' => __('File attached: :name', ['name' => (string) $new]),
             'details_updated' => self::describeChanges($meta['changes'] ?? []),
             default => self::describeLegacy($event),
         };

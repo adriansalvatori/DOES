@@ -68,6 +68,7 @@ class LegacyBackfill
             $this->backfillApprovals();
             $this->mapTasks();
             $this->foldElements();
+            $this->correctClosedAt();
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -312,7 +313,7 @@ class LegacyBackfill
                     'trello_card_url' => $order->trello_card_id ? 'https://trello.com/c/'.$order->trello_card_id : null,
                     'flag_codes' => json_encode(array_map(fn (DeliverableFlag $flag): string => $flag->value, $flags)),
                     'close_reason' => $closeReason?->value,
-                    'closed_at' => $isDone ? ($order->archived_at ?? $order->updated_at) : null,
+                    'closed_at' => $isDone ? $this->legacyClosedAt($order) : null,
                 ]);
 
                 $key = trim(($order->core_status ?? '').' | '.($order->substatus ?? ''), ' |');
@@ -445,6 +446,90 @@ class LegacyBackfill
 
             $this->report['tasks'] = ['by_kind' => $kinds, 'alerts_created' => $alerts];
         });
+    }
+
+    /**
+     * Gives every backfilled done deliverable the time it really closed. Legacy archived_at and updated_at are often
+     * the moment a data migration touched the card, so they only count when nothing better exists. Idempotent, and it
+     * leaves alone deliverables closed through the new workflow (they have a deliverable_moved event into done).
+     *
+     * @return int Deliverables whose closed_at changed.
+     */
+    public function correctClosedAt(): int
+    {
+        return DB::transaction(function (): int {
+            $changed = 0;
+
+            $nativelyClosed = DB::table('order_events')
+                ->where('event_type', 'deliverable_moved')
+                ->where('new_value', DeliverableStatus::DONE->value)
+                ->pluck('order_id')
+                ->flip();
+
+            DB::table('orders')
+                ->where('status', DeliverableStatus::DONE->value)
+                ->whereNull('legacy_element_id')
+                ->orderBy('id')
+                ->each(function (object $order) use (&$changed, $nativelyClosed): void {
+                    if ($nativelyClosed->has($order->id)) {
+                        return;
+                    }
+
+                    $closedAt = $this->legacyClosedAt($order);
+                    if ($closedAt !== null && $closedAt !== $order->closed_at) {
+                        DB::table('orders')->where('id', $order->id)->update(['closed_at' => $closedAt]);
+                        $changed++;
+                    }
+                });
+
+            $elements = DB::table('orders as element')
+                ->join('order_elements', 'order_elements.id', '=', 'element.legacy_element_id')
+                ->join('orders as parent', 'parent.id', '=', 'order_elements.order_id')
+                ->where('element.status', DeliverableStatus::DONE->value)
+                ->whereNotNull('parent.closed_at')
+                ->whereColumn('element.closed_at', '!=', 'parent.closed_at')
+                ->select('element.id', 'parent.closed_at')
+                ->get();
+
+            foreach ($elements as $element) {
+                DB::table('orders')->where('id', $element->id)->update(['closed_at' => $element->closed_at]);
+                $changed++;
+            }
+
+            $this->report['closed_at_corrected'] = $changed;
+
+            return $changed;
+        });
+    }
+
+    /**
+     * When a legacy card closed: its last move to ARCHIVED, else the latest sign of activity (production processed,
+     * sent to client, any legacy event), else archived_at, else updated_at.
+     */
+    private function legacyClosedAt(object $order): ?string
+    {
+        $archivedEvent = DB::table('order_events')
+            ->where('order_id', $order->id)
+            ->where('event_type', 'CORE_STATUS_CHANGED')
+            ->where('new_value', 'ARCHIVED')
+            ->max('created_at');
+
+        if ($archivedEvent !== null) {
+            return $archivedEvent;
+        }
+
+        $activity = array_filter([
+            $order->production_processed_at ?? null,
+            $order->last_sent_to_client_at ?? null,
+            $order->production_sent_at ?? null,
+            DB::table('order_events')->where('order_id', $order->id)->where('event_type', 'not like', 'deliverable\_%')->max('created_at'),
+        ]);
+
+        if ($activity !== []) {
+            return Carbon::parse(max(array_map(fn ($value): string => Carbon::parse($value)->toDateTimeString(), $activity)))->toDateTimeString();
+        }
+
+        return $order->archived_at ?? $order->updated_at;
     }
 
     /**
@@ -875,7 +960,9 @@ class LegacyBackfill
     {
         $this->reviewerUserId = DB::table('users')->where('is_reviewer', true)->orderBy('id')->value('id');
         $this->customerServiceUserId = DB::table('users')
-            ->where('role', UserRole::CUSTOMER_SERVICE->value)->where('active', true)->orderBy('id')->value('id');
+            ->where('active', true)
+            ->where(fn ($holders) => $holders->where('role', UserRole::CUSTOMER_SERVICE->value)->orWhereJsonContains('roles', UserRole::CUSTOMER_SERVICE->value))
+            ->orderBy('id')->value('id');
 
         $managerId = $this->setting('manager_id');
         $this->managerUserId = $managerId !== null && DB::table('users')->where('id', $managerId)->exists()

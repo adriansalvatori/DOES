@@ -56,6 +56,14 @@ class UserFactory extends Factory
         return $this->state(fn () => ['role' => UserRole::CUSTOMER_SERVICE]);
     }
 
+    /**
+     * Give the user several roles at once; the primary role follows automatically.
+     */
+    public function withRoles(UserRole ...$roles): static
+    {
+        return $this->state(fn () => ['roles' => $roles, 'role' => UserRole::primaryOf(array_values($roles))]);
+    }
+
     public function reviewer(): static
     {
         return $this->state(fn () => ['is_reviewer' => true]);

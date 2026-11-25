@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Analytics;
 
-use App\Enums\UserRole;
 use App\Livewire\Analytics\Support\AnalyticsMetrics;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -17,7 +16,7 @@ class AnalyticsPage extends Component
     public function mount(): void
     {
         $user = Auth::user();
-        abort_unless($user !== null && $user->role !== UserRole::DESIGNER, 403);
+        abort_unless($user !== null && ! $user->isDesigner(), 403);
     }
 
     #[Computed]

@@ -11,7 +11,7 @@
             <span><b class="tabular-nums text-ink">{{ $data['dueToday']->count() }}</b> {{ __('due today') }}</span>
             <span @class(['text-danger' => $counts['urgent'] > 0])><b class="tabular-nums">{{ $counts['urgent'] }}</b> {{ __('urgent') }}</span>
             <span><b class="tabular-nums text-ink">{{ $counts['unassigned'] }}</b> {{ __('unassigned') }}</span>
-            <a href="{{ route('v2.resolver') }}" wire:navigate class="hover:underline"><b class="tabular-nums text-ink">{{ $counts['blocked'] + $counts['onHold'] }}</b> {{ __('blocked or on hold') }}</a>
+            <a href="{{ route('resolver') }}" wire:navigate class="hover:underline"><b class="tabular-nums text-ink">{{ $counts['blocked'] + $counts['onHold'] }}</b> {{ __('blocked or on hold') }}</a>
         </div>
     </div>
 

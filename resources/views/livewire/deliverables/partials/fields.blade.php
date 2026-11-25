@@ -15,7 +15,19 @@
             </div>
             <div>
                 <dt class="text-meta text-ink-3">{{ __('Reviewer') }}</dt>
-                <dd class="mt-0.5"><x-ui.person :person="$deliverable->reviewer" size="sm" show-name /></dd>
+                <dd class="mt-0.5">
+                    @if($can['changeReviewer'])
+                        <select class="ui-select" aria-label="{{ __('Reviewer') }}" data-field="reviewer" data-current="{{ $deliverable->reviewer_id }}"
+                            @change="confirmReviewer($event.target, @js(__('Reviewer')), @js($deliverable->reviewer?->name ?? __('(empty)')), @js(__('(empty)')))">
+                            <option value="" @selected($deliverable->reviewer_id === null)>{{ __('(empty)') }}</option>
+                            @foreach($this->reviewerOptions as $option)
+                                <option value="{{ $option->id }}" @selected($deliverable->reviewer_id === $option->id)>{{ $option->name }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <x-ui.person :person="$deliverable->reviewer" size="sm" show-name />
+                    @endif
+                </dd>
             </div>
             <div>
                 <dt class="text-meta text-ink-3">{{ __('Planned for') }}</dt>
@@ -24,7 +36,10 @@
             <div>
                 <dt class="text-meta text-ink-3">{{ __('Due target') }}</dt>
                 <dd class="mt-0.5 text-body text-ink">
-                    @if($due)
+                    @if($can['changeDueTarget'] && ! $isClosed)
+                        <input type="date" class="ui-input" aria-label="{{ __('Due target') }}" data-field="due-target" value="{{ $due?->toDateString() }}" data-current="{{ $due?->toDateString() }}"
+                            @change="confirmDueTarget($event.target, @js(__('Due target')), @js($due?->translatedFormat('j M Y') ?? __('(empty)')), @js(__('(empty)')))">
+                    @elseif($due)
                         <x-ui.tag :tone="$dueTone">{{ $due->translatedFormat('j M Y') }}</x-ui.tag>
                     @else
                         —

@@ -632,7 +632,7 @@ window.KudosNotifier = {
             notif.onclick = () => {
                 window.focus();
                 if (orderId && window.Livewire) {
-                    window.Livewire.dispatch('open-order-detail', { orderId: orderId });
+                    window.Livewire.dispatch('open-deliverable', { deliverableId: orderId });
                 }
                 notif.close();
             };

@@ -90,11 +90,12 @@ class ArchivedOrdersTest extends TestCase
         ]);
 
         $user = User::factory()->create();
-        $response = $this->actingAs($user)->get('/archived');
-        $response->assertStatus(200);
-        $response->assertSee('Archived orders');
-        $response->assertSee('CLOSED CLIENT');
-        $response->assertSee('Euralíz');
+        $this->actingAs($user)->get('/archived')->assertRedirect(route('work-orders.index', ['tab' => 'done']));
+
+        Livewire::test(ArchivedOrders::class)
+            ->assertSee('Archived orders')
+            ->assertSee('CLOSED CLIENT')
+            ->assertSee('Euralíz');
     }
 
     public function test_archived_orders_page_allows_archiving_and_restoring_orders(): void

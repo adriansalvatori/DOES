@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -124,6 +125,15 @@ class DesignerSection extends Component
             $this->dispatch('toast', message: __('You are not allowed to do this.'), type: 'error');
         }
 
+        unset($this->data, $this->nextGates);
+    }
+
+    /**
+     * The panel changed a deliverable: reload this section only.
+     */
+    #[On('deliverable-changed')]
+    public function refreshAfterPanelChange(): void
+    {
         unset($this->data, $this->nextGates);
     }
 

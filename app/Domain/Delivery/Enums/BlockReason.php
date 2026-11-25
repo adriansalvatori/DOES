@@ -2,6 +2,8 @@
 
 namespace App\Domain\Delivery\Enums;
 
+use App\Application\Delivery\Queries\WorkflowLabels;
+
 enum BlockReason: string
 {
     case MISSING_MEASUREMENTS = 'missing_measurements';
@@ -14,6 +16,6 @@ enum BlockReason: string
 
     public function label(): string
     {
-        return __('enums.block_reason.'.$this->value);
+        return app(WorkflowLabels::class)->label('block_reason', $this->value);
     }
 }

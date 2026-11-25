@@ -21,7 +21,6 @@ use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\Phase;
 use App\Domain\Delivery\Models\WorkOrder;
 use App\Domain\Delivery\Support\Roles;
-use App\Enums\UserRole;
 use App\Models\Client;
 use App\Models\User;
 use App\Support\TitleCase;
@@ -29,6 +28,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
 use Livewire\Component;
 
@@ -51,6 +51,17 @@ class WorkOrderShow extends Component
     }
 
     /**
+     * Reloads the page when the panel changed one of this work order's deliverables.
+     */
+    #[On('deliverable-changed')]
+    public function refreshAfterPanelChange(int $deliverableId): void
+    {
+        if (Deliverable::query()->withTrashed()->whereKey($deliverableId)->where('work_order_id', $this->workOrder->getKey())->exists()) {
+            unset($this->page);
+        }
+    }
+
+    /**
      * Managers edit the record data of the work order.
      */
     #[Computed]
@@ -65,7 +76,7 @@ class WorkOrderShow extends Component
     #[Computed]
     public function canLogReceipt(): bool
     {
-        return Auth::user()?->role !== UserRole::SALES;
+        return ! (Auth::user()?->isSales() ?? false);
     }
 
     /**
@@ -76,7 +87,7 @@ class WorkOrderShow extends Component
     {
         $user = Auth::user();
 
-        return $user?->role === UserRole::DESIGNER && ! Roles::isManager($user) && ! Roles::isReviewer($user);
+        return $user?->isDesigner() && ! Roles::isManager($user) && ! Roles::isReviewer($user);
     }
 
     #[Computed]

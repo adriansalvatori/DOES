@@ -28,10 +28,10 @@ class OverviewPageTest extends DeliveryTestCase
     public function test_only_admin_and_coordinator_may_open_it(): void
     {
         foreach ([User::factory()->designer()->create(), User::factory()->sales()->create(), $this->customerService()] as $user) {
-            $this->actingAs($user)->get(route('v2.overview'))->assertForbidden();
+            $this->actingAs($user)->get(route('overview'))->assertForbidden();
         }
         foreach ([User::factory()->admin()->create(), $this->manager()] as $user) {
-            $this->actingAs($user)->get(route('v2.overview'))->assertOk();
+            $this->actingAs($user)->get(route('overview'))->assertOk();
         }
     }
 

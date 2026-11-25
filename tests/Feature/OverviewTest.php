@@ -34,14 +34,13 @@ class OverviewTest extends TestCase
 
     public function test_overview_page_can_be_rendered(): void
     {
-        $response = $this->actingAs($this->user)
-            ->get('/overview')
-            ->assertStatus(200)
-            ->assertSee('Operational Overview');
+        $this->actingAs(User::factory()->admin()->create())->get('/overview')->assertStatus(200)->assertSee('Overview');
+
+        $component = Livewire::test(OverviewIndex::class);
 
         libxml_use_internal_errors(true);
         $dom = new \DOMDocument;
-        $dom->loadHTML($response->getContent());
+        $dom->loadHTML($component->html());
         libxml_clear_errors();
         $xpath = new \DOMXPath($dom);
         $textNodes = $xpath->query('//text()');

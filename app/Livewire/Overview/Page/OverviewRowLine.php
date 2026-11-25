@@ -42,21 +42,19 @@ class OverviewRowLine extends Component
             return $this->preloaded;
         }
 
-        $number = WorkOrder::query()->whereKey($this->workOrderId)->value('number');
-        $page = app(OverviewQuery::class)->run(new OverviewFilters(tab: $this->tab, workOrderNumber: $number), 50);
+        $page = app(OverviewQuery::class)->run(new OverviewFilters(tab: $this->tab, workOrderId: $this->workOrderId), 1);
 
-        return collect($page->items())->first(fn (OverviewRow $row): bool => $row->workOrder->getKey() === $this->workOrderId)
-            ?? $this->loadIgnoringTab($number);
+        return collect($page->items())->first() ?? $this->loadIgnoringTab();
     }
 
     /**
      * An edit can move a line out of its tab; keep showing it until the next page load.
      */
-    private function loadIgnoringTab(?string $number): ?OverviewRow
+    private function loadIgnoringTab(): ?OverviewRow
     {
-        $page = app(OverviewQuery::class)->run(new OverviewFilters(tab: 'all', workOrderNumber: $number), 50);
+        $page = app(OverviewQuery::class)->run(new OverviewFilters(tab: 'all', workOrderId: $this->workOrderId), 1);
 
-        return collect($page->items())->first(fn (OverviewRow $row): bool => $row->workOrder->getKey() === $this->workOrderId);
+        return collect($page->items())->first();
     }
 
     /**
@@ -101,7 +99,7 @@ class OverviewRowLine extends Component
     private function guard(): void
     {
         $user = Auth::user();
-        abort_unless($user !== null && in_array($user->role, [UserRole::ADMIN, UserRole::COORDINATOR], true), 403);
+        abort_unless($user !== null && $user->hasRole(UserRole::ADMIN, UserRole::COORDINATOR), 403);
     }
 
     /**

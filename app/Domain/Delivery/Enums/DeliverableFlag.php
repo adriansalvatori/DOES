@@ -2,6 +2,8 @@
 
 namespace App\Domain\Delivery\Enums;
 
+use App\Application\Delivery\Queries\WorkflowLabels;
+
 enum DeliverableFlag: string
 {
     case URGENT = 'urgent';
@@ -14,6 +16,6 @@ enum DeliverableFlag: string
 
     public function label(): string
     {
-        return __('enums.deliverable_flag.'.$this->value);
+        return app(WorkflowLabels::class)->label('deliverable_flag', $this->value);
     }
 }

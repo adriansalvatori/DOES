@@ -41,9 +41,9 @@
             </div>
             <ul class="space-y-2">
                 @foreach($cycleTimes as $row)
-                    <li class="grid items-center gap-3 text-body" style="grid-template-columns: 9rem 1fr 4rem;" wire:key="cycle-{{ $row['status']->value }}">
+                    <li class="grid grid-cols-[9rem_1fr_4rem] items-center gap-3 text-body" wire:key="cycle-{{ $row['status']->value }}">
                         <span class="truncate text-ink-2" title="{{ $row['status']->label() }}">{{ $row['status']->label() }}</span>
-                        <span class="h-2 overflow-hidden rounded-full bg-sunken"><span class="block h-full rounded-full" style="background-color: #57534e; width: {{ $row['days'] > 0 ? max(2, round($row['days'] / $maxCycle * 100)) : 0 }}%"></span></span>
+                        <span class="h-2 overflow-hidden rounded-full bg-sunken"><span class="block h-full rounded-full bg-stone-600" style="width: {{ $row['days'] > 0 ? max(2, round($row['days'] / $maxCycle * 100)) : 0 }}%"></span></span>
                         <span class="text-right tabular-nums text-ink" title="{{ trans_choice('{1} :count stay|[0,*] :count stays', $row['stays']) }}">{{ $row['stays'] > 0 ? __(':days d', ['days' => $row['days']]) : '—' }}</span>
                     </li>
                 @endforeach
@@ -56,11 +56,11 @@
                 <h2 class="ui-section-title">{{ __('Weekly throughput') }}</h2>
                 <p class="mt-0.5 text-body text-ink-3">{{ __('Deliverables closed per week.') }}</p>
             </div>
-            <div class="flex items-end justify-around gap-2 border-b border-line" style="height: 12rem;">
+            <div class="flex h-48 items-end justify-around gap-2 border-b border-line">
                 @foreach($throughput as $week)
                     <div class="flex h-full flex-1 flex-col items-center justify-end" wire:key="week-{{ $week['week_start'] }}">
                         <span class="mb-1 text-meta font-medium tabular-nums text-ink">{{ $week['count'] }}</span>
-                        <div class="w-full rounded-t-control" style="background-color: #57534e; max-width: 2.5rem; height: {{ $week['count'] > 0 ? max(4, round($week['count'] / $maxThroughput * 100)) : 1 }}%"></div>
+                        <div class="w-full max-w-10 rounded-t-control bg-stone-600" style="height: {{ $week['count'] > 0 ? max(4, round($week['count'] / $maxThroughput * 100)) : 1 }}%"></div>
                     </div>
                 @endforeach
             </div>
@@ -79,9 +79,9 @@
             </div>
             @forelse($wip as $row)
                 @php $over = $row['wip'] > $row['limit']; @endphp
-                <div class="grid items-center gap-3 text-body" style="grid-template-columns: 9rem 1fr 4rem;" wire:key="wip-{{ $row['user']->id }}">
+                <div class="grid grid-cols-[9rem_1fr_4rem] items-center gap-3 text-body" wire:key="wip-{{ $row['user']->id }}">
                     <x-ui.person :person="$row['user']" size="sm" show-name />
-                    <span class="h-2 overflow-hidden rounded-full bg-sunken"><span class="block h-full rounded-full" style="background-color: {{ $over ? 'var(--color-danger)' : '#57534e' }}; width: {{ $row['limit'] > 0 ? min(100, round($row['wip'] / $row['limit'] * 100)) : 0 }}%"></span></span>
+                    <span class="h-2 overflow-hidden rounded-full bg-sunken"><span class="block h-full rounded-full {{ $over ? 'bg-danger' : 'bg-stone-600' }}" style="width: {{ $row['limit'] > 0 ? min(100, round($row['wip'] / $row['limit'] * 100)) : 0 }}%"></span></span>
                     <span class="text-right tabular-nums {{ $over ? 'font-medium text-danger' : 'text-ink' }}">{{ $row['wip'] }} / {{ $row['limit'] }}</span>
                 </div>
             @empty
@@ -96,9 +96,9 @@
                 <p class="mt-0.5 text-body text-ink-3">{{ __('Why closed deliverables ended.') }}</p>
             </div>
             @forelse($closed['reasons'] as $row)
-                <div class="grid items-center gap-3 text-body" style="grid-template-columns: 12rem 1fr 3rem;" wire:key="reason-{{ $row['reason']->value }}">
+                <div class="grid grid-cols-[12rem_1fr_3rem] items-center gap-3 text-body" wire:key="reason-{{ $row['reason']->value }}">
                     <span class="truncate text-ink-2" title="{{ $row['reason']->label() }}">{{ $row['reason']->label() }}</span>
-                    <span class="h-2 overflow-hidden rounded-full bg-sunken"><span class="block h-full rounded-full" style="background-color: #57534e; width: {{ max(2, round($row['count'] / $maxReason * 100)) }}%"></span></span>
+                    <span class="h-2 overflow-hidden rounded-full bg-sunken"><span class="block h-full rounded-full bg-stone-600" style="width: {{ max(2, round($row['count'] / $maxReason * 100)) }}%"></span></span>
                     <span class="text-right tabular-nums text-ink">{{ $row['count'] }}</span>
                 </div>
             @empty

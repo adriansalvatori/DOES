@@ -9,6 +9,7 @@ use App\Services\ActionRequiredResolverService;
 use App\Services\NotificationDispatcher;
 use App\Services\StatusTransitionService;
 use App\Services\TrelloSyncService;
+use App\Support\TrelloCutover;
 use Illuminate\Support\Facades\Log;
 
 class OrderObserver
@@ -125,7 +126,7 @@ class OrderObserver
         }
 
         // 3. Sync changes back to Trello
-        if (! $order->in_workspace || ! $order->trello_card_id) {
+        if (TrelloCutover::isComplete() || ! $order->in_workspace || ! $order->trello_card_id) {
             return;
         }
 
@@ -168,7 +169,7 @@ class OrderObserver
     public function deleted(Order $order): void
     {
         $cardId = $order->trello_card_id;
-        if (! $cardId) {
+        if (! $cardId || TrelloCutover::isComplete()) {
             return;
         }
 
@@ -200,7 +201,7 @@ class OrderObserver
     public function restored(Order $order): void
     {
         $cardId = $order->trello_card_id;
-        if (! $cardId) {
+        if (! $cardId || TrelloCutover::isComplete()) {
             return;
         }
 

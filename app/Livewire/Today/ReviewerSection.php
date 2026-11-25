@@ -13,6 +13,7 @@ use App\Domain\Delivery\Models\Phase;
 use App\Domain\Delivery\Models\WorkOrder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -92,6 +93,15 @@ class ReviewerSection extends Component
             $this->dispatch('toast', message: __('You are not allowed to do this.'), type: 'error');
         }
 
+        unset($this->groups);
+    }
+
+    /**
+     * The panel changed a deliverable: reload this section only.
+     */
+    #[On('deliverable-changed')]
+    public function refreshAfterPanelChange(): void
+    {
         unset($this->groups);
     }
 

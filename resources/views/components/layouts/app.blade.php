@@ -1,9 +1,15 @@
+@php
+    // The tab title follows the navigation (Today - Kudos DOES) unless the page sets its own.
+    $navigationService = app(\App\Services\NavigationService::class);
+    $currentCrumb = collect($navigationService->breadcrumb(auth()->user()))->last();
+    $tabTitle = $title ?? ($currentCrumb !== null ? $currentCrumb['label'].' - '.config('app.name') : config('app.name'));
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-canvas text-zinc-800">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? config('app.name') }}</title>
+    <title>{{ $tabTitle }}</title>
 
     <!-- PWA & Favicon / App Icon -->
     <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">
@@ -78,7 +84,7 @@
     $isCoordinator = (bool) $authUser?->isCoordinator();
 
     // Navigation is defined once in NavigationService (sidebar, settings hub and rail, ⌘K palette).
-    $navigation = app(\App\Services\NavigationService::class);
+    $navigation = $navigationService;
     $navGroups = $navigation->primaryGroups($authUser);
     $bottomItems = $navigation->bottomItems($authUser);
     $settingsGroups = $navigation->settingsGroups($authUser);
@@ -114,7 +120,7 @@
         <!-- Brand -->
         <div class="p-3 pb-0 shrink-0">
             <div :class="sidebarOpen ? 'justify-start' : 'justify-center'" class="flex items-center pb-3 border-b border-line">
-                <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2.5 min-w-0" title="{{ __('Go to Dashboard') }}">
+                <a href="{{ route('today') }}" wire:navigate class="flex items-center gap-2.5 min-w-0" title="{{ __('Go to Today') }}">
                     <div class="w-7 h-7 rounded-lg bg-gold flex items-center justify-center shrink-0">
                         <img src="{{ asset('images/kudos-hand-white.svg') }}" alt="{{ config('app.name') }}" class="w-4.5 h-4.5 object-contain">
                     </div>
@@ -336,8 +342,11 @@
         @endif
     </div>
 
-    <!-- Global Order Detail Side Flyout Drawer Component -->
-    <livewire:orders.order-detail-modal />
+    <!-- Global work order panel (opened with open-deliverable) -->
+    <livewire:deliverables.deliverable-panel />
+
+    <!-- Legacy flyouts still fire open-order-detail {orderId}; the id is the same row, so reopen it in the panel -->
+    <div x-data @open-order-detail.window="$dispatch('open-deliverable', { deliverableId: $event.detail?.orderId })" class="hidden" aria-hidden="true"></div>
 
     <!-- Global Client Detail Side Flyout Drawer Component -->
     <livewire:clients.client-flyout-panel />
@@ -345,8 +354,8 @@
     <!-- Global Contact Detail Side Flyout Drawer Component -->
     <livewire:contacts.contact-flyout-panel />
 
-    <!-- Global Create Order Modal Component -->
-    <livewire:orders.create-order-modal />
+    <!-- Global create work order modal (opened with open-create-work-order) -->
+    <livewire:create-work-order.create-work-order-modal />
 
     <!-- Global Unsaved Changes Warning Modal -->
     <x-dirty-confirm-modal />
@@ -363,17 +372,30 @@
             show: false,
             message: '',
             type: 'success',
+            url: null,
+            linkLabel: '',
             timeout: null,
+            created(detail) {
+                const number = detail?.number ?? '';
+                this.notify({
+                    message: @js(__('Work order :number created')).replace(':number', number),
+                    url: detail?.url ?? null,
+                    linkLabel: @js(__('Open work order')),
+                });
+            },
             notify(detail) {
                 const payload = (typeof detail === 'string') ? { message: detail } : (detail || {});
                 this.message = payload.message ?? '';
+                this.url = payload.url ?? null;
+                this.linkLabel = payload.linkLabel ?? '';
                 this.type = ['success', 'error', 'info'].includes(payload.type) ? payload.type : 'success';
                 this.show = true;
                 clearTimeout(this.timeout);
-                this.timeout = setTimeout(() => { this.show = false; }, this.type === 'error' ? 6000 : 2500);
+                this.timeout = setTimeout(() => { this.show = false; }, this.type === 'error' ? 6000 : (this.url ? 6000 : 2500));
             }
         }"
         @toast.window="notify($event.detail)"
+        @work-order-created.window="created($event.detail)"
         x-show="show"
         x-cloak
         x-transition:enter="transition ease-out duration-200"
@@ -386,11 +408,13 @@
         :role="type === 'error' ? 'alert' : 'status'"
         aria-live="polite"
         class="fixed bottom-5 right-5 z-[9999] max-w-sm bg-stone-900 text-white text-xs font-medium px-3.5 py-2.5 rounded-lg shadow-panel border border-stone-800 flex items-start gap-2 pointer-events-none"
+        :class="url ? '!pointer-events-auto' : ''"
     >
         <x-lucide-check-circle-2 x-show="type === 'success'" class="w-4 h-4 text-emerald-400 shrink-0" />
         <x-lucide-alert-circle x-show="type === 'error'" x-cloak class="w-4 h-4 text-red-400 shrink-0" />
         <x-lucide-info x-show="type === 'info'" x-cloak class="w-4 h-4 text-sky-300 shrink-0" />
         <span x-text="message"></span>
+        <a x-show="url" x-cloak :href="url" wire:navigate class="underline font-semibold text-white shrink-0" x-text="linkLabel" @click="show = false"></a>
     </div>
 
     @livewireScripts

@@ -51,7 +51,7 @@ class BoardPageTest extends DeliveryTestCase
             'due_target' => '2026-09-25',
         ], $workOrder);
 
-        $this->actingAs($this->manager())->get(route('v2.board'))
+        $this->actingAs($this->manager())->get(route('board'))
             ->assertOk()
             ->assertSee('Board')
             ->assertSee('WO 16001')
@@ -266,7 +266,7 @@ class BoardPageTest extends DeliveryTestCase
 
     public function test_a_column_pages_its_cards(): void
     {
-        Deliverable::factory()->count(Column::PAGE_SIZE + 5)->inStatus(DeliverableStatus::READY)->create();
+        Deliverable::factory()->count(25 + 5)->inStatus(DeliverableStatus::READY)->create();
 
         Livewire::actingAs($this->manager())->test(Column::class, ['status' => 'ready'])
             ->assertSee('Show 5 more')
@@ -349,16 +349,16 @@ class BoardPageTest extends DeliveryTestCase
         }
 
         $manager = $this->manager();
-        $this->actingAs($manager)->get(route('v2.board'))->assertOk();
+        $this->actingAs($manager)->get(route('board'))->assertOk();
 
         DB::flushQueryLog();
         DB::enableQueryLog();
-        $this->actingAs($manager)->get(route('v2.board'))->assertOk();
+        $this->actingAs($manager)->get(route('board'))->assertOk();
         $withThirtyCards = count(DB::getQueryLog());
 
         Deliverable::factory()->count(30)->inStatus(DeliverableStatus::READY)->create(['work_order_id' => $workOrder->id, 'assignee_id' => $designer->id]);
         DB::flushQueryLog();
-        $this->actingAs($manager)->get(route('v2.board'))->assertOk();
+        $this->actingAs($manager)->get(route('board'))->assertOk();
 
         $this->assertSame($withThirtyCards, count(DB::getQueryLog()));
         $this->assertLessThan(60, $withThirtyCards);

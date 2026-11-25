@@ -46,7 +46,7 @@ class UsersAndRolesTest extends TestCase
             ->set('name', 'Katherine')
             ->set('email', 'katherine@example.test')
             ->set('password', 'secret-pass-123')
-            ->set('role', UserRole::CUSTOMER_SERVICE->value)
+            ->set('selectedRoles', [UserRole::CUSTOMER_SERVICE->value])
             ->set('is_reviewer', true)
             ->set('is_lead', true)
             ->set('wip_limit', 7)
@@ -97,9 +97,9 @@ class UsersAndRolesTest extends TestCase
         Livewire::test(UserManagement::class)
             ->call('openEditModal', $user->id)
             ->set('wip_limit', 0)
-            ->set('role', 'superuser')
+            ->set('selectedRoles', ['superuser'])
             ->call('saveUser')
-            ->assertHasErrors(['wip_limit', 'role']);
+            ->assertHasErrors(['wip_limit', 'selectedRoles.0']);
     }
 
     public function test_table_shows_reviewer_and_lead_badges(): void

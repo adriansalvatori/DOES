@@ -169,7 +169,7 @@ class DesignSystemComponentsTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->get('/settings/profile')->assertOk();
-        $response->assertSee(__('Control Center'));
+        $response->assertSee(__('Board'));
         $response->assertSee('/settings/backups', false);
         $response->assertDontSee('Trello Workflow');
         $this->assertSame(2, substr_count($response->getContent(), 'href="/settings/backups"'), 'Settings pages list each settings link once in the sub-navigation rail and once in the ⌘K palette.');

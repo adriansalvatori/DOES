@@ -6,7 +6,7 @@
 --}}
 @php
     $statusesByArea = collect(\App\Domain\Delivery\Enums\DeliverableStatus::cases())->groupBy(fn ($status) => $status->area()->value);
-    $workOrderUrl = \Illuminate\Support\Facades\Route::has('v2.work-orders.show') ? route('v2.work-orders.show', '__ID__') : null;
+    $workOrderUrl = \Illuminate\Support\Facades\Route::has('work-orders.show') ? route('work-orders.show', '__ID__') : null;
 @endphp
 <div
     x-data="{

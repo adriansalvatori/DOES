@@ -6,6 +6,15 @@
 <div class="space-y-5">
     <section aria-label="{{ __('Comments') }}">
         <h3 class="ui-section-title">{{ __('Comments') }}</h3>
+        @if($can['addComment'])
+            <form wire:submit="addComment" class="mt-2 space-y-2" data-comment-form>
+                <label class="sr-only" for="dp-comment">{{ __('Write a comment') }}</label>
+                <textarea id="dp-comment" wire:model="newComment" rows="3" maxlength="{{ \App\Application\Delivery\Actions\AddComment::MAX_LENGTH }}" class="ui-input" placeholder="{{ __('Write a comment') }}"></textarea>
+                <div class="flex items-center justify-end">
+                    <button type="submit" class="ui-btn ui-btn-primary ui-btn-sm" wire:loading.attr="disabled" wire:target="addComment">{{ __('Post comment') }}</button>
+                </div>
+            </form>
+        @endif
         @forelse($comments as $comment)
             <article wire:key="comment-{{ $comment->id }}" class="mt-2 rounded-card border border-line px-3 py-2">
                 <div class="flex items-center justify-between gap-2 text-meta text-ink-3">
@@ -20,9 +29,22 @@
     </section>
 
     <section aria-label="{{ __('Files') }}">
-        <h3 class="ui-section-title">{{ __('Files') }}</h3>
+        <div class="flex items-center justify-between gap-3">
+            <h3 class="ui-section-title">{{ __('Files') }}</h3>
+            @if($can['attachFile'])
+                <label class="ui-btn ui-btn-secondary ui-btn-sm cursor-pointer">
+                    <x-lucide-paperclip class="h-3.5 w-3.5" />
+                    <span>{{ __('Attach file') }}</span>
+                    <input type="file" multiple class="sr-only" data-file-input @change="uploadFiles($event.target)" :disabled="uploading !== ''">
+                </label>
+            @endif
+        </div>
+        <div x-show="uploading !== ''" x-cloak class="mt-2 rounded-card border border-line px-3 py-2 text-body text-ink-2" role="status">
+            <span x-text="uploading"></span> <span class="tabular-nums text-ink-3" x-text="progress + '%'"></span>
+        </div>
+        <p x-show="uploadError !== ''" x-cloak x-text="uploadError" class="mt-2 text-body text-danger" role="alert"></p>
         @forelse($files as $file)
-            @php($fileUrl = $file->isLink() ? $file->external_url : $file->drive_web_url)
+            @php($fileUrl = $file->file_url)
             <div wire:key="file-{{ $file->id }}" class="mt-2 flex items-center justify-between gap-3 rounded-card border border-line px-3 py-2 text-body">
                 <span class="min-w-0 truncate text-ink">{{ $file->name }}</span>
                 @if($fileUrl)

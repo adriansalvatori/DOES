@@ -48,10 +48,10 @@
                             $workOrder = $row->workOrder;
                         @endphp
                         <tr wire:key="wo-{{ $workOrder->id }}" class="cursor-pointer hover:bg-sunken"
-                            x-on:click="Livewire.navigate('{{ route('v2.work-orders.show', $workOrder) }}')">
+                            x-on:click="Livewire.navigate('{{ route('work-orders.show', $workOrder) }}')">
                             <td><x-wo-badge :number="$workOrder->number" /></td>
                             <td>
-                                <a href="{{ route('v2.work-orders.show', $workOrder) }}" wire:navigate x-on:click.stop class="text-row font-medium text-ink hover:underline">{{ \App\Support\TitleCase::from($workOrder->client?->name) ?: __('No client') }}</a>
+                                <a href="{{ route('work-orders.show', $workOrder) }}" wire:navigate x-on:click.stop class="text-row font-medium text-ink hover:underline">{{ \App\Support\TitleCase::from($workOrder->client?->name) ?: __('No client') }}</a>
                                 <x-orders.location :location="\App\Support\TitleCase::from($workOrder->clientLocation?->name)" class="ml-2" />
                             </td>
                             <td class="text-right tabular-nums">{{ $workOrder->phases_count > 0 ? $workOrder->phases_count : '—' }}</td>

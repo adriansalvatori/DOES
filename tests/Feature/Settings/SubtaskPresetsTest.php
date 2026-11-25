@@ -25,11 +25,11 @@ class SubtaskPresetsTest extends TestCase
             'is_active' => true,
         ]);
 
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
-        $this->actingAs($user)
-            ->get('/settings/subtasks')
-            ->assertStatus(200)
+        $this->actingAs($user)->get('/settings/subtasks')->assertRedirect('/settings/task-templates');
+
+        Livewire::test(SubtaskPresets::class)
             ->assertSee('Plantillas de Subtareas')
             ->assertSee('Test Subtask Preset');
     }

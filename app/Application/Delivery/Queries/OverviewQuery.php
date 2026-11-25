@@ -98,6 +98,7 @@ class OverviewQuery
         };
 
         $query
+            ->when($filters->workOrderId !== null, fn (Builder $inner) => $inner->whereKey($filters->workOrderId))
             ->when(filled($filters->workOrderNumber), fn (Builder $inner) => $inner->where('number', 'like', '%'.trim((string) $filters->workOrderNumber).'%'))
             ->when($filters->clientId !== null, fn (Builder $inner) => $inner->where('client_id', $filters->clientId))
             ->when($filters->assigneeId !== null, fn (Builder $inner) => $inner->whereHas(

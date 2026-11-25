@@ -5,7 +5,6 @@ namespace Tests\Feature\Auth;
 use App\Enums\CoreStatus;
 use App\Enums\UserRole;
 use App\Livewire\Auth\Login;
-use App\Livewire\Dashboard\Index;
 use App\Livewire\Kanban\Board;
 use App\Livewire\Orders\OrderDetailModal;
 use App\Livewire\Planner\WeeklyPlanner;
@@ -175,7 +174,7 @@ class AuthenticationAndProfileTest extends TestCase
             ->call('openCreateModal')
             ->set('name', 'Nuevo Diseñador')
             ->set('email', 'nuevo.designer@kudos.com')
-            ->set('role', UserRole::DESIGNER->value)
+            ->set('selectedRoles', [UserRole::DESIGNER->value])
             ->set('designer_id', $designer->id)
             ->set('password', 'secret-pass-123')
             ->call('saveUser')
@@ -346,13 +345,12 @@ class AuthenticationAndProfileTest extends TestCase
             ->assertHasErrors(['avatar_file']);
     }
 
-    public function test_designer_is_redirected_away_from_overview(): void
+    public function test_designer_is_kept_out_of_overview(): void
     {
         $user = User::factory()->create(['role' => UserRole::DESIGNER]);
         $this->actingAs($user);
 
-        $response = $this->get(route('overview'));
-        $response->assertRedirect(route('kanban'));
+        $this->get(route('overview'))->assertForbidden();
     }
 
     public function test_designer_cannot_access_technical_settings(): void
@@ -360,24 +358,22 @@ class AuthenticationAndProfileTest extends TestCase
         $designer = User::factory()->create(['role' => UserRole::DESIGNER]);
         $this->actingAs($designer);
 
-        $this->get('/settings/trello-mapping')->assertStatus(403);
         $this->get('/settings/backups')->assertStatus(403);
-        $this->get('/settings/substatuses')->assertStatus(403);
-        $this->get('/settings/subtasks')->assertStatus(403);
-        $this->get('/trello-sync')->assertStatus(403);
+        $this->get('/settings/reasons')->assertStatus(403);
+        $this->get('/settings/task-templates')->assertStatus(403);
+        $this->get('/settings/board')->assertStatus(403);
         $this->get('/trash')->assertStatus(403);
     }
 
-    public function test_coordinator_can_access_substatuses_and_subtasks_but_not_backups(): void
+    public function test_coordinator_can_access_workflow_settings_but_not_backups(): void
     {
         $coordinator = User::factory()->create(['role' => UserRole::COORDINATOR]);
         $this->actingAs($coordinator);
 
-        $this->get('/settings/substatuses')->assertStatus(200);
-        $this->get('/settings/subtasks')->assertStatus(200);
-        $this->get('/trello-sync')->assertStatus(200);
+        $this->get('/settings/reasons')->assertStatus(200);
+        $this->get('/settings/task-templates')->assertStatus(200);
+        $this->get('/settings/board')->assertStatus(200);
         $this->get('/trash')->assertStatus(200);
-        $this->get('/settings/trello-mapping')->assertStatus(403);
         $this->get('/settings/backups')->assertStatus(403);
     }
 
@@ -416,23 +412,18 @@ class AuthenticationAndProfileTest extends TestCase
             ->assertStatus(403);
     }
 
-    public function test_designer_is_redirected_away_from_analytics_and_resolver(): void
+    public function test_designer_is_kept_out_of_analytics_and_resolver(): void
     {
         $designer = User::factory()->create(['role' => UserRole::DESIGNER]);
         $this->actingAs($designer);
 
-        $this->get(route('analytics'))->assertRedirect(route('kanban'));
-        $this->get(route('resolver'))->assertRedirect(route('kanban'));
+        $this->get(route('analytics'))->assertForbidden();
+        $this->get(route('resolver'))->assertForbidden();
 
-        $dashboardResponse = $this->get(route('dashboard'));
-        $dashboardResponse->assertStatus(200);
-        $dashboardResponse->assertDontSee('/analytics');
-        $dashboardResponse->assertDontSee('/resolver');
-        $dashboardResponse->assertDontSee('id="tour-stats-resolver"', false);
-
-        Livewire::test(Index::class)
-            ->call('setActiveTab', 'resolver')
-            ->assertSet('activeTab', 'all');
+        $todayResponse = $this->get(route('today'));
+        $todayResponse->assertStatus(200);
+        $todayResponse->assertDontSee('href="/analytics"', false);
+        $todayResponse->assertDontSee('href="/resolver"', false);
     }
 
     public function test_admin_can_access_analytics_and_resolver(): void
@@ -443,10 +434,10 @@ class AuthenticationAndProfileTest extends TestCase
         $this->get(route('analytics'))->assertStatus(200);
         $this->get(route('resolver'))->assertStatus(200);
 
-        $dashboardResponse = $this->get(route('dashboard'));
-        $dashboardResponse->assertStatus(200);
-        $dashboardResponse->assertSee('/analytics');
-        $dashboardResponse->assertSee('id="tour-stats-resolver"', false);
+        $todayResponse = $this->get(route('today'));
+        $todayResponse->assertStatus(200);
+        $todayResponse->assertSee('href="/analytics"', false);
+        $todayResponse->assertSee('href="/resolver"', false);
     }
 
     public function test_profile_settings_dispatches_form_saved_on_profile_update(): void

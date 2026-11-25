@@ -25,11 +25,12 @@ class SubstatusManagementTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $user = User::factory()->create();
-        $response = $this->actingAs($user)->get('/settings/substatuses');
-        $response->assertStatus(200);
-        $response->assertSee('Substatus Settings');
-        $response->assertSee('PRUEBA SUBESTATUS');
+        $user = User::factory()->admin()->create();
+        $this->actingAs($user)->get('/settings/substatuses')->assertRedirect('/settings/reasons');
+
+        Livewire::test(Substatuses::class)
+            ->assertSee('Statuses and substatuses')
+            ->assertSee('PRUEBA SUBESTATUS');
     }
 
     public function test_can_create_new_substatus(): void

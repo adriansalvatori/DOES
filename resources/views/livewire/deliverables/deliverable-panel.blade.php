@@ -2,6 +2,9 @@
     x-data="{
         open: @js($isOpen),
         menu: false,
+        uploading: '',
+        progress: 0,
+        uploadError: '',
         init() {
             this.$watch('$wire.isOpen', (value) => {
                 this.open = Boolean(value);
@@ -32,6 +35,66 @@
         toggleFlag(flag) {
             const flags = Array.from($wire.edit.flags || []);
             $wire.edit.flags = flags.includes(flag) ? flags.filter((each) => each !== flag) : [...flags, flag];
+        },
+        async confirmReviewer(select, field, from, none) {
+            const to = select.value === '' ? none : select.options[select.selectedIndex].text;
+            if (to === from) {
+                return;
+            }
+            if (await window.KudosConfirmChange({ field, from, to })) {
+                $wire.changeReviewer(select.value === '' ? null : parseInt(select.value, 10));
+            } else {
+                select.value = select.dataset.current || '';
+            }
+        },
+        async confirmDueTarget(input, field, from, none) {
+            if (input.value === '' || input.value === input.dataset.current) {
+                input.value = input.dataset.current || '';
+                return;
+            }
+            const to = new Date(input.value + 'T00:00:00').toLocaleDateString(document.documentElement.lang || undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+            if (await window.KudosConfirmChange({ field, from, to })) {
+                $wire.changeDueTarget(input.value);
+            } else {
+                input.value = input.dataset.current || '';
+            }
+        },
+        async uploadFiles(input) {
+            this.uploadError = '';
+            for (const file of Array.from(input.files || [])) {
+                this.uploading = file.name;
+                const session = await $wire.prepareUpload(file.name, file.type || 'application/octet-stream', file.size);
+                if (! session || ! session.url) {
+                    this.uploadError = $wire.noticeText || '';
+                    $wire.dismissNotice();
+                    break;
+                }
+                try {
+                    const driveFileId = await new Promise((resolve, reject) => {
+                        const request = new XMLHttpRequest();
+                        request.open('PUT', session.url);
+                        request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+                        request.upload.onprogress = (event) => { this.progress = event.lengthComputable ? Math.round(event.loaded / event.total * 100) : 0; };
+                        request.onload = () => {
+                            try {
+                                const id = JSON.parse(request.responseText).id;
+                                request.status < 300 && id ? resolve(id) : reject(new Error('upload'));
+                            } catch (error) {
+                                reject(error);
+                            }
+                        };
+                        request.onerror = () => reject(new Error('upload'));
+                        request.send(file);
+                    });
+                    await $wire.finishUpload(driveFileId);
+                } catch (error) {
+                    this.uploadError = @js(__('The file could not be sent to Google Drive. Try again in a moment.'));
+                    break;
+                }
+            }
+            this.uploading = '';
+            this.progress = 0;
+            input.value = '';
         },
         async confirmSave(labels, phaseNames, flagLabels) {
             for (const key of Object.keys(labels)) {
@@ -69,7 +132,7 @@
                 $isClosed = $deliverable->status->isClosed();
                 $company = \App\Support\TitleCase::from($workOrder?->client?->name ?? $deliverable->company_name);
                 $location = \App\Support\TitleCase::from($workOrder?->clientLocation?->name);
-                $workOrderUrl = $workOrder !== null && \Illuminate\Support\Facades\Route::has('v2.work-orders.show') ? route('v2.work-orders.show', $workOrder) : null;
+                $workOrderUrl = $workOrder !== null && \Illuminate\Support\Facades\Route::has('work-orders.show') ? route('work-orders.show', $workOrder) : null;
             @endphp
 
             {{-- Header --}}

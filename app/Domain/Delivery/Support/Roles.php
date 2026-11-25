@@ -16,7 +16,7 @@ final class Roles
             return false;
         }
 
-        return in_array($user->role, [UserRole::ADMIN, UserRole::COORDINATOR], true) || (bool) $user->is_lead;
+        return $user->hasRole(UserRole::ADMIN, UserRole::COORDINATOR) || (bool) $user->is_lead;
     }
 
     public static function isReviewer(?User $user): bool
@@ -26,6 +26,6 @@ final class Roles
 
     public static function isCustomerService(?User $user): bool
     {
-        return $user !== null && $user->role === UserRole::CUSTOMER_SERVICE;
+        return $user !== null && $user->isCustomerService();
     }
 }

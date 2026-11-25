@@ -15,5 +15,6 @@ final readonly class OverviewFilters
         public ?int $clientId = null,
         public ?int $assigneeId = null,
         public ?string $installation = null,
+        public ?int $workOrderId = null,
     ) {}
 }

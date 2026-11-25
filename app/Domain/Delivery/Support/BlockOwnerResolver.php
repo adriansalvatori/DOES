@@ -14,7 +14,7 @@ class BlockOwnerResolver
     public function defaultOwner(): ?User
     {
         return User::query()
-            ->where('role', UserRole::CUSTOMER_SERVICE->value)
+            ->withAnyRole(UserRole::CUSTOMER_SERVICE)
             ->where('active', true)
             ->orderBy('id')
             ->first();

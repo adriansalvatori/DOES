@@ -34,11 +34,11 @@ class ResolverPageTest extends DeliveryTestCase
 
     public function test_designers_and_sales_get_403_staff_who_resolve_can_open_it(): void
     {
-        $this->actingAs(User::factory()->designer()->create())->get(route('v2.resolver'))->assertForbidden();
-        $this->actingAs(User::factory()->sales()->create())->get(route('v2.resolver'))->assertForbidden();
+        $this->actingAs(User::factory()->designer()->create())->get(route('resolver'))->assertForbidden();
+        $this->actingAs(User::factory()->sales()->create())->get(route('resolver'))->assertForbidden();
 
         foreach ([$this->manager(), $this->customerService(), User::factory()->admin()->create()] as $user) {
-            $this->actingAs($user)->get(route('v2.resolver'))->assertOk();
+            $this->actingAs($user)->get(route('resolver'))->assertOk();
         }
     }
 

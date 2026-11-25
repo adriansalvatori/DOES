@@ -6,7 +6,6 @@ use App\Application\Delivery\Actions\PlanDeliverable;
 use App\Application\Delivery\Actions\UnplanDeliverable;
 use App\Application\Delivery\Data\PlanWeek;
 use App\Application\Delivery\Queries\PlanWeekQuery;
-use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Support\Roles;
@@ -18,6 +17,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
@@ -123,14 +123,7 @@ class PlanWeekPage extends Component
 
         $term = mb_strtolower(trim($this->search));
 
-        return Deliverable::query()
-            ->inStatus(DeliverableStatus::READY)
-            ->whereNull('planned_for')
-            ->blocked()
-            ->with(['workOrder.client', 'openBlock'])
-            ->orderBy('id')
-            ->limit(30)
-            ->get()
+        return $this->plan->blockedBacklog
             ->when($term !== '', fn (Collection $cards) => $cards->filter(fn (Deliverable $deliverable): bool => $this->matches($deliverable, $term)))
             ->values();
     }
@@ -213,6 +206,15 @@ class PlanWeekPage extends Component
             return;
         }
 
+        $this->forgetData();
+    }
+
+    /**
+     * The panel changed a deliverable: reload the grid and the backlog.
+     */
+    #[On('deliverable-changed')]
+    public function refreshAfterPanelChange(): void
+    {
         $this->forgetData();
     }
 

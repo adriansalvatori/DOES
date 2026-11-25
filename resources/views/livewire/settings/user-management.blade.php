@@ -55,7 +55,7 @@
                             class="ui-select">
                             <option value="">-- {{ __('Select user') }} --</option>
                             @foreach($allUsers as $u)
-                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role->label() }})</option>
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ collect($u->roleList())->map(fn ($heldRole) => $heldRole->label())->implode(', ') }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -136,7 +136,9 @@
                         </td>
                         <td class="py-3 px-4">
                             <div class="flex flex-wrap items-center gap-1">
-                                <x-ui.tag tone="neutral">{{ $u->role->label() }}</x-ui.tag>
+                                @foreach($u->roleList() as $heldRole)
+                                    <x-ui.tag tone="neutral">{{ $heldRole->label() }}</x-ui.tag>
+                                @endforeach
                                 @if($u->is_reviewer)
                                     <x-ui.tag tone="neutral">{{ __('Reviewer') }}</x-ui.tag>
                                 @endif
@@ -225,12 +227,15 @@
 
                     <div class="space-y-1">
                         <label class="block text-meta text-ink-2">{{ __('User role') }}</label>
-                        <select wire:model="role" class="ui-select">
-                            @foreach($roles as $r)
-                                <option value="{{ $r->value }}">{{ $r->label() }}</option>
+                        <div class="flex flex-wrap gap-x-4 gap-y-1">
+                            @foreach($roleOptions as $r)
+                                <label class="inline-flex items-center gap-1.5 text-row text-ink cursor-pointer">
+                                    <input type="checkbox" wire:model="selectedRoles" value="{{ $r->value }}" class="rounded border-line">
+                                    {{ $r->label() }}
+                                </label>
                             @endforeach
-                        </select>
-                        @error('role') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
+                        </div>
+                        @error('selectedRoles') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="space-y-1">

@@ -9,12 +9,19 @@ class BackfillDomainCommand extends Command
 {
     protected $signature = 'domain:backfill
         {--dry-run : Run every step inside a transaction and roll it back}
+        {--closed-at-only : Only correct closed_at of done deliverables from the legacy history}
         {--report= : Write the full JSON report to this path}';
 
     protected $description = 'Copy the legacy order model into work orders, deliverables, blocks, holds, approvals and alerts';
 
     public function handle(LegacyBackfill $backfill): int
     {
+        if ($this->option('closed-at-only')) {
+            $this->components->twoColumnDetail('closed_at corrected', (string) $backfill->correctClosedAt());
+
+            return self::SUCCESS;
+        }
+
         $report = $backfill->run((bool) $this->option('dry-run'));
 
         $path = $this->option('report');

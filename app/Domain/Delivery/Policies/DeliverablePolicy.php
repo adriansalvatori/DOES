@@ -4,7 +4,6 @@ namespace App\Domain\Delivery\Policies;
 
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Support\Roles;
-use App\Enums\UserRole;
 use App\Models\User;
 
 /**
@@ -29,6 +28,26 @@ class DeliverablePolicy
     }
 
     public function updateDetails(User $user, Deliverable $deliverable): bool
+    {
+        return $this->isStaff($user);
+    }
+
+    public function changeReviewer(User $user, Deliverable $deliverable): bool
+    {
+        return Roles::isManager($user);
+    }
+
+    public function changeDueTarget(User $user, Deliverable $deliverable): bool
+    {
+        return Roles::isManager($user) || Roles::isReviewer($user);
+    }
+
+    public function addComment(User $user, Deliverable $deliverable): bool
+    {
+        return $this->isStaff($user);
+    }
+
+    public function attachFile(User $user, Deliverable $deliverable): bool
     {
         return $this->isStaff($user);
     }
@@ -100,12 +119,12 @@ class DeliverablePolicy
 
     public function moveInProduction(User $user, Deliverable $deliverable): bool
     {
-        return $this->isStaff($user) && $user->role !== UserRole::SALES;
+        return $this->isStaff($user) && ! $user->isSales();
     }
 
     public function logReceipt(User $user, Deliverable $deliverable): bool
     {
-        return $this->isStaff($user) && $user->role !== UserRole::SALES;
+        return $this->isStaff($user) && ! $user->isSales();
     }
 
     public function close(User $user, Deliverable $deliverable): bool

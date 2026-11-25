@@ -25,14 +25,14 @@ class LivewireEndpointProtectionTest extends TestCase
         $response->assertRedirect(config('app.url').'/planner');
     }
 
-    public function test_get_request_to_livewire_update_without_referer_redirects_to_dashboard(): void
+    public function test_get_request_to_livewire_update_without_referer_redirects_to_today(): void
     {
         $updatePath = EndpointResolver::updatePath();
 
         $response = $this->get($updatePath);
 
         $response->assertStatus(302);
-        $response->assertRedirect(route('dashboard'));
+        $response->assertRedirect(route('today'));
     }
 
     public function test_get_request_to_fallback_livewire_update_redirects_gracefully(): void

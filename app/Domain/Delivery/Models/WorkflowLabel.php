@@ -2,6 +2,7 @@
 
 namespace App\Domain\Delivery\Models;
 
+use App\Application\Delivery\Queries\WorkflowLabels;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -19,6 +20,12 @@ class WorkflowLabel extends Model
         'active',
         'sort',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => WorkflowLabels::forget());
+        static::deleted(fn () => WorkflowLabels::forget());
+    }
 
     /**
      * @return array<string, mixed>

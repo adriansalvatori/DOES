@@ -65,14 +65,14 @@ class LanguageSettingsTest extends TestCase
 
     public function test_pages_render_in_english_when_locale_is_set(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         session()->flush();
         $this->withSession(['locale' => 'en']);
         app()->setLocale('en');
 
-        $response = $this->actingAs($user)->get('/kanban');
+        $response = $this->actingAs($user)->get('/board');
         $response->assertStatus(200);
-        $response->assertSee('Kanban Board');
+        $response->assertSee('Board');
         $response->assertSee(__('New work order'));
 
         $responseTrash = $this->get('/trash');
@@ -80,25 +80,17 @@ class LanguageSettingsTest extends TestCase
         $responseTrash->assertSee('Trash');
         $responseTrash->assertSee(__('Search in trash...'));
 
-        $responsePlanner = $this->get('/planner');
+        $responsePlanner = $this->get('/plan-week');
         $responsePlanner->assertStatus(200);
-        $responsePlanner->assertSee('Weekly Planner');
+        $responsePlanner->assertSee('Plan week');
 
-        $responseSubstatuses = $this->get('/settings/substatuses');
-        $responseSubstatuses->assertStatus(200);
-        $responseSubstatuses->assertSee('Substatus Configuration');
+        $responseReasons = $this->get('/settings/reasons');
+        $responseReasons->assertStatus(200);
+        $responseReasons->assertSee('Reasons &amp; flags', false);
 
-        $responsePresets = $this->get('/settings/subtasks');
-        $responsePresets->assertStatus(200);
-        $responsePresets->assertSee('Subtask &amp; System Task Management', false);
-
-        $responseTrelloMap = $this->get('/settings/trello-mapping');
-        $responseTrelloMap->assertStatus(200);
-        $responseTrelloMap->assertSee('Trello List Mapping');
-
-        $responseTrelloSync = $this->get('/trello-sync');
-        $responseTrelloSync->assertStatus(200);
-        $responseTrelloSync->assertSee('Live Trello Sync');
+        $responseTemplates = $this->get('/settings/task-templates');
+        $responseTemplates->assertStatus(200);
+        $responseTemplates->assertSee('Task templates');
 
         session()->forget('locale');
         session(['locale' => 'es']);

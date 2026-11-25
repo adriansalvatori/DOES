@@ -28,7 +28,10 @@ class UserManagement extends Component
 
     public string $phone = '';
 
-    public string $role = 'designer';
+    /**
+     * @var list<string>
+     */
+    public array $selectedRoles = ['designer'];
 
     public ?int $designer_id = null;
 
@@ -105,10 +108,10 @@ class UserManagement extends Component
 
     public function openCreateModal()
     {
-        $this->reset(['editingUserId', 'name', 'email', 'phone', 'role', 'designer_id', 'password', 'active', 'is_reviewer', 'is_lead']);
+        $this->reset(['editingUserId', 'name', 'email', 'phone', 'selectedRoles', 'designer_id', 'password', 'active', 'is_reviewer', 'is_lead']);
         $this->wip_limit = app(BoardLimits::class)->defaultWipLimit();
         $this->resetValidation();
-        $this->role = UserRole::DESIGNER->value;
+        $this->selectedRoles = [UserRole::DESIGNER->value];
         $this->active = true;
         $this->changePassword = true;
         $this->showModal = true;
@@ -121,7 +124,7 @@ class UserManagement extends Component
         $this->name = $user->name;
         $this->email = $user->email;
         $this->phone = $user->phone ?? ($user->designer?->phone ?? '');
-        $this->role = $user->role->value;
+        $this->selectedRoles = array_map(fn (UserRole $role): string => $role->value, $user->roleList());
         $this->active = $user->active;
         $this->is_reviewer = (bool) $user->is_reviewer;
         $this->is_lead = (bool) $user->is_lead;
@@ -139,7 +142,8 @@ class UserManagement extends Component
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,'.$this->editingUserId,
             'phone' => 'nullable|string|max:50',
-            'role' => ['required', Rule::enum(UserRole::class)],
+            'selectedRoles' => ['required', 'array', 'min:1'],
+            'selectedRoles.*' => ['required', 'distinct', Rule::enum(UserRole::class)],
             'is_reviewer' => 'boolean',
             'is_lead' => 'boolean',
             'wip_limit' => 'required|integer|min:1|max:50',
@@ -151,7 +155,12 @@ class UserManagement extends Component
             $rules['password'] = 'required|string|min:8';
         }
 
-        $this->validate($rules);
+        $this->validate($rules, [
+            'selectedRoles.required' => __('Pick at least one role.'),
+            'selectedRoles.min' => __('Pick at least one role.'),
+        ]);
+
+        $roles = array_map(fn (string $role): UserRole => UserRole::from($role), array_values($this->selectedRoles));
 
         $cleanPhone = $this->phone ? trim($this->phone) : null;
 
@@ -161,7 +170,7 @@ class UserManagement extends Component
                 'name' => $this->name,
                 'email' => $this->email,
                 'phone' => $cleanPhone,
-                'role' => $this->role,
+                'roles' => $roles,
                 'active' => $this->active,
                 'is_reviewer' => $this->is_reviewer,
                 'is_lead' => $this->is_lead,
@@ -177,7 +186,7 @@ class UserManagement extends Component
                 'email' => $this->email,
                 'phone' => $cleanPhone,
                 'password' => Hash::make($this->password),
-                'role' => $this->role,
+                'roles' => $roles,
                 'active' => $this->active,
                 'is_reviewer' => $this->is_reviewer,
                 'is_lead' => $this->is_lead,
@@ -223,7 +232,7 @@ class UserManagement extends Component
             'users' => $users,
             'allUsers' => User::orderBy('name')->get(),
             'designers' => $designers,
-            'roles' => UserRole::cases(),
+            'roleOptions' => UserRole::cases(),
         ])->layout('components.layouts.app', ['title' => __('Users - ').config('app.name')]);
     }
 }
