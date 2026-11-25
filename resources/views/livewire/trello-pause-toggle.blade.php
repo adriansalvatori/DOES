@@ -3,7 +3,7 @@
     <button 
         wire:click="togglePause" 
         type="button"
-        title="{{ $isPaused ? __('Sincronización con Trello Pausada (Clic para Reactivar)') : __('Sincronización con Trello Activa (Clic para Pausar)') }}"
+        title="{{ $isPaused ? __('Trello sync paused (click to resume)') : __('Trello sync active (click to pause)') }}"
         class="w-full px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors border {{ $isPaused ? 'bg-amber-50/80 text-amber-900 border-amber-200/80 hover:bg-amber-100/80' : 'bg-stone-50/80 text-zinc-700 border-stone-200/60 hover:bg-stone-100/80' }}">
         
         <div class="flex items-center gap-2 min-w-0">
@@ -42,7 +42,7 @@
                 <button wire:click="dismissPrompt" class="text-emerald-700 hover:text-emerald-900 font-bold px-1">✕</button>
             </div>
             <p class="text-[10px] text-emerald-800 leading-tight">
-                {{ __('Las acciones futuras se enviarán a Trello.') }}
+                {{ __('Future actions will be sent to Trello.') }}
             </p>
             <a href="/trello-sync" wire:navigate class="mt-0.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 hover:text-emerald-900 underline">
                 <x-lucide-arrow-right class="w-3 h-3" />

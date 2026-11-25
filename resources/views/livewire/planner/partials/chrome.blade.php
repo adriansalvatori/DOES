@@ -30,7 +30,7 @@
                             @keydown.arrow-up.prevent="if(!dropdownOpen) dropdownOpen = true; else navigateOrder(-1);"
                             @keydown.enter.prevent="handleOrderEnter()"
                             @keydown.escape.stop="if(dropdownOpen) { dropdownOpen = false; orderHighlightedIndex = -1; } else { cancelInline(); }"
-                            placeholder="{{ __('+ Buscar empresa o escribir nota...') }}"
+                            placeholder="{{ __('+ Search company or write a note...') }}"
                             class="w-full bg-transparent border-none p-0 focus:ring-0 focus:outline-none text-meta font-normal text-zinc-800 placeholder-stone-400" />
 
                         <!-- Floating Dropdown for Orders -->
@@ -90,7 +90,7 @@
                                  @keydown.enter.prevent="if (presetDropdownOpen && presetHighlightedIndex >= 0 && getFilteredPresets()[presetHighlightedIndex]) { selectPreset(getFilteredPresets()[presetHighlightedIndex]); } else { submitSubtask(); }"
                                  @keydown.backspace="if(!subtaskTitle) { selectedOrderId = ''; selectedOrderCompany = ''; selectedOrderTask = ''; presetDropdownOpen = false; titleFocused = false; }"
                                  @keydown.escape.stop="if(presetDropdownOpen) { presetDropdownOpen = false; presetHighlightedIndex = -1; } else { cancelInline(); }"
-                                 placeholder="{{ __('Nombre subtarea (Enter para guardar)...') }}"
+                                 placeholder="{{ __('Subtask name (Enter to save)...') }}"
                                  class="w-full bg-sunken border border-line px-1.5 py-0.5 rounded text-meta font-semibold text-ink   focus:border-line focus:outline-none placeholder-ink-3 transition-all duration-200" />
 
                             <!-- Delicate Dropdown Menu for Subtask Presets -->
@@ -107,7 +107,7 @@
                                 class="absolute left-0 top-full mt-1 z-50 bg-white/95 border border-stone-200 rounded-lg shadow-menu max-h-48 overflow-y-auto p-1 text-meta min-w-[210px] w-max max-w-xs space-y-0.5 divide-y divide-stone-100"
                                 style="display: none;">
                                 <div class="px-2 py-0.5 text-meta font-semibold text-stone-400  flex items-center justify-between select-none pb-0.5">
-                                    <span>{{ __('Plantillas predeterminadas') }}</span>
+                                    <span>{{ __('Default templates') }}</span>
                                     <span class="text-meta text-stone-300 font-mono">↑↓ Enter</span>
                                 </div>
                                 <div class="pt-0.5 space-y-0.5">
@@ -147,14 +147,14 @@
                             @click="isWorkTask = !isWorkTask"
                             :class="isWorkTask ? 'bg-sunken hover:bg-sunken text-ink-2 border-line' : 'bg-sunken hover:bg-sunken text-ink-2 border-line'"
                             class="px-1.5 py-0.5 rounded text-meta font-semibold border transition cursor-pointer flex items-center gap-1 shrink-0 select-none"
-                            :title="isWorkTask ? @js(__('Trabajo activo de diseño (Mueve orden a Working Today si es para hoy)')) : @js(__('Gestión / Coordinación (No mueve la orden principal a Working Today)'))">
+                            :title="isWorkTask ? @js(__('Active design work (moves the order to Working Today if it\'s for today)')) : @js(__('Management / coordination (doesn\'t move the main order to Working Today)'))">
                             <span x-show="isWorkTask" class="flex items-center gap-1">
                                 <x-lucide-briefcase class="w-3 h-3 text-ink-2" />
-                                <span>{{ __('Trabajo') }}</span>
+                                <span>{{ __('Work') }}</span>
                             </span>
                             <span x-show="!isWorkTask" class="flex items-center gap-1">
                                 <x-lucide-clipboard-check class="w-3 h-3 text-ink-2" />
-                                <span>{{ __('Gestión') }}</span>
+                                <span>{{ __('Admin') }}</span>
                             </span>
                         </button>
 
@@ -164,7 +164,7 @@
             </div>
 
             <div class="flex items-center gap-1 shrink-0">
-                <button type="button" @click="cancelInline()" class="p-0.5 text-stone-400 hover:text-stone-700" title="{{ __('Cancelar') }}">
+                <button type="button" @click="cancelInline()" class="p-0.5 text-stone-400 hover:text-stone-700" title="{{ __('Cancel') }}">
                     <x-lucide-x class="w-3.5 h-3.5" />
                 </button>
             </div>
@@ -197,9 +197,9 @@
                                 <x-lucide-check-square class="w-4 h-4" />
                             </div>
                             <div class="min-w-0">
-                                <h3 class="font-semibold text-sm text-zinc-900 leading-snug">{{ __('Asignar Subtarea a Día') }}</h3>
+                                <h3 class="font-semibold text-sm text-zinc-900 leading-snug">{{ __('Assign Subtask to Day') }}</h3>
                                 <p class="text-xs text-zinc-500 truncate">
-                                    {{ __('Programar para el día y diseñador seleccionado') }}
+                                    {{ __('Schedule for selected day and designer') }}
                                 </p>
                             </div>
                         </div>
@@ -214,11 +214,11 @@
                     <div class="p-5 space-y-4 text-xs">
                         <div class="space-y-1 relative" @click.outside="orderDropdownOpen = false">
                             <label class="font-semibold text-zinc-700 block flex items-center justify-between">
-                                <span>{{ __('Orden / Trabajo Principal') }} <span class="text-zinc-400 font-normal">({{ __('Opcional - dejar en blanco para Nota') }})</span></span>
+                                <span>{{ __('Main Order / Job') }} <span class="text-zinc-400 font-normal">({{ __('Optional - leave blank for a note') }})</span></span>
                                 <template x-if="subtaskOrderId">
                                     <span class="text-meta text-ink-2 font-semibold bg-sunken px-1.5 py-0.2 rounded border border-line flex items-center gap-1">
                                         <x-lucide-check class="w-3 h-3" />
-                                        {{ __('Orden seleccionada') }}
+                                        {{ __('Selected order') }}
                                     </span>
                                 </template>
                             </label>
@@ -236,7 +236,7 @@
                                     @keydown.arrow-up.prevent="if(!orderDropdownOpen) orderDropdownOpen = true; else navigateModalOrder(-1);"
                                     @keydown.enter.prevent="if (orderDropdownOpen && modalOrderHighlightedIndex >= 0) { selectHighlightedModalOrder(); }"
                                     @keydown.escape.stop="if(orderDropdownOpen) { orderDropdownOpen = false; modalOrderHighlightedIndex = -1; }"
-                                    placeholder="{{ __('Buscar por empresa o trabajo...') }}" 
+                                    placeholder="{{ __('Search by company or job...') }}" 
                                     class="w-full bg-canvas focus:bg-white border border-line focus:border-stone-400 rounded-lg pl-9 pr-14 py-2 text-xs text-zinc-800 focus:outline-none transition font-medium" />
 
                                 <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -245,7 +245,7 @@
                                             type="button" 
                                             @click="orderSearchQuery = ''; subtaskOrderId = ''; orderDropdownOpen = true; $refs.orderSearchInput.focus()" 
                                             class="p-1 text-zinc-400 hover:text-zinc-700 rounded-md transition cursor-pointer"
-                                            title="{{ __('Limpiar búsqueda') }}">
+                                            title="{{ __('Clear search') }}">
                                             <x-lucide-x class="w-3.5 h-3.5" />
                                         </button>
                                     </template>
@@ -253,7 +253,7 @@
                                         type="button" 
                                         @click="orderDropdownOpen = !orderDropdownOpen" 
                                         class="p-1 text-zinc-400 hover:text-zinc-700 rounded-md transition cursor-pointer"
-                                        title="{{ __('Mostrar opciones') }}">
+                                        title="{{ __('Show options') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5 transition-transform duration-150" x-bind:class="orderDropdownOpen ? 'rotate-180' : ''" />
                                     </button>
                                 </div>
@@ -293,7 +293,7 @@
 
                                 <template x-if="getFilteredOrders().length === 0">
                                     <div class="p-3 text-center text-zinc-400 italic text-meta">
-                                        {{ __('No se encontraron órdenes coincidentes.') }}
+                                        {{ __('No matching orders.') }}
                                     </div>
                                 </template>
                             </div>
@@ -301,7 +301,7 @@
 
                         <div class="space-y-1">
                             <label class="font-semibold text-zinc-700 block flex items-center justify-between">
-                                <span>{{ __('Nombre de la Subtarea') }} <span class="text-danger">*</span></span>
+                                <span>{{ __('Subtask Name') }} <span class="text-danger">*</span></span>
                                 <div class="flex items-center gap-1 bg-stone-100 p-0.5 rounded-lg text-meta font-semibold border border-stone-200">
                                     <button 
                                         type="button" 
@@ -309,7 +309,7 @@
                                         :class="subtaskIsWorkTask ? 'bg-ink text-white font-semibold' : 'text-zinc-600 hover:text-zinc-900'" 
                                         class="px-2 py-0.5 rounded-md transition cursor-pointer flex items-center gap-1">
                                         <x-lucide-briefcase class="w-3 h-3" />
-                                        <span>{{ __('Trabajo') }}</span>
+                                        <span>{{ __('Work') }}</span>
                                     </button>
                                     <button 
                                         type="button" 
@@ -317,7 +317,7 @@
                                         :class="!subtaskIsWorkTask ? 'bg-ink text-white font-semibold' : 'text-zinc-600 hover:text-zinc-900'" 
                                         class="px-2 py-0.5 rounded-md transition cursor-pointer flex items-center gap-1">
                                         <x-lucide-clipboard-check class="w-3 h-3" />
-                                        <span>{{ __('Gestión') }}</span>
+                                        <span>{{ __('Admin') }}</span>
                                     </button>
                                 </div>
                             </label>
@@ -326,13 +326,13 @@
                                 x-ref="subtaskTitleInput"
                                 x-model="subtaskTitle"
                                 @keyup.enter="submitSubtaskModal()"
-                                placeholder="{{ __('Ej: Revisión, Ajustes de Cliente, Impresión, Montaje...') }}"
+                                placeholder="{{ __('Ex: Review, Client Adjustments, Printing, Assembly...') }}"
                                 class="w-full bg-canvas focus:bg-white border border-line focus:border-stone-400 rounded-lg px-3 py-2 text-xs text-zinc-800 focus:outline-none transition" />
                         </div>
 
                         @if($subtaskPresets->count() > 0)
                             <div class="space-y-1.5 pt-1">
-                                <span class="text-meta font-medium text-zinc-500 block">{{ __('O elige un nombre predefinido:') }}</span>
+                                <span class="text-meta font-medium text-zinc-500 block">{{ __('Or choose a predefined name:') }}</span>
                                 <div class="flex flex-wrap gap-1.5">
                                     @foreach($subtaskPresets as $preset)
                                         @php
@@ -344,7 +344,7 @@
                                             class="px-2 py-1 rounded-md font-medium text-meta border transition inline-flex items-center gap-1 cursor-pointer hover:opacity-80 {{ $preset->badgeStyle() }}">
                                             <x-dynamic-component :component="'lucide-' . $safePlannerIcon" class="w-3 h-3" />
                                             <span>{{ __($preset->title) }}</span>
-                                            <span class="text-meta opacity-75">({{ $preset->is_work_task ? __('Trabajo') : __('Gestión') }})</span>
+                                            <span class="text-meta opacity-75">({{ $preset->is_work_task ? __('Work') : __('Admin') }})</span>
                                         </button>
                                     @endforeach
                                 </div>
@@ -353,7 +353,7 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#f0f0ee]">
                             <div class="space-y-1 relative" x-data="{ calOpen: false }" @click.outside="calOpen = false">
-                                <label class="font-semibold text-zinc-700 block">{{ __('Día Asignado') }}</label>
+                                <label class="font-semibold text-zinc-700 block">{{ __('Assigned Day') }}</label>
                                 
                                 <button 
                                     type="button" 
@@ -361,7 +361,7 @@
                                     class="w-full bg-canvas hover:bg-white border border-line hover:border-stone-400 rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none transition font-medium flex items-center justify-between cursor-pointer">
                                     <span class="flex items-center gap-1.5 truncate">
                                         <x-lucide-calendar class="w-3.5 h-3.5 text-ink-2 shrink-0" />
-                                        <span x-text="subtaskDate ? subtaskDate : @js(__('Seleccionar fecha...'))"></span>
+                                        <span x-text="subtaskDate ? subtaskDate : @js(__('Select a date...'))"></span>
                                     </span>
                                     <x-lucide-chevron-down class="w-3.5 h-3.5 text-zinc-400 shrink-0 transition-transform duration-150" x-bind:class="calOpen ? 'rotate-180' : ''" />
                                 </button>
@@ -390,16 +390,16 @@
                                     <div class="flex items-center justify-between text-meta text-zinc-500 px-0.5">
                                         <span class="flex items-center gap-1 font-medium">
                                             <span class="w-2.5 h-2.5 rounded bg-sunken border border-line inline-block"></span>
-                                            {{ __('Semana Actual') }}
+                                            {{ __('Current Week') }}
                                         </span>
                                         <span class="flex items-center gap-1 font-medium">
                                             <span class="w-2.5 h-2.5 rounded bg-stone-900 inline-block"></span>
-                                            {{ __('Seleccionado') }}
+                                            {{ __('Selected') }}
                                         </span>
                                     </div>
 
                                     <div class="grid grid-cols-7 text-center font-semibold text-meta text-zinc-400 ">
-                                        <span>{{ __('Lun') }}</span><span>{{ __('Mar') }}</span><span>{{ __('Mié') }}</span><span>{{ __('Jue') }}</span><span>{{ __('Vie') }}</span><span class="text-zinc-300">{{ __('Sáb') }}</span><span class="text-zinc-300">{{ __('Dom') }}</span>
+                                        <span>{{ __('Mon') }}</span><span>{{ __('Tue') }}</span><span>{{ __('Wed') }}</span><span>{{ __('Thu') }}</span><span>{{ __('Fri') }}</span><span class="text-zinc-300">{{ __('Sat') }}</span><span class="text-zinc-300">{{ __('Sun') }}</span>
                                     </div>
 
                                     <div class="grid grid-cols-7 gap-1 text-center font-medium">
@@ -415,7 +415,7 @@
                                     </div>
 
                                     <div class="pt-1.5 border-t border-[#f0f0ee] flex items-center justify-between gap-1 text-meta">
-                                        <span class="text-zinc-500 shrink-0">{{ __('O elegir fecha:') }}</span>
+                                        <span class="text-zinc-500 shrink-0">{{ __('Or pick a date:') }}</span>
                                         <input 
                                             type="date" 
                                             x-model="subtaskDate"
@@ -426,11 +426,11 @@
                             </div>
 
                             <div class="space-y-1">
-                                <label class="font-semibold text-zinc-700 block">{{ __('Diseñador Asignado') }}</label>
+                                <label class="font-semibold text-zinc-700 block">{{ __('Assigned Designer') }}</label>
                                 <select 
                                     x-model="subtaskDesignerId" 
                                     class="w-full bg-canvas focus:bg-white border border-line focus:border-stone-400 rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 focus:outline-none transition font-medium">
-                                    <option value="">{{ __('Por defecto (de la Orden)') }}</option>
+                                    <option value="">{{ __('Default (from Order)') }}</option>
                                     @foreach($designers as $des)
                                         <option value="{{ $des->id }}">{{ $des->name }}</option>
                                     @endforeach
@@ -445,14 +445,14 @@
                             type="button" 
                             @click="subtaskModalOpen = false"
                             class="px-3 py-1.5 rounded-lg border border-[#d0d0ce] bg-white hover:bg-stone-50 text-zinc-700 font-semibold text-xs transition cursor-pointer">
-                            {{ __('Cancelar') }}
+                            {{ __('Cancel') }}
                         </button>
                         <button 
                             type="button" 
                             @click="submitSubtaskModal()"
                             class="px-4 py-1.5 rounded-lg bg-ink hover:bg-black text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1.5">
                             <x-lucide-check class="w-3.5 h-3.5" />
-                            <span x-text="subtaskOrderId ? @js(__('Crear Subtarea')) : @js(__('Crear Nota'))"></span>
+                            <span x-text="subtaskOrderId ? @js(__('Create Subtask')) : @js(__('Create note'))"></span>
                         </button>
                     </div>
 
@@ -485,9 +485,9 @@
                                 <x-lucide-link class="w-4 h-4" />
                             </div>
                             <div class="min-w-0">
-                                <h3 class="font-semibold text-sm text-zinc-900 leading-snug">{{ __('Vincular Nota a Orden') }}</h3>
+                                <h3 class="font-semibold text-sm text-zinc-900 leading-snug">{{ __('Link note to order') }}</h3>
                                 <p class="text-xs text-zinc-500 truncate">
-                                    {{ __('Asociar nota a un trabajo del workspace') }}
+                                    {{ __('Attach the note to a workspace job') }}
                                 </p>
                             </div>
                         </div>
@@ -503,20 +503,20 @@
                         <div class="bg-sunken border border-line rounded-lg p-3 text-ink space-y-1">
                             <div class="font-semibold flex items-center gap-1.5 text-xs">
                                 <x-lucide-info class="w-3.5 h-3.5 text-ink-2 shrink-0" />
-                                <span>{{ __('Vinculación Obligatoria') }}</span>
+                                <span>{{ __('Link required') }}</span>
                             </div>
                             <p class="text-meta leading-relaxed text-ink-2">
-                                {{ __('Para marcar una nota como completada o asociarla al timeline de un cliente, debes vincularla a una orden. La información redundante del título (empresa/ubicación) se limpiará automáticamente.') }}
+                                {{ __('To complete a note or add it to a client\'s timeline, link it to an order. Redundant title details (company/location) are cleaned up automatically.') }}
                             </p>
                             <div class="pt-1 font-semibold text-meta text-ink flex items-center gap-1">
-                                <span>{{ __('Nota:') }}</span>
+                                <span>{{ __('Note:') }}</span>
                                 <span class="italic font-semibold text-zinc-900" x-text="linkNoteTitle"></span>
                             </div>
                         </div>
 
                         <div class="space-y-1 relative" @click.outside="linkNoteDropdownOpen = false">
                             <label class="font-semibold text-zinc-700 block flex items-center justify-between">
-                                <span>{{ __('Seleccionar Orden del Workspace') }} <span class="text-danger">*</span></span>
+                                <span>{{ __('Select workspace order') }} <span class="text-danger">*</span></span>
                             </label>
 
                             <div class="relative">
@@ -532,7 +532,7 @@
                                     @keydown.arrow-up.prevent="if(!linkNoteDropdownOpen) linkNoteDropdownOpen = true; else navigateLinkNoteOrder(-1);"
                                     @keydown.enter.prevent="if (linkNoteDropdownOpen && linkNoteHighlightedIndex >= 0) { selectHighlightedLinkNoteOrder(); } else if (linkNoteOrderId) { submitLinkNoteModal(); }"
                                     @keydown.escape.stop="if(linkNoteDropdownOpen) { linkNoteDropdownOpen = false; linkNoteHighlightedIndex = -1; } else { linkNoteModalOpen = false; }"
-                                    placeholder="{{ __('Buscar por empresa, ubicación o trabajo...') }}" 
+                                    placeholder="{{ __('Search by company, location or job...') }}" 
                                     class="w-full bg-canvas focus:bg-white border border-line focus:border-stone-400 rounded-lg pl-9 pr-8 py-2 text-xs text-zinc-800 focus:outline-none transition font-medium" />
 
                                 <div class="absolute right-2 top-1/2 -translate-y-1/2">
@@ -579,7 +579,7 @@
 
                                 <template x-if="getFilteredLinkNoteOrders().length === 0">
                                     <div class="p-3 text-center text-zinc-400 italic text-meta">
-                                        {{ __('No se encontraron órdenes coincidentes.') }}
+                                        {{ __('No matching orders.') }}
                                     </div>
                                 </template>
                             </div>
@@ -591,14 +591,14 @@
                             type="button" 
                             @click="linkNoteModalOpen = false"
                             class="px-3 py-1.5 rounded-lg border border-[#d0d0ce] bg-white hover:bg-stone-50 text-zinc-700 font-semibold text-xs transition cursor-pointer">
-                            {{ __('Cancelar') }}
+                            {{ __('Cancel') }}
                         </button>
                         <button 
                             type="button" 
                             @click="submitLinkNoteModal()"
                             class="px-4 py-1.5 rounded-lg bg-ink hover:bg-black text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1.5">
                             <x-lucide-link class="w-3.5 h-3.5" />
-                            <span>{{ __('Vincular a Orden') }}</span>
+                            <span>{{ __('Link to order') }}</span>
                         </button>
                     </div>
 
@@ -628,7 +628,7 @@
             type="button" 
             class="px-2.5 py-1 rounded-lg bg-ink hover:bg-black text-white font-semibold text-meta flex items-center gap-1.5 shrink-0 transition cursor-pointer">
             <x-lucide-undo-2 class="w-3 h-3 text-stone-300" />
-            <span>{{ __('Deshacer') }}</span>
+            <span>{{ __('Undo') }}</span>
             <kbd class="hidden sm:inline-block px-1.5 py-0.2 text-meta bg-white/20 text-white rounded font-mono">⌘Z</kbd>
         </button>
         <button @click="hideUndoToast()" type="button" class="p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-md transition">
@@ -652,7 +652,7 @@
         <div class="flex items-center gap-2 pr-2.5 border-r border-line">
             <span class="w-2 h-2 rounded-full bg-ink"></span>
             <span class="font-semibold text-meta whitespace-nowrap text-ink">
-                <span x-text="selectedTaskIds.length"></span> {{ __('seleccionadas') }}
+                <span x-text="selectedTaskIds.length"></span> {{ __('selected') }}
             </span>
         </div>
 
@@ -662,25 +662,25 @@
                 type="button" 
                 @click="$wire.moveMultipleSubtasks(selectedTaskIds, '{{ now()->toDateString() }}'); clearSelection();"
                 class="px-2.5 py-1 rounded-lg bg-sunken hover:bg-line text-ink-2 hover:text-ink transition cursor-pointer text-meta font-medium flex items-center gap-1"
-                title="{{ __('Mover a Hoy') }}">
+                title="{{ __('Move to today') }}">
                 <x-lucide-calendar class="w-3.5 h-3.5 text-ink-2" />
-                <span>{{ __('Hoy') }}</span>
+                <span>{{ __('Today') }}</span>
             </button>
 
             <button 
                 type="button" 
                 @click="$wire.moveMultipleSubtasks(selectedTaskIds, '{{ now()->addDay()->toDateString() }}'); clearSelection();"
                 class="px-2.5 py-1 rounded-lg bg-sunken hover:bg-line text-ink-2 hover:text-ink transition cursor-pointer text-meta font-medium flex items-center gap-1"
-                title="{{ __('Mover a Mañana') }}">
-                <span>{{ __('Mañana') }}</span>
+                title="{{ __('Move to tomorrow') }}">
+                <span>{{ __('Tomorrow') }}</span>
             </button>
 
             <button 
                 type="button" 
                 @click="$wire.moveMultipleSubtasks(selectedTaskIds, '{{ now()->addWeek()->startOfWeek()->toDateString() }}'); clearSelection();"
                 class="px-2.5 py-1 rounded-lg bg-sunken hover:bg-line text-ink-2 hover:text-ink transition cursor-pointer text-meta font-medium flex items-center gap-1"
-                title="{{ __('Mover a Próxima Semana') }}">
-                <span>{{ __('Próx. Sem.') }}</span>
+                title="{{ __('Move to next week') }}">
+                <span>{{ __('Next wk') }}</span>
             </button>
         </div>
 
@@ -691,7 +691,7 @@
                 @click="openDesDropdown = !openDesDropdown"
                 class="px-2.5 py-1 rounded-lg bg-sunken hover:bg-line text-ink-2 hover:text-ink transition cursor-pointer text-meta font-medium flex items-center gap-1.5">
                 <x-lucide-user-check class="w-3.5 h-3.5 text-ink-2" />
-                <span>{{ __('Diseñador') }}</span>
+                <span>{{ __('Designer') }}</span>
                 <x-lucide-chevron-up class="w-3 h-3 text-zinc-400 transition-transform" x-bind:class="openDesDropdown ? 'rotate-180' : ''" />
             </button>
 
@@ -701,7 +701,7 @@
                 style="display: none;"
                 class="absolute bottom-full left-0 mb-2 w-48 bg-surface border border-line rounded-card shadow-menu overflow-hidden py-1 text-ink text-meta z-50">
                 <div class="px-2.5 py-1 text-meta font-semibold  text-stone-400 border-b border-stone-100">
-                    {{ __('Reasignar a Diseñador') }}
+                    {{ __('Reassign to designer') }}
                 </div>
                 <div class="max-h-48 overflow-y-auto">
                     @foreach($allDesigners as $des)
@@ -722,9 +722,9 @@
             type="button" 
             @click="$wire.bulkToggleComplete(selectedTaskIds, true); clearSelection();"
             class="px-2.5 py-1 rounded-lg bg-ink hover:bg-black text-white transition cursor-pointer text-meta font-semibold flex items-center gap-1"
-            title="{{ __('Marcar todas como completadas') }}">
+            title="{{ __('Mark all as done') }}">
             <x-lucide-check class="w-3.5 h-3.5" />
-            <span>{{ __('Completar') }}</span>
+            <span>{{ __('Complete') }}</span>
         </button>
 
         <!-- Deselect All / Cancel -->
@@ -732,7 +732,7 @@
             type="button" 
             @click="clearSelection()" 
             class="p-1 rounded-lg text-ink-3 hover:text-ink hover:bg-sunken transition cursor-pointer ml-1"
-            title="{{ __('Deseleccionar todo (Esc)') }}">
+            title="{{ __('Clear selection (Esc)') }}">
             <x-lucide-x class="w-3.5 h-3.5" />
         </button>
     </div>

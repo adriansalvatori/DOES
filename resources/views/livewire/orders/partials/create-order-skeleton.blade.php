@@ -15,8 +15,8 @@
             type="button" 
             @click="confirmClose(() => $wire.closeModal())" 
             class="p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 rounded-lg transition cursor-pointer"
-            title="{{ __('Cerrar (Esc)') }}"
-            aria-label="{{ __('Cerrar') }}">
+            title="{{ __('Close (Esc)') }}"
+            aria-label="{{ __('Close') }}">
             <x-lucide-x class="w-4 h-4" />
         </button>
     </div>

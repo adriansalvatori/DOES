@@ -24,7 +24,7 @@
             copied = true;
             setTimeout(() => copied = false, 2000);
         "
-        title="{{ __('Clic para copiar WO ') . ($cleanNumber ?: $rawNumber) }}"
+        title="{{ __('Click to copy WO ') . ($cleanNumber ?: $rawNumber) }}"
         {{ $attributes->merge([
             'class' => 'font-sans tabular-nums inline-flex items-center gap-1 cursor-pointer transition select-none group/wobadge px-1.5 py-0.5 rounded text-xs leading-4 font-bold bg-wo hover:bg-black text-white shrink-0 whitespace-nowrap',
         ]) }}

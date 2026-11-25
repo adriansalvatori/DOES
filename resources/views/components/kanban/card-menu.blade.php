@@ -27,7 +27,7 @@
         trash() {
             const id = this.orderId;
             this.close();
-            if (confirm(@js(__('¿Enviar esta orden a la papelera (archivar en Trello)?')))) {
+            if (confirm(@js(__('Move this order to the trash (archives it in Trello)?')))) {
                 $wire.trashOrder(id);
             }
         },
@@ -47,7 +47,7 @@
         style="display: none;">
         <button type="button" role="menuitem" @click="movePanel = !movePanel" :aria-expanded="movePanel.toString()" class="w-full flex items-center gap-2 px-2 py-1.5 rounded-control hover:bg-sunken text-left cursor-pointer">
             <x-lucide-arrow-left-right class="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
-            <span class="flex-1">{{ __('Mover a...') }}</span>
+            <span class="flex-1">{{ __('Move to...') }}</span>
             <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3 transition-transform" x-bind:class="{ 'rotate-180': movePanel }" aria-hidden="true" />
         </button>
         <div x-show="movePanel" x-collapse class="max-h-56 overflow-y-auto pl-4" style="display: none;">
@@ -57,17 +57,17 @@
         </div>
         <button type="button" role="menuitem" @click="duplicate()" class="w-full flex items-center gap-2 px-2 py-1.5 rounded-control hover:bg-sunken text-left cursor-pointer">
             <x-lucide-copy class="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
-            <span>{{ __('Duplicar Orden') }}</span>
+            <span>{{ __('Duplicate Order') }}</span>
         </button>
         <a x-show="trelloUrl" x-cloak :href="trelloUrl" target="_blank" rel="noopener noreferrer" role="menuitem" @click="close()" class="w-full flex items-center gap-2 px-2 py-1.5 rounded-control hover:bg-sunken text-left cursor-pointer">
             <x-lucide-external-link class="w-4 h-4 text-ink-3 shrink-0" aria-hidden="true" />
-            <span>{{ __('Abrir en Trello') }}</span>
+            <span>{{ __('Open in Trello') }}</span>
         </a>
         @if(auth()->user()?->canDeleteOrders())
             <div class="my-1 border-t border-line"></div>
             <button type="button" role="menuitem" @click="trash()" class="w-full flex items-center gap-2 px-2 py-1.5 rounded-control hover:bg-danger-soft text-danger text-left cursor-pointer">
                 <x-lucide-trash-2 class="w-4 h-4 shrink-0" aria-hidden="true" />
-                <span>{{ __('Enviar a la papelera (archivar)') }}</span>
+                <span>{{ __('Send to trash (archive)') }}</span>
             </button>
         @endif
     </div>

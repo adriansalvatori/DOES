@@ -57,7 +57,7 @@ class BacklogTrelloSyncTest extends TestCase
             ->call('runTrelloSync')
             ->assertSet('syncReport.show', true)
             ->assertSet('syncReport.updated', 1)
-            ->assertSee(__('Resumen de Sincronización Trello'))
+            ->assertSee(__('Trello Sync Summary'))
             ->call('setFilter', 'updated')
             ->assertSet('activeFilter', 'updated')
             ->call('closeReportModal')
@@ -127,7 +127,7 @@ class BacklogTrelloSyncTest extends TestCase
             ->assertSet('syncReport.show', true)
             ->assertSet('syncReport.added', 1)
             ->assertSet('syncReport.unchanged', 1)
-            ->assertSee(__('Sincronización completada: se importaron :count tarjetas nuevas de Trello.', ['count' => 1]));
+            ->assertSee(__('Sync complete: :count new cards imported from Trello.', ['count' => 1]));
     }
 
     public function test_backlog_sync_only_new_skips_and_canonicalizes_order_matched_by_shortlink(): void

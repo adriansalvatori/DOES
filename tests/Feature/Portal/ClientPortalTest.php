@@ -94,7 +94,7 @@ class ClientPortalTest extends TestCase
             ->assertSee('WO 16362')
             ->assertSee('Esperando tu respuesta')
             ->assertSee('WINDOW GRAPHICS')
-            ->assertSee(__('En Producción'))
+            ->assertSee(__('In Production'))
             ->assertDontSee('OLD ARCHIVED PROJECT');
     }
 
@@ -144,8 +144,8 @@ class ClientPortalTest extends TestCase
             ->call('selectOrder', $order->id)
             ->assertSet('selectedOrderId', $order->id)
             ->assertSee('Order timeline')
-            ->assertSee('Orden recibida e iniciada')
-            ->assertSee('Diseño enviado para tu revisión')
+            ->assertSee('Order received and started')
+            ->assertSee('Design sent for your review')
             ->assertSee('Cambios / comentarios recibidos')
             ->call('closeOrder')
             ->assertSet('selectedOrderId', null);
@@ -163,9 +163,9 @@ class ClientPortalTest extends TestCase
         Livewire::test(ClientFlyoutPanel::class)
             ->dispatch('open-client-flyout', clientId: $client->id)
             ->assertSet('isOpen', true)
-            ->assertSeeHtml(e(__('Portal de seguimiento (QR)')))
+            ->assertSeeHtml(e(__('Tracking portal (QR)')))
             ->assertSee($client->portal_url)
-            ->assertSee(__('Descargar tarjeta JPG'))
+            ->assertSee(__('Download JPG card'))
             ->assertDontSeeHtml('<span>Portal QR</span>');
     }
 

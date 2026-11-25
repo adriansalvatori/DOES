@@ -15,14 +15,14 @@
         from: '',
         to: '',
         note: '',
-        confirmText: @js(__('Confirmar cambio')),
+        confirmText: @js(__('Confirm change')),
         resolver: null,
         open(detail) {
             this.field = detail.field ?? '';
-            this.from = (detail.from ?? '') === '' ? @js(__('(vacío)')) : String(detail.from);
-            this.to = (detail.to ?? '') === '' ? @js(__('(vacío)')) : String(detail.to);
+            this.from = (detail.from ?? '') === '' ? @js(__('(empty)')) : String(detail.from);
+            this.to = (detail.to ?? '') === '' ? @js(__('(empty)')) : String(detail.to);
             this.note = detail.note ?? '';
-            this.confirmText = detail.confirmText || @js(__('Confirmar cambio'));
+            this.confirmText = detail.confirmText || @js(__('Confirm change'));
             this.resolver = typeof detail.resolve === 'function' ? detail.resolve : null;
             this.show = true;
             this.$nextTick(() => this.$refs.confirmButton?.focus());
@@ -57,19 +57,19 @@
     >
         <div class="space-y-1">
             <h2 id="confirm-change-title" class="text-section font-semibold text-ink">
-                {{ __('¿Cambiar') }} <span x-text="field"></span>?
+                {{ __('Change') }} <span x-text="field"></span>?
             </h2>
-            <p class="text-body text-ink-3">{{ __('Este dato identifica la orden o el cliente. Revisa el cambio antes de guardarlo.') }}</p>
+            <p class="text-body text-ink-3">{{ __('This identifies the order or the client. Check the change before saving it.') }}</p>
         </div>
 
         <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 rounded-card bg-sunken p-3">
             <div class="min-w-0">
-                <p class="text-meta text-ink-3">{{ __('Antes') }}</p>
+                <p class="text-meta text-ink-3">{{ __('Before') }}</p>
                 <p class="text-row text-ink-2 line-through break-words" x-text="from"></p>
             </div>
             <x-lucide-arrow-right class="w-4 h-4 text-ink-3" aria-hidden="true" />
             <div class="min-w-0">
-                <p class="text-meta text-ink-3">{{ __('Después') }}</p>
+                <p class="text-meta text-ink-3">{{ __('After') }}</p>
                 <p class="text-row font-semibold text-ink break-words" x-text="to"></p>
             </div>
         </div>
@@ -78,7 +78,7 @@
 
         <div class="flex justify-end gap-2">
             <button type="button" @click="finish(false)" class="h-8 px-3 rounded-control border border-line-strong bg-surface text-body font-medium text-ink hover:bg-sunken transition cursor-pointer">
-                {{ __('Cancelar') }}
+                {{ __('Cancel') }}
             </button>
             <button type="button" x-ref="confirmButton" @click="finish(true)" class="h-8 px-3 rounded-control bg-ink text-white text-body font-medium hover:bg-black transition cursor-pointer" x-text="confirmText"></button>
         </div>

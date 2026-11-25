@@ -464,7 +464,7 @@ class OrderDetailModalTest extends TestCase
         $this->assertNotNull($event);
         $this->assertEquals('manager', $event->metadata['approval_type']);
         $this->assertEquals('Aprobado por Gabriela', $event->metadata['approval_type_label']);
-        $this->assertEquals(__('Aprobación Recibida'), $event->getFormattedTitle());
+        $this->assertEquals(__('Approval Received'), $event->getFormattedTitle());
 
         // Dynamic change of manager name via settings updates label
         Setting::set('manager_name', 'Gabriela Requena');
@@ -992,8 +992,8 @@ class OrderDetailModalTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
-            ->assertSeeHtml(__('Archivar orden'))
-            ->assertDontSeeHtml(__('Enviar a la papelera (archivar)'))
+            ->assertSeeHtml(__('Archive order'))
+            ->assertDontSeeHtml(__('Send to trash (archive)'))
             ->call('openArchiveModal')
             ->assertSet('showArchiveModal', true)
             ->call('confirmArchive')
@@ -1020,8 +1020,8 @@ class OrderDetailModalTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order1->id)
-            ->assertSeeHtml(__('Archivar orden'))
-            ->assertSeeHtml(__('Enviar a la papelera (archivar)'))
+            ->assertSeeHtml(__('Archive order'))
+            ->assertSeeHtml(__('Send to trash (archive)'))
             ->call('deleteOrder')
             ->assertDispatched('order-updated')
             ->assertSet('showModal', false);
@@ -1043,8 +1043,8 @@ class OrderDetailModalTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order2->id)
-            ->assertSeeHtml(__('Archivar orden'))
-            ->assertSeeHtml(__('Enviar a la papelera (archivar)'))
+            ->assertSeeHtml(__('Archive order'))
+            ->assertSeeHtml(__('Send to trash (archive)'))
             ->call('deleteOrder')
             ->assertDispatched('order-updated')
             ->assertSet('showModal', false);

@@ -1,38 +1,38 @@
 <div class="h-full flex flex-col min-h-0">
     <div id="tour-contact-header">
-        <x-ui.page-header :title="__('Directorio de Clientes')" :count="$totalContactsCount">
+        <x-ui.page-header :title="__('Client directory')" :count="$totalContactsCount">
             <x-slot:actions>
                 <button type="button" wire:click="openContactDetail" class="ui-btn ui-btn-primary">
                     <x-lucide-plus />
-                    {{ __('Nuevo contacto') }}
+                    {{ __('New contact') }}
                 </button>
             </x-slot:actions>
             <x-slot:toolbar>
                 <div class="relative w-72 max-w-full">
                     <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
-                    <input type="text" wire:model.live.debounce.200ms="search" placeholder="{{ __('Buscar por nombre, teléfono, email, marca...') }}" class="ui-input pl-8">
+                    <input type="text" wire:model.live.debounce.200ms="search" placeholder="{{ __('Search by name, phone, email or company...') }}" class="ui-input pl-8">
                 </div>
-                <select wire:model.live="channelFilter" class="ui-select w-44" aria-label="{{ __('Canal preferido') }}">
-                    <option value="">{{ __('Todos los canales') }}</option>
+                <select wire:model.live="channelFilter" class="ui-select w-44" aria-label="{{ __('Preferred channel') }}">
+                    <option value="">{{ __('All channels') }}</option>
                     <option value="whatsapp">WhatsApp</option>
-                    <option value="call">{{ __('Llamada') }}</option>
+                    <option value="call">{{ __('Call') }}</option>
                     <option value="email">Email</option>
-                    <option value="any">{{ __('Cualquiera') }}</option>
+                    <option value="any">{{ __('Any') }}</option>
                 </select>
-                <select wire:model.live="languageFilter" class="ui-select w-44" aria-label="{{ __('Idioma') }}">
-                    <option value="">{{ __('Todos los idiomas') }}</option>
-                    <option value="es">ES - {{ __('Español') }}</option>
-                    <option value="en">EN - {{ __('Inglés') }}</option>
-                    <option value="both">ES / EN - {{ __('Bilingüe') }}</option>
+                <select wire:model.live="languageFilter" class="ui-select w-44" aria-label="{{ __('Language') }}">
+                    <option value="">{{ __('All languages') }}</option>
+                    <option value="es">ES - {{ __('Spanish') }}</option>
+                    <option value="en">EN - {{ __('English') }}</option>
+                    <option value="both">ES / EN - {{ __('Bilingual') }}</option>
                 </select>
-                <select wire:model.live="clientFilter" class="ui-select w-52" aria-label="{{ __('Compañía') }}">
-                    <option value="">{{ __('Todas las compañías') }}</option>
+                <select wire:model.live="clientFilter" class="ui-select w-52" aria-label="{{ __('Company') }}">
+                    <option value="">{{ __('All companies') }}</option>
                     @foreach($allClients as $cl)
                         <option value="{{ $cl->id }}">{{ $cl->name }}</option>
                     @endforeach
                 </select>
                 @if(!empty($search) || !empty($channelFilter) || !empty($languageFilter) || !empty($clientFilter))
-                    <button type="button" wire:click="resetFilters" class="ui-btn ui-btn-ghost ui-btn-sm">{{ __('Limpiar todos los filtros') }}</button>
+                    <button type="button" wire:click="resetFilters" class="ui-btn ui-btn-ghost ui-btn-sm">{{ __('Clear all filters') }}</button>
                 @endif
             </x-slot:toolbar>
         </x-ui.page-header>
@@ -42,13 +42,13 @@
         <table class="ui-table min-w-[960px]">
             <thead>
                 <tr>
-                    <th>{{ __('Contacto') }}</th>
-                    <th>{{ __('Compañías') }}</th>
-                    <th>{{ __('Teléfono') }}</th>
+                    <th>{{ __('Contact') }}</th>
+                    <th>{{ __('Companies') }}</th>
+                    <th>{{ __('Phone') }}</th>
                     <th>{{ __('Email') }}</th>
-                    <th>{{ __('Idioma') }}</th>
-                    <th>{{ __('Canal') }}</th>
-                    <th class="is-num">{{ __('Activas') }}</th>
+                    <th>{{ __('Language') }}</th>
+                    <th>{{ __('Channel') }}</th>
+                    <th class="is-num">{{ __('Active') }}</th>
                     <th class="is-num">{{ __('Backlog') }}</th>
                     <th class="w-10"></th>
                 </tr>
@@ -60,9 +60,9 @@
                         $whatsappUrl = $contact->whatsapp_url;
                         $channelLabel = match ($contact->preferred_channel) {
                             'whatsapp' => 'WhatsApp',
-                            'call' => __('Llamada'),
+                            'call' => __('Call'),
                             'email' => 'Email',
-                            default => __('Cualquiera'),
+                            default => __('Any'),
                         };
                         $contactClients = $contact->clients;
                     @endphp
@@ -88,7 +88,7 @@
                             @if($contact->phone)
                                 <span class="text-ink-2">{{ $contact->phone }}</span>
                                 @if($whatsappUrl)
-                                    <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener noreferrer" x-on:click.stop="" class="ml-1.5 text-meta text-ink-3 hover:text-ink underline-offset-2 hover:underline" title="{{ __('Abrir chat en WhatsApp') }}">WhatsApp</a>
+                                    <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener noreferrer" x-on:click.stop="" class="ml-1.5 text-meta text-ink-3 hover:text-ink underline-offset-2 hover:underline" title="{{ __('Open WhatsApp chat') }}">WhatsApp</a>
                                 @endif
                             @else
                                 <span class="text-ink-3">—</span>
@@ -107,13 +107,13 @@
                         <td class="is-num text-ink-3">{{ $contact->backlog_orders_count }}</td>
                         <td class="text-right" x-on:click.stop="">
                             <flux:dropdown position="bottom" align="end">
-                                <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Acciones') }}" />
+                                <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Actions') }}" />
                                 <flux:menu>
                                     <flux:menu.item
                                         variant="danger"
                                         icon="trash"
                                         wire:click="deleteContact({{ $contact->id }})"
-                                        wire:confirm="{{ __('¿Seguro que deseas eliminar a :name del directorio?', ['name' => $contact->name]) }}">{{ __('Eliminar contacto') }}</flux:menu.item>
+                                        wire:confirm="{{ __('Delete :name from the directory?', ['name' => $contact->name]) }}">{{ __('Delete contact') }}</flux:menu.item>
                                 </flux:menu>
                             </flux:dropdown>
                         </td>
@@ -121,7 +121,7 @@
                 @empty
                     <tr>
                         <td colspan="9" class="!h-auto py-10">
-                            <x-ui.empty icon="users" :title="__('No se encontraron clientes con los filtros seleccionados.')" />
+                            <x-ui.empty icon="users" :title="__('No contacts match the selected filters.')" />
                         </td>
                     </tr>
                 @endforelse

@@ -6,15 +6,15 @@
     $overdueTag = function ($order) {
         $days = $order->current_due_date ? (int) abs(now()->startOfDay()->diffInDays($order->current_due_date->copy()->startOfDay(), false)) : 0;
 
-        return ['tone' => 'danger', 'icon' => 'alert-circle', 'label' => __('Atrasada :count d', ['count' => $days])];
+        return ['tone' => 'danger', 'icon' => 'alert-circle', 'label' => __('Overdue :count d', ['count' => $days])];
     };
     $blockedTag = function ($order) {
         $reason = $order->blocking_reason_other ?: $order->blocking_reason?->value;
 
-        return ['tone' => 'warn', 'icon' => 'lock', 'label' => $reason ? __('Bloqueada').': '.$reason : __('Bloqueada')];
+        return ['tone' => 'warn', 'icon' => 'lock', 'label' => $reason ? __('Blocked').': '.$reason : __('Blocked')];
     };
-    $camilaTag = ['tone' => 'info', 'icon' => 'user-check', 'label' => __('Con Camila')];
-    $clientTag = ['tone' => 'info', 'icon' => 'mail', 'label' => __('Cliente sin respuesta')];
+    $camilaTag = ['tone' => 'info', 'icon' => 'user-check', 'label' => __('With Camila')];
+    $clientTag = ['tone' => 'info', 'icon' => 'mail', 'label' => __('Client not responding')];
 
     // Needs attention: one row per order (reasons merged), then follow-up tasks.
     $attention = collect();
@@ -25,46 +25,46 @@
         foreach ($resolverOrders as $o) {
             $row = $attention[$o->id] ?? ['order' => $o, 'tags' => [], 'action' => null];
             $row['tags'][] = $blockedTag($o);
-            $row['action'] = ['label' => __('Desbloquear'), 'wire' => "openResolveModal({$o->id})"];
+            $row['action'] = ['label' => __('Unblock'), 'wire' => "openResolveModal({$o->id})"];
             $attention[$o->id] = $row;
         }
     }
     $attentionTasks = collect();
     foreach ($camilaFollowUpTasks as $t) {
-        $attentionTasks->push(['task' => $t, 'tags' => [$camilaTag], 'action' => ['label' => __('Revisar'), 'wire' => "openCamilaModal({$t->id})"]]);
+        $attentionTasks->push(['task' => $t, 'tags' => [$camilaTag], 'action' => ['label' => __('Review now'), 'wire' => "openCamilaModal({$t->id})"]]);
     }
     foreach ($clientFollowUpTasks as $t) {
-        $attentionTasks->push(['task' => $t, 'tags' => [$clientTag], 'action' => ['label' => __('Hecho'), 'wire' => "completeTask({$t->id})"]]);
+        $attentionTasks->push(['task' => $t, 'tags' => [$clientTag], 'action' => ['label' => __('Done'), 'wire' => "completeTask({$t->id})"]]);
     }
     $attentionCount = $attention->count() + $attentionTasks->count();
     $todayCount = $toDoTodayOrders->count() + $toDoTodayTasks->count();
 
     $segments = [
-        ['tab' => 'all', 'id' => null, 'count' => $inProgressCount, 'label' => __('en curso'), 'tone' => null],
-        ['tab' => 'overdue', 'id' => 'tour-stats-overdue', 'count' => $overdueOrders->count(), 'label' => trans_choice('{1} atrasada|[2,*] atrasadas', $overdueOrders->count()), 'tone' => 'danger'],
+        ['tab' => 'all', 'id' => null, 'count' => $inProgressCount, 'label' => __('in progress'), 'tone' => null],
+        ['tab' => 'overdue', 'id' => 'tour-stats-overdue', 'count' => $overdueOrders->count(), 'label' => trans_choice('{1} overdue|[2,*] overdue', $overdueOrders->count()), 'tone' => 'danger'],
     ];
     if (! $isDesigner) {
-        $segments[] = ['tab' => 'resolver', 'id' => 'tour-stats-resolver', 'count' => $resolverOrders->count(), 'label' => trans_choice('{1} bloqueada|[2,*] bloqueadas', $resolverOrders->count()), 'tone' => 'warn'];
+        $segments[] = ['tab' => 'resolver', 'id' => 'tour-stats-resolver', 'count' => $resolverOrders->count(), 'label' => trans_choice('{1} blocked|[2,*] blocked', $resolverOrders->count()), 'tone' => 'warn'];
     }
-    $segments[] = ['tab' => 'today', 'id' => 'tour-stats-today', 'count' => $todayCount, 'label' => __('para hoy'), 'tone' => null];
-    $segments[] = ['tab' => 'camila', 'id' => null, 'count' => $camilaFollowUpTasks->count(), 'label' => __('con Camila'), 'tone' => null];
-    $segments[] = ['tab' => 'client', 'id' => null, 'count' => $clientFollowUpTasks->count(), 'label' => __('esperando al cliente'), 'tone' => null];
+    $segments[] = ['tab' => 'today', 'id' => 'tour-stats-today', 'count' => $todayCount, 'label' => __('for today'), 'tone' => null];
+    $segments[] = ['tab' => 'camila', 'id' => null, 'count' => $camilaFollowUpTasks->count(), 'label' => __('with Camila'), 'tone' => null];
+    $segments[] = ['tab' => 'client', 'id' => null, 'count' => $clientFollowUpTasks->count(), 'label' => __('waiting on the client'), 'tone' => null];
 
     // Secondary lists and the single full-width lists, defined once.
     $secondary = [
-        'alta' => ['label' => __('Listo ALTA'), 'icon' => 'rocket', 'items' => $readyForAltaOrders, 'empty' => __('No hay órdenes listas para ALTA.')],
-        'pronostico' => ['label' => __('Pronóstico'), 'icon' => 'trending-up', 'items' => $pronosticoAltaOrders, 'empty' => __('No hay órdenes enviadas a cliente esta semana en el pronóstico.')],
-        'new_orders' => ['label' => __('Nuevas'), 'icon' => 'sparkles', 'items' => $newTrelloOrders, 'empty' => __('No hay órdenes nuevas de Trello pendientes en el Backlog.')],
+        'alta' => ['label' => __('Ready ALTA'), 'icon' => 'rocket', 'items' => $readyForAltaOrders, 'empty' => __('No orders ready for ALTA.')],
+        'pronostico' => ['label' => __('Forecast'), 'icon' => 'trending-up', 'items' => $pronosticoAltaOrders, 'empty' => __('No orders sent to clients this week in the forecast.')],
+        'new_orders' => ['label' => __('New'), 'icon' => 'sparkles', 'items' => $newTrelloOrders, 'empty' => __('No new Trello orders waiting in the Backlog.')],
     ];
 @endphp
 
 <div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1">
 
-    <x-ui.page-header :title="__('Hoy')" :subtitle="$dateLabel">
+    <x-ui.page-header :title="__('Today')" :subtitle="$dateLabel">
         <x-slot:actions>
             <div id="tour-designer-pills" class="flex items-center gap-1.5 overflow-x-auto max-w-full py-0.5">
                 <button type="button" wire:click="selectDesigner('all')" aria-pressed="{{ $selectedDesigner === 'all' ? 'true' : 'false' }}" class="ui-chip shrink-0">
-                    {{ __('Todos') }}
+                    {{ __('All') }}
                 </button>
                 @foreach($designers as $designer)
                     <button type="button" wire:key="designer-filter-{{ $designer->id }}" wire:click="selectDesigner('{{ $designer->id }}')"
@@ -101,9 +101,9 @@
 
     @if($activeTab === 'all')
         <section class="space-y-2" aria-labelledby="hoy-attention">
-            <h2 id="hoy-attention" class="text-section font-semibold text-ink">{{ __('Necesita atención') }} <span class="text-ink-3 font-normal tabular-nums">{{ $attentionCount }}</span></h2>
+            <h2 id="hoy-attention" class="text-section font-semibold text-ink">{{ __('Needs attention') }} <span class="text-ink-3 font-normal tabular-nums">{{ $attentionCount }}</span></h2>
             @if($attentionCount === 0)
-                <x-ui.empty icon="check-circle-2" :title="__('Nada necesita atención ahora')" class="rounded-card border border-line bg-surface" />
+                <x-ui.empty icon="check-circle-2" :title="__('Nothing needs attention right now')" class="rounded-card border border-line bg-surface" />
             @else
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($attention as $r)
@@ -121,18 +121,18 @@
 
     @if($activeTab === 'all' || $activeTab === 'today')
         <section class="space-y-2" aria-labelledby="hoy-today">
-            <h2 id="hoy-today" class="text-section font-semibold text-ink">{{ __('Programado hoy') }} <span class="text-ink-3 font-normal tabular-nums">{{ $todayCount }}</span></h2>
+            <h2 id="hoy-today" class="text-section font-semibold text-ink">{{ __('Scheduled today') }} <span class="text-ink-3 font-normal tabular-nums">{{ $todayCount }}</span></h2>
             @if($todayCount === 0)
-                <x-ui.empty icon="calendar" :title="__('No hay trabajo programado para hoy.')" class="rounded-card border border-line bg-surface" />
+                <x-ui.empty icon="calendar" :title="__('No work scheduled for today.')" class="rounded-card border border-line bg-surface" />
             @else
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($toDoTodayTasks as $tTask)
                         @if($tTask->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $tTask->order, 'rowKey' => 'today-task-'.$tTask->id, 'line2' => $tTask->title, 'person' => $tTask->assignee ?? $tTask->order->primary_designer, 'toggle' => ['wire' => "completeTask({$tTask->id})", 'done' => false, 'title' => __('Completar subtarea')]])
+                            @include('livewire.dashboard.partials.row', ['order' => $tTask->order, 'rowKey' => 'today-task-'.$tTask->id, 'line2' => $tTask->title, 'person' => $tTask->assignee ?? $tTask->order->primary_designer, 'toggle' => ['wire' => "completeTask({$tTask->id})", 'done' => false, 'title' => __('Complete subtask')]])
                         @endif
                     @endforeach
                     @foreach($toDoTodayOrders as $order)
-                        @include('livewire.dashboard.partials.row', ['order' => $order, 'rowKey' => 'today-order-'.$order->id, 'showDue' => true, 'toggle' => ['wire' => "markDoneToday({$order->id})", 'done' => (bool) $order->done_today, 'title' => $order->done_today ? __('Completado (Clic para desmarcar)') : __('Marcar como completado')]])
+                        @include('livewire.dashboard.partials.row', ['order' => $order, 'rowKey' => 'today-order-'.$order->id, 'showDue' => true, 'toggle' => ['wire' => "markDoneToday({$order->id})", 'done' => (bool) $order->done_today, 'title' => $order->done_today ? __('Completed (Click to uncheck)') : __('Mark as completed')]])
                     @endforeach
                 </div>
             @endif
@@ -141,9 +141,9 @@
 
     @if($activeTab === 'overdue')
         <section class="space-y-2">
-            <h2 class="text-section font-semibold text-ink">{{ __('Órdenes Atrasadas') }} <span class="text-ink-3 font-normal tabular-nums">{{ $overdueOrders->count() }}</span></h2>
+            <h2 class="text-section font-semibold text-ink">{{ __('Overdue Orders') }} <span class="text-ink-3 font-normal tabular-nums">{{ $overdueOrders->count() }}</span></h2>
             @if($overdueOrders->isEmpty())
-                <x-ui.empty icon="check-circle-2" :title="__('No hay órdenes atrasadas en este momento.')" class="rounded-card border border-line bg-surface" />
+                <x-ui.empty icon="check-circle-2" :title="__('No overdue orders at this moment.')" class="rounded-card border border-line bg-surface" />
             @else
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($overdueOrders as $order)
@@ -156,14 +156,14 @@
 
     @if($activeTab === 'camila')
         <section class="space-y-2">
-            <h2 class="text-section font-semibold text-ink">{{ __('Revisiones Camila') }} <span class="text-ink-3 font-normal tabular-nums">{{ $camilaFollowUpTasks->count() }}</span></h2>
+            <h2 class="text-section font-semibold text-ink">{{ __('Camila Reviews') }} <span class="text-ink-3 font-normal tabular-nums">{{ $camilaFollowUpTasks->count() }}</span></h2>
             @if($camilaFollowUpTasks->isEmpty())
-                <x-ui.empty icon="user-check" :title="__('No hay tareas o revisiones de Camila pendientes.')" class="rounded-card border border-line bg-surface" />
+                <x-ui.empty icon="user-check" :title="__('No pending tasks or Camila reviews.')" class="rounded-card border border-line bg-surface" />
             @else
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($camilaFollowUpTasks as $t)
                         @if($t->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'camila-task-'.$t->id, 'tags' => [$camilaTag], 'line2' => $t->title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Revisar'), 'wire' => "openCamilaModal({$t->id})"]])
+                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'camila-task-'.$t->id, 'tags' => [$camilaTag], 'line2' => $t->title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Review now'), 'wire' => "openCamilaModal({$t->id})"]])
                         @endif
                     @endforeach
                 </div>
@@ -173,13 +173,13 @@
 
     @if(! $isDesigner && $activeTab === 'resolver')
         <section class="space-y-2">
-            <h2 class="text-section font-semibold text-ink">{{ __('Órdenes bloqueadas') }} <span class="text-ink-3 font-normal tabular-nums">{{ $resolverOrders->count() }}</span></h2>
+            <h2 class="text-section font-semibold text-ink">{{ __('Blocked orders') }} <span class="text-ink-3 font-normal tabular-nums">{{ $resolverOrders->count() }}</span></h2>
             @if($resolverOrders->isEmpty())
-                <x-ui.empty icon="check-circle-2" :title="__('No hay órdenes bloqueadas que requieran resolución.')" class="rounded-card border border-line bg-surface" />
+                <x-ui.empty icon="check-circle-2" :title="__('No blocked orders need resolving.')" class="rounded-card border border-line bg-surface" />
             @else
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($resolverOrders as $order)
-                        @include('livewire.dashboard.partials.row', ['order' => $order, 'rowKey' => 'resolver-order-'.$order->id, 'tags' => [$blockedTag($order)], 'action' => ['label' => __('Desbloquear'), 'wire' => "openResolveModal({$order->id})"]])
+                        @include('livewire.dashboard.partials.row', ['order' => $order, 'rowKey' => 'resolver-order-'.$order->id, 'tags' => [$blockedTag($order)], 'action' => ['label' => __('Unblock'), 'wire' => "openResolveModal({$order->id})"]])
                     @endforeach
                 </div>
             @endif
@@ -188,14 +188,14 @@
 
     @if($activeTab === 'client')
         <section class="space-y-2">
-            <h2 class="text-section font-semibold text-ink">{{ __('Esperando al cliente') }} <span class="text-ink-3 font-normal tabular-nums">{{ $clientFollowUpTasks->count() }}</span></h2>
+            <h2 class="text-section font-semibold text-ink">{{ __('Waiting on the client') }} <span class="text-ink-3 font-normal tabular-nums">{{ $clientFollowUpTasks->count() }}</span></h2>
             @if($clientFollowUpTasks->isEmpty())
-                <x-ui.empty icon="mail" :title="__('No hay seguimientos pendientes con clientes.')" class="rounded-card border border-line bg-surface" />
+                <x-ui.empty icon="mail" :title="__('No pending client follow-ups.')" class="rounded-card border border-line bg-surface" />
             @else
                 <div class="rounded-card border border-line bg-surface divide-y divide-line overflow-hidden">
                     @foreach($clientFollowUpTasks as $t)
                         @if($t->order)
-                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'client-task-'.$t->id, 'tags' => [$clientTag], 'line2' => $t->title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Hecho'), 'wire' => "completeTask({$t->id})"]])
+                            @include('livewire.dashboard.partials.row', ['order' => $t->order, 'rowKey' => 'client-task-'.$t->id, 'tags' => [$clientTag], 'line2' => $t->title, 'person' => $t->assignee ?? $t->order->primary_designer, 'action' => ['label' => __('Done'), 'wire' => "completeTask({$t->id})"]])
                         @endif
                     @endforeach
                 </div>
@@ -216,10 +216,10 @@
                                 $sentAt = $order->last_sent_to_client_at ?? $order->updated_at;
                                 $rowData = ['order' => $order, 'rowKey' => $tab.'-order-'.$order->id];
                                 if ($tab === 'pronostico' && $sentAt) {
-                                    $rowData['meta'] = __('Enviado').' '.$sentAt->locale($locale)->translatedFormat('j M, H:i');
+                                    $rowData['meta'] = __('Sent').' '.$sentAt->locale($locale)->translatedFormat('j M, H:i');
                                 }
                                 if ($tab === 'new_orders') {
-                                    $rowData['action'] = ['label' => __('Mover a Workspace'), 'wire' => "moveToWorkspace({$order->id})"];
+                                    $rowData['action'] = ['label' => __('Move to Workspace'), 'wire' => "moveToWorkspace({$order->id})"];
                                     $rowData['extra'] = $order->trello_card_id ? 'https://trello.com/c/'.$order->trello_card_id : null;
                                 }
                             @endphp
@@ -231,7 +231,7 @@
         @endif
     @endforeach
 
-    <nav class="border-t border-line pt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-body text-ink-2" aria-label="{{ __('Otras listas') }}">
+    <nav class="border-t border-line pt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-body text-ink-2" aria-label="{{ __('Other lists') }}">
         @foreach($secondary as $tab => $cfg)
             <button type="button" wire:click="setActiveTab('{{ $tab }}')" aria-pressed="{{ $activeTab === $tab ? 'true' : 'false' }}"
                 class="inline-flex items-center gap-1.5 cursor-pointer hover:text-ink {{ $activeTab === $tab ? 'text-ink font-medium underline underline-offset-4 decoration-2' : '' }}">

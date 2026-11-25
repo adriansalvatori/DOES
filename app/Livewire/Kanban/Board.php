@@ -366,7 +366,7 @@ class Board extends Component
         $this->pendingArchiveOrderId = null;
         $this->syncChangedColumns();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Orden archivada exitosamente.'));
+        $this->dispatch('toast', message: __('Order archived.'));
     }
 
     public function openUnblockModal($orderId)
@@ -563,7 +563,7 @@ class Board extends Component
         $user = Auth::user();
 
         if ($user && ! $user->canDeleteOrders()) {
-            abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
+            abort(403, __('You do not have permission to send orders to the trash.'));
         }
 
         $order->delete(); // soft delete
@@ -678,6 +678,6 @@ class Board extends Component
             'allColumns' => $allColumns,
             'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
             'pendingArchiveOrder' => $this->pendingArchiveOrderId ? Order::find($this->pendingArchiveOrderId) : null,
-        ])->layout('components.layouts.app', ['title' => __('Kanban Board - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Kanban board - ').config('app.name')]);
     }
 }

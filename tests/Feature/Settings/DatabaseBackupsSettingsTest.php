@@ -40,7 +40,7 @@ class DatabaseBackupsSettingsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSeeLivewire(Backups::class);
-        $response->assertSee(__('Respaldos de Base de Datos'));
+        $response->assertSee(__('Database backups'));
     }
 
     public function test_can_create_backup_from_settings_component(): void
@@ -49,7 +49,7 @@ class DatabaseBackupsSettingsTest extends TestCase
 
         Livewire::test(Backups::class)
             ->call('createBackup')
-            ->assertSee(__('Respaldo generado exitosamente.'));
+            ->assertSee(__('Backup created.'));
 
         $newFiles = array_map(fn ($f) => $f->getPathname(), File::files($this->backupDir));
         $created = array_diff($newFiles, $existingFiles);
@@ -67,7 +67,7 @@ class DatabaseBackupsSettingsTest extends TestCase
 
         Livewire::test(Backups::class)
             ->call('deleteBackup', 'backup_sqlite_2026-08-26_120000.sqlite')
-            ->assertSee(__('Respaldo eliminado correctamente.'));
+            ->assertSee(__('Backup deleted.'));
 
         $this->assertFileDoesNotExist($dummyPath);
     }

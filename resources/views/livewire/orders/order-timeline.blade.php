@@ -1,9 +1,9 @@
 <div class="space-y-4">
 @if($order)
                     <!-- Timeline Section Header -->
-                    <x-orders.tab-section-header :title="__('Historial')">
+                    <x-orders.tab-section-header :title="__('History')">
                         <x-slot:actions>
-                            <span class="text-meta text-ink-3 font-mono font-medium">{{ $order->getTimelineEvents()->count() }} {{ __('registro(s)') }}</span>
+                            <span class="text-meta text-ink-3 font-mono font-medium">{{ $order->getTimelineEvents()->count() }} {{ __('record(s)') }}</span>
                         </x-slot:actions>
                     </x-orders.tab-section-header>
                     
@@ -80,7 +80,7 @@
                                                     @endphp
                                                     <div class="flex items-center gap-1.5 pt-0.5 text-ink-2 font-medium">
                                                         <x-lucide-calendar class="w-3 h-3 text-ok shrink-0" />
-                                                        <span>{{ __('Entrega acordada:') }} <strong class="text-ink font-semibold">{{ $promisedDate ?? $event->new_value }}</strong></span>
+                                                        <span>{{ __('Agreed delivery:') }} <strong class="text-ink font-semibold">{{ $promisedDate ?? $event->new_value }}</strong></span>
                                                     </div>
                                                 @endif
 
@@ -89,9 +89,9 @@
                                                 @if(is_array($event->metadata) && isset($event->metadata['trigger_type']))
                                                     <div class="flex items-center gap-1.5 pt-0.5">
                                                         <x-lucide-zap class="w-2.5 h-2.5 text-ink-3 shrink-0" />
-                                                        <span>{{ __('Origen:') }} {{ strtolower(str_replace('_', ' ', (string)$event->metadata['trigger_type'])) }}</span>
+                                                        <span>{{ __('Source:') }} {{ strtolower(str_replace('_', ' ', (string)$event->metadata['trigger_type'])) }}</span>
                                                         @if(isset($event->metadata['priority']) && $event->metadata['priority'] === 'urgent')
-                                                            <span class="text-meta font-semibold text-danger bg-danger-soft px-1 py-0.5 rounded border border-danger/30 ">{{ __('Urgente') }}</span>
+                                                            <span class="text-meta font-semibold text-danger bg-danger-soft px-1 py-0.5 rounded border border-danger/30 ">{{ __('Urgent') }}</span>
                                                         @endif
                                                     </div>
                                                 @endif
@@ -113,19 +113,19 @@
                                                         <div 
                                                             @click="expanded = !expanded" 
                                                             class="flex items-center justify-between gap-2 p-2.5 hover:bg-sunken transition-colors cursor-pointer select-none group"
-                                                            :title="expanded ? '{{ __('Clic para contraer comentario') }}' : '{{ __('Clic para expandir comentario') }}'">
+                                                            :title="expanded ? '{{ __('Click to collapse comment') }}' : '{{ __('Click to expand comment') }}'">
                                                             <div class="flex items-center gap-2 min-w-0 flex-1">
                                                                 <x-lucide-message-square class="w-3.5 h-3.5 text-ink-2 shrink-0" />
                                                                 <span class="text-xs text-ink-2 truncate font-normal" x-show="!expanded">
                                                                     {{ Str::limit($previewText, 80) }}
                                                                 </span>
                                                                 <span class="text-meta font-semibold text-ink" x-show="expanded" x-cloak>
-                                                                    {{ __('Comentario completo') }}
+                                                                    {{ __('Full comment') }}
                                                                 </span>
                                                             </div>
                                                             <div class="flex items-center gap-1 shrink-0">
                                                                 <span class="inline-flex items-center gap-1 text-meta font-semibold text-ink-2 bg-sunken px-2 py-0.5 rounded-control border border-line group-hover:bg-sunken transition-colors">
-                                                                    <span x-text="expanded ? '{{ __('Contraer') }}' : '{{ __('Expandir') }}'"></span>
+                                                                    <span x-text="expanded ? '{{ __('Collapse') }}' : '{{ __('Expand') }}'"></span>
                                                                     <x-lucide-chevron-down class="w-3 h-3 transition-transform duration-200" ::class="expanded ? 'rotate-180' : ''" />
                                                                 </span>
                                                             </div>
@@ -142,7 +142,7 @@
                                                                     @click.stop="expanded = false" 
                                                                     class="inline-flex items-center gap-1 text-meta font-medium text-ink-3 hover:text-ink-2 transition cursor-pointer">
                                                                     <x-lucide-chevron-up class="w-3 h-3" />
-                                                                    <span>{{ __('Contraer') }}</span>
+                                                                    <span>{{ __('Collapse') }}</span>
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -153,7 +153,7 @@
                                                         @if(isset($event->metadata['blocked_duration']))
                                                             <span class="inline-flex items-center gap-1 text-meta text-ok bg-ok-soft px-1.5 py-0.5 rounded border border-ok/30 font-medium">
                                                                 <x-lucide-clock class="w-3 h-3 text-ok shrink-0" />
-                                                                {{ __('Bloqueada por :duration', ['duration' => $event->metadata['blocked_duration']]) }}
+                                                                {{ __('Blocked for :duration', ['duration' => $event->metadata['blocked_duration']]) }}
                                                             </span>
                                                         @endif
                                                     </div>
@@ -171,9 +171,9 @@
                                                         <div class="flex items-center gap-1.5 font-semibold text-ok">
                                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-ok shrink-0" />
                                                             <span>{{ $event->metadata['approval_type_label'] ?? match($event->metadata['approval_type'] ?? '') {
-                                                                'camila' => __('Aprobado por Camila'),
-                                                                'manager', 'gabriela' => __('Aprobado por :name', ['name' => \App\Models\Setting::getManagerName()]),
-                                                                default => __('Aprobado por Cliente'),
+                                                                'camila' => __('Approved by Camila'),
+                                                                'manager', 'gabriela' => __('Approved by :name', ['name' => \App\Models\Setting::getManagerName()]),
+                                                                default => __('Approved by Client'),
                                                             } }}</span>
                                                         </div>
                                                         @if(!empty($event->metadata['new_due_date']))
@@ -183,7 +183,7 @@
                                                                 </span>
                                                                 @if(!empty($event->metadata['is_urgente']) || (!empty($event->metadata['sla_reason']) && str_contains(strtolower($event->metadata['sla_reason']), 'urgent')) || (!empty($event->metadata['sla_message']) && str_contains(strtolower($event->metadata['sla_message']), 'urgent')))
                                                                     <span class="px-1.5 py-0.5 rounded text-meta font-semibold bg-danger-soft text-danger border border-danger/30 ">
-                                                                        {{ __('Urgente (Mismo Día)') }}
+                                                                        {{ __('Urgent (Same Day)') }}
                                                                     </span>
                                                                 @endif
                                                             </div>
@@ -200,15 +200,15 @@
                                                         <div class="pt-0.5">
                                                             <button 
                                                                 type="button" 
-                                                                wire:click="$parent.previewMedia('{{ $event->metadata['approval_image'] }}', '{{ __('Soporte de Aprobación') }}', 'image')" 
+                                                                wire:click="$parent.previewMedia('{{ $event->metadata['approval_image'] }}', '{{ __('Approval Proof') }}', 'image')" 
                                                                 class="inline-flex items-center gap-2 p-1 rounded-control bg-surface border border-ok/30 hover:border-ok/30 text-ok transition cursor-pointer group ">
                                                                 <div x-data="{ imgError: false }" class="shrink-0">
-                                                                    <img src="{{ $event->metadata['approval_image'] }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ __('Comprobante') }}" class="w-8 h-8 object-cover rounded border border-line">
+                                                                    <img src="{{ $event->metadata['approval_image'] }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ __('Proof') }}" class="w-8 h-8 object-cover rounded border border-line">
                                                                     <div x-show="imgError" x-cloak class="w-8 h-8 rounded border border-line bg-sunken flex items-center justify-center text-ink-3">
                                                                         <x-lucide-file-text class="w-4 h-4" />
                                                                     </div>
                                                                 </div>
-                                                                <span class="font-medium text-meta group-hover:underline text-ok pr-1.5">{{ __('Ver comprobante adjunto') }}</span>
+                                                                <span class="font-medium text-meta group-hover:underline text-ok pr-1.5">{{ __('View attached proof') }}</span>
                                                             </button>
                                                         </div>
                                                     @endif
@@ -219,7 +219,7 @@
                                 @empty
                                     <div class="relative flex items-center min-h-5">
                                         <span class="absolute left-[-16px] top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-line ring-2 ring-white " aria-hidden="true"></span>
-                                        <p class="text-xs text-ink-3">{{ __('Sin eventos en la línea de tiempo aún.') }}</p>
+                                        <p class="text-xs text-ink-3">{{ __('No timeline events yet.') }}</p>
                                     </div>
                                 @endforelse
 
@@ -235,7 +235,7 @@
                                                 @endif
                                             </span>
                                             <h5 class="text-xs leading-5 font-semibold {{ $order->isOverdue() ? 'text-danger' : 'text-ok' }}">
-                                                {{ __('Objetivo de Entrega') }} {{ $order->isOverdue() ? '(' . __('Vencido') . ')' : '(' . __('En plazo') . ')' }}
+                                                {{ __('Delivery Target') }} {{ $order->isOverdue() ? '(' . __('Past due') . ')' : '(' . __('On track') . ')' }}
                                             </h5>
                                             <span class="text-meta font-mono font-semibold {{ $order->isOverdue() ? 'text-danger' : 'text-ok' }}">
                                                 {{ $order->current_due_date->format('d M, g:i A') }}
@@ -249,7 +249,7 @@
                             <div class="pt-3 border-t border-line flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                                 <div class="flex items-center gap-1.5 text-ink-2">
                                     <x-lucide-clock class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                                    <span>{{ __('Tiempo transcurrido:') }}</span>
+                                    <span>{{ __('Elapsed time:') }}</span>
                                     <strong class="text-ink font-mono font-semibold">{{ $order->created_at->diffForHumans(null, true) }}</strong>
                                 </div>
 
@@ -257,10 +257,10 @@
                                     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-control border text-meta font-semibold  {{ $order->isOverdue() ? 'bg-danger-soft text-danger border-danger/30' : 'bg-ok-soft text-ok border-ok/30' }}">
                                         @if($order->isOverdue())
                                             <x-lucide-alert-triangle class="w-3.5 h-3.5 text-danger shrink-0" />
-                                            <span>{{ __('SLA Vencido') }}</span>
+                                            <span>{{ __('SLA Overdue') }}</span>
                                         @else
                                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-ok shrink-0" />
-                                            <span>{{ __('En plazo límite') }}</span>
+                                            <span>{{ __('Near deadline') }}</span>
                                         @endif
                                     </div>
                                 @endif

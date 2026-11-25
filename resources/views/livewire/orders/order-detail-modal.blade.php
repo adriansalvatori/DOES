@@ -100,27 +100,27 @@
                     if (window.KudosDirtyGuard && window.KudosDirtyGuard.isConfirmModalOpen) {
                         return;
                     }
-                    let title = @js(__('¿Guardar cambios de la orden?'));
-                    let description = @js(__('Tienes información editada en la orden sin guardar.'));
+                    let title = @js(__('Save order changes?'));
+                    let description = @js(__('You have unsaved edited information in the order.'));
 
                     if (this.isEditDirty() && this.isCommentDirty()) {
-                        title = @js(__('¿Guardar cambios y publicar comentario?'));
-                        description = @js(__('Tienes información editada en los campos de la orden y un borrador de comentario.'));
+                        title = @js(__('Save changes and post comment?'));
+                        description = @js(__('You have unsaved edited order fields and a draft comment.'));
                     } else if (this.isEditDirty()) {
-                        title = @js(__('¿Guardar edición de la orden?'));
-                        description = @js(__('Tienes cambios realizados en los campos de la orden sin guardar.'));
+                        title = @js(__('Save order edits?'));
+                        description = @js(__('You have unsaved changes in the order fields.'));
                     } else if (this.isCommentDirty()) {
-                        title = @js(__('¿Publicar borrador de comentario?'));
-                        description = @js(__('Tienes un borrador de comentario escrito en la tarjeta.'));
+                        title = @js(__('Post comment draft?'));
+                        description = @js(__('You have a comment draft written on the card.'));
                     }
 
                     if (this.isDirty()) {
                         window.KudosDirtyGuard.openConfirmModal({
                             title: title,
                             description: description,
-                            cancelText: @js(__('Cancelar')),
-                            discardText: @js(__('No guardar')),
-                            saveText: @js(__('Guardar')),
+                            cancelText: @js(__('Cancel')),
+                            discardText: @js(__('Don\'t save')),
+                            saveText: @js(__('Save')),
                             onCancel: () => {},
                             onDiscard: () => {
                                 this.isOpen = false;
@@ -173,12 +173,12 @@
                         @if($order->wo_number)
                             <x-wo-badge :number="$order->wo_number" variant="dark" show-copy-icon />
                         @else
-                            <x-ui.tag>{{ __('Sin WO') }}</x-ui.tag>
+                            <x-ui.tag>{{ __('No WO') }}</x-ui.tag>
                         @endif
 
                         @if($order->is_missing_from_trello)
-                            <x-ui.tag icon="alert-triangle" title="{{ __('Falta en Trello') }}">
-                                <span class="hidden sm:inline">{{ __('Falta en Trello') }}</span>
+                            <x-ui.tag icon="alert-triangle" title="{{ __('Missing in Trello') }}">
+                                <span class="hidden sm:inline">{{ __('Missing in Trello') }}</span>
                             </x-ui.tag>
                         @endif
 
@@ -195,68 +195,68 @@
                                 wire:click="startEditing"
                                 @click="window.KudosModalStack?.bringToFront('order-detail-modal')"
                                 class="ui-btn ui-btn-secondary ui-btn-sm"
-                                title="{{ __('Editar campos de la orden') }}">
+                                title="{{ __('Edit order fields') }}">
                                 <x-lucide-pencil />
-                                <span>{{ __('Editar') }}</span>
+                                <span>{{ __('Edit') }}</span>
                             </button>
                         @else
                             <button
                                 type="button"
                                 @click.prevent="confirmClose(() => $wire.cancelEditing())"
                                 class="ui-btn ui-btn-secondary ui-btn-sm"
-                                title="{{ __('Cancelar edición') }}">
+                                title="{{ __('Cancel editing') }}">
                                 <x-lucide-x />
-                                <span>{{ __('Cancelar') }}</span>
+                                <span>{{ __('Cancel') }}</span>
                             </button>
                         @endif
 
                         {{-- One primary next step: unblock when blocked/incoming, otherwise approve. --}}
                         @if($order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE)
-                            <button type="button" wire:click="openUnblockModal" class="ui-btn ui-btn-primary ui-btn-sm" title="{{ __('Desbloquear orden') }}">
+                            <button type="button" wire:click="openUnblockModal" class="ui-btn ui-btn-primary ui-btn-sm" title="{{ __('Unblock order') }}">
                                 <x-lucide-unlock />
-                                <span>{{ __('Desbloquear') }}</span>
+                                <span>{{ __('Unblock') }}</span>
                             </button>
                         @elseif(!$order->approved)
-                            <button type="button" wire:click="openApprovalModal" class="ui-btn ui-btn-primary ui-btn-sm" title="{{ __('Aprobar orden') }}">
+                            <button type="button" wire:click="openApprovalModal" class="ui-btn ui-btn-primary ui-btn-sm" title="{{ __('Approve order') }}">
                                 <x-lucide-check-circle-2 />
-                                <span>{{ __('Aprobar') }}</span>
+                                <span>{{ __('Approve') }}</span>
                             </button>
                         @endif
 
                         <flux:dropdown position="bottom" align="end">
-                            <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="{{ __('Más opciones') }}" aria-label="{{ __('Más opciones') }}">
+                            <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="{{ __('More options') }}" aria-label="{{ __('More options') }}">
                                 <x-lucide-more-horizontal />
                             </button>
                             <flux:menu>
-                                <flux:menu.item icon="document-duplicate" wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })">{{ __('Duplicar orden') }}</flux:menu.item>
+                                <flux:menu.item icon="document-duplicate" wire:click="$dispatch('open-duplicate-order', { orderId: {{ $order->id }} })">{{ __('Duplicate order') }}</flux:menu.item>
 
                                 @if($order->approved || $order->isBlocked() || $order->core_status === \App\Enums\CoreStatus::ENTRANTE)
-                                    <flux:menu.item icon="check-circle" wire:click="openApprovalModal">{{ $order->approved ? __('Ver o registrar aprobación') : __('Aprobar orden') }}</flux:menu.item>
+                                    <flux:menu.item icon="check-circle" wire:click="openApprovalModal">{{ $order->approved ? __('View or record approval') : __('Approve order') }}</flux:menu.item>
                                 @endif
 
                                 @if($order->isBlocked())
-                                    <flux:menu.item icon="lock-open" wire:click="openUnblockModal">{{ __('Desbloquear orden') }}</flux:menu.item>
+                                    <flux:menu.item icon="lock-open" wire:click="openUnblockModal">{{ __('Unblock order') }}</flux:menu.item>
                                 @else
-                                    <flux:menu.item icon="no-symbol" wire:click="openBlockModal">{{ __('Marcar como bloqueada') }}</flux:menu.item>
+                                    <flux:menu.item icon="no-symbol" wire:click="openBlockModal">{{ __('Mark as blocked') }}</flux:menu.item>
                                 @endif
 
                                 @if($order->in_workspace)
-                                    <flux:menu.item icon="archive-box" wire:click="moveToBacklog" wire:confirm="{{ __('¿Mover esta orden de regreso al Backlog?') }}">{{ __('Enviar a Backlog') }}</flux:menu.item>
+                                    <flux:menu.item icon="archive-box" wire:click="moveToBacklog" wire:confirm="{{ __('Move this order back to Backlog?') }}">{{ __('Send to Backlog') }}</flux:menu.item>
                                 @else
-                                    <flux:menu.item icon="plus-circle" wire:click="addToWorkspaceDirectly">{{ __('Añadir a Workspace') }}</flux:menu.item>
+                                    <flux:menu.item icon="plus-circle" wire:click="addToWorkspaceDirectly">{{ __('Add to Workspace') }}</flux:menu.item>
                                 @endif
 
                                 @if($order->trello_url)
-                                    <flux:menu.item icon="arrow-top-right-on-square" href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer">{{ __('Ver orden en Trello') }}</flux:menu.item>
+                                    <flux:menu.item icon="arrow-top-right-on-square" href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer">{{ __('View order in Trello') }}</flux:menu.item>
                                 @endif
 
                                 @if($order->core_status !== \App\Enums\CoreStatus::ARCHIVED)
-                                    <flux:menu.item icon="archive-box-arrow-down" wire:click="openArchiveModal">{{ __('Archivar orden') }}</flux:menu.item>
+                                    <flux:menu.item icon="archive-box-arrow-down" wire:click="openArchiveModal">{{ __('Archive order') }}</flux:menu.item>
                                 @endif
 
                                 @if(auth()->user()?->canDeleteOrders())
                                     <flux:menu.separator />
-                                    <flux:menu.item icon="trash" variant="danger" wire:click="deleteOrder" wire:confirm="{{ __('¿Estás seguro de mover la orden :name a la Papelera de Reciclaje (se archivará en Trello)?', ['name' => $order->company_name]) }}">{{ __('Enviar a la papelera (archivar)') }}</flux:menu.item>
+                                    <flux:menu.item icon="trash" variant="danger" wire:click="deleteOrder" wire:confirm="{{ __('Move order :name to the recycle bin? It will be archived in Trello.', ['name' => $order->company_name]) }}">{{ __('Send to trash (archive)') }}</flux:menu.item>
                                 @endif
                             </flux:menu>
                         </flux:dropdown>
@@ -265,8 +265,8 @@
                             type="button"
                             @click="confirmClose(() => $wire.closeModal())"
                             class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon"
-                            title="{{ __('Cerrar panel (Esc)') }}"
-                            aria-label="{{ __('Cerrar panel') }}">
+                            title="{{ __('Close panel (Esc)') }}"
+                            aria-label="{{ __('Close panel') }}">
                             <x-lucide-x />
                         </button>
                     </div>
@@ -278,7 +278,7 @@
                         wire:click="toggleDoneToday"
                         type="button"
                         class="w-5 h-5 mt-0.5 rounded-full border transition flex items-center justify-center shrink-0 cursor-pointer {{ $order->done_today ? 'bg-ok border-ok text-white' : 'border-line-strong hover:border-ink bg-surface text-transparent hover:text-ink-3' }}"
-                        title="{{ $order->done_today ? __('Completado (Clic para desmarcar)') : __('Marcar como completado') }}">
+                        title="{{ $order->done_today ? __('Completed (Click to uncheck)') : __('Mark as completed') }}">
                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
                     </button>
                     <div class="min-w-0 flex-1 space-y-0.5">
@@ -287,9 +287,9 @@
                                 type="button"
                                 wire:click="openClientDetail"
                                 class="text-left inline-flex items-center gap-1.5 focus:outline-none cursor-pointer rounded-control -ml-1.5 px-1.5 py-0.5 hover:bg-sunken transition-colors"
-                                title="{{ __('Ver detalles de :client', ['client' => $order->company_name ?: __('cliente')]) }}">
+                                title="{{ __('View details for :client', ['client' => $order->company_name ?: __('client')]) }}">
                                 <h2 class="text-title font-semibold text-ink break-words {{ $order->done_today ? 'ui-done' : '' }}">
-                                    {{ $order->company_name ?: __('Sin Cliente') }}
+                                    {{ $order->company_name ?: __('No Client') }}
                                 </h2>
                                 <x-lucide-external-link class="w-3.5 h-3.5 text-ink-3 shrink-0" />
                             </button>
@@ -311,7 +311,7 @@
                             @click="open = !open"
                             @click.outside="open = false"
                             class="ui-btn ui-btn-secondary ui-btn-sm"
-                            title="{{ __('Clic para cambiar el estado principal') }}">
+                            title="{{ __('Click to change core status') }}">
                             <x-orders.stage :status="$order->core_status" />
                             <x-lucide-chevron-down class="text-ink-3 transition-transform" ::class="{ 'rotate-180': open }" />
                         </button>
@@ -323,7 +323,7 @@
                             x-transition:enter-end="opacity-100 scale-100"
                             x-cloak
                             class="absolute left-0 top-full mt-1 z-[350] w-60 bg-surface border border-line rounded-card shadow-menu py-1 overflow-y-auto max-h-72 text-body">
-                            <div class="px-3 py-1.5 text-meta font-medium text-ink-3">{{ __('Cambiar estado principal') }}</div>
+                            <div class="px-3 py-1.5 text-meta font-medium text-ink-3">{{ __('Change main status') }}</div>
                             @foreach($coreStatuses as $st)
                                 <button
                                     type="button"
@@ -341,20 +341,20 @@
 
                     {{-- The stage button already reads "Bloqueado" for that column; the tag only adds blocked state to other stages. --}}
                     @if($order->isBlocked() && $order->core_status !== \App\Enums\CoreStatus::ENTRANTE)
-                        <x-ui.tag tone="warn" icon="lock">{{ __('Bloqueada') }}</x-ui.tag>
+                        <x-ui.tag tone="warn" icon="lock">{{ __('Blocked') }}</x-ui.tag>
                     @endif
                     @if($order->isOverdue() && !$order->done_today)
-                        <x-ui.tag tone="danger" icon="alert-circle">{{ __('Atrasada') }}</x-ui.tag>
+                        <x-ui.tag tone="danger" icon="alert-circle">{{ __('Overdue') }}</x-ui.tag>
                     @endif
                     @if($order->approved)
-                        <x-ui.tag tone="ok" icon="check-circle-2" title="{{ $order->approval_note ?: ($order->approval_type_label ?? __('Orden Aprobada')) }}">
-                            {{ $order->approval_type_label ?? __('Aprobada') }}
+                        <x-ui.tag tone="ok" icon="check-circle-2" title="{{ $order->approval_note ?: ($order->approval_type_label ?? __('Order Approved')) }}">
+                            {{ $order->approval_type_label ?? __('Approved') }}
                             @if($order->approval_image_path)
                                 <button
                                     type="button"
-                                    wire:click="previewMedia('{{ Storage::url($order->approval_image_path) }}', '{{ __('Comprobante de Aprobación') }}', 'image')"
+                                    wire:click="previewMedia('{{ Storage::url($order->approval_image_path) }}', '{{ __('Approval Proof') }}', 'image')"
                                     class="cursor-pointer"
-                                    title="{{ __('Ver comprobante de aprobación') }}">
+                                    title="{{ __('View approval proof') }}">
                                     <x-lucide-paperclip class="w-3 h-3 inline" />
                                 </button>
                             @endif
@@ -370,7 +370,7 @@
                     @if(!$order->in_workspace)
                         <span class="text-meta text-ink-2 inline-flex items-center gap-1">
                             <x-lucide-box class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                            <span>{{ __('En Backlog') }}</span>
+                            <span>{{ __('In Backlog') }}</span>
                         </span>
                     @endif
 
@@ -407,17 +407,17 @@
                             <div class="min-w-0 flex-1 space-y-1">
                                 <div class="flex items-center justify-between gap-2 flex-wrap">
                                     <h4 class="font-semibold text-xs text-warn   flex items-center gap-1.5">
-                                        {{ __('Actualización de WO desde Trello disponible') }}
+                                        {{ __('WO update from Trello available') }}
                                     </h4>
                                     <span class="px-2 py-0.5 rounded-full bg-warn-soft border border-warn/30 text-meta font-semibold text-warn">
-                                        {{ __('Requiere decisión') }}
+                                        {{ __('Requires decision') }}
                                     </span>
                                 </div>
                                 <p class="text-xs text-warn leading-relaxed">
-                                    {{ __('Se detectó un nuevo número de WO en Trello:') }} <x-wo-badge :number="$order->pending_wo_number" variant="amber" show-copy-icon /> <span class="text-meta text-warn">({{ __('Título tarjeta Trello') }})</span>.
+                                    {{ __('A new WO number was detected in Trello:') }} <x-wo-badge :number="$order->pending_wo_number" variant="amber" show-copy-icon /> <span class="text-meta text-warn">({{ __('Trello card title') }})</span>.
                                 </p>
                                 <p class="text-xs text-warn leading-relaxed">
-                                    {{ __('El número registrado actualmente en DOES es:') }} @if($order->wo_number)<x-wo-badge :number="$order->wo_number" variant="amber" show-copy-icon />@else<strong class="font-mono bg-surface px-1.5 py-0.5 rounded border border-warn/30 text-warn font-semibold ">{{ __('Sin WO / WO 0000') }}</strong>@endif <span class="text-meta text-warn">(DOES)</span>.
+                                    {{ __('The number currently registered in DOES is:') }} @if($order->wo_number)<x-wo-badge :number="$order->wo_number" variant="amber" show-copy-icon />@else<strong class="font-mono bg-surface px-1.5 py-0.5 rounded border border-warn/30 text-warn font-semibold ">{{ __('No WO / WO 0000') }}</strong>@endif <span class="text-meta text-warn">(DOES)</span>.
                                 </p>
                             </div>
                         </div>
@@ -428,7 +428,7 @@
                                 wire:click="dismissPendingWo" 
                                 class="ui-btn ui-btn-secondary ui-btn-sm">
                                 <x-lucide-x />
-                                <span>{{ __('Conservar') }} {{ $order->wo_number ?: __('actual') }} (DOES)</span>
+                                <span>{{ __('Keep') }} {{ $order->wo_number ?: __('current') }} (DOES)</span>
                             </button>
 
                             @if(auth()->user()?->canManageWorkOrders())
@@ -437,12 +437,12 @@
                                     wire:click="acceptPendingWo" 
                                     class="ui-btn ui-btn-primary ui-btn-sm">
                                     <x-lucide-check />
-                                    <span>{{ __('Actualizar a') }} {{ $order->pending_wo_number }} (Trello)</span>
+                                    <span>{{ __('Update to') }} {{ $order->pending_wo_number }} (Trello)</span>
                                 </button>
                             @else
                                 <span class="px-2.5 py-1.5 rounded-control bg-warn-soft text-warn font-medium text-xs flex items-center gap-1.5">
                                     <x-lucide-lock class="w-3.5 h-3.5 text-warn shrink-0" />
-                                    <span>{{ __('Sugerencia de WO: :wo (Solo coordinadores y líderes pueden aplicar cambios)', ['wo' => $order->pending_wo_number]) }}</span>
+                                    <span>{{ __('WO suggestion: :wo (only coordinators and leads can apply changes)', ['wo' => $order->pending_wo_number]) }}</span>
                                 </span>
                             @endif
                         </div>
@@ -454,26 +454,26 @@
                     <div class="bg-canvas border border-line rounded-card p-4 space-y-4">
                         <div class="flex items-center justify-between border-b border-line pb-2">
                             <h4 class="font-semibold text-xs text-ink   flex items-center gap-1.5">
-                                <x-lucide-edit-3 class="w-4 h-4 text-ink-2" /> {{ __('Editar Información de la Orden') }}
+                                <x-lucide-edit-3 class="w-4 h-4 text-ink-2" /> {{ __('Edit Order Information') }}
                             </h4>
-                            <span class="text-meta text-ink-3">{{ __('Modifica fechas, diseñador, WO o campos disectados') }}</span>
+                            <span class="text-meta text-ink-3">{{ __('Modify dates, designer, WO or dissected fields') }}</span>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                             <!-- WO Number -->
                             <div class="space-y-1">
                                 <div class="flex items-center justify-between">
-                                    <label class="ui-label">{{ __('Número de Orden') }}</label>
+                                    <label class="ui-label">{{ __('Order number') }}</label>
                                     @if(auth()->user()?->canManageWorkOrders())
                                         <button 
                                             type="button" 
                                             wire:click="generateWoNumber" 
                                             wire:loading.attr="disabled"
                                             class="text-meta font-medium text-ink-2 hover:text-ink-2 flex items-center gap-1 cursor-pointer transition select-none disabled:opacity-50"
-                                            title="{{ __('Crear siguiente número de WO automáticamente') }}">
+                                            title="{{ __('Create next WO number automatically') }}">
                                             <x-lucide-sparkles class="w-3 h-3 text-warn" wire:loading.remove wire:target="generateWoNumber" />
                                             <x-lucide-loader-2 class="w-3 h-3 animate-spin text-ink-3" wire:loading wire:target="generateWoNumber" />
-                                            <span>{{ __('Crear WO') }}</span>
+                                            <span>{{ __('Create WO') }}</span>
                                         </button>
                                     @endif
                                 </div>
@@ -491,7 +491,7 @@
                                 @if(!auth()->user()?->canManageWorkOrders())
                                     <p class="text-meta text-ink-3 flex items-center gap-1 mt-0.5">
                                         <x-lucide-lock class="w-3 h-3 text-ink-3 shrink-0" />
-                                        <span>{{ __('Los diseñadores no pueden modificar el número de WO.') }}</span>
+                                        <span>{{ __('Designers can\'t change the WO number.') }}</span>
                                     </p>
                                 @endif
                             </div>
@@ -508,7 +508,7 @@
                                  x-dropdown-nav>
                                 <label class="ui-label flex items-center gap-1">
                                     <x-lucide-external-link class="w-3.5 h-3.5 text-ink-2" />
-                                    <span>{{ __('ID / Link Tarjeta Trello') }}</span>
+                                    <span>{{ __('Trello card ID / link') }}</span>
                                 </label>
                                 
                                 <div class="relative">
@@ -518,14 +518,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('Ej. AbCdEf12 o buscar por empresa/WO...') }}" 
+                                        placeholder="{{ __('e.g. AbCdEf12 or search by company/WO...') }}" 
                                         class="ui-input pr-7 font-mono">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink-2 p-0.5"
-                                        title="{{ __('Ver tarjetas de Trello disponibles') }}">
+                                        title="{{ __('View available Trello cards') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -539,7 +539,7 @@
                                     class="absolute left-0 right-0 top-full mt-1 z-50 bg-surface border border-line rounded-control shadow-menu max-h-48 overflow-y-auto divide-y divide-line text-xs">
                                     
                                     <div class="px-2.5 py-1 bg-sunken border-b border-line font-semibold text-meta  text-ink-3">
-                                        {{ __('Tarjetas de Trello Disponibles') }} ({{ count($availableTrelloCards) }})
+                                        {{ __('Available Trello Cards') }} ({{ count($availableTrelloCards) }})
                                     </div>
 
                                     @forelse($availableTrelloCards as $tc)
@@ -550,7 +550,7 @@
                                             class="w-full text-left p-2 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer flex items-center justify-between gap-2 transition">
                                             <div class="min-w-0">
                                                 <span class="font-semibold text-ink block truncate text-meta">
-                                                    {{ $tc->trello_title ?: ($tc->company_name ?: __('Tarjeta Trello')) }}
+                                                    {{ $tc->trello_title ?: ($tc->company_name ?: __('Trello Card')) }}
                                                 </span>
                                                 @if($tc->task_name && $tc->task_name !== $tc->trello_title)
                                                     <span class="text-meta text-ink-3 block truncate">{{ $tc->task_name }}</span>
@@ -561,7 +561,7 @@
                                             </span>
                                         </button>
                                     @empty
-                                        <div class="p-3 text-center text-ink-3 italic text-meta">{{ __('No hay tarjetas registradas aún.') }}</div>
+                                        <div class="p-3 text-center text-ink-3 italic text-meta">{{ __('No cards recorded yet.') }}</div>
                                     @endforelse
                                 </div>
                             </div>
@@ -578,7 +578,7 @@
                                  }"
                                  x-dropdown-nav>
                                 <div class="flex items-center justify-between">
-                                    <label class="ui-label">{{ __('Persona Responsable / Cliente') }}</label>
+                                    <label class="ui-label">{{ __('Responsible person / client') }}</label>
                                 </div>
                                 <div class="relative">
                                     <input 
@@ -587,14 +587,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('Ej: MARCELA o buscar cliente...') }}" 
+                                        placeholder="{{ __('E.g. MARCELA or search a client...') }}" 
                                         class="ui-input pr-7">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink-2 p-0.5 cursor-pointer"
-                                        title="{{ __('Ver lista de clientes') }}">
+                                        title="{{ __('Show client list') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -609,7 +609,7 @@
                                     {{-- Contactos de esta compañía --}}
                                     @if(!empty($clientContacts) && $clientContacts->isNotEmpty())
                                         <div class="px-2.5 py-1 bg-ok-soft border-b border-ok/30 font-semibold text-meta  text-ok flex items-center justify-between">
-                                            <span>{{ __('Contactos de esta compañía') }}</span>
+                                            <span>{{ __('Contacts at this company') }}</span>
                                             <x-lucide-user-check class="w-3 h-3 text-ok" />
                                         </div>
                                         @foreach($clientContacts as $c)
@@ -631,7 +631,7 @@
 
                                     @if($otherContacts->isNotEmpty())
                                         <div class="px-2.5 py-1 bg-sunken border-b border-line font-semibold text-meta  text-ink-3 flex items-center justify-between">
-                                            <span>{{ __('Directorio de clientes') }}</span>
+                                            <span>{{ __('Client directory') }}</span>
                                             <x-lucide-users class="w-3 h-3 text-ink-3" />
                                         </div>
                                         @foreach($otherContacts as $dc)
@@ -654,9 +654,9 @@
                                         >
                                             <div class="flex items-center gap-1.5 min-w-0">
                                                 <x-lucide-user-plus class="w-4 h-4 text-ok shrink-0" />
-                                                <span class="truncate">{{ __('Crear contacto para esta compañía') }} <strong class="" x-text="$wire.editResponsiblePerson"></strong></span>
+                                                <span class="truncate">{{ __('Create a contact for this company') }} <strong class="" x-text="$wire.editResponsiblePerson"></strong></span>
                                             </div>
-                                            <span class="text-meta text-ok bg-ok-soft px-1.5 py-0.5 rounded font-semibold shrink-0">{{ __('Crear') }}</span>
+                                            <span class="text-meta text-ok bg-ok-soft px-1.5 py-0.5 rounded font-semibold shrink-0">{{ __('Create') }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -673,15 +673,15 @@
                                  }"
                                  x-dropdown-nav>
                                 <div class="flex items-center justify-between">
-                                    <label class="ui-label">{{ __('Nombre de Empresa') }}</label>
+                                    <label class="ui-label">{{ __('Company name') }}</label>
                                     @if($order->client_id || $order->company_name || $editCompanyName)
                                         <button 
                                             type="button" 
                                             wire:click="openClientDetail" 
                                             class="text-meta font-medium text-ok hover:text-ok flex items-center gap-1 cursor-pointer transition select-none"
-                                            title="{{ __('Ver detalles del cliente') }}">
+                                            title="{{ __('View client details') }}">
                                             <x-lucide-external-link class="w-3 h-3" />
-                                            <span>{{ __('Ver Cliente') }}</span>
+                                            <span>{{ __('View Client') }}</span>
                                         </button>
                                     @endif
                                 </div>
@@ -692,7 +692,7 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('Ej: TAQUERIA LA CHULA...') }}" 
+                                        placeholder="{{ __('e.g. TAQUERIA LA CHULA...') }}" 
                                         class="ui-input pr-7"
                                         x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                                     
@@ -719,7 +719,7 @@
                                             {{ $comp }}
                                         </button>
                                     @empty
-                                        <div class="p-2.5 text-ink-3 italic text-meta">{{ __('Escribe un nuevo nombre de empresa...') }}</div>
+                                        <div class="p-2.5 text-ink-3 italic text-meta">{{ __('Enter a new company name...') }}</div>
                                     @endforelse
                                 </div>
                             </div>
@@ -734,7 +734,7 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="ui-label">{{ __('Locación / Sede (Opcional)') }}</label>
+                                <label class="ui-label">{{ __('Location / branch (optional)') }}</label>
                                 <div class="relative">
                                     <input 
                                         type="text" 
@@ -742,14 +742,14 @@
                                         @focus="open = true"
                                         @click.outside="open = false"
                                         autocomplete="off"
-                                        placeholder="{{ __('Ej: TALPA 8, SEDE NORTE...') }}" 
+                                        placeholder="{{ __('e.g. TALPA 8, NORTH LOCATION...') }}" 
                                         class="ui-input pr-7">
                                     
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         class="absolute right-2 top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink-2 p-0.5"
-                                        title="{{ __('Ver locaciones disponibles') }}">
+                                        title="{{ __('View available locations') }}">
                                         <x-lucide-chevron-down class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -763,7 +763,7 @@
                                     
                                     @if(!empty($clientLocations))
                                         <div class="px-2.5 py-1 bg-ok-soft border-b border-ok/30 font-semibold text-meta  text-ok flex items-center justify-between">
-                                            <span>{{ __('Locaciones del cliente') }}</span>
+                                            <span>{{ __('Client locations') }}</span>
                                             <x-lucide-map-pin class="w-3 h-3 text-danger" />
                                         </div>
                                         @foreach($clientLocations as $cLoc)
@@ -773,7 +773,7 @@
                                                 @click="selectLoc('{{ addslashes($cLoc) }}')" 
                                                 class="w-full text-left p-2 hover:bg-ok-soft focus:bg-ok-soft focus:outline-none cursor-pointer font-semibold text-ink  transition flex items-center justify-between">
                                                 <span>{{ $cLoc }}</span>
-                                                <span class="text-meta text-ok font-medium normal-case">({{ __('Registrada') }})</span>
+                                                <span class="text-meta text-ok font-medium normal-case">({{ __('Registered') }})</span>
                                             </button>
                                         @endforeach
                                     @endif
@@ -785,7 +785,7 @@
                                     @if(!empty($otherLocations))
                                         @if(!empty($clientLocations))
                                             <div class="px-2.5 py-1 bg-sunken border-b border-line font-semibold text-meta  text-ink-3">
-                                                {{ __('Otras locaciones') }}
+                                                {{ __('Other locations') }}
                                             </div>
                                         @endif
                                         @foreach($otherLocations as $loc)
@@ -800,20 +800,20 @@
                                     @endif
 
                                     @if(empty($clientLocations) && empty($otherLocations))
-                                        <div class="p-2.5 text-ink-3 italic text-meta">{{ __('Escribe una nueva locación...') }}</div>
+                                        <div class="p-2.5 text-ink-3 italic text-meta">{{ __('Enter a new location...') }}</div>
                                     @endif
                                 </div>
                             </div>
 
                             <!-- Tarea -->
                             <div class="space-y-1">
-                                <label class="ui-label">{{ __('Tarea de Diseño / Trabajo') }}</label>
+                                <label class="ui-label">{{ __('Design task / work') }}</label>
                                 <input type="text" wire:model="editTaskName" class="ui-input" x-on:blur="$event.target.value = $event.target.value.toUpperCase()">
                             </div>
 
                             <!-- Diseñadores -->
                             <div class="space-y-1.5 sm:col-span-2">
-                                <label class="ui-label">{{ __('Diseñadores Asignados (Soporta múltiples)') }}</label>
+                                <label class="ui-label">{{ __('Assigned designers (multiple allowed)') }}</label>
                                 <div class="flex flex-wrap items-center gap-1.5 p-2 bg-sunken border border-line rounded-control min-h-[38px]">
                                     @foreach($designers as $des)
                                         @php $isAssigned = in_array((int)$des->id, array_map('intval', $editDesignerIds)); @endphp
@@ -828,12 +828,12 @@
                                         </button>
                                     @endforeach
                                 </div>
-                                <span class="text-meta text-ink-3 block">{{ __('* Si seleccionas Diseñador Externo, se agregará Euralíz automáticamente.') }}</span>
+                                <span class="text-meta text-ink-3 block">{{ __('* If you select External Designer, Euralíz will be added automatically.') }}</span>
                             </div>
 
                             <!-- Fecha Límite -->
                             <div class="space-y-1">
-                                <label class="ui-label">{{ __('Fecha Límite (Due Date)') }}</label>
+                                <label class="ui-label">{{ __('Due date') }}</label>
                                 <div class="flex items-center gap-1.5">
                                     <input type="date" wire:model="editDueDate" class="ui-input font-mono">
                                     @if($editDueDate)
@@ -841,9 +841,9 @@
                                             type="button" 
                                             wire:click="$set('editDueDate', '')" 
                                             class="px-2.5 py-1.5 rounded-control bg-sunken hover:bg-danger-soft text-ink-2 hover:text-danger border border-line hover:border-danger/30 text-xs font-medium transition shrink-0 whitespace-nowrap cursor-pointer flex items-center gap-1.5" 
-                                            title="{{ __('Establecer fecha límite a Ninguna') }}">
+                                            title="{{ __('Set due date to None') }}">
                                             <x-lucide-calendar-off class="w-3.5 h-3.5" />
-                                            <span>{{ __('Sin Fecha') }}</span>
+                                            <span>{{ __('No Date') }}</span>
                                         </button>
                                     @endif
                                 </div>
@@ -859,14 +859,14 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="ui-label">{{ __('Lista Trello / Estado Principal') }}</label>
+                                <label class="ui-label">{{ __('Trello list / main status') }}</label>
                                 <div class="relative">
                                     <button 
                                         type="button" 
                                         @click="open = !open" 
                                         @click.outside="open = false"
                                         class="bg-surface border border-line hover:border-line-strong rounded-control px-3 py-1.5 text-xs text-ink w-full text-left flex items-center justify-between font-medium">
-                                        <span>{{ \App\Enums\CoreStatus::tryFrom($editCoreStatus)?->label() ?? __('Seleccionar estado...') }}</span>
+                                        <span>{{ \App\Enums\CoreStatus::tryFrom($editCoreStatus)?->label() ?? __('Select status...') }}</span>
                                         <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3" />
                                     </button>
                                 </div>
@@ -902,7 +902,7 @@
                                      }
                                  }"
                                  x-dropdown-nav>
-                                <label class="ui-label">{{ __('Subestatus Operativo') }}</label>
+                                <label class="ui-label">{{ __('Operational substatus') }}</label>
                                 <div class="relative">
                                     <button 
                                         type="button" 
@@ -913,7 +913,7 @@
                                             @php $subEnum = \App\Enums\Substatus::tryFrom($editSubstatus); @endphp
                                             <span class="text-body text-ink">{{ $editSubstatus }}</span>
                                         @else
-                                            <span class="text-ink-3 italic">{{ __('Sin Subestatus') }}</span>
+                                            <span class="text-ink-3 italic">{{ __('No Substatus') }}</span>
                                         @endif
                                         <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3" />
                                     </button>
@@ -933,7 +933,7 @@
                                                 x-model="search"
                                                 x-ref="subSearchInput"
                                                 x-init="$watch('open', value => { if (value) { search = ''; $nextTick(() => $refs.subSearchInput?.focus()); } })"
-                                                placeholder="{{ __('Buscar subestatus...') }}"
+                                                placeholder="{{ __('Search substatus...') }}"
                                                 class="w-full pl-7 pr-6 py-1 text-xs bg-surface border border-line rounded text-ink placeholder:text-ink-3 focus:outline-none focus:border-line-strong">
                                             <button 
                                                 type="button" 
@@ -950,7 +950,7 @@
                                             x-show="!search || 'sin subestatus'.includes(search.toLowerCase().trim())"
                                             @click="selectSub('')" 
                                             class="w-full text-left p-2.5 hover:bg-sunken focus:bg-sunken focus:outline-none cursor-pointer text-ink-3 italic transition flex items-center justify-between">
-                                            <span>{{ __('Sin Subestatus') }}</span>
+                                            <span>{{ __('No Substatus') }}</span>
                                             @if(!$editSubstatus)
                                                 <x-lucide-check class="w-3.5 h-3.5 text-ok stroke-[3]" />
                                             @endif
@@ -973,13 +973,13 @@
 
                             <!-- Revisiones Cliente -->
                             <div class="space-y-1">
-                                <label class="ui-label">{{ __('Nº Revisiones Cliente') }}</label>
+                                <label class="ui-label">{{ __('No. of client revisions') }}</label>
                                 <input type="number" min="0" wire:model="editClientRevisionCount" class="ui-input font-mono">
                             </div>
 
                             <!-- Revisiones Internas -->
                             <div class="space-y-1">
-                                <label class="ui-label">{{ __('Nº Revisiones Internas') }}</label>
+                                <label class="ui-label">{{ __('Internal revisions') }}</label>
                                 <input type="number" min="0" wire:model="editInternalRevisionCount" class="ui-input font-mono">
                             </div>
                         </div>
@@ -989,10 +989,10 @@
                             // Record data (WO, company, location, Trello link, contact) always asks before saving.
                             $saveLabels = json_encode([
                                 'wo' => __('WO'),
-                                'trelloId' => __('ID Tarjeta Trello'),
-                                'company' => __('Empresa'),
-                                'location' => __('Locación'),
-                                'resp' => __('Persona responsable'),
+                                'trelloId' => __('Trello card ID'),
+                                'company' => __('Company'),
+                                'location' => __('Location'),
+                                'resp' => __('Responsible person'),
                             ], JSON_HEX_QUOT | JSON_HEX_APOS | JSON_UNESCAPED_UNICODE);
                             $saveJsTemplate = <<<'JS'
 (async () => { const i = JSON.parse(initialForm || '{}'); const L = __LABELS__; const c = { wo: $wire.editWoNumber, trelloId: $wire.editTrelloCardId, company: $wire.editCompanyName, location: $wire.editLocationName, resp: $wire.editResponsiblePerson }; const ch = Object.keys(L).filter(k => String(i[k] ?? '') !== String(c[k] ?? '').trim()); if (ch.length) { const ok = await KudosConfirmChange({ field: ch.map(k => L[k]).join(', '), from: ch.map(k => i[k] || '—').join(' · '), to: ch.map(k => String(c[k] || '—').trim()).join(' · ') }); if (!ok) return; } $wire.saveOrder(__ADD__); })()
@@ -1001,7 +1001,7 @@ JS;
                         @endphp
                         <div class="flex items-center justify-end gap-2 pt-3 border-t border-line">
                             <button type="button" @click.prevent="confirmClose(() => $wire.cancelEditing())" class="ui-btn ui-btn-ghost">
-                                {{ __('Cancelar') }}
+                                {{ __('Cancel') }}
                             </button>
 
                             @if(!$order->in_workspace)
@@ -1011,7 +1011,7 @@ JS;
                                     :disabled="!isEditDirty()"
                                     class="ui-btn ui-btn-secondary"
                                 >
-                                    <span>{{ __('Guardar y añadir a Workspace') }}</span>
+                                    <span>{{ __('Save and add to Workspace') }}</span>
                                 </button>
                             @endif
 
@@ -1021,7 +1021,7 @@ JS;
                                 :disabled="!isEditDirty()"
                                 class="ui-btn ui-btn-primary"
                             >
-                                <span>{{ __('Guardar cambios') }}</span>
+                                <span>{{ __('Save changes') }}</span>
                             </button>
                         </div>
                     </div>
@@ -1031,18 +1031,18 @@ JS;
                     <!-- Metadata Property Grid -->
                     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 text-body py-1">
                         <div class="min-w-0">
-                            <span class="ui-label !mb-1">{{ __('Diseñadores') }}</span>
+                            <span class="ui-label !mb-1">{{ __('Designers') }}</span>
                             <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
                                 @forelse($order->assigned_designers as $des)
                                     <x-ui.person :person="$des" size="sm" show-name />
                                 @empty
-                                    <span class="text-ink-3 text-body">{{ __('Sin Asignar') }}</span>
+                                    <span class="text-ink-3 text-body">{{ __('Unassigned') }}</span>
                                 @endforelse
                             </div>
                         </div>
 
                         <div class="min-w-0">
-                            <span class="ui-label !mb-1">{{ __('ID Tarjeta Trello') }}</span>
+                            <span class="ui-label !mb-1">{{ __('Trello card ID') }}</span>
                             @if($order->trello_card_id)
                                 <a href="{{ $order->trello_url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-body text-ink-2 hover:text-ink hover:underline max-w-full min-w-0" title="{{ $order->trello_card_id }}">
                                     <x-lucide-external-link class="w-3.5 h-3.5 text-ink-3 shrink-0" />
@@ -1055,34 +1055,34 @@ JS;
                                         wire:loading.attr="disabled"
                                         type="button"
                                         class="ui-btn ui-btn-secondary ui-btn-sm"
-                                        title="{{ __('Crear nueva tarjeta en Trello para esta orden') }}">
+                                        title="{{ __('Create new card in Trello for this order') }}">
                                         <x-lucide-plus wire:loading.class="hidden" wire:target="createCardOnTrello" />
                                         <x-lucide-loader-2 wire:loading wire:target="createCardOnTrello" class="animate-spin" />
-                                        <span>{{ __('Crear en Trello') }}</span>
+                                        <span>{{ __('Create in Trello') }}</span>
                                     </button>
                                     <button
                                         wire:click="startEditing"
                                         type="button"
                                         class="ui-btn ui-btn-ghost ui-btn-sm"
-                                        title="{{ __('Vincular ID existente de Trello') }}">
+                                        title="{{ __('Link existing Trello ID') }}">
                                         <x-lucide-link />
-                                        <span>{{ __('Vincular') }}</span>
+                                        <span>{{ __('Link') }}</span>
                                     </button>
                                 </div>
                             @endif
                         </div>
 
                         <div class="min-w-0">
-                            <span class="ui-label !mb-1">{{ __('Fecha límite') }}</span>
+                            <span class="ui-label !mb-1">{{ __('Due date') }}</span>
                             @if($order->current_due_date)
                                 <x-orders.due :date="$order->current_due_date" :done="(bool) $order->done_today" />
                             @else
-                                <span class="text-ink-3 text-body">{{ __('Sin Fecha') }}</span>
+                                <span class="text-ink-3 text-body">{{ __('No Date') }}</span>
                             @endif
                         </div>
 
                         <div class="min-w-0">
-                            <span class="ui-label !mb-1">{{ __('Revisiones cliente') }}</span>
+                            <span class="ui-label !mb-1">{{ __('Client revisions') }}</span>
                             <span class="text-ink text-body tabular-nums">{{ $order->client_revision_count }}</span>
                         </div>
                     </div>
@@ -1092,12 +1092,12 @@ JS;
                         <div class="bg-danger-soft rounded-card p-3 flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1">
                                 <h4 class="font-semibold text-body text-danger flex items-center gap-1.5">
-                                    <x-lucide-alert-octagon class="w-4 h-4 shrink-0" /> {{ __('Esta orden está atrasada') }}
+                                    <x-lucide-alert-octagon class="w-4 h-4 shrink-0" /> {{ __('This order is overdue') }}
                                 </h4>
-                                <p class="text-meta text-ink-2 mt-0.5">{{ __('Requiere registrar la nueva fecha acordada con el cliente para resolver el atraso.') }}</p>
+                                <p class="text-meta text-ink-2 mt-0.5">{{ __('Requires recording the new agreed date with the client to resolve the delay.') }}</p>
                             </div>
                             <button wire:click="$set('showDelayModal', true)" class="ui-btn ui-btn-secondary ui-btn-sm">
-                                {{ __('Resolver atraso') }}
+                                {{ __('Resolve delay') }}
                             </button>
                         </div>
                     @endif
@@ -1119,7 +1119,7 @@ JS;
                                         : 'border-transparent text-ink-3 hover:text-ink font-medium'"
                                     class="py-2.5 px-3 text-body border-b-2 transition-colors flex items-center gap-2 cursor-pointer shrink-0 select-none"
                                 >
-                                    <span>{{ __('Piezas y subtareas') }}</span>
+                                    <span>{{ __('Items and subtasks') }}</span>
                                     @php
                                         $tabPiecesCount = $order->elements->count();
                                         $tabSubtasks = $order->relatedTasks;
@@ -1142,7 +1142,7 @@ JS;
                                         : 'border-transparent text-ink-3 hover:text-ink font-medium'"
                                     class="py-2.5 px-3 text-body border-b-2 transition-colors flex items-center gap-2 cursor-pointer shrink-0 select-none"
                                 >
-                                    <span>{{ __('Comentarios y adjuntos') }}</span>
+                                    <span>{{ __('Comments & attachments') }}</span>
                                     @php
                                         $tabCommentsCount = is_countable($trelloComments ?? null) ? count($trelloComments) : 0;
                                         $tabAttachmentsCount = is_countable($trelloAttachments ?? null) ? count($trelloAttachments) : 0;
@@ -1163,7 +1163,7 @@ JS;
                                         : 'border-transparent text-ink-3 hover:text-ink font-medium'"
                                     class="py-2.5 px-3 text-body border-b-2 transition-colors flex items-center gap-2 cursor-pointer shrink-0 select-none"
                                 >
-                                    <span>{{ __('Línea de tiempo') }}</span>
+                                    <span>{{ __('Timeline') }}</span>
                                     @php
                                         $tabTimelineCount = $order->getTimelineEvents()->count();
                                     @endphp
@@ -1193,7 +1193,7 @@ JS;
                     <div class="space-y-3 pt-6 border-t border-line">
                         <!-- Subtasks Header & Progress Bar -->
                         <div class="space-y-2 pb-2">
-                            <x-orders.tab-section-header :title="__('Subtareas')">
+                            <x-orders.tab-section-header :title="__('Subtasks')">
                                 <x-slot:badge>
                                     <span class="text-meta text-ink-3 tabular-nums">{{ $doneSubtasks }}/{{ $totalSubtasks }}</span>
                                 </x-slot:badge>
@@ -1248,20 +1248,20 @@ JS;
                                                 wire:click="toggleTaskStatus({{ $task->id }})" 
                                                 type="button"
                                                 class="w-4 h-4 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $task->isDone() ? 'bg-ok border-ok/30 text-white ' : 'border-line-strong hover:border-ok/30 bg-surface text-transparent hover:text-ok' }}"
-                                                title="{{ $task->isDone() ? __('Marcar como pendiente') : __('Marcar como completada') }}">
+                                                title="{{ $task->isDone() ? __('Mark as pending') : __('Mark as completed') }}">
                                                 <x-lucide-check class="w-3 h-3 stroke-[3]" />
                                             </button>
 
                                             <!-- Subtask Title & Tags -->
                                             <div class="min-w-0 flex-1 flex items-center gap-2 flex-wrap">
                                                 @if($task->isSystemTask())
-                                                    <x-ui.tag title="{{ __('Subtarea generada automáticamente por el sistema') }} ({{ $task->colorCodingLabel() }})">{{ $task->colorCodingShortLabel() }}</x-ui.tag>
+                                                    <x-ui.tag title="{{ __('Subtask automatically generated by the system') }} ({{ $task->colorCodingLabel() }})">{{ $task->colorCodingShortLabel() }}</x-ui.tag>
                                                 @endif
 
                                                 <span 
                                                     @click="editing = true; $nextTick(() => $refs.editInput.focus())"
                                                     class="font-medium text-ink text-body break-words cursor-pointer hover:underline decoration-line-strong underline-offset-2 transition {{ $task->isDone() ? 'ui-done font-normal' : '' }}" 
-                                                    title="{{ __('Haz clic para editar el nombre de la subtarea') }}">
+                                                    title="{{ __('Click to edit subtask name') }}">
                                                     {{ $task->title }}
                                                 </span>
 
@@ -1274,7 +1274,7 @@ JS;
                                                         type="button" 
                                                         @click.stop="openCategory = !openCategory; openType = false; openDate = false; openAssignee = false"
                                                         class="inline-flex items-center gap-1 h-6 px-1.5 rounded-control text-meta font-medium text-ink-2 hover:bg-sunken hover:text-ink transition cursor-pointer shrink-0"
-                                                        title="{{ __('Al completar:') }} {{ $cat->returnActionLabel() }}. {{ __('Clic para cambiar') }}">
+                                                        title="{{ __('When completed:') }} {{ $cat->returnActionLabel() }}. {{ __('Click to change') }}">
                                                                                                                 <span>{{ $cat->shortReturnLabel() }}</span>
                                                         <x-lucide-chevron-down class="w-3 h-3 text-ink-3" />
                                                     </button>
@@ -1289,7 +1289,7 @@ JS;
                                                         x-transition:enter-end="opacity-100 scale-100"
                                                         class="absolute left-0 mt-1 z-50 bg-surface border border-line rounded-card shadow-menu p-1.5 min-w-[210px] space-y-1 text-left text-xs">
                                                         <div class="px-2 py-0.5 font-semibold text-meta  text-ink-3 ">
-                                                            {{ __('Al marcar como lista, enviar a:') }}
+                                                            {{ __('When marked as ready, send to:') }}
                                                         </div>
                                                         @foreach(\App\Enums\SubtaskCategory::cases() as $categoryCase)
                                                             <button 
@@ -1314,13 +1314,13 @@ JS;
                                                         type="button" 
                                                         @click.stop="openType = !openType; openDate = false; openAssignee = false"
                                                         class="inline-flex items-center gap-1 h-6 px-1.5 rounded-control text-meta font-medium text-ink-2 hover:bg-sunken hover:text-ink transition cursor-pointer shrink-0"
-                                                        title="{{ __('Clic para cambiar tipo (Trabajo / Gestión)') }}">
+                                                        title="{{ __('Click to change type (Work / Admin)') }}">
                                                         @if($task->is_work_task !== false)
                                                             <x-lucide-wrench class="w-3.5 h-3.5 text-ink-3" />
-                                                            <span>{{ __('Trabajo') }}</span>
+                                                            <span>{{ __('Work') }}</span>
                                                         @else
                                                             <x-lucide-clipboard-list class="w-3.5 h-3.5 text-ink-3" />
-                                                            <span>{{ __('Gestión') }}</span>
+                                                            <span>{{ __('Admin') }}</span>
                                                         @endif
                                                         <x-lucide-chevron-down class="w-3 h-3 text-ink-3" />
                                                     </button>
@@ -1335,7 +1335,7 @@ JS;
                                                         x-transition:enter-end="opacity-100 scale-100"
                                                         class="absolute left-0 mt-1 z-50 bg-surface border border-line rounded-card shadow-menu p-1.5 min-w-[150px] space-y-1 text-left text-xs">
                                                         <div class="px-2 py-0.5 font-semibold text-meta  text-ink-3 ">
-                                                            {{ __('Tipo de Subtarea') }}
+                                                            {{ __('Subtask Type') }}
                                                         </div>
                                                         <button 
                                                             type="button"
@@ -1344,7 +1344,7 @@ JS;
                                                             class="w-full flex items-center justify-between px-2 py-1.5 rounded-control text-xs font-medium transition cursor-pointer hover:bg-sunken {{ $task->is_work_task !== false ? 'text-ink-2 font-semibold bg-sunken' : 'text-ink-2' }}">
                                                             <span class="flex items-center gap-1.5">
                                                                 <x-lucide-wrench class="w-3.5 h-3.5 text-ink-2" />
-                                                                <span>{{ __('Trabajo') }}</span>
+                                                                <span>{{ __('Work') }}</span>
                                                             </span>
                                                             @if($task->is_work_task !== false)
                                                                 <x-lucide-check class="w-3.5 h-3.5 text-ink-2 stroke-[2.5]" />
@@ -1357,7 +1357,7 @@ JS;
                                                             class="w-full flex items-center justify-between px-2 py-1.5 rounded-control text-xs font-medium transition cursor-pointer hover:bg-sunken {{ $task->is_work_task === false ? 'text-ink font-semibold bg-warn-soft' : 'text-ink-2' }}">
                                                             <span class="flex items-center gap-1.5">
                                                                 <x-lucide-clipboard-list class="w-3.5 h-3.5 text-ink-3" />
-                                                                <span>{{ __('Gestión') }}</span>
+                                                                <span>{{ __('Admin') }}</span>
                                                             </span>
                                                             @if($task->is_work_task === false)
                                                                 <x-lucide-check class="w-3.5 h-3.5 text-ink stroke-[2.5]" />
@@ -1372,9 +1372,9 @@ JS;
                                                         type="button" 
                                                         @click.stop="openDate = !openDate; openType = false; openAssignee = false"
                                                         class="inline-flex items-center gap-1 h-6 px-1.5 rounded-control text-meta font-medium text-ink-2 hover:bg-sunken hover:text-ink transition cursor-pointer shrink-0"
-                                                        title="{{ __('Clic para cambiar fecha programada') }}">
+                                                        title="{{ __('Click to change scheduled date') }}">
                                                         <x-lucide-calendar class="w-3.5 h-3.5 text-ink-3" />
-                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->format('d M') : __('+ Fecha') }}</span>
+                                                        <span>{{ $task->scheduled_date ? $task->scheduled_date->format('d M') : __('+ Date') }}</span>
                                                         <x-lucide-chevron-down class="w-3 h-3 text-ink-3" />
                                                     </button>
 
@@ -1389,7 +1389,7 @@ JS;
                                                         class="absolute left-0 mt-1 z-50 bg-surface border border-line rounded-card shadow-menu p-2.5 min-w-[210px] space-y-2 text-left text-xs">
                                                         
                                                         <div class="font-semibold text-meta  text-ink-3 ">
-                                                            {{ __('Fecha Programada') }}
+                                                            {{ __('Scheduled Date') }}
                                                         </div>
 
                                                         <!-- Quick presets: Hoy, Mañana -->
@@ -1399,20 +1399,20 @@ JS;
                                                                 wire:click="updateTaskDate({{ $task->id }}, '{{ now()->toDateString() }}')"
                                                                 @click="openDate = false"
                                                                 class="px-2 py-1 text-meta font-medium rounded-control border text-center transition cursor-pointer {{ $task->scheduled_date?->isToday() ? 'bg-ink text-white border-zinc-900 font-semibold' : 'bg-sunken hover:bg-sunken text-ink-2 border-line' }}">
-                                                                {{ __('Hoy') }}
+                                                                {{ __('Today') }}
                                                             </button>
                                                             <button 
                                                                 type="button"
                                                                 wire:click="updateTaskDate({{ $task->id }}, '{{ now()->addDay()->toDateString() }}')"
                                                                 @click="openDate = false"
                                                                 class="px-2 py-1 text-meta font-medium rounded-control border text-center transition cursor-pointer {{ $task->scheduled_date?->isTomorrow() ? 'bg-ink text-white border-zinc-900 font-semibold' : 'bg-sunken hover:bg-sunken text-ink-2 border-line' }}">
-                                                                {{ __('Mañana') }}
+                                                                {{ __('Tomorrow') }}
                                                             </button>
                                                         </div>
 
                                                         <!-- Custom Date Input -->
                                                         <div class="space-y-1 pt-1.5 border-t border-line">
-                                                            <label class="text-meta text-ink-3 font-medium block">{{ __('Elegir otra fecha:') }}</label>
+                                                            <label class="text-meta text-ink-3 font-medium block">{{ __('Choose another date:') }}</label>
                                                             <input 
                                                                 type="date" 
                                                                 value="{{ $task->scheduled_date?->toDateString() }}"
@@ -1428,7 +1428,7 @@ JS;
                                                                     wire:click="updateTaskDate({{ $task->id }}, null)"
                                                                     @click="openDate = false"
                                                                     class="w-full text-center py-1 text-meta text-danger hover:text-danger hover:bg-danger-soft rounded-control transition cursor-pointer font-medium">
-                                                                    {{ __('Quitar fecha programada') }}
+                                                                    {{ __('Remove scheduled date') }}
                                                                 </button>
                                                             </div>
                                                         @endif
@@ -1441,9 +1441,9 @@ JS;
                                                         type="button" 
                                                         @click.stop="openAssignee = !openAssignee; openType = false; openDate = false"
                                                         class="inline-flex items-center gap-1 h-6 px-1.5 rounded-control text-meta font-medium text-ink-2 hover:bg-sunken hover:text-ink transition cursor-pointer shrink-0"
-                                                        title="{{ __('Clic para cambiar responsable') }}">
+                                                        title="{{ __('Click to change assignee') }}">
                                                         <x-lucide-user class="w-3.5 h-3.5 text-ink-3" />
-                                                        <span>{{ $task->assignee ? $task->assignee->name : __('+ Asignar') }}</span>
+                                                        <span>{{ $task->assignee ? $task->assignee->name : __('+ Assign') }}</span>
                                                         <x-lucide-chevron-down class="w-3 h-3 text-ink-3" />
                                                     </button>
 
@@ -1458,7 +1458,7 @@ JS;
                                                         class="absolute left-0 mt-1 z-50 bg-surface border border-line rounded-card shadow-menu p-2 min-w-[190px] max-w-[250px] space-y-1.5 text-left text-xs">
                                                         
                                                         <div class="font-semibold text-meta  text-ink-3  px-1">
-                                                            {{ __('Asignar Responsable') }}
+                                                            {{ __('Assign Rep') }}
                                                         </div>
 
                                                         @if(count($designers) > 4)
@@ -1466,7 +1466,7 @@ JS;
                                                                 <input 
                                                                     type="text" 
                                                                     x-model="assigneeSearch"
-                                                                    placeholder="{{ __('Buscar diseñador...') }}" 
+                                                                    placeholder="{{ __('Search designer...') }}" 
                                                                     class="w-full bg-canvas border border-line rounded-control px-2 py-1 text-xs text-ink focus:outline-none focus:border-line-strong">
                                                             </div>
                                                         @endif
@@ -1480,7 +1480,7 @@ JS;
                                                                 class="w-full flex items-center justify-between px-2 py-1.5 rounded-control text-xs transition cursor-pointer hover:bg-sunken {{ !$task->assignee_id ? 'font-semibold text-ink bg-sunken' : 'text-ink-3' }}">
                                                                 <span class="flex items-center gap-1.5">
                                                                     <x-lucide-user-x class="w-3.5 h-3.5 text-ink-3 shrink-0" />
-                                                                    <span>{{ __('Sin asignar') }}</span>
+                                                                    <span>{{ __('Unassigned') }}</span>
                                                                 </span>
                                                                 @if(!$task->assignee_id)
                                                                     <x-lucide-check class="w-3.5 h-3.5 text-ink stroke-[2.5] shrink-0" />
@@ -1516,16 +1516,16 @@ JS;
                                                 type="button"
                                                 @click="editing = true; $nextTick(() => $refs.editInput.focus())"
                                                 class="p-1 rounded-control text-ink-3 hover:text-ink-2 hover:bg-line transition cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100" 
-                                                title="{{ __('Editar nombre de subtarea') }}">
+                                                title="{{ __('Edit subtask name') }}">
                                                 <x-lucide-pencil class="w-3.5 h-3.5" />
                                             </button>
 
                                             <!-- Delete Subtask Button -->
                                             <button 
                                                 wire:click="deleteTask({{ $task->id }})" 
-                                                wire:confirm="{{ __('¿Estás seguro de eliminar la subtarea') }} '{{ addslashes($task->title) }}'?" 
+                                                wire:confirm="{{ __('Are you sure you want to delete the subtask') }} '{{ addslashes($task->title) }}'?" 
                                                 class="p-1 rounded-control text-ink-3 hover:text-danger hover:bg-danger-soft transition cursor-pointer opacity-80 sm:opacity-0 group-hover:opacity-100" 
-                                                title="{{ __('Eliminar subtarea') }}">
+                                                title="{{ __('Delete subtask') }}">
                                                 <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                             </button>
                                         </div>
@@ -1543,27 +1543,27 @@ JS;
                                             type="text" 
                                             x-model="title"
                                             @keydown.escape="editing = false; title = @js($task->title)"
-                                            placeholder="{{ __('Nombre de la subtarea...') }}"
+                                            placeholder="{{ __('Subtask name...') }}"
                                             class="flex-1 bg-surface border border-line-strong rounded-control px-2.5 py-1 text-xs text-ink font-semibold focus:outline-none focus:ring-2 focus:ring-ink/20"
                                         >
                                         <button 
                                             type="submit" 
                                             class="px-2.5 py-1 rounded-control bg-ink hover:bg-ink text-white font-semibold text-xs  transition flex items-center gap-1 cursor-pointer">
                                             <x-lucide-check class="w-3.5 h-3.5" />
-                                            <span>{{ __('Guardar') }}</span>
+                                            <span>{{ __('Save') }}</span>
                                         </button>
                                         <button 
                                             type="button" 
                                             @click="editing = false; title = @js($task->title)" 
                                             class="p-1 rounded-control text-ink-3 hover:text-ink-2 hover:bg-line transition cursor-pointer"
-                                            title="{{ __('Cancelar') }}">
+                                            title="{{ __('Cancel') }}">
                                             <x-lucide-x class="w-3.5 h-3.5" />
                                         </button>
                                     </form>
                                 </div>
                             @empty
                                 <div class="p-4 text-center text-xs text-ink-3 bg-canvas rounded-card border border-line">
-                                    {{ __('Sin subtareas creadas aún.') }}
+                                    {{ __('No subtasks created yet.') }}
                                 </div>
                             @endforelse
                         </div>
@@ -1614,28 +1614,28 @@ JS;
                             @click.outside="presetDropdownOpen = false"
                             class="bg-canvas border border-line rounded-card p-3 space-y-2.5  relative">
                             <div class="flex items-center justify-between gap-2 flex-wrap">
-                                <span class="text-body font-medium text-ink">{{ __('Añadir subtarea') }}</span>
+                                <span class="text-body font-medium text-ink">{{ __('Add subtask') }}</span>
                                 <div class="flex items-center gap-1.5 text-xs">
                                     <!-- Destination Selector: When marked as done, send to... -->
                                     <div x-data="{ 
                                         open: false, 
                                         selected: @entangle('newTaskCategory'),
                                         options: {
-                                            '': { label: '{{ __('Al terminar: Auto') }}', dot: 'bg-ink-3' },
-                                            'new_design': { label: '{{ __('Volver al estado anterior') }}', dot: 'bg-ink-3' },
-                                            'client_adjustments': { label: '{{ __('Enviado al Cliente') }}', dot: 'bg-ink-3' },
-                                            'camila_adjustments': { label: '{{ __('Enviado a Camila') }}', dot: 'bg-ink-3' },
-                                            'production_adjustments': { label: '{{ __('En Producción') }}', dot: 'bg-ink-3' },
-                                            'management': { label: '{{ __('No mover la orden') }}', dot: 'bg-ink-3' }
+                                            '': { label: '{{ __('On finish: Auto') }}', dot: 'bg-ink-3' },
+                                            'new_design': { label: '{{ __('Return to previous status') }}', dot: 'bg-ink-3' },
+                                            'client_adjustments': { label: '{{ __('Sent to Client') }}', dot: 'bg-ink-3' },
+                                            'camila_adjustments': { label: '{{ __('Sent to Camila') }}', dot: 'bg-ink-3' },
+                                            'production_adjustments': { label: '{{ __('In Production') }}', dot: 'bg-ink-3' },
+                                            'management': { label: '{{ __('Do not move order') }}', dot: 'bg-ink-3' }
                                         }
                                     }" class="relative">
                                         <button 
                                             type="button" 
                                             @click="open = !open" 
                                             class="ui-btn ui-btn-secondary ui-btn-sm"
-                                            title="{{ __('Al marcar como lista, enviar orden a...') }}">
+                                            title="{{ __('When marked as ready, send order to...') }}">
                                             <span class="w-2 h-2 rounded-full shrink-0" :class="options[selected]?.dot || 'bg-ink-3'"></span>
-                                            <span x-text="options[selected]?.label || '{{ __('Al terminar: Auto') }}'"></span>
+                                            <span x-text="options[selected]?.label || '{{ __('On finish: Auto') }}'"></span>
                                             <x-lucide-chevron-down class="w-3 h-3 text-ink-3 transition-transform duration-200" ::class="{ 'rotate-180': open }" />
                                         </button>
                                         <div 
@@ -1670,16 +1670,16 @@ JS;
                                         wire:click="$set('newTaskIsWork', true)"
                                         class="ui-chip"
                                         aria-pressed="{{ $newTaskIsWork ? 'true' : 'false' }}"
-                                        title="{{ __('Trabajo de diseño/producción') }}">
-                                        <span>{{ __('Trabajo') }}</span>
+                                        title="{{ __('Design/production work') }}">
+                                        <span>{{ __('Work') }}</span>
                                     </button>
                                     <button
                                         type="button"
                                         wire:click="$set('newTaskIsWork', false)"
                                         class="ui-chip"
                                         aria-pressed="{{ !$newTaskIsWork ? 'true' : 'false' }}"
-                                        title="{{ __('Gestión/Seguimiento administrativo') }}">
-                                        <span>{{ __('Gestión') }}</span>
+                                        title="{{ __('Administrative management/follow-up') }}">
+                                        <span>{{ __('Admin') }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -1687,17 +1687,17 @@ JS;
                             @if($order && ($order->core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE || $order->origin_core_status === \App\Enums\CoreStatus::ENVIADO_AL_CLIENTE))
                                 <div class="flex items-center gap-1.5 text-meta text-ink-2 bg-sunken border border-line px-2 py-1 rounded-control font-medium">
                                     <x-lucide-corner-down-left class="w-3 h-3 text-ink-2 shrink-0" />
-                                    <span>{{ __('Al completar las subtareas de hoy, este pedido volverá automáticamente a') }} <strong>{{ __('Enviado al Cliente') }}</strong>.</span>
+                                    <span>{{ __('Upon completing today\'s subtasks, this order will automatically return to') }} <strong>{{ __('Sent to Client') }}</strong>.</span>
                                 </div>
                             @elseif($order && ($order->core_status === \App\Enums\CoreStatus::ENVIADO_A_CAMILA || $order->origin_core_status === \App\Enums\CoreStatus::ENVIADO_A_CAMILA))
                                 <div class="flex items-center gap-1.5 text-meta text-ink-2 bg-sunken border border-line px-2 py-1 rounded-control font-medium">
                                     <x-lucide-corner-down-left class="w-3 h-3 text-ink-2 shrink-0" />
-                                    <span>{{ __('Al completar las subtareas de hoy, este pedido volverá automáticamente a') }} <strong>{{ __('Enviado a Camila') }}</strong>.</span>
+                                    <span>{{ __('Upon completing today\'s subtasks, this order will automatically return to') }} <strong>{{ __('Sent to Camila') }}</strong>.</span>
                                 </div>
                             @elseif($order && ($order->core_status === \App\Enums\CoreStatus::EN_PRODUCCION || $order->origin_core_status === \App\Enums\CoreStatus::EN_PRODUCCION))
                                 <div class="flex items-center gap-1.5 text-meta text-ink-2 bg-sunken border border-line px-2 py-1 rounded-control font-medium">
                                     <x-lucide-corner-down-left class="w-3 h-3 text-ink-2 shrink-0" />
-                                    <span>{{ __('Al completar las subtareas de hoy, este pedido volverá automáticamente a') }} <strong>{{ __('En Producción') }}</strong>.</span>
+                                    <span>{{ __('Upon completing today\'s subtasks, this order will automatically return to') }} <strong>{{ __('In Production') }}</strong>.</span>
                                 </div>
                             @endif
 
@@ -1712,7 +1712,7 @@ JS;
                                         @keydown.arrow-up.prevent="if(!presetDropdownOpen) presetDropdownOpen = true; else navigatePreset(-1);"
                                         @keydown.enter.prevent="if (presetDropdownOpen && presetHighlightedIndex >= 0 && getFilteredPresets()[presetHighlightedIndex]) { selectPreset(getFilteredPresets()[presetHighlightedIndex]); } else { $wire.addTask(); presetDropdownOpen = false; }"
                                         @keydown.escape.stop="presetDropdownOpen = false; presetHighlightedIndex = -1;"
-                                        placeholder="{{ __('Nombre de la subtarea (ej: Ajustes cliente, Confirmar medidas...)') }}" 
+                                        placeholder="{{ __('Subtask name (e.g., Client adjustments, Confirm measurements...)') }}" 
                                         class="ui-input">
 
                                     <!-- Dropdown Menu for Subtask Presets -->
@@ -1729,7 +1729,7 @@ JS;
                                         class="absolute left-0 top-full mt-1 z-50 bg-surface/95 backdrop-blur-xs border border-line rounded-control shadow-menu max-h-48 overflow-y-auto p-1 text-meta min-w-[220px] w-full max-w-md space-y-0.5 divide-y divide-line"
                                         style="display: none;">
                                         <div class="px-2 py-1 text-meta font-semibold text-ink-3   flex items-center justify-between select-none pb-0.5">
-                                            <span>{{ __('Plantillas') }}</span>
+                                            <span>{{ __('Templates') }}</span>
                                             <span class="ui-kbd">↑↓ Enter</span>
                                         </div>
                                         <div class="pt-0.5 space-y-0.5">
@@ -1749,7 +1749,7 @@ JS;
                                                     <div class="flex items-center gap-1 shrink-0">
                                                         <span 
                                                             class="text-meta text-ink-3">
-                                                            <span x-text="preset.is_work_task ? '{{ __('Trabajo') }}' : '{{ __('Gestión') }}'"></span>
+                                                            <span x-text="preset.is_work_task ? '{{ __('Work') }}' : '{{ __('Admin') }}'"></span>
                                                         </span>
                                                         <span class="text-meta text-ink-3 opacity-0 group-hover:opacity-100 transition">
                                                             ↵
@@ -1772,7 +1772,7 @@ JS;
                                         @click="presetDropdownOpen = false"
                                         class="ui-btn ui-btn-secondary">
                                         <x-lucide-plus class="w-3.5 h-3.5" />
-                                        <span>{{ __('Añadir') }}</span>
+                                        <span>{{ __('Add') }}</span>
                                     </button>
                                 </div>
                             </div>
@@ -1790,15 +1790,15 @@ JS;
                     <!-- TRELLO INTEGRATION SECTION (DESCRIPTION, ATTACHMENTS & COMMENTS) -->
                     <div class="space-y-4">
                         <!-- Recycled Section Header -->
-                        <x-orders.tab-section-header :title="__('Información y archivos de Trello')">
+                        <x-orders.tab-section-header :title="__('Trello information & files')">
                             <x-slot:icon>
                                 <x-lucide-message-square class="w-4.5 h-4.5 text-sky-600 shrink-0" />
                             </x-slot:icon>
                             @if($order->trello_card_id)
                                 <x-slot:actions>
-                                    <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="{{ __('Actualizar datos de Trello') }}">
+                                    <button wire:click="refreshTrelloData" type="button" class="text-xs text-sky-700 hover:text-sky-900 font-medium flex items-center gap-1 transition cursor-pointer" title="{{ __('Update Trello data') }}">
                                         <x-lucide-refresh-cw wire:loading.class="animate-spin" wire:target="refreshTrelloData,loadTrelloComments,loadTrelloDetails" class="w-3.5 h-3.5" />
-                                        <span>{{ __('Actualizar Trello') }}</span>
+                                        <span>{{ __('Update Trello') }}</span>
                                     </button>
                                 </x-slot:actions>
                             @endif
@@ -1808,7 +1808,7 @@ JS;
                         <div class="p-3.5 rounded-xl bg-blue-50/60 border border-blue-200/80 text-xs text-blue-900 flex items-center justify-between gap-3 shadow-2xs">
                             <div class="flex items-center gap-2 min-w-0">
                                 <x-lucide-info class="w-4 h-4 text-blue-500 shrink-0" />
-                                <span class="truncate">{{ __('Esta orden no tiene tarjeta vinculada en Trello.') }}</span>
+                                <span class="truncate">{{ __('This order does not have a linked Trello card.') }}</span>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
                                 <button 
@@ -1818,7 +1818,7 @@ JS;
                                     class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-2xs transition cursor-pointer disabled:opacity-50">
                                     <x-lucide-plus-circle wire:loading.class="hidden" wire:target="createCardOnTrello" class="w-3.5 h-3.5 shrink-0" />
                                     <x-lucide-loader-2 wire:loading wire:target="createCardOnTrello" class="w-3.5 h-3.5 animate-spin shrink-0" />
-                                    <span>{{ __('Crear Tarjeta en Trello') }}</span>
+                                    <span>{{ __('Create Card in Trello') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -1828,7 +1828,7 @@ JS;
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-[13px] text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-align-left class="w-4 h-4 text-sky-600 shrink-0" />
-                                    <span>{{ __('Descripción de la Tarjeta') }}</span>
+                                    <span>{{ __('Card Description') }}</span>
                                 </h5>
                                 @if($isLoadingTrelloDetails)
                                     <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
@@ -1838,7 +1838,7 @@ JS;
                             @if($isLoadingTrelloDetails)
                                 <div class="py-3 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 font-medium">
                                     <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
-                                    <span>{{ __('Cargando descripción desde Trello...') }}</span>
+                                    <span>{{ __('Loading description from Trello...') }}</span>
                                 </div>
                             @elseif($trelloDetailsError)
                                 <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
@@ -1850,7 +1850,7 @@ JS;
                                     $formattedDesc = preg_replace_callback('/!\[([^\]]*)\]\(([^\)]+)\)/', function($matches) {
                                         $url = trim($matches[2]);
                                         $alt = trim($matches[1]);
-                                        $label = !empty($alt) ? $alt : (basename(parse_url($url, PHP_URL_PATH) ?: __('Archivo')));
+                                        $label = !empty($alt) ? $alt : (basename(parse_url($url, PHP_URL_PATH) ?: __('File')));
                                         return "[$label]($url)";
                                     }, $trelloDescription);
 
@@ -1879,7 +1879,7 @@ JS;
                                     $htmlDesc = preg_replace_callback('/<a\s+(?:[^>]*?\s+)?href=([\'"])(.*?)\1[^>]*>(.*?)<\/a>/i', function($matches) {
                                         $url = html_entity_decode($matches[2]);
                                         $rawLabel = strip_tags($matches[3]);
-                                        $label = !empty(trim($rawLabel)) ? trim($rawLabel) : __('Archivo');
+                                        $label = !empty(trim($rawLabel)) ? trim($rawLabel) : __('File');
                                         $escapedUrl = addslashes($url);
                                         $escapedLabel = addslashes($label);
                                         return '<button type="button" wire:click="openMediaPreview(\'' . $escapedUrl . '\', \'' . $escapedLabel . '\')" class="text-sky-600 font-semibold underline hover:text-sky-800 transition cursor-pointer inline-flex items-center gap-1 my-0.5">' . $matches[3] . ' <svg class="w-3 h-3 inline-block shrink-0 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg></button>';
@@ -1890,7 +1890,7 @@ JS;
                                 </div>
                             @else
                                 <div class="p-3 rounded-lg bg-stone-100/70 border border-stone-200 text-xs text-zinc-400 italic">
-                                    {{ __('Sin descripción registrada en la tarjeta de Trello.') }}
+                                    {{ __('No description on the Trello card.') }}
                                 </div>
                             @endif
                         </div>
@@ -1913,7 +1913,7 @@ JS;
                                         }
                                     }
                                     if (oversized.length > 0) {
-                                        $wire.dispatch('toast', { message: '{{ __('El archivo supera los 10 MB (límite de Trello): ') }}' + oversized.join(', ') });
+                                        $wire.dispatch('toast', { message: '{{ __('The file exceeds 10 MB (Trello limit): ') }}' + oversized.join(', ') });
                                         return;
                                     }
 
@@ -1946,14 +1946,14 @@ JS;
                                 <div class="w-12 h-12 rounded-full bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-600 mb-2 animate-bounce">
                                     <x-lucide-upload-cloud class="w-6 h-6" />
                                 </div>
-                                <p class="text-sm font-bold text-sky-950">{{ __('Suelta los archivos aquí para adjuntarlos') }}</p>
-                                <p class="text-xs text-sky-700 mt-1 max-w-sm">{{ __('Se adjuntarán automáticamente a la tarjeta de Trello (puedes soltar varios archivos, máx. 10 MB c/u)') }}</p>
+                                <p class="text-sm font-bold text-sky-950">{{ __('Drop files here to attach them') }}</p>
+                                <p class="text-xs text-sky-700 mt-1 max-w-sm">{{ __('They will be attached automatically to the Trello card (you can drop several files, max. 10 MB each)') }}</p>
                             </div>
 
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-[13px] text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-paperclip class="w-4 h-4 text-sky-600 shrink-0" />
-                                    <span>{{ __('Archivos Adjuntos') }}</span>
+                                    <span>{{ __('Attachments') }}</span>
                                     @if(!empty($trelloAttachments))
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
                                             {{ count($trelloAttachments) }}
@@ -1965,7 +1965,7 @@ JS;
                                     @if($isLoadingTrelloDetails || $isUploadingAttachment)
                                         <div class="flex items-center gap-1.5 text-[11px] text-sky-600 font-medium">
                                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin shrink-0" />
-                                            <span class="hidden sm:inline">{{ $isUploadingAttachment ? __('Subiendo a Trello...') : __('Cargando...') }}</span>
+                                            <span class="hidden sm:inline">{{ $isUploadingAttachment ? __('Uploading to Trello...') : __('Loading...') }}</span>
                                         </div>
                                     @endif
 
@@ -1975,11 +1975,11 @@ JS;
                                             wire:click="downloadAllAttachments"
                                             wire:loading.attr="disabled"
                                             class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white hover:bg-stone-50 text-zinc-700 hover:text-zinc-900 border border-stone-200/90 shadow-2xs cursor-pointer transition select-none disabled:opacity-50"
-                                            title="{{ __('Descargar todos los archivos adjuntos en un archivo ZIP') }}"
+                                            title="{{ __('Download all attachments as a ZIP file') }}"
                                         >
                                             <x-lucide-download class="w-3.5 h-3.5 text-zinc-500 shrink-0" wire:loading.remove wire:target="downloadAllAttachments" />
                                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600 shrink-0" wire:loading wire:target="downloadAllAttachments" />
-                                            <span>{{ __('Descargar todos') }}</span>
+                                            <span>{{ __('Download all') }}</span>
                                         </button>
                                     @endif
 
@@ -2008,7 +2008,7 @@ JS;
                             {{-- Livewire loading indicator during file upload --}}
                             <div wire:loading.flex wire:target="attachmentFiles, attachmentFile" class="flex flex-row items-center gap-2.5 py-2.5 px-3 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-800 shadow-2xs" style="display: none;">
                                 <x-lucide-loader-2 class="w-4 h-4 animate-spin text-sky-600 shrink-0 inline-block" />
-                                <span class="leading-snug font-medium">{{ __('Cargando archivos y sincronizando con la tarjeta de Trello...') }}</span>
+                                <span class="leading-snug font-medium">{{ __('Uploading files and syncing with the Trello card...') }}</span>
                             </div>
 
                             @if($attachmentUploadError)
@@ -2041,7 +2041,7 @@ JS;
                                 >
                                     <div class="flex items-center gap-2 min-w-0">
                                         <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
-                                        <span>{{ $message === 'The attachmentFiles failed to upload.' ? __('No se pudieron subir los archivos. Comprueba que no superen el límite permitido.') : $message }}</span>
+                                        <span>{{ $message === 'The attachmentFiles failed to upload.' ? __('The files couldn\'t be uploaded. Check that they don\'t exceed the allowed limit.') : $message }}</span>
                                     </div>
                                     <button type="button" @click="show = false; $wire.clearAttachmentErrors()" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
@@ -2077,7 +2077,7 @@ JS;
                                 >
                                     <div class="flex items-center gap-2 min-w-0">
                                         <x-lucide-alert-circle class="w-4 h-4 text-rose-600 shrink-0" />
-                                        <span>{{ $message === 'The attachmentFile failed to upload.' ? __('No se pudo subir el archivo. Comprueba que no supere el límite permitido.') : $message }}</span>
+                                        <span>{{ $message === 'The attachmentFile failed to upload.' ? __('The file couldn\'t be uploaded. Check that it doesn\'t exceed the allowed limit.') : $message }}</span>
                                     </div>
                                     <button type="button" @click="show = false; $wire.clearAttachmentErrors()" class="text-rose-500 hover:text-rose-800 text-xs font-semibold shrink-0 cursor-pointer">✕</button>
                                 </div>
@@ -2086,7 +2086,7 @@ JS;
                             @if($isLoadingTrelloDetails)
                                 <div class="py-3 text-center text-xs text-zinc-400 flex items-center justify-center gap-2 font-medium">
                                     <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin text-sky-600" />
-                                    <span>{{ __('Cargando archivos adjuntos desde Trello...') }}</span>
+                                    <span>{{ __('Loading attachments from Trello...') }}</span>
                                 </div>
                             @elseif(empty($trelloAttachments))
                                 @if($order && $order->trello_card_id)
@@ -2098,15 +2098,15 @@ JS;
                                             <x-lucide-upload-cloud class="w-5 h-5" />
                                         </div>
                                         <p class="text-xs font-semibold text-zinc-700 group-hover:text-sky-800 transition">
-                                            {{ __('Arrastra y suelta tus archivos aquí') }}
-                                            <span class="text-sky-600 underline ml-1 font-medium">{{ __('o haz clic para explorar') }}</span>
+                                            {{ __('Drag and drop your files here') }}
+                                            <span class="text-sky-600 underline ml-1 font-medium">{{ __('or click to browse') }}</span>
                                         </p>
                                         <p class="text-[11px] text-zinc-400">
-                                            {{ __('Puedes soltar múltiples archivos (imágenes, planos, PDFs, etc. — máx. 10 MB c/u)') }}
+                                            {{ __('You can drop multiple files (images, plans, PDFs, etc. — max. 10 MB each)') }}
                                         </p>
                                 @else
                                     <div class="p-4 rounded-xl bg-stone-50/80 border border-dashed border-stone-300 text-center">
-                                        <p class="text-xs text-zinc-500 italic">{{ __('Sin archivos adjuntos en la tarjeta de Trello.') }}</p>
+                                        <p class="text-xs text-zinc-500 italic">{{ __('No attachments on the Trello card.') }}</p>
                                     </div>
                                 @endif
                             @else
@@ -2137,7 +2137,7 @@ JS;
                                             @endphp
                                             
                                             <div 
-                                                wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
+                                                wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('File')) }}')" 
                                                 x-data="{ imgError: false }" 
                                                 class="group bg-white hover:bg-stone-50/60 border border-stone-200/90 hover:border-sky-300 rounded-lg overflow-hidden flex flex-col transition-all duration-200 shadow-2xs hover:shadow-xs cursor-pointer relative"
                                             >
@@ -2148,7 +2148,7 @@ JS;
                                                             $proxiedUrl = route('trello.attachment-proxy', ['url' => $previewUrl]);
                                                         @endphp
                                                         <template x-if="!imgError">
-                                                            <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? __('Adjunto') }}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
+                                                            <img src="{{ $proxiedUrl }}" x-on:error="imgError = true" alt="{{ $attachment['name'] ?? __('Attachment') }}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105">
                                                         </template>
                                                         <template x-if="imgError">
                                                             <div class="w-full h-full bg-stone-100 text-stone-400 flex flex-col items-center justify-center gap-1">
@@ -2181,8 +2181,8 @@ JS;
 
                                                 {{-- Ribbon below with subtle details and smaller buttons --}}
                                                 <div class="p-2 bg-white flex flex-col gap-1 flex-1 justify-between">
-                                                    <p class="text-[11px] font-semibold text-zinc-800 group-hover:text-sky-700 truncate leading-snug transition-colors" title="{{ $attachment['name'] ?? __('Archivo') }}">
-                                                        {{ $attachment['name'] ?? __('Archivo') }}
+                                                    <p class="text-[11px] font-semibold text-zinc-800 group-hover:text-sky-700 truncate leading-snug transition-colors" title="{{ $attachment['name'] ?? __('File') }}">
+                                                        {{ $attachment['name'] ?? __('File') }}
                                                     </p>
 
                                                     <div class="flex items-center justify-between gap-1 pt-1 border-t border-stone-100">
@@ -2206,7 +2206,7 @@ JS;
                                                             </a>
                                                             <button 
                                                                 type="button" 
-                                                                wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
+                                                                wire:click="openMediaPreview('{{ addslashes($attachment['url']) }}', '{{ addslashes($attachment['name'] ?? __('File')) }}')" 
                                                                 class="p-0.5 rounded text-zinc-400 hover:text-sky-600 hover:bg-sky-50 transition cursor-pointer" 
                                                                 title="{{ __('Vista previa') }}"
                                                             >
@@ -2215,10 +2215,10 @@ JS;
                                                             @if(!empty($attachment['id']))
                                                                 <button 
                                                                     type="button" 
-                                                                    wire:click="deleteAttachment('{{ $attachment['id'] }}', '{{ addslashes($attachment['name'] ?? __('Archivo')) }}')" 
-                                                                    wire:confirm="{{ __('¿Estás seguro de que deseas eliminar este archivo adjunto de la tarjeta de Trello?') }}" 
+                                                                    wire:click="deleteAttachment('{{ $attachment['id'] }}', '{{ addslashes($attachment['name'] ?? __('File')) }}')" 
+                                                                    wire:confirm="{{ __('Are you sure you want to delete this attachment from the Trello card?') }}" 
                                                                     class="p-0.5 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer opacity-70 group-hover:opacity-100" 
-                                                                    title="{{ __('Eliminar') }}"
+                                                                    title="{{ __('Delete') }}"
                                                                 >
                                                                     <x-lucide-trash-2 class="w-3 h-3" />
                                                                 </button>
@@ -2236,7 +2236,7 @@ JS;
                                             class="group border border-dashed border-stone-300 hover:border-sky-400 bg-stone-50/60 hover:bg-sky-50/50 rounded-lg py-2 px-3 text-center cursor-pointer transition flex items-center justify-center gap-2 text-xs text-zinc-500 hover:text-sky-700 font-medium"
                                         >
                                             <x-lucide-upload class="w-3.5 h-3.5 text-zinc-400 group-hover:text-sky-600 transition" />
-                                            <span>{{ __('Arrastra más archivos aquí o haz clic para agregar') }}</span>
+                                            <span>{{ __('Drag more files here or click to add') }}</span>
                                         </div>
                                     @endif
                                 </div>
@@ -2248,7 +2248,7 @@ JS;
                             <div class="flex items-center justify-between border-b border-[#e9e9e7] pb-2">
                                 <h5 class="font-bold text-[13px] text-zinc-900 flex items-center gap-1.5">
                                     <x-lucide-message-square class="w-4 h-4 text-sky-600 shrink-0" />
-                                    <span>{{ __('Comentarios') }}</span>
+                                    <span>{{ __('Comments') }}</span>
                                     @if(!empty($trelloComments))
                                         <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
                                             {{ count($trelloComments) }}
@@ -3203,7 +3203,7 @@ JS;
 
                                     promptLink() {
                                         this.$refs.editor.focus();
-                                        const url = prompt('{{ __('Ingrese URL del enlace:') }}', 'https://');
+                                        const url = prompt('{{ __('Enter link URL:') }}', 'https://');
                                         if (url && url.trim() && url !== 'https://') {
                                             document.execCommand('createLink', false, url.trim());
                                             this.handleAfterChange();
@@ -3277,7 +3277,7 @@ JS;
                                         }
 
                                         if (oversized.length > 0) {
-                                            $wire.dispatch('toast', { message: '{{ __('Una o más fotos superan los 10 MB (límite de Trello): ') }}' + oversized.join(', ') });
+                                            $wire.dispatch('toast', { message: '{{ __('One or more photos exceed 10 MB (Trello limit): ') }}' + oversized.join(', ') });
                                         }
 
                                         if (validFiles.length > 0) {
@@ -3293,7 +3293,7 @@ JS;
                                                 () => {
                                                     this.activePhotoUploads = Math.max(0, this.activePhotoUploads - 1);
                                                     this.isUploadingPhotos = this.activePhotoUploads > 0;
-                                                    $wire.dispatch('toast', { message: '{{ __('Error al cargar una o más fotos. Inténtalo de nuevo.') }}' });
+                                                    $wire.dispatch('toast', { message: '{{ __('Error uploading one or more photos. Please try again.') }}' });
                                                 }
                                             );
                                         }
@@ -3607,7 +3607,7 @@ JS;
                                             @click="toggleHeading('h1')" 
                                             :class="isH1 ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="p-1.5 rounded-md border text-xs font-semibold transition flex items-center justify-center cursor-pointer" 
-                                            title="{{ __('Título principal (# )') }}"
+                                            title="{{ __('Heading (# )') }}"
                                         >
                                             <x-lucide-heading-1 class="w-3.5 h-3.5" />
                                         </button>
@@ -3619,7 +3619,7 @@ JS;
                                             @click="toggleHeading('h2')" 
                                             :class="isH2 ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="p-1.5 rounded-md border text-xs font-semibold transition flex items-center justify-center cursor-pointer" 
-                                            title="{{ __('Subtítulo (## )') }}"
+                                            title="{{ __('Subheading (## )') }}"
                                         >
                                             <x-lucide-heading-2 class="w-3.5 h-3.5" />
                                         </button>
@@ -3633,10 +3633,10 @@ JS;
                                             @click="toggleList('ul')" 
                                             :class="isUnorderedList ? 'bg-sky-100 text-sky-700 border-sky-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="px-2 py-1 rounded-md border text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer" 
-                                            title="{{ __('Lista con viñetas (- o *)') }}"
+                                            title="{{ __('Bulleted list (- or *)') }}"
                                         >
                                             <x-lucide-list class="w-3.5 h-3.5" />
-                                            <span class="hidden sm:inline">{{ __('Viñetas') }}</span>
+                                            <span class="hidden sm:inline">{{ __('Bullets') }}</span>
                                         </button>
 
                                         <!-- Ordered List -->
@@ -3659,7 +3659,7 @@ JS;
                                             @click="toggleChecklist()" 
                                             :class="isChecklist ? 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-2xs' : 'text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 border-transparent'"
                                             class="px-2 py-1 rounded-md border text-[11px] font-medium transition flex items-center gap-1.5 cursor-pointer" 
-                                            title="{{ __('Lista de verificación (- [ ])') }}"
+                                            title="{{ __('Checklist (- [ ])') }}"
                                         >
                                             <x-lucide-check-square class="w-3.5 h-3.5 text-emerald-600" />
                                             <span class="hidden sm:inline">{{ __('Checklist') }}</span>
@@ -3673,7 +3673,7 @@ JS;
                                             @mousedown.prevent 
                                             @click="insertDivider()" 
                                             class="p-1.5 rounded-md border border-transparent text-zinc-600 hover:bg-stone-200/70 hover:text-zinc-900 text-xs transition flex items-center justify-center cursor-pointer" 
-                                            title="{{ __('Línea divisoria (---)') }}"
+                                            title="{{ __('Divider (---)') }}"
                                         >
                                             <x-lucide-separator-horizontal class="w-3.5 h-3.5" />
                                         </button>
@@ -3686,7 +3686,7 @@ JS;
                                             @mousedown.prevent 
                                             @click="$refs.photoInput.click()" 
                                             class="p-1.5 rounded-md border border-transparent text-zinc-600 hover:bg-stone-200/70 hover:text-sky-600 text-xs transition flex items-center justify-center cursor-pointer group" 
-                                            title="{{ __('Adjuntar foto(s)') }}"
+                                            title="{{ __('Attach photo(s)') }}"
                                         >
                                             <x-lucide-image class="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
                                         </button>
@@ -3712,8 +3712,8 @@ JS;
                                     <div class="w-10 h-10 rounded-full bg-sky-100 border border-sky-300 flex items-center justify-center text-sky-600 mb-1.5 animate-bounce">
                                         <x-lucide-image class="w-5 h-5" />
                                     </div>
-                                    <p class="text-xs font-bold text-sky-950">{{ __('Suelta las fotos aquí') }}</p>
-                                    <p class="text-[11px] text-sky-700 mt-0.5">{{ __('Se adjuntarán a este comentario (máx. 10 MB c/u)') }}</p>
+                                    <p class="text-xs font-bold text-sky-950">{{ __('Drop photos here') }}</p>
+                                    <p class="text-[11px] text-sky-700 mt-0.5">{{ __('They will be attached to this comment (max 10 MB each)') }}</p>
                                 </div>
 
                                 <!-- Contenteditable Input Area -->
@@ -3733,7 +3733,7 @@ JS;
                                         @keyup="handleKeyup($event)"
                                         @paste="handlePaste($event)"
                                         @pointerup="updateActiveFormatting()"
-                                        data-placeholder="{{ __('Escribe un comentario (# Título, - viñetas, --- divisor, pega o arrastra fotos)...') }}"
+                                        data-placeholder="{{ __('Write a comment (# Heading, - bullets, --- divider, paste or drag photos)...') }}"
                                         class="comment-editor-box w-full text-xs text-zinc-900 font-sans leading-relaxed outline-none break-words min-h-[64px]"
                                     ></div>
                                 </div>
@@ -3747,7 +3747,7 @@ JS;
                                     <div class="flex items-center justify-between text-[11px] px-0.5">
                                         <span class="font-medium flex items-center gap-1.5 text-zinc-700">
                                             <x-lucide-image class="w-3.5 h-3.5 text-sky-600" />
-                                            <span>{{ __('Fotos a adjuntar:') }}</span>
+                                            <span>{{ __('Photos to attach:') }}</span>
                                             <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-sky-100 text-sky-700 border border-sky-200" x-text="stagedPhotos.length"></span>
                                         </span>
                                         <button 
@@ -3755,7 +3755,7 @@ JS;
                                             @click="clearStagedPhotos()" 
                                             class="text-[10px] text-zinc-400 hover:text-rose-600 transition cursor-pointer font-medium"
                                         >
-                                            {{ __('Quitar todas') }}
+                                            {{ __('Remove all') }}
                                         </button>
                                     </div>
 
@@ -3768,7 +3768,7 @@ JS;
                                                         type="button" 
                                                         @click="removePhoto(index)" 
                                                         class="w-6 h-6 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-xs hover:bg-rose-700 transition cursor-pointer"
-                                                        title="{{ __('Quitar esta foto') }}"
+                                                        title="{{ __('Remove this photo') }}"
                                                     >
                                                         <x-lucide-x class="w-3.5 h-3.5" />
                                                     </button>
@@ -3782,10 +3782,10 @@ JS;
                                             type="button" 
                                             @click="$refs.photoInput.click()" 
                                             class="shrink-0 w-20 h-20 rounded-lg border-2 border-dashed border-stone-300 hover:border-sky-400 bg-white hover:bg-sky-50/50 flex flex-col items-center justify-center gap-1 text-zinc-400 hover:text-sky-600 transition cursor-pointer"
-                                            title="{{ __('Agregar más fotos') }}"
+                                            title="{{ __('Add more photos') }}"
                                         >
                                             <x-lucide-plus class="w-5 h-5" />
-                                            <span class="text-[9px] font-medium">{{ __('Agregar') }}</span>
+                                            <span class="text-[9px] font-medium">{{ __('Add') }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -3801,7 +3801,7 @@ JS;
                                             title="{{ __('Adjuntar fotos a este comentario') }}"
                                         >
                                             <x-lucide-camera class="w-3.5 h-3.5 text-zinc-500" />
-                                            <span>{{ __('Adjuntar foto') }}</span>
+                                            <span>{{ __('Attach photo') }}</span>
                                             <template x-if="stagedPhotos.length > 0">
                                                 <span class="px-1.5 py-0.2 rounded-full text-[9.5px] font-bold bg-sky-100 text-sky-700 border border-sky-300" x-text="stagedPhotos.length"></span>
                                             </template>
@@ -3810,7 +3810,7 @@ JS;
                                         <div class="hidden sm:flex items-center gap-2 text-[10.5px] text-zinc-400 font-sans select-none">
                                             <span class="flex items-center gap-1">
                                                 <kbd class="px-1.5 py-0.5 rounded bg-white border border-stone-200 text-zinc-600 font-mono text-[9.5px] shadow-2xs">Enter</kbd>
-                                                <span>{{ __('nueva línea') }}</span>
+                                                <span>{{ __('new line') }}</span>
                                             </span>
                                             <span class="text-zinc-300">•</span>
                                             <span class="flex items-center gap-1">
@@ -3822,7 +3822,7 @@ JS;
 
                                     <div class="flex items-center gap-3">
                                         <span class="text-[11px] text-zinc-400 hidden md:inline">
-                                            {{ __('Como:') }} <strong class="text-zinc-700 font-medium">{{ auth()->user()?->name ?? __('Usuario') }}</strong>
+                                            {{ __('As:') }} <strong class="text-zinc-700 font-medium">{{ auth()->user()?->name ?? __('User') }}</strong>
                                         </span>
                                         <button 
                                             @click="submit()"
@@ -3832,7 +3832,7 @@ JS;
                                         >
                                             <x-lucide-send x-show="!isSubmitting && !isUploadingPhotos" class="w-3.5 h-3.5" />
                                             <x-lucide-loader-2 x-show="isSubmitting || isUploadingPhotos" x-cloak class="w-3.5 h-3.5 animate-spin" />
-                                            <span x-text="isSubmitting ? '{{ __('Publicando...') }}' : (isUploadingPhotos ? '{{ __('Cargando fotos...') }}' : '{{ __('Publicar en Trello') }}')">{{ __('Publicar en Trello') }}</span>
+                                            <span x-text="isSubmitting ? '{{ __('Publicando...') }}' : (isUploadingPhotos ? '{{ __('Uploading photos...') }}' : '{{ __('Post to Trello') }}')">{{ __('Post to Trello') }}</span>
                                         </button>
                                     </div>
                                 </div>
@@ -3852,18 +3852,18 @@ JS;
                             @if($isLoadingTrelloComments)
                                 <div class="py-4 text-center text-xs text-zinc-500 flex items-center justify-center gap-2">
                                     <x-lucide-loader-2 class="w-4 h-4 animate-spin text-sky-600" />
-                                    <span>{{ __('Cargando comentarios desde Trello...') }}</span>
+                                    <span>{{ __('Loading comments from Trello...') }}</span>
                                 </div>
                             @elseif($trelloCommentError)
                                 <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-start gap-2">
                                     <x-lucide-alert-circle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                     <div>
-                                        <strong>{{ __('Nota de comentarios:') }}</strong> {{ $trelloCommentError }}
+                                        <strong>{{ __('Comments note:') }}</strong> {{ $trelloCommentError }}
                                     </div>
                                 </div>
                             @elseif(empty($trelloComments))
                                 <div class="py-3 text-center text-xs text-zinc-400">
-                                    {{ __('No hay comentarios registrados en la tarjeta de Trello aún.') }}
+                                    {{ __('No comments recorded on the Trello card yet.') }}
                                 </div>
                             @else
                                 <div class="space-y-3 max-h-72 overflow-y-auto pr-1 scrollbar-thin divide-y divide-[#e9e9e7]">
@@ -3906,10 +3906,10 @@ JS;
                                                         <button 
                                                             type="button"
                                                             wire:click="deleteTrelloComment('{{ $comment['id'] }}')"
-                                                            wire:confirm="{{ __('¿Estás seguro de que deseas eliminar este comentario de Trello?') }}"
+                                                            wire:confirm="{{ __('Are you sure you want to delete this comment from Trello?') }}"
                                                             wire:loading.attr="disabled"
                                                             class="p-1 rounded text-stone-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
-                                                            title="{{ __('Eliminar comentario de Trello') }}">
+                                                            title="{{ __('Delete comment from Trello') }}">
                                                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
                                                         </button>
                                                     @endif
@@ -3955,10 +3955,10 @@ JS;
                         </div>
                         <div>
                             <h3 class="text-base font-semibold text-ink">
-                                {{ __('Verificación de Subtarea') }}
+                                {{ __('Subtask check') }}
                             </h3>
                             <p class="text-xs text-ink-3 mt-0.5">
-                                {{ __('Nueva tarea: ":title"', ['title' => $pendingSubtaskData['title'] ?? '']) }}
+                                {{ __('New task: ":title"', ['title' => $pendingSubtaskData['title'] ?? '']) }}
                             </p>
                         </div>
                     </div>
@@ -3973,29 +3973,29 @@ JS;
                             <div class="flex items-start gap-2">
                                 <x-lucide-ban class="w-4 h-4 text-danger shrink-0 mt-0.5" />
                                 <div>
-                                    <span class="font-semibold text-danger block">{{ __('Orden Bloqueada') }}</span>
+                                    <span class="font-semibold text-danger block">{{ __('Blocked order') }}</span>
                                     <p class="text-danger text-xs mt-0.5">
-                                        {{ __('Actualmente bloqueada por:') }} <span class="font-semibold">{{ $pendingSubtaskData['blockingReason'] ?? __('Faltan Medidas') }}</span>.
+                                        {{ __('Currently blocked by:') }} <span class="font-semibold">{{ $pendingSubtaskData['blockingReason'] ?? __('Missing Measurements') }}</span>.
                                     </p>
                                 </div>
                             </div>
                             <div class="space-y-2 pt-1 border-t border-danger/30">
                                 <label class="font-semibold text-danger block text-xs">
-                                    {{ __('¿Esta subtarea resuelve el motivo de bloqueo?') }}
+                                    {{ __('Does this subtask resolve the block?') }}
                                 </label>
                                 <div class="grid grid-cols-1 gap-2">
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-control border cursor-pointer transition {{ $subtaskBlockResolution === 'unblock' ? 'bg-surface border-danger/30 ring-1 ring-line-strong  font-medium text-ink' : 'bg-danger-soft border-danger/30 text-ink-2 hover:bg-surface' }}">
                                         <input type="radio" wire:model.live="subtaskBlockResolution" value="unblock" class="mt-0.5 text-danger focus:ring-line-strong">
                                         <div>
-                                            <span class="block font-semibold">{{ __('Sí, datos/medidas confirmados (Desbloquear orden)') }}</span>
-                                            <span class="block text-meta text-ink-3">{{ __('Marca las medidas como confirmadas y desbloquea la orden para avanzar.') }}</span>
+                                            <span class="block font-semibold">{{ __('Yes, details confirmed (unblock the order)') }}</span>
+                                            <span class="block text-meta text-ink-3">{{ __('Marks the details as confirmed and unblocks the order.') }}</span>
                                         </div>
                                     </label>
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-control border cursor-pointer transition {{ $subtaskBlockResolution === 'keep_blocked' ? 'bg-surface border-danger/30 ring-1 ring-line-strong  font-medium text-ink' : 'bg-danger-soft border-danger/30 text-ink-2 hover:bg-surface' }}">
                                         <input type="radio" wire:model.live="subtaskBlockResolution" value="keep_blocked" class="mt-0.5 text-danger focus:ring-line-strong">
                                         <div>
-                                            <span class="block font-semibold">{{ __('No, es solo seguimiento (Mantener bloqueada)') }}</span>
-                                            <span class="block text-meta text-ink-3">{{ __('Crea la tarea de consulta/llamada sin alterar el estado de bloqueo.') }}</span>
+                                            <span class="block font-semibold">{{ __('No, just a follow-up (keep it blocked)') }}</span>
+                                            <span class="block text-meta text-ink-3">{{ __('Creates the follow-up task without changing the block.') }}</span>
                                         </div>
                                     </label>
                                 </div>
@@ -4008,29 +4008,29 @@ JS;
                             <div class="flex items-start gap-2">
                                 <x-lucide-check-circle-2 class="w-4 h-4 text-warn shrink-0 mt-0.5" />
                                 <div>
-                                    <span class="font-semibold text-warn block">{{ __('Orden ya Aprobada') }}</span>
+                                    <span class="font-semibold text-warn block">{{ __('Order already approved') }}</span>
                                     <p class="text-warn text-xs mt-0.5">
-                                        {{ __('Aprobada por') }} <span class="font-semibold">{{ $pendingSubtaskData['approvalType'] ?? __('Cliente') }}</span> ({{ $pendingSubtaskData['approvedAt'] ?? '' }}).
+                                        {{ __('Approved by') }} <span class="font-semibold">{{ $pendingSubtaskData['approvalType'] ?? __('Client') }}</span> ({{ $pendingSubtaskData['approvedAt'] ?? '' }}).
                                     </p>
                                 </div>
                             </div>
                             <div class="space-y-2 pt-1 border-t border-warn/30">
                                 <label class="font-semibold text-warn block text-xs">
-                                    {{ __('¿Esta subtarea altera el arte o requiere re-aprobación?') }}
+                                    {{ __('Does this subtask change the artwork or need re-approval?') }}
                                 </label>
                                 <div class="grid grid-cols-1 gap-2">
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-control border cursor-pointer transition {{ $subtaskApprovalImpact === 'invalidate' ? 'bg-surface border-warn/30 ring-1 ring-line-strong  font-medium text-ink' : 'bg-warn-soft border-warn/30 text-ink-2 hover:bg-surface' }}">
                                         <input type="radio" wire:model.live="subtaskApprovalImpact" value="invalidate" class="mt-0.5 text-warn focus:ring-line-strong">
                                         <div>
-                                            <span class="block font-semibold text-danger">{{ __('Anular aprobación previa (Requiere nuevo visto bueno)') }}</span>
-                                            <span class="block text-meta text-ink-3">{{ __('El diseño cambió. Se anula la aprobación para prevenir que se envíe a producción por error.') }}</span>
+                                            <span class="block font-semibold text-danger">{{ __('Cancel the previous approval (needs new sign-off)') }}</span>
+                                            <span class="block text-meta text-ink-3">{{ __('The design changed. The approval is cancelled so it isn\'t sent to production by mistake.') }}</span>
                                         </div>
                                     </label>
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-control border cursor-pointer transition {{ $subtaskApprovalImpact === 'keep' ? 'bg-surface border-warn/30 ring-1 ring-line-strong  font-medium text-ink' : 'bg-warn-soft border-warn/30 text-ink-2 hover:bg-surface' }}">
                                         <input type="radio" wire:model.live="subtaskApprovalImpact" value="keep" class="mt-0.5 text-warn focus:ring-line-strong">
                                         <div>
-                                            <span class="block font-semibold text-ok">{{ __('Conservar aprobación (Solo ajuste técnico/interno)') }}</span>
-                                            <span class="block text-meta text-ink-3">{{ __('El arte aprobado no cambia visualmente; no requiere aprobación adicional del cliente.') }}</span>
+                                            <span class="block font-semibold text-ok">{{ __('Keep the approval (technical or internal tweak only)') }}</span>
+                                            <span class="block text-meta text-ink-3">{{ __('The approved artwork doesn\'t change visually, so no extra client approval is needed.') }}</span>
                                         </div>
                                     </label>
                                 </div>
@@ -4044,13 +4044,13 @@ JS;
                         type="button" 
                         wire:click="cancelSubtaskWarning" 
                         class="px-4 py-2 rounded-card border border-line-strong text-ink-2 hover:bg-sunken text-xs font-semibold transition cursor-pointer">
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         type="button" 
                         wire:click="confirmSubtaskWarning" 
                         class="px-5 py-2 rounded-card bg-ink hover:bg-black text-white text-xs font-semibold  transition cursor-pointer">
-                        {{ __('Confirmar y Crear Subtarea') }}
+                        {{ __('Confirm and create subtask') }}
                     </button>
                 </div>
             </div>
@@ -4067,12 +4067,12 @@ JS;
                     <div>
                         <h3 class="text-base font-semibold text-ink">
                             @if($pendingProductionStatus === \App\Enums\CoreStatus::EN_PRODUCCION->value || $pendingProductionStatus === 'EN PRODUCCIÓN')
-                                {{ __('Aprobación Requerida para Producción') }}
+                                {{ __('Approval Required for Production') }}
                             @else
-                                {{ __('Confirmación de Aprobación') }}
+                                {{ __('Approval Confirmation') }}
                             @endif
                         </h3>
-                        <p class="text-xs text-ink-3 mt-0.5">{{ __('Valida el visto bueno y registra el soporte de aprobación para continuar.') }}</p>
+                        <p class="text-xs text-ink-3 mt-0.5">{{ __('Validate approval and record approval proof to continue.') }}</p>
                     </div>
                     <button type="button" wire:click="closeApprovalModal" class="p-1 rounded-control text-ink-3 hover:text-ink-2 hover:bg-sunken transition cursor-pointer">
                         <x-lucide-x class="w-4 h-4" />
@@ -4083,8 +4083,8 @@ JS;
                     <div class="p-3 rounded-card bg-sunken border border-line text-ink-2 text-xs flex items-start gap-2.5 shrink-0">
                         <x-lucide-alert-circle class="w-4 h-4 text-ink-2 shrink-0 mt-0.5" />
                         <div>
-                            <span class="font-semibold block">{{ __('Pase a Producción Requerido') }}</span>
-                            {{ __('Para enviar esta orden a Producción debe ser aprobada previamente. Registra quién la aprobó e ingresa el comentario o soporte de aprobación.') }}
+                            <span class="font-semibold block">{{ __('Move to Production Approval Required') }}</span>
+                            {{ __('To send this order to Production, it must be approved first. Record who approved it and enter the comment or approval proof.') }}
                         </div>
                     </div>
                 @endif
@@ -4093,7 +4093,7 @@ JS;
                     <!-- Validation Type Selection -->
                     <div class="space-y-2">
                         <label class="block text-xs font-semibold text-ink">
-                            {{ __('¿Quién validó la aprobación?') }} <span class="text-danger">*</span>
+                            {{ __('Who validated the approval?') }} <span class="text-danger">*</span>
                         </label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <button 
@@ -4102,7 +4102,7 @@ JS;
                                 class="relative p-3.5 sm:p-4 rounded-card border text-left transition-all flex flex-col justify-between cursor-pointer select-none {{ $approvalType === 'camila' ? 'border-ok/30 bg-ok-soft ring-2 ring-line-strong ' : 'border-line bg-canvas hover:bg-sunken hover:border-line-strong text-ink-2' }}">
                                 <div class="flex items-start justify-between w-full gap-2">
                                     <div class="min-w-0 flex-1">
-                                        <span class="text-xs {{ $approvalType === 'camila' ? 'text-ok font-medium' : 'text-ink-3 font-normal' }} block">{{ __('Aprobado por') }}</span>
+                                        <span class="text-xs {{ $approvalType === 'camila' ? 'text-ok font-medium' : 'text-ink-3 font-normal' }} block">{{ __('Approved by') }}</span>
                                         <span class="text-sm sm:text-base font-semibold {{ $approvalType === 'camila' ? 'text-ok' : 'text-ink' }} block  mt-0.5 leading-snug">{{ __('Camila') }}</span>
                                     </div>
                                     @if($approvalType === 'camila')
@@ -4112,7 +4112,7 @@ JS;
                                     @endif
                                 </div>
                                 <div class="text-meta {{ $approvalType === 'camila' ? 'text-ok font-medium' : 'text-ink-3' }} leading-tight mt-2.5">
-                                    {{ __('Validación interna') }}
+                                    {{ __('Internal validation') }}
                                 </div>
                             </button>
 
@@ -4122,7 +4122,7 @@ JS;
                                 class="relative p-3.5 sm:p-4 rounded-card border text-left transition-all flex flex-col justify-between cursor-pointer select-none {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'border-ok/30 bg-ok-soft ring-2 ring-line-strong ' : 'border-line bg-canvas hover:bg-sunken hover:border-line-strong text-ink-2' }}">
                                 <div class="flex items-start justify-between w-full gap-2">
                                     <div class="min-w-0 flex-1">
-                                        <span class="text-xs {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-ok font-medium' : 'text-ink-3 font-normal' }} block">{{ __('Aprobado por') }}</span>
+                                        <span class="text-xs {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-ok font-medium' : 'text-ink-3 font-normal' }} block">{{ __('Approved by') }}</span>
                                         <div class="flex items-baseline gap-1 mt-0.5 flex-wrap">
                                             <span class="text-sm sm:text-base font-semibold {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-ok' : 'text-ink' }}  leading-snug">{{ $managerName ?? \App\Models\Setting::getManagerName() }}</span>
                                             <span class="text-xs font-normal {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-ok' : 'text-ink-3' }}">({{ __('Manager') }})</span>
@@ -4135,7 +4135,7 @@ JS;
                                     @endif
                                 </div>
                                 <div class="text-meta {{ ($approvalType === 'manager' || $approvalType === 'gabriela') ? 'text-ok font-medium' : 'text-ink-3' }} leading-tight mt-2.5">
-                                    {{ __('Validación Manager') }}
+                                    {{ __('Manager Validation') }}
                                 </div>
                             </button>
 
@@ -4145,8 +4145,8 @@ JS;
                                 class="relative p-3.5 sm:p-4 rounded-card border text-left transition-all flex flex-col justify-between cursor-pointer select-none {{ $approvalType === 'cliente' ? 'border-ok/30 bg-ok-soft ring-2 ring-line-strong ' : 'border-line bg-canvas hover:bg-sunken hover:border-line-strong text-ink-2' }}">
                                 <div class="flex items-start justify-between w-full gap-2">
                                     <div class="min-w-0 flex-1">
-                                        <span class="text-xs {{ $approvalType === 'cliente' ? 'text-ok font-medium' : 'text-ink-3 font-normal' }} block">{{ __('Aprobado por') }}</span>
-                                        <span class="text-sm sm:text-base font-semibold {{ $approvalType === 'cliente' ? 'text-ok' : 'text-ink' }} block  mt-0.5 leading-snug">{{ __('Cliente') }}</span>
+                                        <span class="text-xs {{ $approvalType === 'cliente' ? 'text-ok font-medium' : 'text-ink-3 font-normal' }} block">{{ __('Approved by') }}</span>
+                                        <span class="text-sm sm:text-base font-semibold {{ $approvalType === 'cliente' ? 'text-ok' : 'text-ink' }} block  mt-0.5 leading-snug">{{ __('Client') }}</span>
                                     </div>
                                     @if($approvalType === 'cliente')
                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-ok text-white shrink-0  mt-0.5">
@@ -4155,7 +4155,7 @@ JS;
                                     @endif
                                 </div>
                                 <div class="text-meta {{ $approvalType === 'cliente' ? 'text-ok font-medium' : 'text-ink-3' }} leading-tight mt-2.5">
-                                    {{ __('Confirmación directa') }}
+                                    {{ __('Direct confirmation') }}
                                 </div>
                             </button>
                         </div>
@@ -4167,9 +4167,9 @@ JS;
                             <div class="flex items-center justify-between">
                                 <label class="block text-xs font-semibold text-ink flex items-center gap-1.5">
                                     <x-lucide-check-square class="w-4 h-4 text-ink-2" />
-                                    <span>{{ __('¿Qué deseas aprobar?') }}</span>
+                                    <span>{{ __('What do you want to approve?') }}</span>
                                 </label>
-                                <span class="text-meta text-ink-3 font-medium">{{ __('Selecciona el alcance') }}</span>
+                                <span class="text-meta text-ink-3 font-medium">{{ __('Select the scope') }}</span>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -4182,7 +4182,7 @@ JS;
                                             <div class="w-1.5 h-1.5 rounded-full bg-surface"></div>
                                         @endif
                                     </div>
-                                    <span>{{ __('Toda la orden') }}</span>
+                                    <span>{{ __('Whole order') }}</span>
                                 </button>
                                 <button 
                                     type="button" 
@@ -4193,7 +4193,7 @@ JS;
                                             <div class="w-1.5 h-1.5 rounded-full bg-surface"></div>
                                         @endif
                                     </div>
-                                    <span>{{ __('Por Etapa') }}</span>
+                                    <span>{{ __('By stage') }}</span>
                                 </button>
                                 <button 
                                     type="button" 
@@ -4204,15 +4204,15 @@ JS;
                                             <div class="w-1.5 h-1.5 rounded-full bg-surface"></div>
                                         @endif
                                     </div>
-                                    <span>{{ __('Piezas específicas') }}</span>
+                                    <span>{{ __('Specific items') }}</span>
                                 </button>
                             </div>
 
                             @if($approvalScope === 'stage')
                                 <div class="pt-1 space-y-1">
-                                    <label class="block text-meta font-semibold text-ink-2">{{ __('Selecciona la etapa a aprobar:') }}</label>
+                                    <label class="block text-meta font-semibold text-ink-2">{{ __('Select the stage to approve:') }}</label>
                                     <select wire:model.live="selectedApprovalStageId" class="w-full bg-surface border border-line rounded-card p-2.5 text-xs text-ink focus:outline-none focus:border-line-strong ">
-                                        <option value="">{{ __('Selecciona una etapa...') }}</option>
+                                        <option value="">{{ __('Select a stage...') }}</option>
                                         @foreach($order->stages as $stg)
                                             <option value="{{ $stg->id }}">{{ $stg->name }} ({{ $stg->elements->count() }} piezas)</option>
                                         @endforeach
@@ -4221,14 +4221,14 @@ JS;
                             @elseif($approvalScope === 'elements')
                                 <div class="pt-1 space-y-2">
                                     <div class="flex items-center justify-between">
-                                        <label class="block text-meta font-semibold text-ink-2">{{ __('Selecciona las piezas aprobadas:') }}</label>
+                                        <label class="block text-meta font-semibold text-ink-2">{{ __('Select the approved items:') }}</label>
                                         <div class="flex items-center gap-2 text-meta">
                                             <button type="button" wire:click="selectAllApprovalElements" class="text-ink-2 hover:text-ink-2 font-semibold hover:underline cursor-pointer">
-                                                {{ __('Marcar todas') }}
+                                                {{ __('Select all') }}
                                             </button>
                                             <span class="text-ink-3">•</span>
                                             <button type="button" wire:click="deselectAllApprovalElements" class="text-ink-3 hover:text-ink-2 font-medium hover:underline cursor-pointer">
-                                                {{ __('Desmarcar') }}
+                                                {{ __('Uncheck') }}
                                             </button>
                                         </div>
                                     </div>
@@ -4255,7 +4255,7 @@ JS;
                                                     @if($el->is_approved)
                                                         <span class="inline-flex items-center gap-0.5 text-meta font-semibold text-ok bg-ok-soft border border-ok/30 px-1.5 py-0.5 rounded">
                                                             <x-lucide-check class="w-2.5 h-2.5" />
-                                                            <span>{{ __('Aprobada') }}</span>
+                                                            <span>{{ __('Approved') }}</span>
                                                         </span>
                                                     @endif
                                                 </div>
@@ -4267,7 +4267,7 @@ JS;
                                             </label>
                                         @empty
                                             <div class="p-4 text-center text-xs text-ink-3">
-                                                {{ __('No hay piezas registradas en esta orden.') }}
+                                                {{ __('No items registered on this order.') }}
                                             </div>
                                         @endforelse
                                     </div>
@@ -4280,9 +4280,9 @@ JS;
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
                             <label class="block text-xs font-semibold text-ink">
-                                {{ __('Soporte de aprobación y notas adicionales') }} <span class="text-danger">*</span>
+                                {{ __('Approval proof and additional notes') }} <span class="text-danger">*</span>
                             </label>
-                            <span class="text-meta text-ink-3">{{ __('Texto o Imagen (al menos uno)') }}</span>
+                            <span class="text-meta text-ink-3">{{ __('Text or Image (at least one)') }}</span>
                         </div>
 
                         <div 
@@ -4341,13 +4341,13 @@ JS;
                             <textarea 
                                 wire:model="approvalComment"
                                 rows="3"
-                                placeholder="{{ __('Escribe aquí un comentario o pega una captura con Ctrl+V / Cmd+V (ej. visto bueno por WhatsApp, email, etc.)...') }}"
+                                placeholder="{{ __('Type a comment here or paste a screenshot with Ctrl+V / Cmd+V (e.g. approval via WhatsApp, email, etc.)...') }}"
                                 class="w-full text-xs text-ink placeholder:text-ink-3 bg-transparent resize-none border-0 p-0 focus:outline-none focus:ring-0 leading-relaxed outline-none"></textarea>
 
                             <!-- Uploading loader -->
                             <div wire:loading.flex wire:target="approvalImage" class="flex flex-row items-center gap-2 mt-2 p-2 rounded-control bg-ok-soft border border-ok/30 text-xs text-ok" style="display: none;">
                                 <x-lucide-loader-2 class="w-4 h-4 animate-spin text-ok shrink-0 inline-block" />
-                                <span>{{ __('Cargando imagen de soporte...') }}</span>
+                                <span>{{ __('Loading support image...') }}</span>
                             </div>
 
                             <!-- Uploaded image preview -->
@@ -4366,11 +4366,11 @@ JS;
                                     <div class="flex items-center gap-2.5 min-w-0">
                                         <div class="w-12 h-12 rounded-control border border-line-strong  shrink-0 overflow-hidden bg-sunken flex items-center justify-center relative">
                                             <template x-if="clientPreviewUrl">
-                                                <img :src="clientPreviewUrl" alt="{{ __('Soporte') }}" class="w-full h-full object-cover">
+                                                <img :src="clientPreviewUrl" alt="{{ __('Proof') }}" class="w-full h-full object-cover">
                                             </template>
                                             <template x-if="!clientPreviewUrl">
                                                 @if($approvalPreviewUrl)
-                                                    <img src="{{ $approvalPreviewUrl }}" alt="{{ __('Soporte') }}" class="w-full h-full object-cover" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                                    <img src="{{ $approvalPreviewUrl }}" alt="{{ __('Proof') }}" class="w-full h-full object-cover" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
                                                     <div class="hidden w-full h-full items-center justify-center bg-sunken text-ink-3">
                                                         <x-lucide-image class="w-5 h-5" />
                                                     </div>
@@ -4380,11 +4380,11 @@ JS;
                                             </template>
                                         </div>
                                         <div class="min-w-0">
-                                            <span class="text-xs font-semibold text-ink truncate block">{{ __('Imagen de soporte adjunta') }}</span>
+                                            <span class="text-xs font-semibold text-ink truncate block">{{ __('Attached proof image') }}</span>
                                             <span class="text-meta text-ink-3 block">{{ number_format($approvalImage->getSize() / 1024, 1) }} KB</span>
                                         </div>
                                     </div>
-                                    <button type="button" wire:click="removeApprovalImage" @click="clearPreview()" class="p-1.5 rounded-control text-ink-3 hover:text-danger hover:bg-danger-soft transition cursor-pointer" title="{{ __('Quitar imagen') }}">
+                                    <button type="button" wire:click="removeApprovalImage" @click="clearPreview()" class="p-1.5 rounded-control text-ink-3 hover:text-danger hover:bg-danger-soft transition cursor-pointer" title="{{ __('Remove image') }}">
                                         <x-lucide-trash-2 class="w-4 h-4" />
                                     </button>
                                 </div>
@@ -4394,13 +4394,13 @@ JS;
                             <div class="flex items-center justify-between pt-2 border-t border-line mt-2 text-meta text-ink-3">
                                 <label for="approval-image-file" class="inline-flex items-center gap-1.5 font-medium hover:text-ok cursor-pointer transition select-none">
                                     <x-lucide-paperclip class="w-3.5 h-3.5 text-ink-3" />
-                                    <span>{{ __('Adjuntar imagen') }}</span>
+                                    <span>{{ __('Attach image') }}</span>
                                     <input type="file" id="approval-image-file" wire:model="approvalImage" accept="image/*" class="hidden" @change="if ($event.target.files && $event.target.files[0]) { setPreview($event.target.files[0]); }">
                                 </label>
 
                                 <span class="text-meta text-ink-3 flex items-center gap-1 select-none">
                                     <x-lucide-image class="w-3 h-3 text-ink-3" />
-                                    <span>{{ __('Pega con Cmd+V o arrastra aquí') }}</span>
+                                    <span>{{ __('Paste with Cmd+V or drag here') }}</span>
                                 </span>
                             </div>
                         </div>
@@ -4423,11 +4423,11 @@ JS;
                     <label class="flex items-start gap-3 p-3.5 rounded-card border border-line bg-canvas hover:bg-sunken transition cursor-pointer select-none">
                         <input type="checkbox" wire:model="measuresConfirmed" class="w-4 h-4 mt-0.5 rounded border-line-strong text-ink focus:ring-stone-400">
                         <div class="space-y-0.5 min-w-0 flex-1">
-                            <span class="font-semibold text-ink text-xs block">{{ __('Medidas 100% confirmadas') }}</span>
+                            <span class="font-semibold text-ink text-xs block">{{ __('Measurements 100% confirmed') }}</span>
                             @if(!$measuresConfirmed)
-                                <span class="text-meta text-warn font-medium block">{{ __('Si no se marca, se enviará la orden a RESOLVER para confirmar medidas.') }}</span>
+                                <span class="text-meta text-warn font-medium block">{{ __('If not checked, the order will be sent to RESOLVE to confirm measurements.') }}</span>
                             @else
-                                <span class="text-meta text-ok font-medium block">{{ __('Medidas listas para producción.') }}</span>
+                                <span class="text-meta text-ok font-medium block">{{ __('Measurements ready for production.') }}</span>
                             @endif
                         </div>
                     </label>
@@ -4436,11 +4436,11 @@ JS;
                     <label class="flex items-start gap-3 p-3.5 rounded-card border border-line bg-canvas hover:bg-sunken transition cursor-pointer select-none">
                         <input type="checkbox" wire:model="estimateApproved" class="w-4 h-4 mt-0.5 rounded border-line-strong text-ink focus:ring-stone-400">
                         <div class="space-y-0.5 min-w-0 flex-1">
-                            <span class="font-semibold text-ink text-xs block">{{ __('Estimado / Presupuesto aprobado') }}</span>
+                            <span class="font-semibold text-ink text-xs block">{{ __('Quote / Estimate approved') }}</span>
                             @if(!$estimateApproved)
-                                <span class="text-meta text-warn font-medium block">{{ __('Si no se marca, se registrará una advertencia de estimado pendiente.') }}</span>
+                                <span class="text-meta text-warn font-medium block">{{ __('If not checked, a pending estimate warning will be logged.') }}</span>
                             @else
-                                <span class="text-meta text-ok font-medium block">{{ __('Presupuesto verificado por cliente.') }}</span>
+                                <span class="text-meta text-ok font-medium block">{{ __('Estimate verified by client.') }}</span>
                             @endif
                         </div>
                     </label>
@@ -4451,20 +4451,20 @@ JS;
                             @if(!$measuresConfirmed)
                                 <x-lucide-alert-triangle class="w-4 h-4 text-warn shrink-0 mt-0.5" />
                                 <div>
-                                    <strong class="font-semibold block text-meta   text-warn">{{ __('Resultado: Resolver (Bloqueada)') }}</strong>
-                                    {{ __('La orden se moverá a') }} <span class="font-semibold">{{ __('ENTRANTE') }}</span> {{ __('con subestado') }} <span class="font-semibold">{{ __('BLOQUEADA') }}</span> {{ __('y se creará una tarea de resolución de medidas de alta prioridad') }} (SLA {{ $order?->isUrgente() ? __('mismo día') : '24h' }}).
+                                    <strong class="font-semibold block text-meta   text-warn">{{ __('Result: Resolve (Blocked)') }}</strong>
+                                    {{ __('The order will move to') }} <span class="font-semibold">{{ __('INCOMING') }}</span> {{ __('with substatus') }} <span class="font-semibold">{{ __('BLOCKED') }}</span> {{ __('and a high-priority measurement resolution task will be created') }} (SLA {{ $order?->isUrgente() ? __('same day') : '24h' }}).
                                 </div>
                             @elseif(!$estimateApproved)
                                 <x-lucide-info class="w-4 h-4 text-warn shrink-0 mt-0.5" />
                                 <div>
-                                    <strong class="font-semibold block text-meta   text-warn">{{ __('Resultado: Pendiente de Estimado') }}</strong>
-                                    {{ __('La orden pasará al buzón del diseñador con subestado') }} <span class="font-semibold">{{ __('FALTA APROBACIÓN DE ESTIMADO') }}</span> (SLA {{ $order?->isUrgente() ? __('mismo día') : '24h' }}).
+                                    <strong class="font-semibold block text-meta   text-warn">{{ __('Result: Pending Estimate') }}</strong>
+                                    {{ __('The order will move to the designer\'s inbox with substatus') }} <span class="font-semibold">{{ __('AWAITING ESTIMATE APPROVAL') }}</span> (SLA {{ $order?->isUrgente() ? __('same day') : '24h' }}).
                                 </div>
                             @else
                                 <x-lucide-check-circle-2 class="w-4 h-4 text-ok shrink-0 mt-0.5" />
                                 <div>
-                                    <strong class="font-semibold block text-meta   text-ok">{{ __('Resultado: Lista para Alta') }}</strong>
-                                    {{ __('La orden pasará al buzón del diseñador con subestado') }} <span class="font-semibold">{{ __('PONER EN ALTA') }}</span> @if($order?->isUrgente()) (<span class="font-semibold text-danger">{{ __('SLA MISMO DÍA') }}</span> {{ __('por orden urgente') }}). @else ({{ __('SLA 24h para preprensa de alta resolución') }}). @endif
+                                    <strong class="font-semibold block text-meta   text-ok">{{ __('Result: Ready for Print') }}</strong>
+                                    {{ __('The order will move to the designer\'s inbox with substatus') }} <span class="font-semibold">{{ __('READY FOR ALTA') }}</span> @if($order?->isUrgente()) (<span class="font-semibold text-danger">{{ __('SAME DAY SLA') }}</span> {{ __('due to urgent order') }}). @else ({{ __('24h SLA for high-resolution prepress') }}). @endif
                                 </div>
                             @endif
                         </div>
@@ -4473,7 +4473,7 @@ JS;
 
                 <div class="flex items-center justify-end gap-2.5 pt-2 border-t border-line shrink-0">
                     <button type="button" wire:click="closeApprovalModal" class="px-3.5 py-1.5 rounded-control bg-sunken hover:bg-line text-ink-2 text-xs font-medium transition cursor-pointer">
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         type="button" 
@@ -4481,8 +4481,8 @@ JS;
                         wire:loading.attr="disabled"
                         class="px-4 py-1.5 rounded-control bg-ok hover:bg-ok disabled:opacity-50 text-white font-medium text-xs  transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-loader-2 wire:loading wire:target="submitApproval" class="w-3.5 h-3.5 animate-spin" />
-                        <span wire:loading.remove wire:target="submitApproval">{{ __('Procesar Aprobación') }}</span>
-                        <span wire:loading wire:target="submitApproval">{{ __('Procesando...') }}</span>
+                        <span wire:loading.remove wire:target="submitApproval">{{ __('Process Approval') }}</span>
+                        <span wire:loading wire:target="submitApproval">{{ __('Processing...') }}</span>
                     </button>
                 </div>
             </div>
@@ -4497,28 +4497,28 @@ JS;
             @keydown.window.enter.prevent="if($event.target.tagName !== 'TEXTAREA') $wire.submitDelayResolution()">
             <div class="bg-surface border border-line rounded-card w-full max-w-md p-5 space-y-4 shadow-panel">
                 <div>
-                    <h3 class="text-base font-semibold text-ink">{{ __('Resolver Atraso') }}</h3>
-                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Ingresa la nueva fecha prometida al cliente para resolver el estado Overdue.') }}</p>
+                    <h3 class="text-base font-semibold text-ink">{{ __('Resolve Delay') }}</h3>
+                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Enter the new promised date to the client to resolve the Overdue status.') }}</p>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="font-medium text-ink-2 block mb-1">{{ __('Nueva Fecha Prometida al Cliente:') }}</label>
+                        <label class="font-medium text-ink-2 block mb-1">{{ __('New Promised Date to Client:') }}</label>
                         <input type="date" wire:model="clientPromisedDate" class="bg-canvas border border-line rounded-control px-3 py-1.5 text-xs text-ink focus:outline-none w-full font-mono">
                     </div>
 
                     <div>
-                        <label class="font-medium text-ink-2 block mb-1">{{ __('Motivo / Explicación del Retraso:') }}</label>
+                        <label class="font-medium text-ink-2 block mb-1">{{ __('Reason / Delay Explanation:') }}</label>
                         <textarea wire:model="delayReason" rows="3" class="bg-canvas border border-line rounded-control p-2.5 text-xs text-ink focus:outline-none w-full font-normal"></textarea>
                     </div>
                 </div>
 
                 <div class="flex items-center justify-end gap-2.5 pt-2">
                     <button wire:click="$set('showDelayModal', false)" class="px-3 py-1.5 rounded-control bg-sunken text-ink-2 text-xs font-medium">
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button wire:click="submitDelayResolution" class="px-3.5 py-1.5 rounded-control bg-danger hover:bg-danger text-white font-medium text-xs ">
-                        {{ __('Guardar & Resolver Atraso') }}
+                        {{ __('Save & Resolve Delay') }}
                     </button>
                 </div>
             </div>
@@ -4528,91 +4528,91 @@ JS;
     <!-- UNBLOCK MODAL -->
     <x-orders.reason-sheet
         :show="$showUnblockModal"
-        :title="__('Desbloquear orden')"
+        :title="__('Unblock order')"
         :description="trim(($order->company_name ?? '') . ' — ' . ($order->task_name ?? ''), ' —')"
         confirm="confirmUnblock"
         cancel="closeUnblockModal"
-        :confirm-label="__('Confirmar desbloqueo')"
+        :confirm-label="__('Confirm unblock')"
         icon="unlock"
         :presets="[
-            'Medidas confirmadas y recibidas' => __('Medidas confirmadas'),
-            'Cliente aprobó información' => __('Cliente aprobó información'),
-            'Estimado aprobado' => __('Estimado aprobado'),
-            'Resuelto por Atención a Clientes' => __('Resuelto por Atención a Clientes'),
+            'Medidas confirmadas y recibidas' => __('Measurements confirmed'),
+            'Cliente aprobó información' => __('Client approved information'),
+            'Estimado aprobado' => __('Estimate approved'),
+            'Resuelto por Atención a Clientes' => __('Resolved by Customer Service'),
         ]"
         preset-model="unblockReason"
         :selected="$unblockReason"
-        :preset-label="__('¿Cómo se resolvió el bloqueo o qué acción se tomó?')"
+        :preset-label="__('How was the block resolved or what action was taken?')"
         reason-model="unblockReason"
-        :reason-placeholder="__('Describe cómo se resolvió el bloqueo...')"
+        :reason-placeholder="__('Describe how the block was resolved...')"
         :reason-rows="3"
     />
 
     <!-- BLOCK MODAL -->
     <x-orders.reason-sheet
         :show="$showBlockModal"
-        :title="__('Bloquear orden')"
+        :title="__('Block order')"
         :description="trim(($order->company_name ?? '') . ' — ' . ($order->task_name ?? ''), ' —')"
         confirm="confirmBlock"
         cancel="closeBlockModal"
-        :confirm-label="__('Bloquear orden')"
+        :confirm-label="__('Block order')"
         tone="danger"
         icon="alert-octagon"
         :presets="[
-            'FALTAN MEDIDAS' => __('Faltan Medidas'),
-            'FALTA LOGO' => __('Falta Logo / Arte'),
-            'FALTA APROBACIÓN DE ESTIMADO' => __('Falta Aprobación Estimado'),
-            'ESPERANDO CLIENTE' => __('Esperando Cliente'),
-            'OTROS' => __('Otro Motivo'),
+            'FALTAN MEDIDAS' => __('Missing Measurements'),
+            'FALTA LOGO' => __('Missing Logo / Artwork'),
+            'FALTA APROBACIÓN DE ESTIMADO' => __('Awaiting Estimate Approval'),
+            'ESPERANDO CLIENTE' => __('Waiting for Client'),
+            'OTROS' => __('Other Reason'),
         ]"
         preset-model="blockReason"
         :selected="$blockReason"
-        :preset-label="__('Motivo del bloqueo')"
+        :preset-label="__('Block reason')"
         reason-model="blockReasonOther"
         reason-type="input"
         :reason-visible="$blockReason === 'OTROS'"
-        :reason-label="__('Especificar otro motivo')"
-        :reason-placeholder="__('Ej: Esperando material especial de proveedor...')"
+        :reason-label="__('Specify other reason')"
+        :reason-placeholder="__('e.g. Waiting for special material from supplier...')"
     >
         <div class="space-y-1">
-            <label class="text-meta font-medium text-ink-2 block">{{ __('Detalles o comentarios adicionales (opcional)') }}</label>
-            <textarea wire:model="blockComment" rows="2" placeholder="{{ __('Explica brevemente la situación...') }}" class="ui-input !h-auto py-1.5"></textarea>
+            <label class="text-meta font-medium text-ink-2 block">{{ __('Additional details or comments (optional)') }}</label>
+            <textarea wire:model="blockComment" rows="2" placeholder="{{ __('Briefly explain the situation...') }}" class="ui-input !h-auto py-1.5"></textarea>
         </div>
         <div class="pt-1 border-t border-line">
             <label class="flex items-center gap-2 cursor-pointer text-ink font-medium">
                 <input type="checkbox" wire:model="requireCustomerService" class="rounded border-line-strong w-4 h-4">
-                <span>{{ __('Requiere atención / seguimiento del cliente o responsable') }}</span>
+                <span>{{ __('Requires attention / follow-up by client or account rep') }}</span>
             </label>
-            <p class="text-meta text-ink-3 pl-6 mt-0.5">{{ __('Creará una tarea pendiente para dar seguimiento con el contacto o responsable del cliente.') }}</p>
+            <p class="text-meta text-ink-3 pl-6 mt-0.5">{{ __('Creates a pending task to follow up with the client contact or account rep.') }}</p>
         </div>
     </x-orders.reason-sheet>
 
     <!-- ON HOLD REASON MODAL -->
     <x-orders.reason-sheet
         :show="$showOnHoldModal"
-        :title="__('Motivo para poner en On Hold')"
+        :title="__('Reason for putting on hold')"
         :description="trim(($order->company_name ?? '') . ' — ' . ($order->task_name ?? ''), ' —')"
         confirm="confirmOnHold"
         cancel="closeOnHoldModal"
-        :confirm-label="__('Poner en On Hold')"
+        :confirm-label="__('Put on On Hold')"
         icon="pause-circle"
         reason-model="onHoldReason"
-        :reason-label="__('Motivo o comentario')"
-        :reason-placeholder="__('Ej: Esperando confirmación de presupuesto por parte del cliente...')"
+        :reason-label="__('Reason or comment')"
+        :reason-placeholder="__('e.g. Waiting for quote confirmation from client...')"
     />
 
     <!-- RESUME ORDER MODAL -->
     <x-orders.reason-sheet
         :show="$showResumeModal"
-        :title="__('Motivo para reanudar orden')"
+        :title="__('Reason for resuming the order')"
         :description="trim(($order->company_name ?? '') . ' — ' . ($order->task_name ?? ''), ' —')"
         confirm="confirmResume"
         cancel="closeResumeModal"
-        :confirm-label="__('Reanudar orden')"
+        :confirm-label="__('Resume order')"
         icon="play-circle"
         reason-model="resumeReason"
-        :reason-label="__('Motivo o nota de reanudación')"
-        :reason-placeholder="__('Ej: Cliente aprobó presupuesto / Se recibieron las medidas del cliente...')"
+        :reason-label="__('Reason or resume note')"
+        :reason-placeholder="__('e.g. Client approved quote / Received client measurements...')"
     />
 
     <!-- ARCHIVE ORDER SUBSTATUS SELECTION MODAL -->
@@ -4648,7 +4648,7 @@ JS;
                         <x-lucide-download class="w-3.5 h-3.5 text-sky-400" />
                         <span class="hidden sm:inline">{{ __('Descargar') }}</span>
                     </a>
-                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center border border-white/10 transition cursor-pointer" title="{{ __('Cerrar (Esc)') }}">
+                    <button wire:click="closeMediaPreview" type="button" class="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center border border-white/10 transition cursor-pointer" title="{{ __('Close (Esc)') }}">
                         <x-lucide-x class="w-4 h-4" />
                     </button>
                 </div>
@@ -4661,7 +4661,7 @@ JS;
                         <img src="{{ $previewMediaUrl }}" x-show="!imgError" x-on:error="imgError = true" alt="{{ $previewMediaTitle }}" class="max-w-full max-h-[76vh] object-contain rounded-xl shadow-2xl border border-white/10">
                         <div x-show="imgError" x-cloak class="p-8 text-center text-zinc-400 flex flex-col items-center gap-2">
                             <x-lucide-image-off class="w-12 h-12 stroke-[1.5] text-zinc-500" />
-                            <p class="text-sm font-medium">{{ __('No se pudo cargar la vista previa de la imagen') }}</p>
+                            <p class="text-sm font-medium">{{ __('The image preview couldn\'t be loaded') }}</p>
                         </div>
                     </div>
                 @elseif($previewMediaType === 'pdf')

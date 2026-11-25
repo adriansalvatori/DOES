@@ -12,7 +12,7 @@
                 {{ config('app.name') }}
             </h2>
             <p class="text-body text-ink-3 max-w-xs mx-auto">
-                {{ __('Ingresa con tu cuenta para acceder a la gestión de órdenes y flujos de trabajo.') }}
+                {{ __('Sign in to manage orders and workflows.') }}
             </p>
         </div>
 
@@ -24,7 +24,7 @@
                 <!-- Email Input -->
                 <div class="">
                     <label for="email" class="ui-label">
-                        {{ __('Correo electrónico') }}
+                        {{ __('Email') }}
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-3">
@@ -47,7 +47,7 @@
                 <!-- Password Input with Show/Hide Toggle -->
                 <div class="">
                     <label for="password" class="ui-label">
-                        {{ __('Contraseña') }}
+                        {{ __('Password') }}
                     </label>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-3">
@@ -66,8 +66,8 @@
                             type="button" 
                             @click="showPassword = !showPassword"
                             class="absolute inset-y-0 right-0 pr-3 flex items-center text-ink-3 hover:text-ink transition cursor-pointer select-none focus:outline-none"
-                            :title="showPassword ? '{{ __('Ocultar contraseña') }}' : '{{ __('Mostrar contraseña') }}'"
-                            :aria-label="showPassword ? '{{ __('Ocultar contraseña') }}' : '{{ __('Mostrar contraseña') }}'"
+                            :title="showPassword ? '{{ __('Hide password') }}' : '{{ __('Show password') }}'"
+                            :aria-label="showPassword ? '{{ __('Hide password') }}' : '{{ __('Show password') }}'"
                             :aria-pressed="showPassword.toString()">
                             <x-lucide-eye x-show="!showPassword" class="w-4 h-4" />
                             <x-lucide-eye-off x-show="showPassword" class="w-4 h-4" style="display: none;" />
@@ -85,7 +85,7 @@
                             wire:model="remember"
                             type="checkbox"
                             class="w-4 h-4 rounded border-line-strong text-ink focus:ring-ink/20 transition cursor-pointer">
-                        <span class="text-body text-ink-2 select-none">{{ __('Recordar sesión') }}</span>
+                        <span class="text-body text-ink-2 select-none">{{ __('Remember me') }}</span>
                     </label>
                 </div>
 
@@ -96,7 +96,7 @@
                     class="ui-btn ui-btn-primary w-full h-9 disabled:opacity-50">
                     <x-lucide-log-in class="w-4 h-4" wire:loading.remove />
                     <x-lucide-loader-2 class="w-4 h-4 animate-spin" wire:loading />
-                    <span>{{ __('Iniciar Sesión') }}</span>
+                    <span>{{ __('Sign in') }}</span>
                 </button>
             </form>
 
@@ -104,14 +104,14 @@
             <div class="border-t border-line pt-4 space-y-2">
                 <div class="flex items-center justify-between">
                     <p class="text-meta font-medium text-ink-3">
-                        {{ __('Cuentas de demostración rápida') }}
+                        {{ __('Quick demo accounts') }}
                     </p>
                     @if($isDemo)
-                        <x-ui.tag tone="neutral">{{ __('Demo DB activa') }}</x-ui.tag>
+                        <x-ui.tag tone="neutral">{{ __('Demo database active') }}</x-ui.tag>
                     @endif
                 </div>
                 <div class="grid grid-cols-2 gap-2">
-                    @foreach(['admin' => __('Admin'), 'manager' => __('Manager'), 'designer' => __('Designer'), 'comercial' => __('Comercial')] as $demoRole => $demoLabel)
+                    @foreach(['admin' => __('Admin'), 'manager' => __('Manager'), 'designer' => __('Designer'), 'comercial' => __('Sales')] as $demoRole => $demoLabel)
                         <a href="{{ route('demo.direct-login', ['role' => $demoRole]) }}" class="ui-btn ui-btn-secondary justify-center">{{ $demoLabel }}</a>
                     @endforeach
                 </div>

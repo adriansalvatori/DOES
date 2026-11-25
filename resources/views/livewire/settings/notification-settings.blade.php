@@ -1,11 +1,11 @@
 <div class="h-full w-full max-w-4xl flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-10">
     
-    <x-ui.page-header :title="__('Configuración de Notificaciones (Admin)')" :subtitle="__('Administra los 11 eventos globales de alertas. Los usuarios recibirán automáticamente todas las notificaciones activas sin opción a desactivarlas.')">
+    <x-ui.page-header :title="__('Notification settings (admin)')" :subtitle="__('Manage the 11 global alert events. Users receive every active notification and can\'t turn them off.')">
         <x-slot:actions>
-            <flux:button wire:click="enableAll" type="button" variant="outline" size="sm" icon="check">{{ __('Activar Todas') }}</flux:button>
+            <flux:button wire:click="enableAll" type="button" variant="outline" size="sm" icon="check">{{ __('Enable all') }}</flux:button>
         </x-slot:actions>
     </x-ui.page-header>
-    <p class="text-meta text-ink-3 -mt-3 shrink-0">{{ __('Los cambios se guardan al instante.') }}</p>
+    <p class="text-meta text-ink-3 -mt-3 shrink-0">{{ __('Changes are saved instantly.') }}</p>
 
     @if(session('success'))
         <div class="p-3 bg-ok-soft text-ok border border-line rounded-card text-body flex items-center gap-2 shrink-0">

@@ -422,23 +422,23 @@ class RelatedTask extends Model
     {
         return match ($this->colorCodingKey()) {
             'urgent' => __('Urgente / Atraso'),
-            'production' => __('ALTA / Producción'),
-            'client' => __('Cliente / Seguimiento'),
+            'production' => __('Production files / Production'),
+            'client' => __('Client / Follow-up'),
             'camila' => __('Camila / QA'),
             'blocked' => __('Bloqueado / Resolver'),
-            default => __('Sistema'),
+            default => __('System'),
         };
     }
 
     public function colorCodingShortLabel(): string
     {
         return match ($this->colorCodingKey()) {
-            'urgent' => __('Urgente'),
+            'urgent' => __('Urgent'),
             'production' => __('ALTA'),
-            'client' => __('Cliente'),
+            'client' => __('Client'),
             'camila' => __('QA'),
             'blocked' => __('Bloqueo'),
-            default => __('Sistema'),
+            default => __('System'),
         };
     }
 }

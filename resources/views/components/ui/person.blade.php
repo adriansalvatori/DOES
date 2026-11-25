@@ -47,11 +47,11 @@
             <span class="text-body text-ink truncate">{{ $displayName }}</span>
         @endif
     @else
-        <span class="{{ $sizeClasses }} rounded-full inline-grid place-items-center border border-dashed border-line-strong text-ink-3 shrink-0" title="{{ __('Sin Asignar') }}" @if(! $showName) role="img" aria-label="{{ __('Sin Asignar') }}" @endif>
+        <span class="{{ $sizeClasses }} rounded-full inline-grid place-items-center border border-dashed border-line-strong text-ink-3 shrink-0" title="{{ __('Unassigned') }}" @if(! $showName) role="img" aria-label="{{ __('Unassigned') }}" @endif>
             <x-lucide-user class="w-3 h-3" aria-hidden="true" />
         </span>
         @if($showName)
-            <span class="text-body text-ink-3 truncate">{{ __('Sin Asignar') }}</span>
+            <span class="text-body text-ink-3 truncate">{{ __('Unassigned') }}</span>
         @endif
     @endif
 </span>

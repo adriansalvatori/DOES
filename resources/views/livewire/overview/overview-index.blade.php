@@ -348,7 +348,7 @@
             if (val === from) { el.value = this.estDisplay(orderId, from); return; }
             el.dataset.busy = '1';
             el.value = this.estDisplay(orderId, from);
-            KudosConfirmChange({ field: @js(__('Estimado / Invoice')), from: from || '—', to: val || '—' }).then(ok => {
+            KudosConfirmChange({ field: @js(__('Estimate / Invoice')), from: from || '—', to: val || '—' }).then(ok => {
                 if (ok) {
                     el.dataset.initial = val;
                     $wire.quickUpdateField(orderId, 'estimate_invoice_number', val);
@@ -879,18 +879,18 @@
             <!-- View mode: one neutral segmented control -->
             <div class="inline-flex items-center gap-0.5 bg-sunken p-0.5 rounded-card flex-wrap" role="tablist">
                 <button type="button" role="tab" aria-selected="{{ $activeTab === 'all' ? 'true' : 'false' }}" wire:click="setTab('all')" class="{{ $tabBase }} {{ $activeTab === 'all' ? $tabOn : $tabOff }}">
-                    {{ __('Todas') }}
+                    {{ __('All') }}
                 </button>
                 <button type="button" role="tab" aria-selected="{{ $activeTab === 'workspace' ? 'true' : 'false' }}" wire:click="setTab('workspace')" class="{{ $tabBase }} {{ $activeTab === 'workspace' ? $tabOn : $tabOff }}">
-                    <span>{{ __('Órdenes Activas') }}</span>
+                    <span>{{ __('Active Orders') }}</span>
                     <span class="text-ink-3 font-normal tabular-nums">{{ $totalWorkspaceCount }}</span>
                 </button>
                 <button type="button" role="tab" aria-selected="{{ $activeTab === 'production' ? 'true' : 'false' }}" wire:click="setTab('production')" class="{{ $tabBase }} {{ $activeTab === 'production' ? $tabOn : $tabOff }}">
-                    <span>{{ __('En Producción') }}</span>
+                    <span>{{ __('In Production') }}</span>
                     <span class="text-ink-3 font-normal tabular-nums">{{ $inProductionCount }}</span>
                 </button>
                 <button type="button" role="tab" aria-selected="{{ $activeTab === 'archived' ? 'true' : 'false' }}" wire:click="setTab('archived', 'all')" class="{{ $tabBase }} {{ $activeTab === 'archived' ? $tabOn : $tabOff }}">
-                    <span>{{ __('Archivadas') }}</span>
+                    <span>{{ __('Archived') }}</span>
                     <span class="text-ink-3 font-normal tabular-nums">{{ $totalArchivedCount }}</span>
                 </button>
                 <button type="button" role="tab" aria-selected="{{ $activeTab === 'backlog' ? 'true' : 'false' }}" wire:click="setTab('backlog')" class="{{ $tabBase }} {{ $activeTab === 'backlog' ? $tabOn : $tabOff }}">
@@ -902,13 +902,13 @@
             <!-- Quick toggles -->
             <div class="inline-flex items-center gap-1.5 flex-wrap">
                 <button type="button" wire:click="toggleFilter('urgent')" aria-pressed="{{ $filterUrgent ? 'true' : 'false' }}" class="{{ $toggleBase }} {{ $filterUrgent ? $toggleOn : $toggleOff }}">
-                    <span>{{ __('Urgente') }}</span>
+                    <span>{{ __('Urgent') }}</span>
                     @if(($urgentCount ?? 0) > 0)
                         <span class="{{ $filterUrgent ? 'text-white/70' : 'text-ink-3' }} font-normal tabular-nums">{{ $urgentCount }}</span>
                     @endif
                 </button>
                 <button type="button" wire:click="toggleFilter('withDueDate')" aria-pressed="{{ $filterWithDueDate ? 'true' : 'false' }}" class="{{ $toggleBase }} {{ $filterWithDueDate ? $toggleOn : $toggleOff }}">
-                    <span>{{ __('Con Due Date') }}</span>
+                    <span>{{ __('With due date') }}</span>
                     @if(($withDueDateCount ?? 0) > 0)
                         <span class="{{ $filterWithDueDate ? 'text-white/70' : 'text-ink-3' }} font-normal tabular-nums">{{ $withDueDateCount }}</span>
                     @endif
@@ -926,8 +926,8 @@
                     type="text"
                     wire:model.live.debounce.300ms="search"
                     @keydown.escape="$el.blur()"
-                    placeholder="{{ __('Búsqueda general...') }}"
-                    title="{{ __('Buscar en el overview (Ctrl+F / ⌘F)') }}"
+                    placeholder="{{ __('Search all...') }}"
+                    title="{{ __('Search the overview (Ctrl+F / ⌘F)') }}"
                     class="{{ $fieldBase }} pl-8"
                 >
             </div>
@@ -935,37 +935,37 @@
             <input
                 type="text"
                 wire:model.live.debounce.300ms="filterWo"
-                placeholder="{{ __('Filtro WO (ej. 1234)') }}"
+                placeholder="{{ __('WO filter (e.g. 1234)') }}"
                 class="{{ $fieldBase }}"
             >
 
             <select wire:model.live="filterClient" class="ui-select">
-                <option value="">{{ __('Todos los clientes') }}</option>
+                <option value="">{{ __('All clients') }}</option>
                 @foreach($clients as $c)
                     <option value="{{ is_object($c) ? $c->id : $c }}">{{ is_object($c) ? $c->name : $c }}</option>
                 @endforeach
             </select>
 
             <select wire:model.live="filterDesigner" class="ui-select">
-                <option value="">{{ __('Todos los diseñadores') }}</option>
+                <option value="">{{ __('All Designers') }}</option>
                 @foreach($filterDesigners as $d)
                     <option value="{{ is_object($d) ? $d->id : $d }}">{{ is_object($d) ? $d->name : $d }}</option>
                 @endforeach
             </select>
 
             <select wire:model.live="filterReviewStatus" class="ui-select">
-                <option value="">{{ __('Cualquier revisión del estimado') }}</option>
-                <option value="CS">{{ __('Revisado por CS') }}</option>
-                <option value="CAMILA">{{ __('Revisado por Camila') }}</option>
-                <option value="NONE">{{ __('Sin revisión') }}</option>
+                <option value="">{{ __('Any estimate review') }}</option>
+                <option value="CS">{{ __('Reviewed by CS') }}</option>
+                <option value="CAMILA">{{ __('Reviewed by Camila') }}</option>
+                <option value="NONE">{{ __('No review') }}</option>
             </select>
 
             <select wire:model.live="filterInstallation" class="ui-select">
-                <option value="">{{ __('Cualquier instalación') }}</option>
+                <option value="">{{ __('Any installation') }}</option>
                 @foreach($installationTypes as $instType)
                     <option value="{{ $instType->name }}">{{ $instType->name }}</option>
                 @endforeach
-                <option value="NONE">{{ __('Vacío (Sin información)') }}</option>
+                <option value="NONE">{{ __('Empty (no info)') }}</option>
             </select>
         </div>
 
@@ -976,13 +976,13 @@
                     <span class="inline-flex items-center gap-1.5 pl-2 pr-1 py-0.5 rounded-control text-meta bg-sunken text-ink-2 border border-line">
                         <span class="text-ink-3">{{ $filter['label'] }}:</span>
                         <span class="font-medium text-ink max-w-[160px] truncate" title="{{ $filter['value'] }}">{{ $filter['value'] }}</span>
-                        <button type="button" wire:click="clearFilter('{{ $filter['key'] }}')" class="text-ink-3 hover:text-ink hover:bg-line rounded p-0.5 transition cursor-pointer" title="{{ __('Quitar filtro') }}" aria-label="{{ __('Quitar filtro') }}">
+                        <button type="button" wire:click="clearFilter('{{ $filter['key'] }}')" class="text-ink-3 hover:text-ink hover:bg-line rounded p-0.5 transition cursor-pointer" title="{{ __('Remove filter') }}" aria-label="{{ __('Remove filter') }}">
                             <x-lucide-x class="w-3 h-3" />
                         </button>
                     </span>
                 @endforeach
                 <button type="button" wire:click="resetFilters" class="px-2 py-0.5 rounded-control text-meta font-medium text-ink-2 hover:text-ink hover:bg-sunken transition cursor-pointer">
-                    {{ __('Limpiar') }}
+                    {{ __('Clear') }}
                 </button>
             </div>
         @endif
@@ -1015,7 +1015,7 @@
                             class="sticky top-0 left-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('production_processed_at')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Procesado en producción') }}">{{ __('Proc. prod.') }}</span>
+                                <span class="truncate" title="{{ __('Processed in production') }}">{{ __('Proc. prod.') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1026,7 +1026,7 @@
                             class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('delivery_due_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Fecha límite de entrega') }}">{{ __('Fecha límite') }}</span>
+                                <span class="truncate" title="{{ __('Delivery due date') }}">{{ __('Due date') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1048,7 +1048,7 @@
                             class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 py-2.5 px-1.5 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('company_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Cliente') }}">{{ __('Cliente') }}</span>
+                                <span class="truncate" title="{{ __('Client') }}">{{ __('Client') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1059,7 +1059,7 @@
                             class="sticky top-0 z-30 bg-stone-50 border-b border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] py-2.5 px-2 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('task_name')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Nombre de orden') }}">{{ __('Nombre de orden') }}</span>
+                                <span class="truncate" title="{{ __('Order name') }}">{{ __('Order name') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1069,7 +1069,7 @@
                             style="width: 130px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Diseñador') }}">{{ __('Diseñador') }}</span>
+                                <span class="truncate" title="{{ __('Designer') }}">{{ __('Designer') }}</span>
                             </div>
                         </th>
 
@@ -1078,7 +1078,7 @@
                             style="width: 400px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 px-1.5 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate inline-flex items-center gap-1" title="{{ __('Nota de producción / instalación') }}"><span>{{ __('Nota prod./inst.') }}</span></span>
+                                <span class="truncate inline-flex items-center gap-1" title="{{ __('Production / installation note') }}"><span>{{ __('Prod./inst. note') }}</span></span>
                             </div>
                         </th>
 
@@ -1087,7 +1087,7 @@
                             style="width: 130px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Estimado / Invoice') }}">{{ __('Est. / Inv.') }}</span>
+                                <span class="truncate" title="{{ __('Estimate / Invoice') }}">{{ __('Est. / Inv.') }}</span>
                             </div>
                         </th>
 
@@ -1097,7 +1097,7 @@
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 px-1 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('email_date')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Fecha del email') }}">{{ __('Email') }}</span>
+                                <span class="truncate" title="{{ __('Email date') }}">{{ __('Email') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1107,7 +1107,7 @@
                             style="width: 170px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 px-1 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Instalación') }}">{{ __('Instalación') }}</span>
+                                <span class="truncate" title="{{ __('Installation') }}">{{ __('Installation') }}</span>
                             </div>
                         </th>
 
@@ -1125,7 +1125,7 @@
                             style="width: 240px;"
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 px-1.5 select-none">
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate inline-flex items-center gap-1" title="{{ __('Nota de entrega') }}"><span>{{ __('Entrega') }}</span></span>
+                                <span class="truncate inline-flex items-center gap-1" title="{{ __('Delivery note') }}"><span>{{ __('Delivery') }}</span></span>
                             </div>
                         </th>
 
@@ -1135,7 +1135,7 @@
                             class="sticky top-0 z-20 bg-stone-50 border-b border-stone-200 py-2.5 pl-1.5 pr-4 sm:pr-6 select-none"
                             {{-- TEMPORAL: wire:click="sortByColumn('substatus')" class="cursor-pointer hover:bg-stone-100 transition-colors" --}}>
                             <div class="flex items-center justify-between gap-0.5 w-full pointer-events-none overflow-hidden">
-                                <span class="truncate" title="{{ __('Subestatus') }}">{{ __('Subestatus') }}</span>
+                                <span class="truncate" title="{{ __('Substatuses') }}">{{ __('Substatuses') }}</span>
                                 {{-- TEMPORAL: <x-lucide-arrow-up-down class="w-3 h-3 text-stone-400 shrink-0" /> --}}
                             </div>
                         </th>
@@ -1191,7 +1191,7 @@
                                             x-show="activeDateEdit !== 'proc_{{ $order->id }}'"
                                             @click.stop="openDateInput('proc', {{ $order->id }}, $el.nextElementSibling)" 
                                             class="w-full text-left text-stone-400 hover:text-stone-700 text-meta font-mono px-1 py-0.5 rounded-sm cursor-pointer"
-                                            title="{{ __('Sin fecha - Clic para asignar fecha de procesado') }}">
+                                            title="{{ __('No date - click to set the processed date') }}">
                                             —
                                         </button>
                                     @endif
@@ -1212,7 +1212,7 @@
                                             closeDateInput();
                                         "
                                         class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-meta text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 cursor-pointer"
-                                        title="{{ $procDateDisplay }} ({{ __('Procesado en producción - Clic para editar') }})"
+                                        title="{{ $procDateDisplay }} ({{ __('Processed in production - click to edit') }})"
                                     >
                                 </div>
                             </td>
@@ -1234,7 +1234,7 @@
                                             x-show="activeDateEdit !== 'due_{{ $order->id }}'"
                                             @click.stop="openDateInput('due', {{ $order->id }}, $el.nextElementSibling)" 
                                             class="w-full text-left text-stone-400 hover:text-stone-700 text-meta font-mono px-1.5 py-0.5 rounded-sm cursor-pointer"
-                                            title="{{ __('Sin fecha límite - Clic para asignar fecha de entrega') }}">
+                                            title="{{ __('No due date - click to set the delivery date') }}">
                                             —
                                         </button>
                                     @endif
@@ -1267,7 +1267,7 @@
                                         "
                                         class="w-full text-meta tabular-nums px-1.5 py-0.5 rounded-control border-0 cursor-pointer bg-transparent hover:bg-sunken focus:bg-surface focus:outline-none focus:ring-0 {{ $isDueDateFilled && $order->isOverdue() ? 'text-danger font-medium' : 'text-ink-2' }}"
                                         :class="isPastDate(ordersState[{{ $order->id }}]?.delivery_due_date || '{{ $dueDateVal }}') && !isMutedRow({{ $order->id }}) ? 'text-danger font-medium' : 'text-ink-2'"
-                                        title="{{ $dueDateDisplay }} ({{ __('Fecha límite de entrega - Clic para editar') }})"
+                                        title="{{ $dueDateDisplay }} ({{ __('Delivery due date - click to edit') }})"
                                     >
                                 </div>
                             </td>
@@ -1288,7 +1288,7 @@
                                             @keydown.escape.stop.prevent="$el.value = ''; $el.blur()"
                                             @blur="confirmWo($el, {{ $order->id }})"
                                             class="w-full bg-transparent hover:bg-sunken focus:bg-surface text-ink placeholder-ink-3 text-body px-1.5 py-0.5 rounded-control border border-dashed border-line-strong focus:border-ink focus:outline-none focus:ring-0 transition-colors truncate"
-                                            title="{{ __('Sin WO - Clic para agregar número de WO') }}"
+                                            title="{{ __('No WO - click to add a WO number') }}"
                                         >
                                     @else
                                         <x-wo-badge :number="$order->wo_number" />
@@ -1349,7 +1349,7 @@
                                         <template x-if="!ordersState[{{ $order->id }}]?.designer_name">
                                             <span class="inline-flex items-center gap-2 min-w-0">
                                                 <span class="w-5 h-5 rounded-full inline-grid place-items-center border border-dashed border-line-strong text-ink-3 shrink-0"><x-lucide-user class="w-3 h-3" aria-hidden="true" /></span>
-                                                <span class="text-body text-ink-3 truncate">{{ __('Sin Asignar') }}</span>
+                                                <span class="text-body text-ink-3 truncate">{{ __('Unassigned') }}</span>
                                             </span>
                                         </template>
                                     </span>
@@ -1373,7 +1373,7 @@
                                         }
                                     "
                                     class="w-full bg-transparent hover:bg-stone-100/70 focus:bg-white text-meta text-stone-700 italic px-1.5 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 truncate placeholder-stone-400 focus:text-stone-900 focus:not-italic"
-                                    title="{{ $order->production_note ?: __('Clic para editar nota de producción') }}"
+                                    title="{{ $order->production_note ?: __('Click to edit production note') }}"
                                 >
                             </td>
 
@@ -1402,7 +1402,7 @@
                                         @keydown.escape.stop.prevent="$el.value = '{{ $displayText }}'; $el.blur()"
                                         @blur="confirmEstimate($el, {{ $order->id }})"
                                         class="flex-1 min-w-0 bg-transparent hover:bg-sunken focus:bg-surface text-meta tabular-nums font-semibold text-ink px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate"
-                                        title="{{ $displayText }} ({{ __('Clic para editar') }})"
+                                        title="{{ $displayText }} ({{ __('Click to edit') }})"
                                     >
 
                                     <button 
@@ -1412,7 +1412,7 @@
                                         :class="getReviewIconColor(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
                                         :style="getReviewIconStyle(ordersState[{{ $order->id }}]?.review_status !== undefined ? ordersState[{{ $order->id }}].review_status : '{{ addslashes($order->review_status ?? '') }}')"
                                         class="p-0.5 rounded cursor-pointer shrink-0 transition flex items-center justify-center border-none"
-                                        title="{{ __('Cambiar estado de revisión') }}">
+                                        title="{{ __('Change review status') }}">
                                         <x-lucide-check-square class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
@@ -1432,7 +1432,7 @@
                                             x-show="activeDateEdit !== 'email_{{ $order->id }}'"
                                             @click="openDateInput('email', {{ $order->id }}, $el.nextElementSibling)" 
                                             class="w-full text-left text-stone-400 hover:text-stone-700 text-meta font-mono px-1 py-0.5 rounded-sm cursor-pointer"
-                                            title="{{ __('Sin fecha de email - Clic para asignar') }}">
+                                            title="{{ __('No email date - click to set') }}">
                                             —
                                         </button>
                                     @endif
@@ -1451,7 +1451,7 @@
                                             closeDateInput();
                                         "
                                         class="w-full bg-transparent hover:bg-stone-100/60 focus:bg-white text-meta text-stone-700 font-mono px-1 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 cursor-pointer"
-                                        title="{{ $emailDateDisplay }} ({{ __('Clic para editar') }})"
+                                        title="{{ $emailDateDisplay }} ({{ __('Click to edit') }})"
                                     >
                                 </div>
                             </td>
@@ -1460,14 +1460,14 @@
                             @php
                                 $orderInstTypes = $order->installation_types_list;
                                 $hasInstTypes = !empty($orderInstTypes);
-                                $instSummaryTitle = $hasInstTypes ? implode(', ', $orderInstTypes) : __('Sin información');
+                                $instSummaryTitle = $hasInstTypes ? implode(', ', $orderInstTypes) : __('No info');
                             @endphp
                             <td class="py-1 px-1 text-meta bg-transparent hover:bg-stone-50/80">
                                 <button 
                                     type="button"
                                     @click.stop="Alpine.store('installationModal').open({ orderId: {{ $order->id }}, wo: '{{ addslashes($order->wo_number ?? '') }}', company: '{{ addslashes($order->company_name ?? '') }}', types: getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}) })"
                                     class="w-full text-left cursor-pointer flex items-center justify-between gap-1 py-0.5 px-0.5 rounded border border-transparent hover:border-stone-200 transition bg-transparent overflow-hidden"
-                                    title="{{ __('Instalación: :types (Clic para cambiar)', ['types' => $instSummaryTitle]) }}">
+                                    title="{{ __('Installation: :types (click to change)', ['types' => $instSummaryTitle]) }}">
                                     
                                     <div class="flex items-center gap-1 overflow-hidden min-w-0 flex-1">
                                         <template x-if="getOrderInstallationTypes({{ $order->id }}, {{ \Illuminate\Support\Js::from($orderInstTypes) }}).length === 0">
@@ -1546,7 +1546,7 @@
                                         }
                                     "
                                     class="w-full bg-transparent hover:bg-stone-100/70 focus:bg-white text-meta text-stone-700 italic px-1.5 py-0.5 rounded-sm border-0 border-b border-transparent focus:border-stone-400 focus:outline-none focus:ring-0 transition-colors truncate placeholder-stone-400 focus:text-stone-900 focus:not-italic"
-                                    title="{{ $order->delivery_note ?: __('Clic para editar nota de entrega') }}"
+                                    title="{{ $order->delivery_note ?: __('Click to edit delivery note') }}"
                                 >
                             </td>
 
@@ -1579,13 +1579,13 @@
                                         flags: getOrderFlags({{ $order->id }}, {{ \Illuminate\Support\Js::from($order->flags ?? []) }})
                                     })"
                                     class="w-full text-left cursor-pointer flex items-center justify-between gap-0.5 border-none bg-transparent py-0.5 truncate"
-                                    title="{{ __('Subestatus y Banderas') }}: {{ $subLabel }} ({{ __('Clic para cambiar') }})">
+                                    title="{{ __('Substatus and flags') }}: {{ $subLabel }} ({{ __('Click to change') }})">
                                     <div class="flex items-center gap-0.5 overflow-hidden truncate">
                                         <span class="truncate text-body block px-1.5 rounded-control {{ $toneClasses[$subTone] }}" :class="toneClass(getOrderSubstatus({{ $order->id }}, '{{ addslashes($subVal ?? '') }}'))" x-text="getOrderSubstatusLabel({{ $order->id }}, '{{ addslashes($subLabel) }}')">{{ $subLabel }}</span>
                                         @if($order->isOverdue())
-                                            <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['danger'] }} shrink-0" title="{{ __('Atrasada') }}">!</span>
+                                            <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['danger'] }} shrink-0" title="{{ __('Overdue') }}">!</span>
                                         @elseif($order->isDueToday())
-                                            <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['warn'] }} shrink-0" title="{{ __('Vence hoy') }}">PV</span>
+                                            <span class="px-1 rounded-control text-meta font-semibold {{ $toneClasses['warn'] }} shrink-0" title="{{ __('Due today') }}">PV</span>
                                         @endif
                                         <template x-for="fName in getOrderFlags({{ $order->id }}, {{ \Illuminate\Support\Js::from($order->flags ?? []) }})" :key="fName">
                                             <span 
@@ -1604,7 +1604,7 @@
                     @empty
                         <tr>
                             <td colspan="13" class="py-8 text-center text-stone-400 font-medium">
-                                {{ __('No se encontraron órdenes para la vista seleccionada.') }}
+                                {{ __('No orders found for this view.') }}
                             </td>
                         </tr>
                     @endforelse
@@ -1621,13 +1621,13 @@
                     class="py-3 px-4 bg-stone-50 border-t border-stone-200 flex flex-col sm:flex-row items-center justify-center gap-2 text-body text-ink-2">
                     <div class="flex items-center gap-2">
                         <x-lucide-loader-2 class="w-4 h-4 animate-spin text-ink-3 shrink-0" />
-                        <span>{{ __('Cargando más órdenes al hacer scroll...') }} ({{ count($orders) }} / {{ $totalFilteredCount }})</span>
+                        <span>{{ __('Loading more orders as you scroll...') }} ({{ count($orders) }} / {{ $totalFilteredCount }})</span>
                     </div>
                     <button 
                         type="button" 
                         wire:click="loadNextChunk" 
                         class="text-meta font-medium text-ink hover:underline cursor-pointer sm:ml-3">
-                        {{ __('Cargar siguientes órdenes ahora') }}
+                        {{ __('Load next orders now') }}
                     </button>
                 </div>
             @endif
@@ -1637,7 +1637,7 @@
         @if(method_exists($orders, 'hasPages') && $orders->hasPages())
             <div class="px-4 sm:px-6 py-3 border-t border-stone-200 bg-[#f7f7f5] flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div class="text-xs text-stone-500 font-medium">
-                    {{ __('Mostrando') }} <span class="font-semibold text-stone-900">{{ $orders->firstItem() }}</span> {{ __('a') }} <span class="font-semibold text-stone-900">{{ $orders->lastItem() }}</span> {{ __('de') }} <span class="font-semibold text-stone-900">{{ $orders->total() }}</span> {{ __('órdenes') }}
+                    {{ __('Showing') }} <span class="font-semibold text-stone-900">{{ $orders->firstItem() }}</span> {{ __('to') }} <span class="font-semibold text-stone-900">{{ $orders->lastItem() }}</span> {{ __('of') }} <span class="font-semibold text-stone-900">{{ $orders->total() }}</span> {{ __('orders') }}
                 </div>
                 <div>
                     {{ $orders->links() }}
@@ -1646,7 +1646,7 @@
         @else
             <div class="px-6 py-2.5 border-t border-line bg-canvas flex items-center gap-3">
                 <div class="text-meta text-ink-3 flex items-center gap-2">
-                    <span>{{ __('Mostrando') }} <strong class="text-stone-900 font-semibold">{{ count($orders) }}</strong> {{ __('de') }} <strong class="text-stone-900 font-semibold">{{ $totalFilteredCount }}</strong> {{ __('órdenes') }}</span>
+                    <span>{{ __('Showing') }} <strong class="text-stone-900 font-semibold">{{ count($orders) }}</strong> {{ __('of') }} <strong class="text-stone-900 font-semibold">{{ $totalFilteredCount }}</strong> {{ __('orders') }}</span>
                 </div>
             </div>
         @endif
@@ -1677,7 +1677,7 @@
         <template x-if="activeMenu === 'designer'">
             <div class="flex flex-col h-full min-h-0 space-y-1.5">
                 <div class="px-2 py-0.5 text-meta font-semibold text-ink-3 tracking-wider border-b border-stone-100 pb-1 flex items-center justify-between shrink-0">
-                    <span>{{ __('Seleccionar Diseñador') }}</span>
+                    <span>{{ __('Select designer') }}</span>
                 </div>
 
                 <!-- Search input -->
@@ -1691,7 +1691,7 @@
                             x-model="menuSearch"
                             @input="onMenuSearchInput()"
                             type="text" 
-                            placeholder="{{ __('Buscar diseñador...') }}" 
+                            placeholder="{{ __('Search designer...') }}" 
                             class="w-full pl-7 pr-6 py-1 text-xs bg-stone-50 hover:bg-stone-100/80 focus:bg-white border border-stone-200 focus:border-stone-400 rounded-lg text-stone-800 placeholder-stone-400 outline-none transition"
                         >
                         <button 
@@ -1710,7 +1710,7 @@
                         x-show="matchesMenuSearch('sin asignar')"
                         @click="setDesigner(null, null, '', '', null)"
                         class="w-full text-left px-2 py-1.5 rounded-lg text-xs hover:bg-stone-100 text-stone-500 cursor-pointer">
-                        -- {{ __('Sin Asignar') }} --
+                        -- {{ __('Unassigned') }} --
                     </button>
                     @foreach($designers as $d)
                         @php 
@@ -1747,7 +1747,7 @@
                     @mouseenter="updateActiveFromHover($el)"
                     @click="setReviewStatus('CS')"
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs text-ink font-medium hover:bg-sunken transition cursor-pointer">
-                    {{ __('Revisado por CS') }}
+                    {{ __('Reviewed by CS') }}
                 </button>
                 <button 
                     type="button"
@@ -1756,7 +1756,7 @@
                     @click="setReviewStatus('CAMILA')"
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs font-semibold transition cursor-pointer"
                     style="background-color: var(--cc-camila-bg-light); color: var(--cc-camila-text-dark); border: 1px solid var(--cc-camila-border);">
-                    {{ __('Revisado por Camila') }}
+                    {{ __('Reviewed by Camila') }}
                 </button>
                 <button 
                     type="button"
@@ -1764,7 +1764,7 @@
                     @mouseenter="updateActiveFromHover($el)"
                     @click="setReviewStatus(null)"
                     class="w-full text-left px-2.5 py-1.5 rounded text-xs bg-stone-50 text-stone-600 hover:bg-stone-100 border border-stone-200 transition cursor-pointer">
-                    {{ __('Sin revisión (Blanco / EST)') }}
+                    {{ __('No review (Blank / EST)') }}
                 </button>
             </div>
         </template>
@@ -1815,17 +1815,17 @@
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <h3 class="text-sm font-semibold text-stone-900">{{ __('Tipo de Instalación') }}</h3>
+                                <h3 class="text-sm font-semibold text-stone-900">{{ __('Installation type') }}</h3>
                                 <span 
                                     x-show="$store.installationModal && $store.installationModal.types.length > 0" 
                                     class="text-meta bg-sunken text-ink-2 border border-line px-2 py-0.5 rounded-full font-semibold"
-                                    x-text="$store.installationModal ? ($store.installationModal.types.length + ' ' + ($store.installationModal.types.length === 1 ? '{{ __('seleccionada') }}' : '{{ __('seleccionadas') }}')) : ''">
+                                    x-text="$store.installationModal ? ($store.installationModal.types.length + ' ' + ($store.installationModal.types.length === 1 ? '{{ __('selected') }}' : '{{ __('selected') }}')) : ''">
                                 </span>
                             </div>
                             <p class="text-xs text-stone-500 mt-0.5 flex items-center gap-1.5 truncate">
-                                <span class="font-mono font-semibold text-stone-700" x-text="($store.installationModal && $store.installationModal.orderWo) || @js(__('Sin WO'))"></span>
+                                <span class="font-mono font-semibold text-stone-700" x-text="($store.installationModal && $store.installationModal.orderWo) || @js(__('No WO'))"></span>
                                 <span class="text-stone-300">•</span>
-                                <span class="truncate" x-text="($store.installationModal && $store.installationModal.orderCompany) || @js(__('Sin Cliente'))"></span>
+                                <span class="truncate" x-text="($store.installationModal && $store.installationModal.orderCompany) || @js(__('No Client'))"></span>
                             </p>
                         </div>
                     </div>
@@ -1836,15 +1836,15 @@
                             @click.stop="$store.installationModal.close()" 
                             wire:navigate 
                             class="text-xs text-stone-400 hover:text-stone-700 hover:underline flex items-center gap-1 py-1 px-2 rounded hover:bg-stone-100 transition cursor-pointer"
-                            title="{{ __('Administrar tipos y colores') }}">
+                            title="{{ __('Manage types and colors') }}">
                             <x-lucide-settings class="w-3.5 h-3.5" />
-                            <span class="hidden sm:inline">{{ __('Ajustes') }}</span>
+                            <span class="hidden sm:inline">{{ __('Settings') }}</span>
                         </a>
                         <button 
                             type="button" 
                             @click="$store.installationModal.close()" 
                             class="text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 p-1.5 rounded-lg transition cursor-pointer"
-                            title="{{ __('Cerrar') }}">
+                            title="{{ __('Close') }}">
                             <x-lucide-x class="w-5 h-5" />
                         </button>
                     </div>
@@ -1855,7 +1855,7 @@
                     <!-- 1. Input Box con Tags Seleccionados -->
                     <div>
                         <label class="block text-xs font-semibold text-stone-600 tracking-wider mb-1.5">
-                            {{ __('Etiquetas asignadas') }}
+                            {{ __('Assigned tags') }}
                         </label>
                         <div 
                             onclick="document.getElementById('installation-modal-tag-input')?.focus()"
@@ -1871,7 +1871,7 @@
                                         type="button" 
                                         @click.stop="$store.installationModal.toggleType(type)" 
                                         class="hover:bg-black/15 active:bg-black/25 rounded-full p-0.5 text-current cursor-pointer transition inline-flex items-center justify-center"
-                                        title="{{ __('Quitar') }}">
+                                        title="{{ __('Remove') }}">
                                         <x-lucide-x class="w-3 h-3 stroke-[2.5]" />
                                     </button>
                                 </span>
@@ -1884,7 +1884,7 @@
                                 x-model="$store.installationModal.search"
                                 @keydown.enter.prevent.stop="$store.installationModal.addMatch()"
                                 @keydown.backspace="$store.installationModal.onBackspace($event)"
-                                placeholder="{{ __('Escribe para buscar o presiona Enter para añadir...') }}" 
+                                placeholder="{{ __('Type to search or press Enter to add...') }}" 
                                 class="flex-1 min-w-[160px] bg-transparent border-0 p-1 text-xs text-stone-800 placeholder-stone-400 focus:outline-none focus:ring-0 leading-tight"
                             >
                         </div>
@@ -1897,7 +1897,7 @@
                     <div>
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-semibold text-stone-600 tracking-wider">
-                                <span x-text="$store.installationModal && $store.installationModal.search ? '{{ __('Sugerencias coincidentes') }}' : '{{ __('Opciones disponibles') }}'"></span>
+                                <span x-text="$store.installationModal && $store.installationModal.search ? '{{ __('Matching suggestions') }}' : '{{ __('Available options') }}'"></span>
                             </span>
                             <template x-if="$store.installationModal && $store.installationModal.getFirstMatch() && $store.installationModal.search">
                                 <span class="text-xs text-ink-3 font-medium">
@@ -1944,7 +1944,7 @@
                             @click.stop="$store.installationModal.clearAll()"
                             class="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 font-semibold cursor-pointer">
                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                            <span>{{ __('Vaciar selección') }}</span>
+                            <span>{{ __('Clear selection') }}</span>
                         </button>
                     </div>
 
@@ -1954,7 +1954,7 @@
                             @click.stop="$store.installationModal.close()" 
                             class="px-4 py-2 text-xs font-semibold text-white bg-ink hover:bg-black rounded-xl shadow-xs transition cursor-pointer flex items-center gap-1.5">
                             <x-lucide-check class="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>{{ __('Guardar y Cerrar') }}</span>
+                            <span>{{ __('Save and close') }}</span>
                         </button>
                     </div>
                 </div>
@@ -2007,7 +2007,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="flex items-center gap-1.5">
-                                <h3 class="text-xs font-semibold text-stone-900 truncate">{{ __('Subestatus y Banderas') }}</h3>
+                                <h3 class="text-xs font-semibold text-stone-900 truncate">{{ __('Substatus and flags') }}</h3>
                                 <template x-if="$store.substatusModal && $store.substatusModal.substatus">
                                     <span 
                                         class="text-meta px-1.5 py-0.2 rounded-full font-semibold border truncate"
@@ -2017,9 +2017,9 @@
                                 </template>
                             </div>
                             <p class="text-meta text-stone-500 flex items-center gap-1 truncate">
-                                <span class="font-mono font-semibold text-stone-700" x-text="($store.substatusModal && $store.substatusModal.orderWo) || @js(__('Sin WO'))"></span>
+                                <span class="font-mono font-semibold text-stone-700" x-text="($store.substatusModal && $store.substatusModal.orderWo) || @js(__('No WO'))"></span>
                                 <span class="text-stone-300">•</span>
-                                <span class="truncate" x-text="($store.substatusModal && $store.substatusModal.orderCompany) || @js(__('Sin Cliente'))"></span>
+                                <span class="truncate" x-text="($store.substatusModal && $store.substatusModal.orderCompany) || @js(__('No Client'))"></span>
                             </p>
                         </div>
                     </div>
@@ -2030,15 +2030,15 @@
                             @click.stop="$store.substatusModal.close()" 
                             wire:navigate 
                             class="text-meta text-stone-400 hover:text-stone-700 flex items-center gap-1 py-1 px-1.5 rounded hover:bg-stone-100 transition cursor-pointer"
-                            title="{{ __('Administrar subestatus y colores') }}">
+                            title="{{ __('Manage substatuses and colors') }}">
                             <x-lucide-settings class="w-3.5 h-3.5" />
-                            <span class="hidden sm:inline">{{ __('Ajustes') }}</span>
+                            <span class="hidden sm:inline">{{ __('Settings') }}</span>
                         </a>
                         <button 
                             type="button" 
                             @click="$store.substatusModal.close()" 
                             class="text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 p-1 rounded-lg transition cursor-pointer"
-                            title="{{ __('Cerrar') }}">
+                            title="{{ __('Close') }}">
                             <x-lucide-x class="w-4 h-4" />
                         </button>
                     </div>
@@ -2054,7 +2054,7 @@
                             type="text" 
                             x-model="$store.substatusModal.search"
                             @keydown.enter.prevent.stop="$store.substatusModal.addMatch()"
-                            placeholder="{{ __('Buscar subestatus o bandera...') }}" 
+                            placeholder="{{ __('Search substatus or flag...') }}" 
                             class="w-full bg-stone-100/80 hover:bg-stone-100 focus:bg-white text-xs text-stone-800 placeholder-stone-400 rounded-lg pl-8 pr-7 py-1.5 border border-transparent focus:border-line-strong transition focus:outline-none"
                         >
                         <button 
@@ -2062,7 +2062,7 @@
                             @click.stop="$store.substatusModal.search = ''; document.getElementById('substatus-modal-search-input')?.focus()" 
                             type="button" 
                             class="absolute right-2 text-stone-400 hover:text-stone-600 p-0.5 rounded transition cursor-pointer"
-                            title="{{ __('Limpiar búsqueda') }}">
+                            title="{{ __('Clear search') }}">
                             <x-lucide-x class="w-3 h-3" />
                         </button>
                     </div>
@@ -2081,7 +2081,7 @@
                                     type="button" 
                                     @click.stop="$store.substatusModal.clearSubstatus()" 
                                     class="hover:bg-black/15 active:bg-black/25 rounded-full p-0.5 text-current cursor-pointer transition inline-flex items-center justify-center"
-                                    title="{{ __('Quitar subestatus') }}">
+                                    title="{{ __('Remove substatus') }}">
                                     <x-lucide-x class="w-2.5 h-2.5 stroke-[2.5]" />
                                 </button>
                             </span>
@@ -2098,7 +2098,7 @@
                                     type="button" 
                                     @click.stop="$store.substatusModal.toggleFlag(flag)" 
                                     class="hover:bg-black/15 active:bg-black/25 rounded-full p-0.5 text-current cursor-pointer transition inline-flex items-center justify-center"
-                                    title="{{ __('Quitar bandera') }}">
+                                    title="{{ __('Remove flag') }}">
                                     <x-lucide-x class="w-2.5 h-2.5 stroke-[2.5]" />
                                 </button>
                             </span>
@@ -2110,10 +2110,10 @@
                         <div class="flex items-center justify-between mb-1.5">
                             <span class="text-meta font-semibold text-stone-500 tracking-wider flex items-center gap-1">
                                 <x-lucide-flag class="w-3 h-3 text-ink-3" />
-                                <span>{{ __('Banderas / Flags Globales') }}</span>
+                                <span>{{ __('Global flags') }}</span>
                             </span>
                             <span class="text-meta text-stone-400">
-                                {{ __('Múltiple selección') }}
+                                {{ __('Multiple selection') }}
                             </span>
                         </div>
                         <div class="grid grid-cols-2 gap-1.5">
@@ -2151,7 +2151,7 @@
                         <div class="flex items-center justify-between mb-1.5">
                             <span class="text-meta font-semibold text-stone-500 tracking-wider flex items-center gap-1">
                                 <x-lucide-layers class="w-3 h-3 text-stone-400" />
-                                <span>{{ __('Clasificación de Proceso (1 Selección)') }}</span>
+                                <span>{{ __('Process classification (pick one)') }}</span>
                             </span>
                             <template x-if="$store.substatusModal && $store.substatusModal.getFirstMatch() && $store.substatusModal.getFirstMatch().type === 'substatus' && $store.substatusModal.search">
                                 <span class="text-meta text-ink-3 font-medium">
@@ -2172,7 +2172,7 @@
                                 <template x-if="!$store.substatusModal || !$store.substatusModal.substatus">
                                     <x-lucide-check class="w-3 h-3 stroke-[2.5]" />
                                 </template>
-                                <span class="italic">-- {{ __('Sin Subestatus') }} --</span>
+                                <span class="italic">-- {{ __('No Substatus') }} --</span>
                             </button>
                         </div>
 
@@ -2247,7 +2247,7 @@
                             @click.stop="$store.substatusModal.clearAll()"
                             class="text-meta text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded-md transition flex items-center gap-1 font-semibold cursor-pointer">
                             <x-lucide-trash-2 class="w-3 h-3" />
-                            <span>{{ __('Vaciar') }}</span>
+                            <span>{{ __('Empty') }}</span>
                         </button>
                     </div>
 
@@ -2257,7 +2257,7 @@
                             @click.stop="$store.substatusModal.close()" 
                             class="px-3.5 py-1.5 text-xs font-semibold text-white bg-ink hover:bg-black rounded-lg shadow-xs transition cursor-pointer flex items-center gap-1.5">
                             <x-lucide-check class="w-3.5 h-3.5 stroke-[2.5]" />
-                            <span>{{ __('Guardar y Cerrar') }}</span>
+                            <span>{{ __('Save and close') }}</span>
                         </button>
                     </div>
                 </div>

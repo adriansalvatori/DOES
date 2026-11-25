@@ -290,7 +290,7 @@
         },
         submitLinkNoteModal() {
             if (!this.linkNoteOrderId) {
-                alert(@js(__('Debes seleccionar una orden del workspace para vincular la nota.')));
+                alert(@js(__('Select a workspace order to link the note to.')));
                 return;
             }
             this.$wire.linkSubtaskToOrder(this.linkNoteTaskId, this.linkNoteOrderId);
@@ -354,7 +354,7 @@
         },
         submitSubtaskModal() {
             if (!this.subtaskTitle.trim()) {
-                alert(@js(__('Por favor ingresa el nombre de la subtarea o nota.')));
+                alert(@js(__('Enter a name for the subtask or note.')));
                 return;
             }
             this.$wire.scheduleSubtask(this.subtaskOrderId || null, this.subtaskTitle.trim(), this.subtaskDate, this.subtaskDesignerId, this.subtaskIsWorkTask);
@@ -364,7 +364,7 @@
         undoToastMessage: '',
         undoToastTimer: null,
         triggerUndoToast(msg) {
-            this.undoToastMessage = msg || @js(__('Subtarea eliminada'));
+            this.undoToastMessage = msg || @js(__('Subtask deleted'));
             this.undoToastOpen = true;
             if (this.undoToastTimer) clearTimeout(this.undoToastTimer);
             this.undoToastTimer = setTimeout(() => {
@@ -742,11 +742,11 @@
                             this.resetInline();
                             return;
                         }
-                        alert(@js(__('Por favor ingresa el nombre de la subtarea o nota.')));
+                        alert(@js(__('Enter a name for the subtask or note.')));
                         return;
                     }
                     if (!this.subtaskTitle.trim()) {
-                        alert(@js(__('Por favor ingresa el nombre de la subtarea.')));
+                        alert(@js(__('Please enter subtask title.')));
                         return;
                     }
                     this.$wire.scheduleSubtask(this.selectedOrderId, this.subtaskTitle.trim(), this.date, this.designerId, this.isWorkTask);
@@ -800,7 +800,7 @@
     $taskMenuDays = collect($weekDaysOnly)->map(fn ($d) => [
         'date' => $d['date_string'],
         'label' => ucfirst($d['date']->translatedFormat('l j M')),
-    ])->push(['date' => $nextWeekItem['date_string'], 'label' => __('Próxima Semana')])->values()->all();
+    ])->push(['date' => $nextWeekItem['date_string'], 'label' => __('Next Week')])->values()->all();
     $taskMenuCategories = collect(\App\Enums\SubtaskCategory::cases())->map(fn ($c) => ['value' => $c->value, 'label' => $c->label()])->all();
 @endphp
 <div 
@@ -854,7 +854,7 @@
         class="fixed z-[60] w-56 p-1 rounded-lg border border-line bg-surface shadow-menu text-body text-ink">
         <button type="button" @click="taskMenu.section = taskMenu.section === 'move' ? '' : 'move'" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-sunken cursor-pointer">
             <x-lucide-arrow-left-right class="w-4 h-4 text-ink-3" />
-            <span class="flex-1">{{ __('Mover a...') }}</span>
+            <span class="flex-1">{{ __('Move to...') }}</span>
             <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3 transition" ::class="taskMenu.section === 'move' ? 'rotate-180' : ''" />
         </button>
         <div x-show="taskMenu.section === 'move'" class="pl-6 pb-1">
@@ -867,7 +867,7 @@
             <div>
                 <button type="button" @click="taskMenu.section = taskMenu.section === 'category' ? '' : 'category'" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-sunken cursor-pointer">
                     <x-lucide-tag class="w-4 h-4 text-ink-3" />
-                    <span class="flex-1">{{ __('Al completar enviar a...') }}</span>
+                    <span class="flex-1">{{ __('On completion send to...') }}</span>
                     <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3 transition" ::class="taskMenu.section === 'category' ? 'rotate-180' : ''" />
                 </button>
                 <div x-show="taskMenu.section === 'category'" class="pl-6 pb-1">
@@ -881,16 +881,16 @@
 
                 <button type="button" @click="taskMenu.section = taskMenu.section === 'type' ? '' : 'type'" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-sunken cursor-pointer">
                     <x-lucide-wrench class="w-4 h-4 text-ink-3" />
-                    <span class="flex-1">{{ __('Tipo de Subtarea') }}</span>
+                    <span class="flex-1">{{ __('Subtask Type') }}</span>
                     <x-lucide-chevron-down class="w-3.5 h-3.5 text-ink-3 transition" ::class="taskMenu.section === 'type' ? 'rotate-180' : ''" />
                 </button>
                 <div x-show="taskMenu.section === 'type'" class="pl-6 pb-1">
                     <button type="button" @click="setTaskType(true)" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-sunken cursor-pointer">
-                        <span class="flex-1">{{ __('Trabajo') }}</span>
+                        <span class="flex-1">{{ __('Work') }}</span>
                         <x-lucide-check x-show="taskMenu.work !== '0'" class="w-3.5 h-3.5" />
                     </button>
                     <button type="button" @click="setTaskType(false)" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left hover:bg-sunken cursor-pointer">
-                        <span class="flex-1">{{ __('Gestión') }}</span>
+                        <span class="flex-1">{{ __('Admin') }}</span>
                         <x-lucide-check x-show="taskMenu.work === '0'" class="w-3.5 h-3.5" />
                     </button>
                 </div>
@@ -900,7 +900,7 @@
         <div class="my-1 h-px bg-line"></div>
         <button type="button" @click="removeTask()" class="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-danger hover:bg-sunken cursor-pointer">
             <x-lucide-trash-2 class="w-4 h-4" />
-            <span>{{ __('Eliminar subtarea') }}</span>
+            <span>{{ __('Delete subtask') }}</span>
         </button>
     </div>
 
@@ -928,29 +928,29 @@
                 $segmentOff = 'text-ink-2 hover:text-ink border border-transparent';
             @endphp
 
-            <x-ui.page-header :title="__('Planificación Semanal')">
+            <x-ui.page-header :title="__('Weekly Planner')">
                 <x-slot:actions>
                     @if(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
                         <button
                             wire:click="openAllSlaWarningsModal"
                             type="button"
                             class="cursor-pointer"
-                            title="{{ __('Ver tareas que superan SLA') }}">
+                            title="{{ __('View tasks past SLA') }}">
                             <x-ui.tag tone="warn" icon="triangle-alert">{{ trans_choice('{1} :count SLA alert|[2,*] :count SLA alerts', $slaBreachedList->count()) }}</x-ui.tag>
                         </button>
                     @endif
                 <div class="flex flex-wrap items-center gap-2 shrink-0">
                     <div class="flex items-center gap-1">
-                        <flux:button wire:click="previousWeek" size="sm" variant="ghost" icon="chevron-left" aria-label="{{ __('Semana anterior') }}" :tooltip="__('Semana anterior')" />
+                        <flux:button wire:click="previousWeek" size="sm" variant="ghost" icon="chevron-left" aria-label="{{ __('Previous week') }}" :tooltip="__('Previous week')" />
                         <span class="px-1 text-body font-medium text-ink tabular-nums select-none">{{ $startVal->format('d M') }} - {{ $endVal->format('d M') }}</span>
-                        <flux:button wire:click="nextWeek" size="sm" variant="ghost" icon="chevron-right" aria-label="{{ __('Semana siguiente') }}" :tooltip="__('Semana siguiente')" />
+                        <flux:button wire:click="nextWeek" size="sm" variant="ghost" icon="chevron-right" aria-label="{{ __('Next week') }}" :tooltip="__('Next week')" />
                     </div>
 
-                    <flux:button wire:click="thisWeek" size="sm" variant="{{ $isThisWeek ? 'filled' : 'outline' }}">{{ __('Esta semana') }}</flux:button>
+                    <flux:button wire:click="thisWeek" size="sm" variant="{{ $isThisWeek ? 'filled' : 'outline' }}">{{ __('This week') }}</flux:button>
 
                     <!-- Calendar popover (single picker) -->
                     <div class="relative" @click.outside="calendarOpen = false">
-                        <flux:button @click="calendarOpen = !calendarOpen" size="sm" variant="outline" icon="calendar" aria-label="{{ __('Calendario') }}">{{ __('Calendario') }}</flux:button>
+                        <flux:button @click="calendarOpen = !calendarOpen" size="sm" variant="outline" icon="calendar" aria-label="{{ __('Calendar') }}">{{ __('Calendar') }}</flux:button>
 
                         <div
                             x-show="calendarOpen"
@@ -958,13 +958,13 @@
                             class="absolute right-0 top-full mt-2 w-72 z-50 bg-surface border border-line rounded-card shadow-menu p-3 text-body space-y-2"
                             style="display: none;">
                             <div class="flex items-center justify-between pb-2 border-b border-line">
-                                <flux:button wire:click="previousMonth" size="xs" variant="ghost" icon="chevron-left" aria-label="{{ __('Mes anterior') }}" />
+                                <flux:button wire:click="previousMonth" size="xs" variant="ghost" icon="chevron-left" aria-label="{{ __('Previous month') }}" />
                                 <span class="font-medium text-ink capitalize">{{ Carbon\Carbon::parse($viewMonth . '-01')->translatedFormat('F Y') }}</span>
-                                <flux:button wire:click="nextMonth" size="xs" variant="ghost" icon="chevron-right" aria-label="{{ __('Mes siguiente') }}" />
+                                <flux:button wire:click="nextMonth" size="xs" variant="ghost" icon="chevron-right" aria-label="{{ __('Next month') }}" />
                             </div>
 
                             <div class="grid grid-cols-7 text-center text-meta text-ink-3">
-                                <span>{{ __('Lun') }}</span><span>{{ __('Mar') }}</span><span>{{ __('Mié') }}</span><span>{{ __('Jue') }}</span><span>{{ __('Vie') }}</span><span>{{ __('Sáb') }}</span><span>{{ __('Dom') }}</span>
+                                <span>{{ __('Mon') }}</span><span>{{ __('Tue') }}</span><span>{{ __('Wed') }}</span><span>{{ __('Thu') }}</span><span>{{ __('Fri') }}</span><span>{{ __('Sat') }}</span><span>{{ __('Sun') }}</span>
                             </div>
 
                             <div class="grid grid-cols-7 gap-1 text-center">
@@ -987,22 +987,22 @@
                 </x-slot:actions>
 
                 <x-slot:toolbar>
-                <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{{ __('Vista') }}">
-                    <button type="button" wire:click="changeViewMode('by_day')" aria-pressed="{{ $viewMode === 'by_day' ? 'true' : 'false' }}" class="ui-chip">{{ __('Por Días') }}</button>
-                    <button type="button" wire:click="changeViewMode('by_designer')" aria-pressed="{{ $viewMode === 'by_designer' ? 'true' : 'false' }}" class="ui-chip">{{ __('Por Diseñador') }}</button>
+                <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{{ __('View') }}">
+                    <button type="button" wire:click="changeViewMode('by_day')" aria-pressed="{{ $viewMode === 'by_day' ? 'true' : 'false' }}" class="ui-chip">{{ __('By Days') }}</button>
+                    <button type="button" wire:click="changeViewMode('by_designer')" aria-pressed="{{ $viewMode === 'by_designer' ? 'true' : 'false' }}" class="ui-chip">{{ __('By Designer') }}</button>
                 </div>
 
                 <span class="h-4 w-px bg-line" aria-hidden="true"></span>
 
-                <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{{ __('Orden:') }}">
-                    <button type="button" wire:click="changePlannerSortBy('custom')" aria-pressed="{{ $plannerSortBy === 'custom' ? 'true' : 'false' }}" class="ui-chip" title="{{ __('Manual / Arrastrar') }}">{{ __('Manual') }}</button>
-                    <button type="button" wire:click="changePlannerSortBy('priority')" aria-pressed="{{ $plannerSortBy === 'priority' ? 'true' : 'false' }}" class="ui-chip" title="{{ __('Ordenar por Prioridad') }}">{{ __('Prioridad') }}</button>
+                <div class="flex flex-wrap items-center gap-2" role="group" aria-label="{{ __('Order:') }}">
+                    <button type="button" wire:click="changePlannerSortBy('custom')" aria-pressed="{{ $plannerSortBy === 'custom' ? 'true' : 'false' }}" class="ui-chip" title="{{ __('Manual / drag') }}">{{ __('Manual sort') }}</button>
+                    <button type="button" wire:click="changePlannerSortBy('priority')" aria-pressed="{{ $plannerSortBy === 'priority' ? 'true' : 'false' }}" class="ui-chip" title="{{ __('Sort by priority') }}">{{ __('Priority') }}</button>
                 </div>
 
                 <span class="h-4 w-px bg-line" aria-hidden="true"></span>
 
-                <div class="flex flex-wrap items-center gap-2 min-w-0" role="group" aria-label="{{ __('Diseñador') }}">
-                    <button type="button" wire:click="changeDesignerFilter('all')" aria-pressed="{{ $selectedDesignerFilter === 'all' ? 'true' : 'false' }}" class="ui-chip">{{ __('Todos los diseñadores') }}</button>
+                <div class="flex flex-wrap items-center gap-2 min-w-0" role="group" aria-label="{{ __('Designer') }}">
+                    <button type="button" wire:click="changeDesignerFilter('all')" aria-pressed="{{ $selectedDesignerFilter === 'all' ? 'true' : 'false' }}" class="ui-chip">{{ __('All Designers') }}</button>
                     @foreach($allDesigners as $des)
                         <button type="button" wire:key="planner-designer-tab-{{ $des->id }}" wire:click="changeDesignerFilter('{{ $des->id }}')" aria-pressed="{{ $selectedDesignerFilter == $des->id ? 'true' : 'false' }}" class="ui-chip">
                             <span class="w-2 h-2 rounded-full shrink-0" style="background-color: {{ $des->hex_color ?? '#a8a29e' }}"></span>
@@ -1021,7 +1021,7 @@
                                 type="text" 
                                 wire:model.live.debounce.150ms="unscheduledSearch"
                                 @focus="open = true"
-                                placeholder="{{ __('Buscar en Workspace...') }}" 
+                                placeholder="{{ __('Search workspace...') }}" 
                                 class="ui-input pl-8 pr-7" />
                             @if($unscheduledSearch)
                                 <button 
@@ -1047,9 +1047,9 @@
                                 <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-semibold text-meta  text-zinc-500 flex items-center justify-between">
                                     <span class="flex items-center gap-1.5">
                                         <x-lucide-search class="w-3.5 h-3.5 text-zinc-500" />
-                                        {{ __('Órdenes en Workspace') }} ({{ $workspaceSearchResults->count() }})
+                                        {{ __('Orders in workspace') }} ({{ $workspaceSearchResults->count() }})
                                     </span>
-                                    <span class="text-meta font-normal text-zinc-400">{{ __('Workspace Activo') }}</span>
+                                    <span class="text-meta font-normal text-zinc-400">{{ __('Active workspace') }}</span>
                                 </div>
 
                                 <div class="max-h-72 overflow-y-auto custom-vertical-scrollbar divide-y divide-stone-100">
@@ -1080,7 +1080,7 @@
                                         </div>
                                     @empty
                                         <div class="p-4 text-center text-zinc-400 italic text-meta">
-                                            {{ __('No se encontraron órdenes activas para ":query".', ['query' => $unscheduledSearch]) }}
+                                            {{ __('No active orders match ":query".', ['query' => $unscheduledSearch]) }}
                                         </div>
                                     @endforelse
                                 </div>
@@ -1096,7 +1096,7 @@
                                 type="text" 
                                 wire:model.live.debounce.150ms="backlogSearch"
                                 @focus="open = true"
-                                placeholder="{{ __('Buscar en Backlog...') }}" 
+                                placeholder="{{ __('Search backlog...') }}" 
                                 class="ui-input pl-8 pr-7" />
                             @if($backlogSearch)
                                 <button 
@@ -1122,9 +1122,9 @@
                                 <div class="px-3 py-2 bg-stone-50 border-b border-stone-100 font-semibold text-meta  text-zinc-500 flex items-center justify-between">
                                     <span class="flex items-center gap-1.5">
                                         <x-lucide-archive class="w-3.5 h-3.5 text-zinc-500" />
-                                        {{ __('Órdenes en Backlog') }} ({{ $backlogOrders->count() }})
+                                        {{ __('Orders in backlog') }} ({{ $backlogOrders->count() }})
                                     </span>
-                                    <span class="text-meta font-normal text-zinc-400">{{ __('Sin agendar') }}</span>
+                                    <span class="text-meta font-normal text-zinc-400">{{ __('Unscheduled') }}</span>
                                 </div>
 
                                 <div class="max-h-72 overflow-y-auto custom-vertical-scrollbar divide-y divide-stone-100">
@@ -1155,7 +1155,7 @@
                                         </div>
                                     @empty
                                         <div class="p-4 text-center text-zinc-400 italic text-meta">
-                                            {{ __('No se encontraron órdenes en backlog para ":query".', ['query' => $backlogSearch]) }}
+                                            {{ __('No backlog orders match ":query".', ['query' => $backlogSearch]) }}
                                         </div>
                                     @endforelse
                                 </div>
@@ -1274,7 +1274,7 @@
                                                 type="button"
                                                 @click.stop="$dispatch('open-subtask-modal', { dateStr: '{{ $day['date_string'] }}', designerId: '{{ $designer->id }}' })" 
                                                 class="p-0.5 rounded hover:bg-stone-200/80 text-zinc-500 hover:text-zinc-900 transition cursor-pointer"
-                                                title="{{ __('Agregar subtarea a') }} {{ $day['day_name'] }}">
+                                                title="{{ __('Add subtask to') }} {{ $day['day_name'] }}">
                                                 <x-lucide-plus class="w-3.5 h-3.5" />
                                             </button>
                                         </div>
@@ -1284,7 +1284,7 @@
                                     <div class="p-2 overflow-y-auto flex-1 space-y-2 min-h-0">
                                         @if($daySubtasks->isEmpty())
                                             <div class="py-6 text-center border border-dashed border-stone-200/80 rounded-lg my-1 bg-stone-50/40">
-                                                <span class="text-meta text-zinc-400 font-normal select-none">{{ __('Sin trabajo agendado') }}</span>
+                                                <span class="text-meta text-zinc-400 font-normal select-none">{{ __('No work scheduled') }}</span>
                                             </div>
                                         @else
                                             <div class="space-y-2">
@@ -1336,7 +1336,7 @@
                                                 @click.stop="$dispatch('open-subtask-modal', { dateStr: '{{ $day['date_string'] }}', designerId: '{{ $designer->id }}' })"
                                                 class="w-full py-1 px-1.5 rounded-lg border border-dashed border-stone-200 hover:border-stone-300 hover:bg-stone-100/80 text-zinc-400 hover:text-zinc-700 text-meta font-medium transition flex items-center justify-center gap-1 cursor-pointer select-none">
                                                 <x-lucide-plus class="w-3 h-3" />
-                                                <span>{{ __('Agregar subtarea') }}</span>
+                                                <span>{{ __('Add subtask') }}</span>
                                             </button>
                                         </div>
                                     </div>
@@ -1391,7 +1391,7 @@
                                 <h3 class="font-semibold text-base text-zinc-900 truncate" title="{{ $designer->name }}">{{ $designer->name }}</h3>
                             </div>
                             <div class="flex items-center gap-1.5 shrink-0">
-                                <span class="px-2 py-0.5 rounded-full bg-stone-100 text-zinc-600 font-mono text-meta font-semibold" title="{{ __('Subtareas semanales') }}">
+                                <span class="px-2 py-0.5 rounded-full bg-stone-100 text-zinc-600 font-mono text-meta font-semibold" title="{{ __('Weekly subtasks') }}">
                                     @if(!$showSystemTasks && $designerVisibleCount !== $designerTotalCount)
                                         {{ $designerVisibleCount }} ({{ $designerTotalCount }})
                                     @else
@@ -1402,7 +1402,7 @@
                                     type="button"
                                     @click.stop="$dispatch('open-subtask-modal', { designerId: '{{ $designer->id }}' })" 
                                     class="p-1 rounded hover:bg-stone-100 text-zinc-500 hover:text-zinc-900 transition cursor-pointer"
-                                    title="{{ __('Agregar subtarea a') }} {{ $designer->name }}">
+                                    title="{{ __('Add subtask to') }} {{ $designer->name }}">
                                     <x-lucide-plus class="w-4 h-4" />
                                 </button>
                             </div>
@@ -1479,7 +1479,7 @@
                                                     {{ $day['day_name'] }}
                                                 </span>
                                                 @if($isToday)
-                                                    <x-ui.tag tone="neutral">{{ __('Hoy') }}</x-ui.tag>
+                                                    <x-ui.tag tone="neutral">{{ __('Today') }}</x-ui.tag>
                                                 @endif
                                                 @if($isSingleDesignerFiltered && $daySubtasks->isNotEmpty())
                                                     @php
@@ -1489,7 +1489,7 @@
                                                         @if($dayPendingCount === 0)
                                                             <span class="flex items-center gap-0.5">
                                                                 <x-lucide-check class="w-3 h-3 text-ok inline" />
-                                                                <span>{{ __('al día') }}</span>
+                                                                <span>{{ __('all done') }}</span>
                                                             </span>
                                                         @else
                                                             {{ $dayPendingCount }} {{ __('pend.') }}
@@ -1549,7 +1549,7 @@
                                         @if($daySubtasks->isEmpty())
                                             <div x-show="!inlineActive" @click="openInline()" class="py-1 px-1 text-left cursor-pointer hover:bg-stone-100/60 rounded transition flex items-center gap-2">
                                                 <div class="w-3.5 h-3.5 rounded-full border border-dashed border-stone-300 shrink-0"></div>
-                                                <p class="text-meta text-zinc-400 select-none">+ {{ __('Escribir subtarea') }}</p>
+                                                <p class="text-meta text-zinc-400 select-none">+ {{ __('Write a subtask') }}</p>
                                             </div>
                                         @endif
 
@@ -1557,7 +1557,7 @@
                                         @if($daySubtasks->isNotEmpty())
                                             <div x-show="!inlineActive" class="pt-0.5 px-1">
                                                 <button type="button" @click="openInline()" class="text-meta text-zinc-400 hover:text-ink-2 font-medium transition cursor-pointer select-none">
-                                                    + {{ __('Escribir subtarea...') }}
+                                                    + {{ __('Write a subtask...') }}
                                                 </button>
                                             </div>
                                         @endif
@@ -1688,7 +1688,7 @@
                                         {{ now()->translatedFormat('l, d \d\e F') }}
                                     </span>
                                     <h3 class="text-base font-semibold text-zinc-900 mt-0.5 flex items-center gap-2">
-                                        <span>{{ __('Progreso de hoy') }}</span>
+                                        <span>{{ __('Today\'s progress') }}</span>
                                         <span class="w-2.5 h-2.5 rounded-full shrink-0 {{ $singleDesigner->dot_color_class }}" style="{{ $singleDesigner->dot_inline_style }}" title="{{ $singleDesigner->name }}"></span>
                                     </h3>
                                 </div>
@@ -1696,11 +1696,11 @@
                                 <!-- Quick Status Pill -->
                                 <div class="shrink-0">
                                     @if($todayTotal === 0)
-                                        <x-ui.tag>{{ __('Sin tareas') }}</x-ui.tag>
+                                        <x-ui.tag>{{ __('No tasks') }}</x-ui.tag>
                                     @elseif($todayPending === 0)
-                                        <x-ui.tag tone="ok" icon="circle-check">{{ __('¡Al día!') }}</x-ui.tag>
+                                        <x-ui.tag tone="ok" icon="circle-check">{{ __('All caught up') }}</x-ui.tag>
                                     @else
-                                        <x-ui.tag>{{ $todayPending }} {{ __('pendientes') }}</x-ui.tag>
+                                        <x-ui.tag>{{ $todayPending }} {{ __('pending') }}</x-ui.tag>
                                     @endif
                                 </div>
                             </div>
@@ -1713,11 +1713,11 @@
                                             {{ $todayPercentage }}%
                                         </span>
                                         <span class="text-xs font-medium text-stone-500">
-                                            {{ __('completado') }}
+                                            {{ __('done') }}
                                         </span>
                                     </div>
                                     <div class="text-xs font-medium text-stone-600">
-                                        <span class="font-semibold text-zinc-900">{{ $todayCompleted }}</span> / {{ $todayTotal }} {{ __('completadas') }}
+                                        <span class="font-semibold text-zinc-900">{{ $todayCompleted }}</span> / {{ $todayTotal }} {{ __('completed') }}
                                     </div>
                                 </div>
 
@@ -1730,11 +1730,11 @@
                             <!-- Simple Inline Stats (sin cajas visibles, mucho más pequeñas) -->
                             <div class="flex items-center justify-between text-meta text-stone-500 pt-2 border-t border-stone-100">
                                 <div class="flex items-center gap-1">
-                                    <span class="text-ink-3 font-medium">{{ __('Completadas:') }}</span>
+                                    <span class="text-ink-3 font-medium">{{ __('Completed:') }}</span>
                                     <span class="font-semibold tabular-nums text-ink">{{ $todayCompleted }}</span>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <span class="text-ink-3 font-medium">{{ __('Pendientes:') }}</span>
+                                    <span class="text-ink-3 font-medium">{{ __('Pending:') }}</span>
                                     <span class="font-semibold tabular-nums text-ink">{{ $todayPending }}</span>
                                 </div>
                             </div>
@@ -1746,15 +1746,15 @@
                             <div class="flex items-center justify-between gap-3 border-b border-stone-100 pb-3">
                                 <div class="flex items-center gap-2 min-w-0">
                                                                         <h3 class="text-xs font-semibold text-zinc-900  truncate">
-                                        {{ __('Poner en ALTA') }}
+                                        {{ __('Set to ALTA') }}
                                     </h3>
                                 </div>
                                 @if($altaTotalCount > 0)
                                     <div class="shrink-0 flex items-center gap-1.5">
                                         @if($altaPendingCount === 0)
-                                            <x-ui.tag tone="ok" icon="circle-check">{{ __('Al día') }}</x-ui.tag>
+                                            <x-ui.tag tone="ok" icon="circle-check">{{ __('All caught up') }}</x-ui.tag>
                                         @else
-                                            <x-ui.tag>{{ $altaPendingCount }} {{ __('pendientes') }}</x-ui.tag>
+                                            <x-ui.tag>{{ $altaPendingCount }} {{ __('pending') }}</x-ui.tag>
                                         @endif
                                     </div>
                                 @endif
@@ -1777,7 +1777,7 @@
                                                 type="button"
                                                 @click.stop="$wire.toggleSubtaskComplete({{ $stask->id }})" 
                                                 class="w-3.5 h-3.5 mt-0.5 rounded border transition flex items-center justify-center shrink-0 cursor-pointer {{ $stDone ? 'bg-ok border-ok text-white' : 'border-stone-300 hover:border-ink bg-white text-transparent hover:text-ok/40' }}"
-                                                title="{{ $stDone ? __('Marcar como pendiente') : __('Marcar como completada') }}">
+                                                title="{{ $stDone ? __('Mark as pending') : __('Mark as completed') }}">
                                                 <x-lucide-check class="w-2.5 h-2.5 stroke-[3]" />
                                             </button>
 
@@ -1788,7 +1788,7 @@
                                                     <span class="text-body font-medium truncate {{ $stDone ? 'ui-done' : 'text-ink' }}" title="{{ $stask->order->company_name }}">{{ $stask->order->company_name }}</span>
                                                     <x-orders.location :location="$stask->order->location_text" class="shrink-0 max-w-[45%]" />
                                                     @if($stask->isUrgent() && ! $stDone)
-                                                        <x-ui.tag tone="danger" icon="zap">{{ __('Urgente') }}</x-ui.tag>
+                                                        <x-ui.tag tone="danger" icon="zap">{{ __('Urgent') }}</x-ui.tag>
                                                     @endif
                                                 </div>
                                                 <p class="text-meta truncate mt-0.5 {{ $stDone ? 'ui-done' : 'text-ink-2' }}" title="{{ $stask->order->task_name }}">{{ $stask->order->task_name }}</p>
@@ -1807,7 +1807,7 @@
                                 <div class="py-5 text-center">
                                     <x-lucide-check-circle-2 class="w-4 h-4 text-stone-300 mx-auto mb-1" />
                                     <p class="text-meta text-stone-400 font-medium">
-                                        {{ __('Sin órdenes para ALTA esta semana') }}
+                                        {{ __('No orders for ALTA this week') }}
                                     </p>
                                 </div>
                             @endif
@@ -1833,10 +1833,10 @@
                         </div>
                         <div>
                             <h3 class="text-base font-semibold text-zinc-900">
-                                {{ __('Verificación de Subtarea') }}
+                                {{ __('Subtask check') }}
                             </h3>
                             <p class="text-xs text-zinc-500 mt-0.5">
-                                {{ __('Nueva tarea: ":title"', ['title' => $pendingSubtaskData['title'] ?? '']) }}
+                                {{ __('New task: ":title"', ['title' => $pendingSubtaskData['title'] ?? '']) }}
                             </p>
                         </div>
                     </div>
@@ -1851,29 +1851,29 @@
                             <div class="flex items-start gap-2">
                                 <x-lucide-ban class="w-4 h-4 text-warn shrink-0 mt-0.5" />
                                 <div>
-                                    <span class="font-semibold text-warn block">{{ __('Orden Bloqueada') }}</span>
+                                    <span class="font-semibold text-warn block">{{ __('Blocked order') }}</span>
                                     <p class="text-warn text-xs mt-0.5">
-                                        {{ __('Actualmente bloqueada por:') }} <span class="font-semibold">{{ $pendingSubtaskData['blockingReason'] ?? __('Faltan Medidas') }}</span>.
+                                        {{ __('Currently blocked by:') }} <span class="font-semibold">{{ $pendingSubtaskData['blockingReason'] ?? __('Missing Measurements') }}</span>.
                                     </p>
                                 </div>
                             </div>
                             <div class="space-y-2 pt-1 border-t border-line">
                                 <label class="font-semibold text-warn block text-xs">
-                                    {{ __('¿Esta subtarea resuelve el motivo de bloqueo?') }}
+                                    {{ __('Does this subtask resolve the block?') }}
                                 </label>
                                 <div class="grid grid-cols-1 gap-2">
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskBlockResolution === 'unblock' ? 'bg-surface border-ink font-medium text-zinc-900' : 'bg-warn-soft border-line text-zinc-700 hover:bg-white' }}">
                                         <input type="radio" wire:model.live="subtaskBlockResolution" value="unblock" class="mt-0.5 accent-ink">
                                         <div>
-                                            <span class="block font-semibold">{{ __('Sí, datos/medidas confirmados (Desbloquear orden)') }}</span>
-                                            <span class="block text-meta text-zinc-500">{{ __('Marca las medidas como confirmadas y desbloquea la orden para avanzar.') }}</span>
+                                            <span class="block font-semibold">{{ __('Yes, details confirmed (unblock the order)') }}</span>
+                                            <span class="block text-meta text-zinc-500">{{ __('Marks the details as confirmed and unblocks the order.') }}</span>
                                         </div>
                                     </label>
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskBlockResolution === 'keep_blocked' ? 'bg-surface border-ink font-medium text-zinc-900' : 'bg-warn-soft border-line text-zinc-700 hover:bg-white' }}">
                                         <input type="radio" wire:model.live="subtaskBlockResolution" value="keep_blocked" class="mt-0.5 accent-ink">
                                         <div>
-                                            <span class="block font-semibold">{{ __('No, es solo seguimiento (Mantener bloqueada)') }}</span>
-                                            <span class="block text-meta text-zinc-500">{{ __('Crea la tarea de consulta/llamada sin alterar el estado de bloqueo.') }}</span>
+                                            <span class="block font-semibold">{{ __('No, just a follow-up (keep it blocked)') }}</span>
+                                            <span class="block text-meta text-zinc-500">{{ __('Creates the follow-up task without changing the block.') }}</span>
                                         </div>
                                     </label>
                                 </div>
@@ -1886,29 +1886,29 @@
                             <div class="flex items-start gap-2">
                                 <x-lucide-check-circle-2 class="w-4 h-4 text-warn shrink-0 mt-0.5" />
                                 <div>
-                                    <span class="font-semibold text-warn block">{{ __('Orden ya Aprobada') }}</span>
+                                    <span class="font-semibold text-warn block">{{ __('Order already approved') }}</span>
                                     <p class="text-warn text-xs mt-0.5">
-                                        {{ __('Aprobada por') }} <span class="font-semibold">{{ $pendingSubtaskData['approvalType'] ?? __('Cliente') }}</span> ({{ $pendingSubtaskData['approvedAt'] ?? '' }}).
+                                        {{ __('Approved by') }} <span class="font-semibold">{{ $pendingSubtaskData['approvalType'] ?? __('Client') }}</span> ({{ $pendingSubtaskData['approvedAt'] ?? '' }}).
                                     </p>
                                 </div>
                             </div>
                             <div class="space-y-2 pt-1 border-t border-line">
                                 <label class="font-semibold text-warn block text-xs">
-                                    {{ __('¿Esta subtarea altera el arte o requiere re-aprobación?') }}
+                                    {{ __('Does this subtask change the artwork or need re-approval?') }}
                                 </label>
                                 <div class="grid grid-cols-1 gap-2">
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskApprovalImpact === 'invalidate' ? 'bg-surface border-ink font-medium text-zinc-900' : 'bg-warn-soft border-line text-zinc-700 hover:bg-white' }}">
                                         <input type="radio" wire:model.live="subtaskApprovalImpact" value="invalidate" class="mt-0.5 accent-ink">
                                         <div>
-                                            <span class="block font-semibold text-danger">{{ __('Anular aprobación previa (Requiere nuevo visto bueno)') }}</span>
-                                            <span class="block text-meta text-zinc-500">{{ __('El diseño cambió. Se anula la aprobación para prevenir que se envíe a producción por error.') }}</span>
+                                            <span class="block font-semibold text-danger">{{ __('Cancel the previous approval (needs new sign-off)') }}</span>
+                                            <span class="block text-meta text-zinc-500">{{ __('The design changed. The approval is cancelled so it isn\'t sent to production by mistake.') }}</span>
                                         </div>
                                     </label>
                                     <label class="flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition {{ $subtaskApprovalImpact === 'keep' ? 'bg-surface border-ink font-medium text-zinc-900' : 'bg-warn-soft border-line text-zinc-700 hover:bg-white' }}">
                                         <input type="radio" wire:model.live="subtaskApprovalImpact" value="keep" class="mt-0.5 accent-ink">
                                         <div>
-                                            <span class="block font-semibold text-ok">{{ __('Conservar aprobación (Solo ajuste técnico/interno)') }}</span>
-                                            <span class="block text-meta text-zinc-500">{{ __('El arte aprobado no cambia visualmente; no requiere aprobación adicional del cliente.') }}</span>
+                                            <span class="block font-semibold text-ok">{{ __('Keep the approval (technical or internal tweak only)') }}</span>
+                                            <span class="block text-meta text-zinc-500">{{ __('The approved artwork doesn\'t change visually, so no extra client approval is needed.') }}</span>
                                         </div>
                                     </label>
                                 </div>
@@ -1922,13 +1922,13 @@
                         type="button" 
                         wire:click="cancelSubtaskWarning" 
                         class="px-4 py-2 rounded-xl border border-stone-300 text-zinc-700 hover:bg-stone-50 text-xs font-semibold transition cursor-pointer">
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         type="button" 
                         wire:click="confirmSubtaskWarning" 
                         class="px-5 py-2 rounded-control bg-ink hover:bg-black text-white text-xs font-semibold transition cursor-pointer">
-                        {{ __('Confirmar y Crear Subtarea') }}
+                        {{ __('Confirm and create subtask') }}
                     </button>
                 </div>
             </div>
@@ -1959,9 +1959,9 @@
                             <x-lucide-alert-triangle class="w-5 h-5 stroke-[2.5]" />
                         </div>
                         <div class="min-w-0">
-                            <h3 class="font-semibold text-sm text-danger leading-snug">{{ __('Alertas de SLA / Exceso de Plazo') }}</h3>
+                            <h3 class="font-semibold text-sm text-danger leading-snug">{{ __('SLA alerts') }}</h3>
                             <p class="text-xs text-danger truncate">
-                                {{ __('Tareas o subtareas programadas fuera del plazo límite oficial') }}
+                                {{ __('Tasks scheduled past their official deadline') }}
                             </p>
                         </div>
                     </div>
@@ -1981,7 +1981,7 @@
                                 role="button"
                                 tabindex="0"
                                 @keydown.enter.stop="$dispatch('open-order-detail', { orderId: {{ $slaWarningDetails['order_id'] }} })"
-                                title="{{ __('Abrir orden :company para gestionar SLA', ['company' => $slaWarningDetails['company_name'] ?? '']) }}"
+                                title="{{ __('Open :company to manage its SLA', ['company' => $slaWarningDetails['company_name'] ?? '']) }}"
                                 class="p-3 bg-sunken border border-line rounded-lg space-y-1 hover:bg-sunken hover:border-line transition cursor-pointer group select-none"
                             @else
                                 class="p-3 bg-sunken border border-line rounded-lg space-y-1"
@@ -2001,16 +2001,16 @@
                         </div>
 
                         <p class="leading-relaxed">
-                            {!! __('La subtarea fue programada para el :date, lo cual supera la fecha límite del SLA (:due) por :days.', [
+                            {!! __('The subtask was scheduled for :date, which is past the SLA deadline (:due) by :days.', [
                                 'date' => '<strong class="text-ink font-semibold">'.e($slaWarningDetails['scheduled_date'] ?? '').'</strong>',
                                 'due' => '<strong class="text-danger font-semibold">'.e($slaWarningDetails['current_due_date'] ?? '').'</strong>',
-                                'days' => '<strong class="text-danger font-semibold">'.trans_choice('{1} :count día|[2,*] :count días', (int) ($slaWarningDetails['days_overdue'] ?? 0)).'</strong>',
+                                'days' => '<strong class="text-danger font-semibold">'.trans_choice('{1} :count day|[2,*] :count days', (int) ($slaWarningDetails['days_overdue'] ?? 0)).'</strong>',
                             ]) !!}
                         </p>
                     @elseif(isset($slaBreachedList) && $slaBreachedList->isNotEmpty())
                         <div class="space-y-2">
                             <p class="font-medium text-zinc-600 flex items-center justify-between">
-                                <span>{{ __('Las siguientes :count tareas en la agenda semanal superan su fecha límite de SLA:', ['count' => $slaBreachedList->count()]) }}</span>
+                                <span>{{ __('These :count tasks in the weekly plan are past their SLA deadline:', ['count' => $slaBreachedList->count()]) }}</span>
                             </p>
                             <div class="divide-y divide-stone-100 border border-stone-200 rounded-lg overflow-hidden">
                                 @foreach($slaBreachedList as $item)
@@ -2021,13 +2021,13 @@
                                             role="button"
                                             tabindex="0"
                                             @keydown.enter.stop="$dispatch('open-order-detail', { orderId: {{ $item['order_id'] }} })"
-                                            title="{{ __('Abrir orden :company para gestionar SLA', ['company' => $item['company_name']]) }}"
+                                            title="{{ __('Open :company to manage its SLA', ['company' => $item['company_name']]) }}"
                                         @endif
                                         class="p-3 bg-danger-soft hover:bg-danger-soft transition-colors flex items-center justify-between gap-3 cursor-pointer group select-none">
                                         <div class="min-w-0 flex-1">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="px-1.5 py-0.2 rounded text-meta font-semibold  {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? 'bg-ink text-white border border-line' : 'bg-sunken text-ink-2 border border-line') : 'bg-stone-200 text-zinc-800 border border-stone-300' }}">
-                                                    {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? __('Sistema') : __('Subtarea')) : __('Orden') }}
+                                                    {{ $item['type'] === 'subtask' ? ((isset($item['is_work_task']) && !$item['is_work_task']) ? __('System') : __('Subtask')) : __('Order') }}
                                                 </span>
                                                 <h4 class="font-semibold text-xs text-zinc-900 truncate  group-hover:text-danger transition-colors">{{ $item['company_name'] }}</h4>
                                             </div>
@@ -2036,7 +2036,7 @@
                                         <div class="flex items-center gap-2.5 shrink-0">
                                             <div class="text-right">
                                                 <span class="text-danger font-semibold text-xs block">
-                                                    +{{ $item['days_overdue'] }}d {{ __('Atraso') }}
+                                                    +{{ $item['days_overdue'] }}d {{ __('Late') }}
                                                 </span>
                                                 <span class="text-meta text-zinc-400 block mt-0.5">
                                                     SLA: {{ $item['current_due_date'] }}
@@ -2052,13 +2052,13 @@
                         </div>
                     @else
                         <div class="p-4 text-center text-zinc-400 italic">
-                            {{ __('No hay alertas de SLA activas en esta semana.') }}
+                            {{ __('No active SLA alerts this week.') }}
                         </div>
                     @endif
 
                     <div class="p-2.5 bg-stone-50 border border-stone-200 rounded-lg text-meta text-zinc-500 flex items-start gap-2">
                         <x-lucide-info class="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
-                        <span>{{ __('Haz clic en cualquier tarea para abrir su orden en el panel lateral y gestionar su SLA sin cerrar esta lista.') }}</span>
+                        <span>{{ __('Click a task to open its order in the side panel without closing this list.') }}</span>
                     </div>
                 </div>
 
@@ -2068,7 +2068,7 @@
                         wire:click="closeSlaWarningModal"
                         class="px-4 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-semibold text-xs transition cursor-pointer flex items-center gap-1.5">
                         <x-lucide-check class="w-3.5 h-3.5" />
-                        <span>{{ __('Entendido') }}</span>
+                        <span>{{ __('Got it') }}</span>
                     </button>
                 </div>
 

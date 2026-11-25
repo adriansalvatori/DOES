@@ -1,6 +1,6 @@
 {{--
     Empty state: an icon, one line, an optional hint and an optional single action in the slot.
-    Usage: <x-ui.empty icon="inbox" :title="__('No hay órdenes atrasadas')" />
+    Usage: <x-ui.empty icon="inbox" :title="__('No overdue orders')" />
 --}}
 @props([
     'icon' => 'inbox',

@@ -76,7 +76,7 @@
                         <p class="text-body text-ink-3 mt-0.5">{{ $description }}</p>
                     @endif
                 </div>
-                <button type="button" wire:click="{{ $cancel }}" aria-label="{{ __('Cerrar') }}"
+                <button type="button" wire:click="{{ $cancel }}" aria-label="{{ __('Close') }}"
                         class="p-1 rounded-control text-ink-3 hover:text-ink hover:bg-sunken transition shrink-0">
                     <x-lucide-x class="w-4 h-4" />
                 </button>
@@ -132,11 +132,11 @@
             <div class="flex items-center justify-end gap-2 pt-1">
                 <button type="button" wire:click="{{ $cancel }}"
                         class="px-3 h-8 rounded-control border border-line bg-surface text-ink-2 text-body font-medium hover:bg-sunken transition">
-                    {{ $cancelLabel ?? __('Cancelar') }}
+                    {{ $cancelLabel ?? __('Cancel') }}
                 </button>
                 <button type="button" wire:click="{{ $confirm }}" wire:loading.attr="disabled" wire:target="{{ $confirm }}"
                         class="px-3.5 h-8 rounded-control text-body font-medium transition disabled:opacity-50 {{ $confirmClasses }}">
-                    {{ $confirmLabel ?? __('Confirmar') }}
+                    {{ $confirmLabel ?? __('Confirm') }}
                 </button>
             </div>
         </div>

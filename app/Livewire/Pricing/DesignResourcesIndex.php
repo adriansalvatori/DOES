@@ -121,7 +121,7 @@ class DesignResourcesIndex extends Component
         ]);
 
         $this->editModalOpen = false;
-        $this->feedbackMessage = __('Recursos actualizados correctamente.');
+        $this->feedbackMessage = __('Resources updated successfully.');
     }
 
     public function resetFilters(): void

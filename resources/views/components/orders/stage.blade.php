@@ -17,7 +17,7 @@
 
 @if($coreStatus)
     <span {{ $attributes->class('inline-flex items-center gap-2 min-w-0') }} title="{{ $coreStatus->phaseLabel() }} · {{ $coreStatus->label() }}">
-        <span class="inline-flex items-center gap-0.5 shrink-0" role="img" aria-label="{{ __('Fase :current de 5', ['current' => $phase]) }}">
+        <span class="inline-flex items-center gap-0.5 shrink-0" role="img" aria-label="{{ __('Phase :current of 5', ['current' => $phase]) }}">
             @for($step = 1; $step <= 5; $step++)
                 <span class="w-2.5 h-1.5 rounded-xs {{ $step <= $phase ? ($isArchived ? 'bg-ink-3' : 'bg-ink') : 'bg-line-strong' }}"></span>
             @endfor

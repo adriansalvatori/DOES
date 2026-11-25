@@ -22,13 +22,13 @@
         if ($done) {
             $label = str_replace('.', '', $localized->translatedFormat('j M'));
         } elseif ($daysUntil < 0) {
-            $label = __('Atrasada :count d', ['count' => abs($daysUntil)]);
+            $label = __('Overdue :count d', ['count' => abs($daysUntil)]);
             $tone = 'danger';
         } elseif ($daysUntil === 0) {
-            $label = __('Hoy');
+            $label = __('Today');
             $tone = 'warn';
         } elseif ($daysUntil === 1) {
-            $label = __('Mañana');
+            $label = __('Tomorrow');
         } elseif ($daysUntil < 7) {
             $label = str_replace('.', '', $localized->translatedFormat('D j'));
         } else {
@@ -38,5 +38,5 @@
 @endphp
 
 @if($label)
-    <x-ui.tag :tone="$tone" {{ $attributes->merge(['title' => __('Fecha Límite') . ': ' . $due->format('d/m/Y')]) }}>{{ $label }}</x-ui.tag>
+    <x-ui.tag :tone="$tone" {{ $attributes->merge(['title' => __('Due Date') . ': ' . $due->format('d/m/Y')]) }}>{{ $label }}</x-ui.tag>
 @endif

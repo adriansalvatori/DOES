@@ -12,19 +12,19 @@
 
         <div class="space-y-1.5">
             <h1 class="text-section font-semibold text-ink">
-                {{ __('Enlace o Código QR No Válido') }}
+                {{ __('Invalid link or QR code') }}
             </h1>
             <p class="text-body text-ink-3">
-                {{ __('El código QR o enlace al portal no corresponde a un cliente activo o ha sido modificado.') }}
+                {{ __('This QR code or portal link doesn\'t match an active client, or it has been changed.') }}
             </p>
         </div>
 
         <div class="pt-2 border-t border-line text-body text-ink-2 space-y-2">
             <p class="font-medium text-ink">
-                {{ __('¿Necesitas ayuda con tus pedidos?') }}
+                {{ __('Need help with your orders?') }}
             </p>
             <p class="text-meta text-ink-3">
-                {{ __('Por favor comunícate directamente con tu asesor de Kudos Print Media para recibir un nuevo enlace de acceso.') }}
+                {{ __('Please contact your Kudos Print Media advisor to get a new access link.') }}
             </p>
         </div>
     </div>
@@ -32,7 +32,7 @@
     {{-- Footer --}}
     <div class="w-full pb-6 text-center">
         <p class="text-meta text-ink-3">
-            Kudos Print Media &bull; {{ __('Portal de Clientes') }}
+            Kudos Print Media &bull; {{ __('Client portal') }}
         </p>
     </div>
 </div>

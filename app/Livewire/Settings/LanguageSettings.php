@@ -28,7 +28,7 @@ class LanguageSettings extends Component
 
         $this->dispatch('app-locale-changed', locale: $locale);
 
-        session()->flash('message', __('Idioma guardado correctamente.'));
+        session()->flash('message', __('Language saved successfully.'));
 
         $this->redirectRoute('settings.language');
     }

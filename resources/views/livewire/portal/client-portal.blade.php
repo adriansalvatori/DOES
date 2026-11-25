@@ -14,7 +14,7 @@
 
             <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-ok-soft text-ok text-meta font-medium">
                 <span class="w-1.5 h-1.5 rounded-full bg-ok"></span>
-                <span>{{ __('Seguimiento en Vivo') }}</span>
+                <span>{{ __('Live tracking') }}</span>
             </div>
 
             <div class="space-y-1">
@@ -24,12 +24,12 @@
                 {{-- Yellow Underline Accent --}}
                 
                 <p class="text-body font-medium text-ink-2">
-                    {{ __('¡Eres parte de la familia Kudos!') }}
+                    {{ __('You\'re part of the Kudos family!') }}
                 </p>
             </div>
 
             <p class="text-body text-ink-3 max-w-xs mx-auto">
-                {{ __('Monitorea el estado y avance de todas tus órdenes activas en tiempo real.') }}
+                {{ __('Follow the status and progress of all your active orders in real time.') }}
             </p>
 
             @if($client->locations->count() > 0 && $client->locations->first()->address)
@@ -49,7 +49,7 @@
             <input 
                 type="text" 
                 wire:model.live.debounce.250ms="search" 
-                placeholder="{{ __('Buscar por número de WO u orden...') }}" 
+                placeholder="{{ __('Search by WO number or order…') }}" 
                 class="w-full bg-surface border border-line rounded-card pl-10 pr-4 py-2.5 text-meta text-ink placeholder:text-ink-3  focus:outline-none focus:ring-2 focus:ring-ink/10 focus:border-ink transition"
             >
             @if(!empty($search))
@@ -70,7 +70,7 @@
                 wire:click="setFilter('all')" 
                 class="px-3 py-1.5 rounded-full font-medium transition shrink-0 cursor-pointer {{ $statusFilter === 'all' ? 'bg-ink text-white font-medium' : 'bg-surface text-ink-2 border border-line hover:bg-sunken' }}"
             >
-                {{ __('Todas') }} ({{ $allCount }})
+                {{ __('All') }} ({{ $allCount }})
             </button>
 
             @if($reviewCount > 0)
@@ -80,7 +80,7 @@
                     class="px-3 py-1.5 rounded-full font-medium transition shrink-0 cursor-pointer flex items-center gap-1.5 {{ $statusFilter === 'review' ? 'bg-ink text-white font-medium' : 'bg-surface text-ink-2 border border-line hover:bg-sunken' }}"
                 >
                     <span class="w-1.5 h-1.5 rounded-full bg-ok"></span>
-                    <span>{{ __('¡Esperando tu respuesta!') }} ({{ $reviewCount }})</span>
+                    <span>{{ __('Waiting for your reply') }} ({{ $reviewCount }})</span>
                 </button>
             @endif
 
@@ -89,7 +89,7 @@
                 wire:click="setFilter('design')" 
                 class="px-3 py-1.5 rounded-full font-medium transition shrink-0 cursor-pointer {{ $statusFilter === 'design' ? 'bg-ink text-white font-medium' : 'bg-surface text-ink-2 border border-line hover:bg-sunken' }}"
             >
-                {{ __('En Diseño') }}
+                {{ __('In design') }}
             </button>
 
             @if($productionCount > 0)
@@ -98,7 +98,7 @@
                     wire:click="setFilter('production')" 
                     class="px-3 py-1.5 rounded-full font-medium transition shrink-0 cursor-pointer {{ $statusFilter === 'production' ? 'bg-ink text-white font-medium' : 'bg-surface text-ink-2 border border-line hover:bg-sunken' }}"
                 >
-                    {{ __('En Producción') }} ({{ $productionCount }})
+                    {{ __('In Production') }} ({{ $productionCount }})
                 </button>
             @endif
 
@@ -108,7 +108,7 @@
                     wire:click="setFilter('hold')" 
                     class="px-3 py-1.5 rounded-full font-medium transition shrink-0 cursor-pointer {{ $statusFilter === 'hold' ? 'bg-ink text-white font-medium' : 'bg-surface text-ink-2 border border-line hover:bg-sunken' }}"
                 >
-                    {{ __('En Pausa') }} ({{ $holdCount }})
+                    {{ __('On hold') }} ({{ $holdCount }})
                 </button>
             @endif
         </div>
@@ -135,7 +135,7 @@
                             @if($order->approved)
                                 <span class="px-1.5 py-0.5 rounded bg-ok-soft text-ok text-meta font-semibold flex items-center gap-0.5">
                                     <x-lucide-check class="w-3 h-3 text-ok" />
-                                    <span>{{ __('Aprobado') }}</span>
+                                    <span>{{ __('Approved') }}</span>
                                 </span>
                             @endif
                         </div>
@@ -182,7 +182,7 @@
 
                     {{-- Tap to View Details Cue --}}
                     <div class="pt-1 flex items-center justify-between text-meta text-ink-2 font-medium">
-                        <span>{{ __('Ver detalles y línea de tiempo') }}</span>
+                        <span>{{ __('View details and timeline') }}</span>
                         <x-lucide-chevron-right class="w-4 h-4 text-ink-3" />
                     </div>
                 </div>
@@ -192,12 +192,12 @@
                         <x-lucide-folder-open class="w-6 h-6" />
                     </div>
                     <div class="space-y-1">
-                        <h3 class="text-sm font-semibold text-ink">{{ __('No se encontraron órdenes') }}</h3>
+                        <h3 class="text-sm font-semibold text-ink">{{ __('No orders found') }}</h3>
                         <p class="text-meta text-ink-3 max-w-xs mx-auto">
                             @if(!empty($search))
-                                {{ __('No hay órdenes que coincidan con ":search". Prueba con otro término.', ['search' => $search]) }}
+                                {{ __('No orders match ":search". Try another term.', ['search' => $search]) }}
                             @else
-                                {{ __('Actualmente no tienes órdenes activas en esta sección.') }}
+                                {{ __('You have no active orders in this section.') }}
                             @endif
                         </p>
                     </div>
@@ -207,7 +207,7 @@
                             wire:click="$set('search', ''); $set('statusFilter', 'all');" 
                             class="px-3.5 py-1.5 rounded-control bg-sunken hover:bg-line text-ink-2 text-meta font-semibold transition cursor-pointer"
                         >
-                            {{ __('Ver todas las órdenes') }}
+                            {{ __('View all orders') }}
                         </button>
                     @endif
                 </div>
@@ -228,7 +228,7 @@
                     <x-lucide-headphones class="w-4 h-4" />
                 </div>
                 <div class="min-w-0">
-                    <span class="font-semibold text-ink block truncate">{{ __('Atención al Cliente (CS)') }}</span>
+                    <span class="font-semibold text-ink block truncate">{{ __('Customer service') }}</span>
                     <span class="text-body text-ink-3 block truncate font-mono">{{ \App\Livewire\Portal\ClientPortal::formatDisplayPhone($csPhone) }}</span>
                 </div>
             </div>
@@ -251,8 +251,8 @@
         </div>
 
         <div class="text-body text-ink-3 space-y-0.5 font-medium">
-            <p>{{ __('Kudos Print Media • Portal de Clientes') }}</p>
-            <p class="text-meta text-ink-3/80">{{ __('Solo vista y monitoreo de órdenes') }}</p>
+            <p>{{ __('Kudos Print Media • Client Portal') }}</p>
+            <p class="text-meta text-ink-3/80">{{ __('View-only order tracking') }}</p>
         </div>
     </footer>
 
@@ -322,7 +322,7 @@
                     <div class="bg-zinc-50 border border-line rounded-panel p-4 space-y-1.5">
                         <div class="flex items-center gap-2 text-meta font-semibold text-ink">
                             <span class="w-2.5 h-2.5 rounded-full {{ $selectedStatus['dot_color'] }}"></span>
-                            <span>{{ __('Estado Actual: :status', ['status' => $selectedStatus['label']]) }}</span>
+                            <span>{{ __('Current status: :status', ['status' => $selectedStatus['label']]) }}</span>
                         </div>
                         <p class="text-meta text-ink-2 leading-relaxed">
                             {{ $selectedStatus['description'] }}
@@ -332,23 +332,23 @@
                     {{-- Key Project Highlights Cards --}}
                     <div class="grid grid-cols-2 gap-2.5 text-meta">
                         <div class="bg-surface p-3 rounded-card border border-line  space-y-1">
-                            <span class="text-body text-ink-3 font-medium block">{{ __('Aprobación de Diseño') }}</span>
+                            <span class="text-body text-ink-3 font-medium block">{{ __('Design approval') }}</span>
                             <div class="font-semibold flex items-center gap-1.5 {{ $selectedOrder->approved ? 'text-ok' : 'text-ink-2' }}">
                                 @if($selectedOrder->approved)
                                     <x-lucide-check-circle class="w-4 h-4 text-ok" />
-                                    <span>{{ __('Aprobado') }}</span>
+                                    <span>{{ __('Approved') }}</span>
                                 @else
                                     <x-lucide-clock class="w-4 h-4 text-ink-3" />
-                                    <span>{{ __('En Proceso') }}</span>
+                                    <span>{{ __('In Progress') }}</span>
                                 @endif
                             </div>
                         </div>
 
                         <div class="bg-surface p-3 rounded-card border border-line  space-y-1">
-                            <span class="text-body text-ink-3 font-medium block">{{ __('Entrega Estimada') }}</span>
+                            <span class="text-body text-ink-3 font-medium block">{{ __('Estimated delivery') }}</span>
                             <div class="font-semibold text-ink flex items-center gap-1.5">
                                 <x-lucide-calendar class="w-4 h-4 text-ink-3" />
-                                <span>{{ $selectedOrder->current_due_date ? $selectedOrder->current_due_date->translatedFormat('d M, Y') : __('Por Definir') }}</span>
+                                <span>{{ $selectedOrder->current_due_date ? $selectedOrder->current_due_date->translatedFormat('d M, Y') : __('To be set') }}</span>
                             </div>
                         </div>
                     </div>
@@ -358,10 +358,10 @@
                         <div class="flex items-center justify-between">
                             <h3 class="text-meta font-semibold text-ink  flex items-center gap-1.5">
                                 <x-lucide-history class="w-4 h-4 text-ink-3" />
-                                <span>{{ __('Línea de Tiempo de la Orden') }}</span>
+                                <span>{{ __('Order timeline') }}</span>
                             </h3>
                             <span class="text-body text-ink-3 font-medium font-mono">
-                                {{ $selectedTimeline->count() }} {{ __('evento(s)') }}
+                                {{ $selectedTimeline->count() }} {{ __('event(s)') }}
                             </span>
                         </div>
 
@@ -406,7 +406,7 @@
                                     </div>
                                 @empty
                                     <p class="text-meta text-ink-3 italic">
-                                        {{ __('Iniciando registro de eventos para esta orden.') }}
+                                        {{ __('Event log starting for this order.') }}
                                     </p>
                                 @endforelse
                             </div>
@@ -444,9 +444,9 @@
                                 <svg class="w-4 h-4 text-[#16a34a] shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
                                 </svg>
-                                <span>{{ __('¿Tienes dudas o ajustes con esta orden?') }}</span>
+                                <span>{{ __('Questions or changes about this order?') }}</span>
                             </h4>
-                            <p class="text-body text-ink-3">{{ __('Comunícate directamente por WhatsApp con nuestro equipo.') }}</p>
+                            <p class="text-body text-ink-3">{{ __('Message our team directly on WhatsApp.') }}</p>
                         </div>
 
                         {{-- Action Buttons & Contact Numbers --}}
@@ -501,7 +501,7 @@
                                             @click="copy('{{ \App\Livewire\Portal\ClientPortal::formatDisplayPhone($designerPhone) }}')"
                                             class="inline-flex items-center gap-1.5 font-mono font-semibold transition cursor-pointer hover:opacity-80 active:scale-95"
                                             style="color: {{ $designerHex }};"
-                                            title="{{ __('Copiar número al portapapeles') }}"
+                                            title="{{ __('Copy number to clipboard') }}"
                                         >
                                             <span x-show="!copied" class="inline-flex items-center gap-1">
                                                 <x-lucide-copy class="w-3 h-3 opacity-80" />
@@ -509,10 +509,10 @@
                                             </span>
                                             <span x-show="copied" x-cloak class="inline-flex items-center gap-1 font-sans font-semibold text-ok">
                                                 <x-lucide-check class="w-3 h-3" />
-                                                <span>{{ __('¡Copiado!') }}</span>
+                                                <span>{{ __('Copied') }}</span>
                                             </span>
                                         </button>
-                                        <span class="text-meta text-ink-3 select-none">{{ __('Clic para copiar') }}</span>
+                                        <span class="text-meta text-ink-3 select-none">{{ __('Click to copy') }}</span>
                                     </div>
                                 </div>
                             @elseif($assignedDesigner)
@@ -523,7 +523,7 @@
                                         </svg>
                                         <span class="text-meta font-medium text-ink-2 block truncate">{{ $assignedDesigner->name }}</span>
                                     </div>
-                                    <span class="text-body text-ink-3 block">{{ __('Sin WhatsApp directo') }}</span>
+                                    <span class="text-body text-ink-3 block">{{ __('No direct WhatsApp') }}</span>
                                 </div>
                             @endif
 
@@ -576,7 +576,7 @@
                                         @click="copy('{{ \App\Livewire\Portal\ClientPortal::formatDisplayPhone($csPhone) }}')"
                                         class="inline-flex items-center gap-1.5 font-mono font-semibold transition cursor-pointer active:scale-95"
                                         style="color: #b45309;"
-                                        title="{{ __('Copiar número al portapapeles') }}"
+                                        title="{{ __('Copy number to clipboard') }}"
                                     >
                                         <span x-show="!copied" class="inline-flex items-center gap-1">
                                             <x-lucide-copy class="w-3 h-3 opacity-80" />
@@ -584,10 +584,10 @@
                                         </span>
                                         <span x-show="copied" x-cloak class="inline-flex items-center gap-1 font-sans font-semibold text-ok">
                                             <x-lucide-check class="w-3 h-3" />
-                                            <span>{{ __('¡Copiado!') }}</span>
+                                            <span>{{ __('Copied') }}</span>
                                         </span>
                                     </button>
-                                    <span class="text-meta text-ink-3 select-none">{{ __('Clic para copiar') }}</span>
+                                    <span class="text-meta text-ink-3 select-none">{{ __('Click to copy') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -596,7 +596,7 @@
                         <div class="pt-3 border-t border-line space-y-1.5 text-body text-ink-3">
                             <div class="flex items-center gap-1.5 text-meta font-semibold  text-ink-3">
                                 <x-lucide-building-2 class="w-3.5 h-3.5" />
-                                <span>{{ __('Oficina Kudos') }}</span>
+                                <span>{{ __('Kudos office') }}</span>
                             </div>
                             
                             <div class="flex items-start gap-2 text-ink-2">
@@ -626,7 +626,7 @@
                         wire:click="closeOrder" 
                         class="w-full sm:w-auto px-5 py-2 rounded-card bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-meta  transition cursor-pointer"
                     >
-                        {{ __('Volver a la lista') }}
+                        {{ __('Back to list') }}
                     </button>
                 </div>
             </div>

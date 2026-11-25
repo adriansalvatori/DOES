@@ -1,5 +1,5 @@
 <div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 w-full max-w-4xl">
-    <x-ui.page-header :title="__('Idioma / Language')" :subtitle="__('El cambio se aplica al instante; no hay botón de guardar.')" />
+    <x-ui.page-header :title="__('Idioma / Language')" :subtitle="__('The change applies instantly; there is no save button.')" />
 
     @if (session()->has('message'))
         <div class="bg-ok-soft text-ok border border-line rounded-card px-3.5 py-2.5 text-body flex items-center gap-2 shrink-0">
@@ -26,7 +26,7 @@
                         <p class="text-meta text-ink-3">{{ $lang['note'] }}</p>
                     </div>
                     @if($currentLocale === $lang['code'])
-                        <x-ui.tag tone="neutral" icon="check">{{ __('Activo') }}</x-ui.tag>
+                        <x-ui.tag tone="neutral" icon="check">{{ __('Active') }}</x-ui.tag>
                     @endif
                 </div>
                 <p class="text-body text-ink-2">{{ $lang['desc'] }}</p>

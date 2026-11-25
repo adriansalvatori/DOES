@@ -19,7 +19,7 @@ class DocumentationSettingsTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSeeLivewire(Documentation::class);
-        $response->assertSee(__('Guía de Comportamientos'));
+        $response->assertSee(__('Behavior guide'));
     }
 
     public function test_non_admin_users_cannot_access_behavior_guide_page(): void
@@ -49,10 +49,10 @@ class DocumentationSettingsTest extends TestCase
 
         $adminResponse = $this->actingAs($admin)->get('/settings/profile');
         $adminResponse->assertSee('/settings/documentation');
-        $adminResponse->assertSee(__('Guía de Comportamientos'));
+        $adminResponse->assertSee(__('Behavior guide'));
 
         $designerResponse = $this->actingAs($designer)->get('/settings/profile');
         $designerResponse->assertDontSee('/settings/documentation');
-        $designerResponse->assertDontSee(__('Guía de Comportamientos'));
+        $designerResponse->assertDontSee(__('Behavior guide'));
     }
 }

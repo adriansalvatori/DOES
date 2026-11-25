@@ -49,7 +49,7 @@ class ClientPortal extends Component
     {
         if ($this->clientNotFound) {
             return view('livewire.portal.client-portal-not-found')
-                ->layout('components.layouts.portal', ['title' => __('Enlace no encontrado · Kudos')]);
+                ->layout('components.layouts.portal', ['title' => __('Link not found · Kudos')]);
         }
 
         $client = Client::where('portal_token', $this->token)
@@ -58,7 +58,7 @@ class ClientPortal extends Component
 
         if (! $client) {
             return view('livewire.portal.client-portal-not-found')
-                ->layout('components.layouts.portal', ['title' => __('Enlace no encontrado · Kudos')]);
+                ->layout('components.layouts.portal', ['title' => __('Link not found · Kudos')]);
         }
 
         $timelineService = app(ClientTimelineService::class);

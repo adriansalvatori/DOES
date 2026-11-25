@@ -526,8 +526,8 @@ class ClientFlyoutPanel extends Component
             ],
             'locations.*.address' => 'nullable|string',
         ], [
-            'name.required' => __('El nombre del cliente es obligatorio.'),
-            'name.unique' => __('Ya existe un cliente registrado con este nombre.'),
+            'name.required' => __('The company name is required.'),
+            'name.unique' => __('A company with this name already exists.'),
         ]);
 
         foreach ($this->locations as $index => $locData) {
@@ -537,14 +537,14 @@ class ClientFlyoutPanel extends Component
 
             $phone = trim($locData['phone'] ?? '');
             if (! empty($phone) && ! ClientLocation::isValidPhoneNumber($phone)) {
-                $this->addError("locations.{$index}.phone", __('El teléfono de la locación debe tener 10 dígitos (ej. (770) 864-9359).'));
+                $this->addError("locations.{$index}.phone", __('The location phone must have 10 digits (e.g. (770) 864-9359).'));
 
                 return;
             }
 
             $email = trim($locData['email'] ?? '');
             if (! empty($email) && ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $this->addError("locations.{$index}.email", __('El correo de la locación debe ser una dirección válida.'));
+                $this->addError("locations.{$index}.email", __('The location email must be a valid address.'));
 
                 return;
             }
@@ -555,7 +555,7 @@ class ClientFlyoutPanel extends Component
             $pPhone = ClientLocation::formatPhoneNumber($p['phone'] ?? '');
             $pLabel = mb_strtoupper(trim($p['label'] ?? ''), 'UTF-8');
             if (! empty(trim($p['phone'] ?? '')) && ! ClientLocation::isValidPhoneNumber($p['phone'])) {
-                $this->addError("phones.{$index}.phone", __('El teléfono debe tener 10 dígitos (ej. (770) 864-9359).'));
+                $this->addError("phones.{$index}.phone", __('The phone number must have 10 digits (e.g. (770) 864-9359).'));
 
                 return;
             }
@@ -814,7 +814,7 @@ class ClientFlyoutPanel extends Component
             }
         }
 
-        $this->dispatch('toast', message: __('Compañía ":name" guardada.', ['name' => $client->name]));
+        $this->dispatch('toast', message: __('Company ":name" saved.', ['name' => $client->name]));
         $this->dispatch('client-updated');
         $this->close();
     }
@@ -830,7 +830,7 @@ class ClientFlyoutPanel extends Component
 
         if ($targetClient && $sourceClient) {
             app(ClientMatchingService::class)->mergeClients($targetClient, $sourceClient);
-            $this->dispatch('toast', message: __('":source" fusionada con ":target".', ['source' => $sourceClient->name, 'target' => $targetClient->name]));
+            $this->dispatch('toast', message: __('":source" merged into ":target".', ['source' => $sourceClient->name, 'target' => $targetClient->name]));
             $this->open($targetClient->id);
             $this->dispatch('client-updated');
         }
@@ -858,7 +858,7 @@ class ClientFlyoutPanel extends Component
                 'client_location_id' => null,
             ]);
             $client->delete();
-            $this->dispatch('toast', message: __('Compañía ":name" eliminada.', ['name' => $name]));
+            $this->dispatch('toast', message: __('Company ":name" deleted.', ['name' => $name]));
             $this->dispatch('client-updated');
             $this->close();
         }

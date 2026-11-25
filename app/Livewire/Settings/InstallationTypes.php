@@ -37,7 +37,7 @@ class InstallationTypes extends Component
     {
         $user = Auth::user();
         if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
     }
 
@@ -137,12 +137,12 @@ class InstallationTypes extends Component
                 });
             }
 
-            session()->flash('message', __('Tipo de instalación actualizado correctamente.'));
+            session()->flash('message', __('Installation type updated.'));
         } else {
             $maxSort = InstallationType::max('sort_order') ?? 0;
             $validated['sort_order'] = $maxSort + 1;
             InstallationType::create($validated);
-            session()->flash('message', __('Nuevo tipo de instalación creado correctamente.'));
+            session()->flash('message', __('Installation type created.'));
         }
 
         InstallationType::clearCache();
@@ -160,7 +160,7 @@ class InstallationTypes extends Component
         InstallationType::clearCache();
         $this->dispatch('installation-types-updated');
 
-        session()->flash('message', __('Opción de instalación ":name" eliminada.', ['name' => $name]));
+        session()->flash('message', __('Installation option ":name" deleted.', ['name' => $name]));
     }
 
     public function toggleActive(int $id): void
@@ -185,7 +185,7 @@ class InstallationTypes extends Component
         InstallationType::clearCache();
         $this->dispatch('installation-types-updated');
 
-        session()->flash('message', __('Color de ":name" actualizado correctamente.', ['name' => $item->name]));
+        session()->flash('message', __('Color of ":name" updated.', ['name' => $item->name]));
     }
 
     public function toggleStyleType(int $id): void
@@ -198,7 +198,7 @@ class InstallationTypes extends Component
         InstallationType::clearCache();
         $this->dispatch('installation-types-updated');
 
-        session()->flash('message', __('Estilo de ":name" actualizado.', ['name' => $item->name]));
+        session()->flash('message', __('Style of ":name" updated.', ['name' => $item->name]));
     }
 
     public function closeModal(): void

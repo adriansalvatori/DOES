@@ -1,21 +1,21 @@
 <div 
     x-data="{
         show: false,
-        title: @js(__('¿Guardar cambios sin guardar?')),
-        description: @js(__('Tienes datos o modificaciones que no han sido guardadas.')),
-        cancelText: @js(__('Cancelar')),
-        discardText: @js(__('No guardar')),
-        saveText: @js(__('Guardar')),
+        title: @js(__('Save your changes?')),
+        description: @js(__('You have changes that haven\'t been saved.')),
+        cancelText: @js(__('Cancel')),
+        discardText: @js(__('Don\'t save')),
+        saveText: @js(__('Save')),
         onCancelCallback: null,
         onDiscardCallback: null,
         onSaveCallback: null,
 
         open(detail) {
-            this.title = detail.title || @js(__('¿Guardar cambios sin guardar?'));
-            this.description = detail.description || @js(__('Tienes datos o modificaciones que no han sido guardadas.'));
-            this.cancelText = detail.cancelText || @js(__('Cancelar'));
-            this.discardText = detail.discardText || detail.confirmText || @js(__('No guardar'));
-            this.saveText = detail.saveText || @js(__('Guardar'));
+            this.title = detail.title || @js(__('Save your changes?'));
+            this.description = detail.description || @js(__('You have changes that haven\'t been saved.'));
+            this.cancelText = detail.cancelText || @js(__('Cancel'));
+            this.discardText = detail.discardText || detail.confirmText || @js(__('Don\'t save'));
+            this.saveText = detail.saveText || @js(__('Save'));
             this.onCancelCallback = detail.onCancel || null;
             this.onDiscardCallback = detail.onDiscard || detail.onConfirm || null;
             this.onSaveCallback = detail.onSave || null;

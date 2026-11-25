@@ -45,18 +45,18 @@ class="px-4 py-3 flex items-center justify-between hover:bg-sunken transition-co
 
     <div class="flex items-center gap-3 min-w-0 flex-1">
         <div class="flex items-center gap-1 shrink-0 text-ink-3">
-            <span class="cursor-grab active:cursor-grabbing p-1 rounded-control hover:bg-sunken hover:text-ink transition" title="{{ __('Arrastrar para organizar orden') }}">
+            <span class="cursor-grab active:cursor-grabbing p-1 rounded-control hover:bg-sunken hover:text-ink transition" title="{{ __('Drag to reorder') }}">
                 <x-lucide-grip-vertical class="w-4 h-4" />
             </span>
             <div class="flex flex-col -space-y-1">
                 <button type="button" wire:click="moveUp({{ $sub->id }})" @disabled($loop->first)
                     class="p-0.5 rounded hover:bg-sunken hover:text-ink disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition"
-                    title="{{ __('Mover hacia arriba') }}">
+                    title="{{ __('Move up') }}">
                     <x-lucide-chevron-up class="w-3.5 h-3.5" />
                 </button>
                 <button type="button" wire:click="moveDown({{ $sub->id }})" @disabled($loop->last)
                     class="p-0.5 rounded hover:bg-sunken hover:text-ink disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer disabled:cursor-not-allowed transition"
-                    title="{{ __('Mover hacia abajo') }}">
+                    title="{{ __('Move down') }}">
                     <x-lucide-chevron-down class="w-3.5 h-3.5" />
                 </button>
             </div>
@@ -68,29 +68,29 @@ class="px-4 py-3 flex items-center justify-between hover:bg-sunken transition-co
         </span>
 
         @if($isGlobalRow)
-            <x-ui.tag tone="neutral" icon="globe">{{ __('Transversal Global') }}</x-ui.tag>
+            <x-ui.tag tone="neutral" icon="globe">{{ __('Global cross-stage') }}</x-ui.tag>
         @elseif($sub->is_default)
-            <x-ui.tag tone="neutral" icon="check">{{ __('Por Defecto') }}</x-ui.tag>
+            <x-ui.tag tone="neutral" icon="check">{{ __('Default') }}</x-ui.tag>
         @endif
 
         @if($sub->is_system)
-            <x-ui.tag tone="neutral">{{ __('Sistema') }}</x-ui.tag>
+            <x-ui.tag tone="neutral">{{ __('System') }}</x-ui.tag>
         @endif
     </div>
 
     <div class="hidden sm:flex items-center shrink-0 text-meta text-ink-3">
-        {{ $sub->style_type === 'solid' ? __('Color Sólido') : __('Fondo Claro') }}
+        {{ $sub->style_type === 'solid' ? __('Solid Color') : __('Light Background') }}
     </div>
 
     <div class="flex items-center gap-1 shrink-0">
-        <flux:button wire:click="openEditModal({{ $sub->id }})" variant="subtle" size="sm" icon="pencil">{{ __('Editar') }}</flux:button>
+        <flux:button wire:click="openEditModal({{ $sub->id }})" variant="subtle" size="sm" icon="pencil">{{ __('Edit') }}</flux:button>
 
         @if(!$sub->is_system)
             <button
                 wire:click="delete({{ $sub->id }})"
-                wire:confirm="{{ __('¿Estás seguro de eliminar el subestatus ":name"?', ['name' => $sub->name]) }}"
+                wire:confirm="{{ __('Are you sure you want to delete the substatus ":name"?', ['name' => $sub->name]) }}"
                 class="p-1.5 rounded-control text-ink-3 hover:text-danger hover:bg-danger-soft transition cursor-pointer"
-                title="{{ __('Eliminar Subestatus') }}">
+                title="{{ __('Delete Substatus') }}">
                 <x-lucide-trash-2 class="w-4 h-4" />
             </button>
         @endif

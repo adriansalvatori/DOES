@@ -80,7 +80,7 @@ class CsvReconciliation extends Component
     {
         $user = Auth::user();
         if (! $user || ! $user->isAdmin()) {
-            abort(403, __('No tiene permisos para acceder a esta sección. Esta herramienta es de acceso exclusivo para administradores.'));
+            abort(403, __('You don\'t have permission to access this section. This tool is for administrators only.'));
         }
 
         // Load existing analysis metadata if available

@@ -39,7 +39,7 @@ class HeaderSearch extends Component
         $boardId = Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '')));
 
         if (empty(trim($boardId))) {
-            $this->dispatch('toast', message: __('No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.'));
+            $this->dispatch('toast', message: __('No Trello board is configured. Set one up in Trello sync.'));
 
             return;
         }
@@ -50,7 +50,7 @@ class HeaderSearch extends Component
         // Fetch lists
         $listsRes = $syncService->getBoardLists($extractedBoardId, $apiKey, $userToken);
         if (! $listsRes['success']) {
-            $this->dispatch('toast', message: __('Error al conectar con la API de Trello: ').($listsRes['error'] ?? 'Error de autenticación o tablero no encontrado'));
+            $this->dispatch('toast', message: __('Error connecting to the Trello API: ').($listsRes['error'] ?? 'Error de autenticación o tablero no encontrado'));
 
             return;
         }
@@ -64,7 +64,7 @@ class HeaderSearch extends Component
         // Fetch cards
         $cardsRes = $syncService->getBoardCards($extractedBoardId, $apiKey, $userToken);
         if (! $cardsRes['success']) {
-            $this->dispatch('toast', message: __('Error al obtener tarjetas desde Trello.'));
+            $this->dispatch('toast', message: __('Could not fetch cards from Trello.'));
 
             return;
         }
@@ -150,9 +150,9 @@ class HeaderSearch extends Component
         $this->dispatch('order-updated');
 
         if ($addedCount > 0) {
-            $this->dispatch('toast', message: __('Sincronización completada: se importaron :count tarjetas nuevas de Trello.', ['count' => $addedCount]));
+            $this->dispatch('toast', message: __('Sync complete: :count new cards imported from Trello.', ['count' => $addedCount]));
         } else {
-            $this->dispatch('toast', message: __('Sincronización completada: no se encontraron tarjetas nuevas en Trello.'));
+            $this->dispatch('toast', message: __('Sync complete: no new cards found in Trello.'));
         }
     }
 

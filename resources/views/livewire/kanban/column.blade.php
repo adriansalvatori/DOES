@@ -30,8 +30,8 @@
             type="button"
             @click="$dispatch('open-create-order', { initialStatus: '{{ $column->value }}' })"
             class="p-1 rounded-control text-ink-3 hover:text-ink hover:bg-surface transition shrink-0"
-            title="{{ __('Añadir nueva orden a') }} {{ $column->label() }}"
-            aria-label="{{ __('Añadir nueva orden a') }} {{ $column->label() }}">
+            title="{{ __('Add new order to') }} {{ $column->label() }}"
+            aria-label="{{ __('Add new order to') }} {{ $column->label() }}">
             <x-lucide-plus class="w-4 h-4" />
         </button>
     </div>
@@ -45,7 +45,7 @@
 
         @if($columnOrders->isEmpty() && $columnTasks->isEmpty())
             <div class="py-10 text-center border border-dashed border-line-strong rounded-card">
-                <span class="text-meta text-ink-3 block">{{ __('Arrastra una tarjeta aquí') }}</span>
+                <span class="text-meta text-ink-3 block">{{ __('Drag a card here') }}</span>
             </div>
         @else
             @foreach($urgentColumnOrders as $order)
@@ -61,12 +61,12 @@
                     class="bg-surface border border-line hover:border-line-strong rounded-card p-3 flex flex-col gap-2 transition duration-150 relative select-none cursor-pointer">
                     <div class="flex items-center justify-between gap-1.5 min-w-0">
                         <div class="flex flex-wrap items-center gap-1 min-w-0">
-                            <x-ui.tag icon="check-square">{{ __('Tarea vinculada') }}</x-ui.tag>
+                            <x-ui.tag icon="check-square">{{ __('Linked task') }}</x-ui.tag>
                             @if($task->type)
                                 <span class="text-meta text-ink-3">{{ $task->type->label() }}</span>
                             @endif
                         </div>
-                        <span class="text-meta text-ink-2 shrink-0 truncate max-w-[110px]">{{ $task->assignee?->name ?? __('Sin Asignar') }}</span>
+                        <span class="text-meta text-ink-2 shrink-0 truncate max-w-[110px]">{{ $task->assignee?->name ?? __('Unassigned') }}</span>
                     </div>
 
                     <div class="min-w-0">
@@ -88,17 +88,17 @@
                             @click="isCompleting = true; setTimeout(() => $wire.$parent.toggleTaskComplete({{ $task->id }}), 300)"
                             class="px-2.5 h-7 rounded-control text-meta font-medium bg-surface hover:bg-sunken text-ink border border-line transition flex items-center gap-1">
                             <x-lucide-check class="w-3 h-3" />
-                            <span>{{ __('Completar') }}</span>
+                            <span>{{ __('Complete') }}</span>
                         </button>
 
                         <flux:dropdown position="bottom" align="end">
-                            <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Más acciones') }}" />
+                            <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('More actions') }}" />
                             <flux:menu>
                                 <flux:menu.item
                                     icon="trash"
                                     variant="danger"
                                     wire:click="$parent.deleteTask({{ $task->id }})"
-                                    wire:confirm="{{ __('¿Eliminar esta tarea vinculada?') }}">{{ __('Eliminar tarea') }}</flux:menu.item>
+                                    wire:confirm="{{ __('Delete this linked task?') }}">{{ __('Delete task') }}</flux:menu.item>
                             </flux:menu>
                         </flux:dropdown>
                     </div>
@@ -117,7 +117,7 @@
                 wire:loading.attr="disabled"
                 wire:target="showMore"
                 class="w-full h-8 rounded-control border border-line bg-surface hover:bg-sunken text-meta font-medium text-ink-2 transition cursor-pointer">
-                {{ __('Mostrar :count más', ['count' => min($hiddenCount, $pageSize)]) }}
+                {{ __('Show :count more', ['count' => min($hiddenCount, $pageSize)]) }}
                 <span class="text-ink-3">({{ $hiddenCount }})</span>
             </button>
         @endif

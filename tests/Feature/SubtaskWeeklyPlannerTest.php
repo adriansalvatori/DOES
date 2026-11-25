@@ -281,8 +281,8 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertSet('viewMode', 'by_designer')
-            ->assertSeeHtml(__('Por Días'))
-            ->assertSeeHtml(__('Por Diseñador'))
+            ->assertSeeHtml(__('By Days'))
+            ->assertSeeHtml(__('By Designer'))
             ->assertSeeHtml('RESTAURANTE EL TACO')
             ->assertSeeHtml('Ajuste de colores')
             ->call('changeViewMode', 'by_day')
@@ -1231,7 +1231,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
         Livewire::test(WeeklyPlanner::class)
             ->set('viewMode', 'by_designer')
             ->set('selectedDesignerFilter', (string) $designer->id)
-            ->assertSee('Al Cliente')
+            ->assertSee('To client')
             ->call('plannerChrome')
             ->assertReturned(fn ($html) => str_contains($html, 'Trabajo'));
     }
@@ -1632,7 +1632,7 @@ class SubtaskWeeklyPlannerTest extends TestCase
 
         Livewire::test(WeeklyPlanner::class)
             ->assertSee('SUPER URGENTE CO')
-            ->assertSee(__('Urgente'))
+            ->assertSee(__('Urgent'))
             ->assertSeeHtml('data-tone="danger"')
             ->assertDontSeeHtml('border-red-500');
     }

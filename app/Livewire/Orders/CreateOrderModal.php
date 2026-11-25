@@ -252,7 +252,7 @@ class CreateOrderModal extends Component
     {
         $name = trim($this->newPieceName);
         if (empty($name)) {
-            $this->addError('newPieceName', __('El nombre de la pieza es obligatorio.'));
+            $this->addError('newPieceName', __('The piece name is required.'));
 
             return;
         }
@@ -568,9 +568,9 @@ class CreateOrderModal extends Component
         $this->dispatch('order-updated');
 
         if ($this->isDuplicating) {
-            session()->flash('message', __('Copia de la orden ":name" creada exitosamente.', ['name' => $order->company_name]));
+            session()->flash('message', __('Copy of order ":name" created.', ['name' => $order->company_name]));
         } else {
-            session()->flash('message', __('Orden ":name" creada exitosamente.', ['name' => $order->company_name]));
+            session()->flash('message', __('Order ":name" created.', ['name' => $order->company_name]));
         }
     }
 

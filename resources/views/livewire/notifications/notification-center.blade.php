@@ -30,8 +30,8 @@
                 window.KudosNotifier.playChime();
                 if (this.permission === 'granted') {
                     window.KudosNotifier.showSystemNotification({
-                        title: 'Kudos DOES · ' + @js(__('Prueba')),
-                        body: @js(__('¡El sonido y las notificaciones del sistema están activos!')),
+                        title: 'Kudos DOES · ' + @js(__('Test notification')),
+                        body: @js(__('Sound and system notifications are on.')),
                     });
                 }
             }
@@ -46,8 +46,8 @@
         type="button"
         class="ui-btn ui-btn-ghost ui-btn-icon relative"
         :aria-expanded="open.toString()"
-        aria-label="{{ __('Centro de Notificaciones') }}"
-        title="{{ __('Centro de Notificaciones') }}">
+        aria-label="{{ __('Notification center') }}"
+        title="{{ __('Notification center') }}">
         <x-lucide-bell class="w-4 h-4" />
 
         @if($unreadCount > 0)
@@ -78,15 +78,15 @@
 
         <div class="px-4 py-3 flex items-center justify-between border-b border-line">
             <div class="flex items-center gap-2">
-                <h3 class="text-row font-semibold text-ink">{{ __('Notificaciones') }}</h3>
+                <h3 class="text-row font-semibold text-ink">{{ __('Notifications') }}</h3>
                 @if($unreadCount > 0)
-                    <span class="text-meta text-ink-3">{{ trans_choice('{1} :count nueva|[2,*] :count nuevas', $unreadCount) }}</span>
+                    <span class="text-meta text-ink-3">{{ trans_choice('{1} :count new|[2,*] :count new', $unreadCount) }}</span>
                 @endif
             </div>
 
             @if($unreadCount > 0)
                 <button wire:click="markAllAsRead" type="button" class="ui-btn ui-btn-ghost ui-btn-sm">
-                    {{ __('Marcar leídas') }}
+                    {{ __('Mark as read') }}
                 </button>
             @endif
         </div>
@@ -94,10 +94,10 @@
         <!-- Permission prompt (only when the browser has not been asked yet) -->
         <div x-show="permission === 'default'" x-cloak class="px-4 py-3 flex items-center justify-between gap-3 border-b border-line bg-sunken">
             <div class="min-w-0">
-                <p class="text-body font-medium text-ink">{{ __('¿Activar alertas en tu equipo?') }}</p>
-                <p class="text-meta text-ink-3 truncate">{{ __('Recibe avisos con sonido de tus órdenes') }}</p>
+                <p class="text-body font-medium text-ink">{{ __('Turn on alerts on this device?') }}</p>
+                <p class="text-meta text-ink-3 truncate">{{ __('Get sound alerts for your orders') }}</p>
             </div>
-            <button @click="requestPerm()" type="button" class="ui-btn ui-btn-secondary ui-btn-sm shrink-0">{{ __('Activar') }}</button>
+            <button @click="requestPerm()" type="button" class="ui-btn ui-btn-secondary ui-btn-sm shrink-0">{{ __('Turn on') }}</button>
         </div>
 
         <!-- Items -->
@@ -155,12 +155,12 @@
 
                 @if($isRead && $hasUnread && !$firstReadRendered)
                     @php $firstReadRendered = true; @endphp
-                    <div class="px-4 py-1.5 bg-sunken text-meta font-medium text-ink-3 select-none">{{ __('Leídas') }}</div>
+                    <div class="px-4 py-1.5 bg-sunken text-meta font-medium text-ink-3 select-none">{{ __('Read') }}</div>
                 @endif
 
                 <div wire:click="markAsRead('{{ $n->id }}')" class="px-4 py-3 flex items-start gap-3 cursor-pointer hover:bg-sunken transition">
                     <span class="mt-1.5 h-2 w-2 rounded-full shrink-0 {{ $isRead ? 'bg-transparent' : ($isAssignedToMe || $isUrgent ? 'bg-danger' : 'bg-ink-3') }}"
-                          @if(! $isRead) title="{{ $isAssignedToMe ? __('Orden asignada a ti') : __('Orden no asignada a ti') }}" @endif></span>
+                          @if(! $isRead) title="{{ $isAssignedToMe ? __('Order assigned to you') : __('Order not assigned to you') }}" @endif></span>
 
                     <div class="flex-1 min-w-0 {{ $isRead ? 'ui-done' : '' }}">
                         <div class="flex items-center gap-2 min-w-0">
@@ -174,14 +174,14 @@
                             <p class="text-meta text-ink-3 mt-0.5">{{ $detailText }}</p>
                         @endif
                         <p class="text-meta text-ink-3 mt-1">
-                            {{ $n->created_at->diffForHumans() }}@if($actorName) · {{ __('por') }} {{ $actorName }}@endif
+                            {{ $n->created_at->diffForHumans() }}@if($actorName) · {{ __('by') }} {{ $actorName }}@endif
                         </p>
                     </div>
                 </div>
             @empty
                 <div class="px-4 py-8 text-center">
                     <x-lucide-bell-off class="w-5 h-5 mx-auto mb-2 text-ink-3" />
-                    <p class="text-body text-ink-3">{{ __('No tienes notificaciones pendientes') }}</p>
+                    <p class="text-body text-ink-3">{{ __('You\'re all caught up') }}</p>
                 </div>
             @endforelse
         </div>
@@ -190,31 +190,31 @@
         <div x-show="permission !== 'default'" class="px-4 py-2 border-t border-line flex items-center justify-between text-meta text-ink-3">
             <template x-if="permission === 'granted'">
                 <div class="w-full flex items-center justify-between">
-                    <span>{{ __('Avisos activos') }}</span>
+                    <span>{{ __('Alerts on') }}</span>
                     <div class="flex items-center gap-1">
                         <button @click="toggleSound()" type="button" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"
-                                :title="soundEnabled ? @js(__('Silenciar sonido')) : @js(__('Activar sonido'))"
-                                :aria-label="soundEnabled ? @js(__('Silenciar sonido')) : @js(__('Activar sonido'))">
+                                :title="soundEnabled ? @js(__('Mute sound')) : @js(__('Turn sound on'))"
+                                :aria-label="soundEnabled ? @js(__('Mute sound')) : @js(__('Turn sound on'))">
                             <span x-show="soundEnabled"><x-lucide-volume-2 class="w-4 h-4" /></span>
                             <span x-show="!soundEnabled" x-cloak><x-lucide-volume-x class="w-4 h-4" /></span>
                         </button>
                         <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm"
-                                title="{{ __('Reproducir sonido de prueba y mostrar notificación') }}">{{ __('Probar') }}</button>
+                                title="{{ __('Play a test sound and show a notification') }}">{{ __('Test') }}</button>
                     </div>
                 </div>
             </template>
 
             <template x-if="permission === 'denied'">
                 <div class="w-full flex items-center justify-between gap-2">
-                    <span class="truncate">{{ __('Avisos bloqueados en navegador') }}</span>
-                    <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm shrink-0">{{ __('Probar sonido') }}</button>
+                    <span class="truncate">{{ __('Alerts blocked in browser') }}</span>
+                    <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm shrink-0">{{ __('Test sound') }}</button>
                 </div>
             </template>
 
             <template x-if="permission === 'unsupported'">
                 <div class="w-full flex items-center justify-between gap-2">
-                    <span>{{ __('Avisos no soportados') }}</span>
-                    <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm shrink-0">{{ __('Probar sonido') }}</button>
+                    <span>{{ __('Alerts not supported') }}</span>
+                    <button @click="testNotification()" type="button" class="ui-btn ui-btn-ghost ui-btn-sm shrink-0">{{ __('Test sound') }}</button>
                 </div>
             </template>
         </div>

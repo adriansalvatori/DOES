@@ -16,8 +16,8 @@
                 type="button" 
                 @click="isOpen = false; $wire.close()" 
                 class="p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-stone-100 rounded-lg transition cursor-pointer"
-                title="{{ __('Cerrar panel (Esc)') }}"
-                aria-label="{{ __('Cerrar panel') }}">
+                title="{{ __('Close panel (Esc)') }}"
+                aria-label="{{ __('Close panel') }}">
                 <x-lucide-x class="w-4 h-4" />
             </button>
         </div>

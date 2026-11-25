@@ -49,7 +49,7 @@ class ContactIndex extends Component
             $contact->clients()->detach();
             $contact->delete();
 
-            $this->dispatch('toast', message: __('Contacto ":name" eliminado.', ['name' => $name]));
+            $this->dispatch('toast', message: __('Contact ":name" deleted.', ['name' => $name]));
             $this->dispatch('contact-updated');
         }
     }

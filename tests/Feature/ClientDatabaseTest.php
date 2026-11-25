@@ -78,7 +78,7 @@ class ClientDatabaseTest extends TestCase
         Livewire::test(ClientIndex::class)
             ->assertStatus(200)
             ->assertSee('CLIENTE TEST')
-            ->assertSee(__('Compañías'));
+            ->assertSee(__('Companies'));
     }
 
     public function test_merging_clients_extracts_location_and_updates_orders(): void
@@ -268,7 +268,7 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee(__('¡Posible contacto duplicado con'))
+            ->assertSee(__('Possible duplicate contact:'))
             ->call('confirmMergeContact', 1, 'GIO')
             ->call('save');
 
@@ -295,7 +295,7 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee(__('¡Posible contacto duplicado con'))
+            ->assertSee(__('Possible duplicate contact:'))
             ->call('confirmMergeContact', 1, 'GIO GARCIA')
             ->call('save');
 
@@ -332,7 +332,7 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee(__('Eliminar compañía'))
+            ->assertSee(__('Delete company'))
             ->call('deleteClient')
             ->assertSet('isOpen', false)
             ->assertDispatched('client-updated');
@@ -362,8 +362,8 @@ class ClientDatabaseTest extends TestCase
 
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
-            ->assertSee(__('Proyectos'))
-            ->assertSee(__('Archivados'))
+            ->assertSee(__('Projects'))
+            ->assertSee(__('Archived'))
             ->set('activeTab', 'archived')
             ->assertSee('ARCHIVED PROJECT TASK');
     }
@@ -538,8 +538,8 @@ class ClientDatabaseTest extends TestCase
         Livewire::test(ClientFlyoutPanel::class)
             ->call('open', $client->id)
             ->set('activeTab', 'brand_kit')
-            ->assertSee(__('Brand Kit'))
-            ->assertSee(__('Activos y enlaces clave'))
+            ->assertSee(__('Brand kit'))
+            ->assertSee(__('Key assets and links'))
             ->call('addBrandColor')
             ->set('brandKit.colors.0.name', 'Azul Corporativo')
             ->set('brandKit.colors.0.hex', '#0055FF')

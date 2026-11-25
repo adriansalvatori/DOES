@@ -20,8 +20,8 @@
                     type="button" 
                     @click="confirmClose(() => $wire.closeModal())" 
                     class="h-8 w-8 rounded-control text-ink-3 hover:text-ink-2 hover:bg-sunken transition flex items-center justify-center shrink-0 cursor-pointer ml-0.5" 
-                    title="{{ __('Cerrar panel (Esc)') }}"
-                    aria-label="{{ __('Cerrar panel') }}">
+                    title="{{ __('Close panel (Esc)') }}"
+                    aria-label="{{ __('Close panel') }}">
                     <x-lucide-x class="w-4 h-4 shrink-0" />
                 </button>
             </div>

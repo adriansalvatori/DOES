@@ -44,8 +44,8 @@ class CsvReconciliationTest extends TestCase
         $response = $this->actingAs($admin)->get('/settings/csv-reconciliation');
 
         $response->assertStatus(200);
-        $response->assertSee('Conciliación & Migración CSV');
-        $response->assertSee('Cargar archivo CSV de órdenes');
+        $response->assertSee('Reconciliation & CSV migration');
+        $response->assertSee('Upload orders CSV file');
     }
 
     public function test_non_admin_cannot_access_csv_reconciliation_page(): void

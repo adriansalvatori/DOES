@@ -43,8 +43,8 @@ class ClientTimelineService
 
         $milestones->push([
             'type' => 'created',
-            'title' => __('Orden recibida e iniciada'),
-            'subtitle' => __('Ingresado en nuestro sistema de diseño'),
+            'title' => __('Order received and started'),
+            'subtitle' => __('Entered into our design system'),
             'date' => Carbon::parse($createdAt),
             'color' => 'yellow',
             'icon' => 'folder-plus',
@@ -78,8 +78,8 @@ class ClientTimelineService
 
                 $milestones->push([
                     'type' => 'sent_to_client',
-                    'title' => $isFirst ? __('Diseño enviado para tu revisión') : __('Nueva versión enviada para tu revisión'),
-                    'subtitle' => $isFirst ? __('Primera propuesta lista para tu revisión / aprobación') : __('Ajustes realizados y enviados para tu revisión'),
+                    'title' => $isFirst ? __('Design sent for your review') : __('New version sent for your review'),
+                    'subtitle' => $isFirst ? __('First proposal ready for your review / approval') : __('Changes made and sent for your review'),
                     'date' => $eventDate,
                     'color' => 'emerald',
                     'icon' => 'send',
@@ -103,7 +103,7 @@ class ClientTimelineService
                 $milestones->push([
                     'type' => 'changes_received',
                     'title' => __('Cambios / comentarios recibidos'),
-                    'subtitle' => __('Tu diseñador asignado está aplicando las modificaciones'),
+                    'subtitle' => __('Your assigned designer is applying the changes'),
                     'date' => $eventDate,
                     'color' => 'purple',
                     'icon' => 'message-square',
@@ -125,8 +125,8 @@ class ClientTimelineService
 
                 $milestones->push([
                     'type' => 'follow_up',
-                    'title' => __('Seguimiento de revisión'),
-                    'subtitle' => __('Te contactamos para hacer seguimiento a la última propuesta enviada'),
+                    'title' => __('Review follow-up'),
+                    'subtitle' => __('We\'re reaching out to follow up on the last proposal we sent'),
                     'date' => $eventDate,
                     'color' => 'indigo',
                     'icon' => 'phone-call',
@@ -138,7 +138,7 @@ class ClientTimelineService
 
             // On Hold
             if (str_contains($type, 'MOVED_TO_ON_HOLD') || (str_contains($type, 'CORE_STATUS') && str_contains($newVal, 'HOLD'))) {
-                $reason = $event->metadata['reason'] ?? $order->pause_reason ?? ($order->blocking_reason?->label() ?: __('En espera de información o confirmación'));
+                $reason = $event->metadata['reason'] ?? $order->pause_reason ?? ($order->blocking_reason?->label() ?: __('Waiting for information or confirmation'));
                 $milestones->push([
                     'type' => 'on_hold',
                     'title' => __('En pausa (On Hold)'),
@@ -158,7 +158,7 @@ class ClientTimelineService
                 $milestones->push([
                     'type' => 'unblocked',
                     'title' => __('Pausa resuelta / Trabajo reanudado'),
-                    'subtitle' => __('La orden fue retomada y está en proceso de revisión'),
+                    'subtitle' => __('The order was resumed and is under review'),
                     'date' => $eventDate,
                     'color' => 'emerald',
                     'icon' => 'play-circle',
@@ -173,8 +173,8 @@ class ClientTimelineService
             if (str_contains($type, 'APPROVED') || str_contains($type, 'APPROVAL_SUBMITTED') || (is_string($event->new_value) && str_contains(strtolower($event->new_value), 'estimate: yes'))) {
                 $milestones->push([
                     'type' => 'approved',
-                    'title' => __('Diseño aprobado'),
-                    'subtitle' => __('¡Recibimos tu aprobación! Tu orden está siendo preparada para producción'),
+                    'title' => __('Design approved'),
+                    'subtitle' => __('We received your approval! Your order is being prepared for production'),
                     'date' => $eventDate,
                     'color' => 'lime',
                     'icon' => 'check-circle-2',
@@ -189,8 +189,8 @@ class ClientTimelineService
             if (str_contains($type, 'CORE_STATUS') && str_contains($newVal, 'PRODUCCI')) {
                 $milestones->push([
                     'type' => 'in_production',
-                    'title' => __('En producción / Impresión'),
-                    'subtitle' => __('Tu orden fue enviada a producción para impresión y acabado'),
+                    'title' => __('In production / Printing'),
+                    'subtitle' => __('Your order was sent to production for printing and finishing'),
                     'date' => $eventDate,
                     'color' => 'pink',
                     'icon' => 'printer',
@@ -206,8 +206,8 @@ class ClientTimelineService
         if (! $hasSent && $order->last_sent_to_client_at) {
             $milestones->push([
                 'type' => 'sent_to_client',
-                'title' => __('Diseño enviado para tu revisión'),
-                'subtitle' => __('Primera propuesta lista para tu revisión / aprobación'),
+                'title' => __('Design sent for your review'),
+                'subtitle' => __('First proposal ready for your review / approval'),
                 'date' => $order->last_sent_to_client_at,
                 'color' => 'emerald',
                 'icon' => 'send',
@@ -218,8 +218,8 @@ class ClientTimelineService
         if (! $hasApproved && $order->approved) {
             $milestones->push([
                 'type' => 'approved',
-                'title' => __('Diseño aprobado'),
-                'subtitle' => __('¡Recibimos tu aprobación! Tu orden está siendo preparada para producción'),
+                'title' => __('Design approved'),
+                'subtitle' => __('We received your approval! Your order is being prepared for production'),
                 'date' => $order->updated_at,
                 'color' => 'lime',
                 'icon' => 'check-circle-2',
@@ -230,8 +230,8 @@ class ClientTimelineService
         if (! $hasProduction && ($order->production_sent_at || $order->core_status === CoreStatus::EN_PRODUCCION)) {
             $milestones->push([
                 'type' => 'in_production',
-                'title' => __('En producción / Impresión'),
-                'subtitle' => __('Tu orden fue enviada a producción para impresión y acabado'),
+                'title' => __('In production / Printing'),
+                'subtitle' => __('Your order was sent to production for printing and finishing'),
                 'date' => $order->production_sent_at ?: $order->updated_at,
                 'color' => 'pink',
                 'icon' => 'printer',
@@ -240,7 +240,7 @@ class ClientTimelineService
         }
 
         if ($order->core_status === CoreStatus::ON_HOLD && ! $onHoldActive) {
-            $reason = $order->pause_reason ?: ($order->blocking_reason?->label() ?: __('En espera de especificaciones o confirmación'));
+            $reason = $order->pause_reason ?: ($order->blocking_reason?->label() ?: __('Waiting for specifications or confirmation'));
             $milestones->push([
                 'type' => 'on_hold',
                 'title' => __('En pausa (On Hold)'),
@@ -310,12 +310,12 @@ class ClientTimelineService
             $palette = $cc->derivePalette($hex);
 
             return [
-                'label' => __('En Pausa'),
+                'label' => __('On hold'),
                 'badge_class' => 'border font-semibold',
                 'badge_inline_style' => $palette['badge_style'],
                 'dot_color' => '',
                 'dot_style' => "background-color: {$hex};",
-                'description' => $order->pause_reason ?: ($order->blocking_reason?->label() ?: __('Tu orden se encuentra pausada. Contacta a Customer Service para más información.')),
+                'description' => $order->pause_reason ?: ($order->blocking_reason?->label() ?: __('Your order is on hold. Contact Customer Service for more information.')),
                 'icon' => 'pause-circle',
             ];
         }
@@ -325,12 +325,12 @@ class ClientTimelineService
             $palette = $cc->derivePalette($hex);
 
             return [
-                'label' => __('En Producción'),
+                'label' => __('In Production'),
                 'badge_class' => 'border font-semibold',
                 'badge_inline_style' => $palette['badge_style'],
                 'dot_color' => '',
                 'dot_style' => "background-color: {$hex};",
-                'description' => __('Tu orden se encuentra en etapa de producción. Te contactaremos cuando esté lista.'),
+                'description' => __('Your order is in the production phase. We\'ll contact you when it\'s ready.'),
                 'icon' => 'printer',
             ];
         }
@@ -345,7 +345,7 @@ class ClientTimelineService
                 'badge_inline_style' => $palette['badge_style'],
                 'dot_color' => '',
                 'dot_style' => "background-color: {$hex};",
-                'description' => __('¡Te hemos enviado la propuesta! Esperamos tus comentarios o revisión.'),
+                'description' => __('We\'ve sent you the proposal! We look forward to your comments or review.'),
                 'icon' => 'sparkles',
             ];
         }
@@ -361,12 +361,12 @@ class ClientTimelineService
             $palette = $cc->derivePalette($hex);
 
             return [
-                'label' => __('En Diseño'),
+                'label' => __('In design'),
                 'badge_class' => 'border font-semibold',
                 'badge_inline_style' => $palette['badge_style'],
                 'dot_color' => '',
                 'dot_style' => "background-color: {$hex};",
-                'description' => __('Nuestro equipo de diseño está trabajando activamente en tu orden.'),
+                'description' => __('Our design team is actively working on your order.'),
                 'icon' => 'palette',
             ];
         }
@@ -375,12 +375,12 @@ class ClientTimelineService
         $palette = $cc->derivePalette($hex);
 
         return [
-            'label' => __('Orden Recibida'),
+            'label' => __('Order received'),
             'badge_class' => 'border font-semibold',
             'badge_inline_style' => $palette['badge_style'],
             'dot_color' => '',
             'dot_style' => "background-color: {$hex};",
-            'description' => __('¡Recibimos tu orden! Muy pronto te contactaremos para el siguiente paso.'),
+            'description' => __('We received your order! We\'ll contact you very soon with the next step.'),
             'icon' => 'clock',
         ];
     }

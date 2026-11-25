@@ -18,7 +18,7 @@ class CoreStatusTest extends TestCase
 
         $this->assertEquals(__('Camila'), CoreStatus::ENVIADO_A_CAMILA->shortLabel());
         $this->assertEquals(__('Working'), CoreStatus::TO_DO_TODAY->shortLabel());
-        $this->assertEquals(__('Entrante'), CoreStatus::ENTRANTE->shortLabel());
+        $this->assertEquals(__('Incoming'), CoreStatus::ENTRANTE->shortLabel());
     }
 
     public function test_map_returns_all_statuses_with_metadata(): void

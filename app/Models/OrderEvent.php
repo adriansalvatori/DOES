@@ -229,25 +229,25 @@ class OrderEvent extends Model
             str_contains($newValLower, 'aprobado por') ||
             str_contains($newValLower, 'aprobación recibida')
         ) {
-            return __('Aprobación Recibida');
+            return __('Approval Received');
         }
 
         if (str_contains($type, 'ORDER_UNBLOCKED') || str_contains($type, 'UNBLOCKED')) {
-            return __('Orden desbloqueada');
+            return __('Order unblocked');
         }
         if (str_contains($type, 'AUTOMATIC_TASK') || str_contains($type, 'TASK_TRIGGERED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Task');
 
-            return __('":title" añadida', ['title' => $taskTitle]);
+            return __('":title" added', ['title' => $taskTitle]);
         }
         if (str_contains($type, 'SUBTASK_SCHEDULED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Task');
             $dateStr = isset($this->metadata['date']) ? $this->formatValueIfDate($this->metadata['date']) : '';
 
-            return __('":title" agendada', ['title' => $taskTitle]).($dateStr ? ' '.__('para el').' '.$dateStr : '');
+            return __('":title" scheduled', ['title' => $taskTitle]).($dateStr ? ' '.__('for').' '.$dateStr : '');
         }
         if (str_contains($type, 'SUBTASK_COMPLETED')) {
-            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Tarea');
+            $taskTitle = $this->metadata['task_title'] ?? $this->new_value ?? __('Task');
 
             return __('":title" completada', ['title' => $taskTitle]);
         }
@@ -269,26 +269,26 @@ class OrderEvent extends Model
             }
 
             return $source === 'trello'
-                ? __('Orden creada desde Trello')
-                : __('Orden creada desde la app');
+                ? __('Order created from Trello')
+                : __('Order created from the app');
         }
         if (str_contains($type, 'MOVED_TO_ON_HOLD')) {
-            return __('Orden ON HOLD');
+            return __('Order ON HOLD');
         }
         if (str_contains($type, 'DELAY_RESOLVED')) {
-            return __('Atraso resuelto');
+            return __('Delay resolved');
         }
         if (str_contains($type, 'WO_UPDATED')) {
             return __('WO actualizado (:new)', ['new' => $this->new_value]);
         }
         if (str_contains($type, 'DUPLICATED')) {
-            return __('Orden duplicada');
+            return __('Order duplicated');
         }
         if (str_contains($type, 'ATTACHMENT_DELETED')) {
-            return __('Archivo adjunto eliminado de Trello (:file)', ['file' => $this->previous_value ?? __('Archivo')]);
+            return __('Attachment removed from Trello (:file)', ['file' => $this->previous_value ?? __('File')]);
         }
         if (str_contains($type, 'ATTACHMENT')) {
-            return __('Archivo adjuntado a Trello (:file)', ['file' => $this->new_value ?? __('Archivo')]);
+            return __('Archivo adjuntado a Trello (:file)', ['file' => $this->new_value ?? __('File')]);
         }
         if (str_contains($type, 'COMMENT')) {
             $author = ! empty($this->actor)
@@ -296,13 +296,13 @@ class OrderEvent extends Model
                 : ($this->metadata['author_name'] ?? $this->metadata['user'] ?? $this->order?->designer?->name ?? null);
 
             return $author
-                ? __('Comentario de :user', ['user' => $author])
+                ? __('Comment from :user', ['user' => $author])
                 : __('Comentario');
         }
         if (str_contains($type, 'STATUS_CHANGED_VIA_TRELLO')) {
             $statusLabel = $this->formatValueIfDate($this->new_value);
             if (str_contains(strtoupper((string) $this->new_value), 'PRODUCCI') || str_contains(strtoupper((string) $statusLabel), 'PRODUCCI')) {
-                $statusLabel = __('ENVIADO A PRODUCCIÓN');
+                $statusLabel = __('SENT TO PRODUCTION');
             }
 
             return __('Estatus actualizado desde Trello (:status)', ['status' => $statusLabel]);
@@ -310,7 +310,7 @@ class OrderEvent extends Model
         if (str_contains($type, 'DUE_DATE_CHANGED')) {
             $dateLabel = $this->formatValueIfDate($this->new_value);
 
-            return __('Fecha de entrega actualizada (:date)', ['date' => $dateLabel]);
+            return __('Due date updated (:date)', ['date' => $dateLabel]);
         }
         if (str_contains($type, 'SUBSTATUS')) {
             if (! empty($this->metadata['description'])) {
@@ -328,7 +328,7 @@ class OrderEvent extends Model
         if (str_contains($type, 'STATUS_CHANGED') || ! empty($this->new_value)) {
             $formatted = $this->formatValueIfDate($this->new_value);
             if (str_contains(strtoupper((string) $this->new_value), 'PRODUCCI') || str_contains(strtoupper((string) $formatted), 'PRODUCCI')) {
-                return __('ENVIADO A PRODUCCIÓN');
+                return __('SENT TO PRODUCTION');
             }
 
             return $formatted;

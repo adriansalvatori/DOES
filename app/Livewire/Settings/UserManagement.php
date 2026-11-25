@@ -48,7 +48,7 @@ class UserManagement extends Component
     {
         $user = Auth::user();
         if (! $user || ! $user->isAdmin()) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
 
         $this->cs_whatsapp_phone = Setting::get('cs_whatsapp_phone', '+16783580594');
@@ -76,7 +76,7 @@ class UserManagement extends Component
         ]);
 
         Setting::set('cs_whatsapp_phone', trim($this->cs_whatsapp_phone));
-        session()->flash('success_cs', __('Número de WhatsApp de Atención al Cliente actualizado exitosamente.'));
+        session()->flash('success_cs', __('Customer service WhatsApp number updated.'));
     }
 
     public function saveManagerSettings(): void
@@ -85,14 +85,14 @@ class UserManagement extends Component
             'manager_id' => 'nullable|integer|exists:users,id',
             'manager_name' => 'required|string|max:100',
         ], [
-            'manager_id.exists' => __('El usuario seleccionado como manager no existe.'),
-            'manager_name.required' => __('El nombre a mostrar para el manager es obligatorio.'),
+            'manager_id.exists' => __('The selected manager doesn\'t exist.'),
+            'manager_name.required' => __('The manager display name is required.'),
         ]);
 
         Setting::set('manager_id', $this->manager_id);
         Setting::set('manager_name', trim($this->manager_name));
 
-        session()->flash('success_manager', __('Configuración del Manager de Aprobaciones actualizada exitosamente.'));
+        session()->flash('success_manager', __('Approvals Manager configuration updated successfully.'));
     }
 
     public function openCreateModal()
@@ -175,14 +175,14 @@ class UserManagement extends Component
         }
 
         $this->showModal = false;
-        session()->flash('success_user', __('Usuario guardado exitosamente.'));
+        session()->flash('success_user', __('User saved.'));
     }
 
     public function toggleActive(int $id)
     {
         $user = User::findOrFail($id);
         if ($user->id === Auth::id()) {
-            throw ValidationException::withMessages(['user' => __('No puede desactivar su propia cuenta.')]);
+            throw ValidationException::withMessages(['user' => __('You can\'t deactivate your own account.')]);
         }
         $user->update(['active' => ! $user->active]);
     }
@@ -201,6 +201,6 @@ class UserManagement extends Component
             'allUsers' => User::orderBy('name')->get(),
             'designers' => $designers,
             'roles' => UserRole::cases(),
-        ])->layout('components.layouts.app', ['title' => __('Gestión de Usuarios - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Users - ').config('app.name')]);
     }
 }

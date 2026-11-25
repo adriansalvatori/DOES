@@ -30,7 +30,7 @@ class KanbanReasonSheetTest extends TestCase
         Livewire::test(Board::class)
             ->call('moveOrder', $order->id, CoreStatus::ON_HOLD->value)
             ->assertSet('showOnHoldModal', true)
-            ->assertSee(__('Motivo para poner en On Hold'))
+            ->assertSee(__('Reason for putting on hold'))
             ->call('confirmOnHold')
             ->assertHasErrors(['onHoldReason'])
             ->set('onHoldReason', 'Esperando presupuesto')
@@ -48,7 +48,7 @@ class KanbanReasonSheetTest extends TestCase
             ->call('moveOrder', $order->id, CoreStatus::ON_HOLD->value)
             ->call('cancelOnHold')
             ->assertSet('showOnHoldModal', false)
-            ->assertDontSee(__('Motivo para poner en On Hold'));
+            ->assertDontSee(__('Reason for putting on hold'));
 
         $this->assertEquals(CoreStatus::TO_DO_TODAY, $order->fresh()->core_status);
     }
@@ -60,7 +60,7 @@ class KanbanReasonSheetTest extends TestCase
         Livewire::test(Board::class)
             ->call('moveOrder', $order->id, CoreStatus::TO_DO_TODAY->value)
             ->assertSet('showResumeModal', true)
-            ->assertSee(__('Motivo para reanudar la orden'))
+            ->assertSee(__('Reason for resuming the order'))
             ->set('resumeReason', 'Cliente aprobó')
             ->call('confirmResume')
             ->assertSet('showResumeModal', false);
@@ -74,12 +74,12 @@ class KanbanReasonSheetTest extends TestCase
 
         Livewire::test(Board::class)
             ->call('moveOrder', $order->id, CoreStatus::ENTRANTE->value)
-            ->assertSee(__('Bloquear Orden'))
-            ->assertSee(__('Falta logo / arte'))
-            ->assertSee(__('Requiere atención / seguimiento del cliente o responsable'))
-            ->assertDontSee(__('Especificar otro motivo'))
+            ->assertSee(__('Block Order'))
+            ->assertSee(__('Missing logo / artwork'))
+            ->assertSee(__('Requires attention / follow-up by client or account rep'))
+            ->assertDontSee(__('Specify other reason'))
             ->set('blockReason', 'OTROS')
-            ->assertSee(__('Especificar otro motivo'))
+            ->assertSee(__('Specify other reason'))
             ->set('blockReasonOther', 'Material especial')
             ->set('requireCustomerService', true)
             ->call('confirmBlock')
@@ -101,8 +101,8 @@ class KanbanReasonSheetTest extends TestCase
 
         $board->call('openUnblockModal', $order->id)
             ->assertSet('showUnblockModal', true)
-            ->assertSee(__('Desbloquear Orden'))
-            ->assertSee(__('Medidas confirmadas'))
+            ->assertSee(__('Unblock Order'))
+            ->assertSee(__('Measurements confirmed'))
             ->call('confirmUnblock')
             ->assertHasErrors(['unblockReason'])
             ->set('unblockReason', 'Medidas confirmadas')

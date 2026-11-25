@@ -17,13 +17,13 @@
                 <div class="flex items-center gap-2 min-w-0">
                     <x-lucide-archive class="w-4 h-4 text-ink-2 shrink-0" />
                     <div class="min-w-0">
-                        <h3 class="text-section font-semibold text-ink truncate">{{ __('Archivar Orden') }}</h3>
+                        <h3 class="text-section font-semibold text-ink truncate">{{ __('Archive Order') }}</h3>
                         @if($targetOrder)
                             <p class="text-meta text-ink-3 truncate">
                                 {{ $targetOrder->wo_number ? $targetOrder->wo_number . ' · ' : '' }}{{ $targetOrder->company_name ?? '' }}
                             </p>
                         @else
-                            <p class="text-meta text-ink-3">{{ __('Selecciona el subestatus de cierre.') }}</p>
+                            <p class="text-meta text-ink-3">{{ __('Choose a closing status.') }}</p>
                         @endif
                     </div>
                 </div>
@@ -31,7 +31,7 @@
                     wire:click="closeArchiveModal" 
                     type="button" 
                     class="p-1 rounded-control text-ink-3 hover:text-ink hover:bg-sunken transition cursor-pointer"
-                    title="{{ __('Cerrar') }}">
+                    title="{{ __('Close') }}">
                     <x-lucide-x class="w-4 h-4" />
                 </button>
             </div>
@@ -39,9 +39,9 @@
             <!-- Modal Body -->
             <div class="space-y-2 text-body">
                 <div class="flex items-center justify-between">
-                    <label class="font-medium text-ink-2 block text-meta">{{ __('Razón o subestatus de cierre:') }}</label>
+                    <label class="font-medium text-ink-2 block text-meta">{{ __('Closing reason:') }}</label>
                     <span class="text-meta text-ink-3">
-                        {{ count($archivedSubstatuses) }} {{ __('disponibles') }}
+                        {{ count($archivedSubstatuses) }} {{ __('available') }}
                     </span>
                 </div>
 
@@ -54,15 +54,15 @@
                             
                             // Contextual tooltip description
                             $desc = match(mb_strtoupper($subName)) {
-                                'FINALIZADA !', 'FINALIZADA' => __('Trabajo completado y entregado al cliente.'),
-                                'ORDEN LISTA - ENTREGADA' => __('Trabajo terminado y entregado con éxito.'),
-                                'ORDEN LISTA' => __('Trabajo finalizado, listo para entrega o cerrado.'),
-                                'CLIENTE NO RESPONSIVE', 'CLIENTE NO RESPONDIO' => __('Sin respuesta o no retiró la orden tras largo tiempo.'),
-                                'CANCELADA' => __('Orden anulada o no realizada.'),
-                                'CANCELADA POR CLIENTE' => __('Cancelada por decisión directa del cliente.'),
-                                'CANCELADA POR CAMILA' => __('Cancelada internamente durante revisión / QA.'),
-                                'DEBE' => __('Orden finalizada con saldo pendiente por cobrar.'),
-                                'NO REALIZADA / TRANSFERIDA' => __('Orden transferida o no ejecutada.'),
+                                'FINALIZADA !', 'FINALIZADA' => __('Work completed and delivered to client.'),
+                                'ORDEN LISTA - ENTREGADA' => __('Work finished and delivered.'),
+                                'ORDEN LISTA' => __('Work finished, ready for delivery or closed.'),
+                                'CLIENTE NO RESPONSIVE', 'CLIENTE NO RESPONDIO' => __('No response or failed to pick up order after an extended period.'),
+                                'CANCELADA' => __('Order voided or cancelled.'),
+                                'CANCELADA POR CLIENTE' => __('Cancelled by the client.'),
+                                'CANCELADA POR CAMILA' => __('Cancelled internally during review.'),
+                                'DEBE' => __('Order finished with an outstanding balance.'),
+                                'NO REALIZADA / TRANSFERIDA' => __('Order transferred or not carried out.'),
                                 default => null,
                             };
                         @endphp
@@ -93,7 +93,7 @@
                         </label>
                     @empty
                         <div class="p-3 text-center text-body text-ink-3 bg-sunken rounded-control">
-                            {{ __('No hay subestatus configurados para archivar.') }}
+                            {{ __('No closing statuses are set up.') }}
                         </div>
                     @endforelse
                 </div>
@@ -105,7 +105,7 @@
                     wire:click="closeArchiveModal" 
                     type="button" 
                     class="ui-btn ui-btn-secondary">
-                    {{ __('Cancelar') }}
+                    {{ __('Cancel') }}
                 </button>
                 <button 
                     wire:click="confirmArchive" 
@@ -114,11 +114,11 @@
                     class="ui-btn ui-btn-primary disabled:opacity-50">
                     <span wire:loading.remove wire:target="confirmArchive" class="flex items-center gap-1.5">
                         <x-lucide-archive class="w-3.5 h-3.5" />
-                        <span>{{ __('Archivar Orden') }}</span>
+                        <span>{{ __('Archive Order') }}</span>
                     </span>
                     <span wire:loading wire:target="confirmArchive" class="flex items-center gap-1.5">
                         <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" />
-                        <span>{{ __('Archivando...') }}</span>
+                        <span>{{ __('Archiving...') }}</span>
                     </span>
                 </button>
             </div>

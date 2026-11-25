@@ -20,15 +20,15 @@ enum CoreStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::ENTRANTE => __('BLOCKED'),
-            self::EURALIZ_ORDERS_RECEIVED => __('Euralíz Orders Received'),
-            self::ADRIAN_ORDERS_RECEIVED => __('Adrián Orders Received'),
-            self::CESAR_ORDERS_RECEIVED => __('César Orders Received'),
-            self::TO_DO_TODAY => __('Working Today'),
+            self::ENTRANTE => __('Blocked'),
+            self::EURALIZ_ORDERS_RECEIVED => __('Euralíz · received'),
+            self::ADRIAN_ORDERS_RECEIVED => __('Adrián · received'),
+            self::CESAR_ORDERS_RECEIVED => __('César · received'),
+            self::TO_DO_TODAY => __('Working today'),
             self::ENVIADO_A_CAMILA => __('Sent to Camila'),
-            self::ENVIADO_AL_CLIENTE => __('Sent to Client'),
-            self::ON_HOLD => __('On Hold'),
-            self::EN_PRODUCCION => __('In Production'),
+            self::ENVIADO_AL_CLIENTE => __('Sent to client'),
+            self::ON_HOLD => __('On hold'),
+            self::EN_PRODUCCION => __('In production'),
             self::ARCHIVED => __('Archived'),
         };
     }
@@ -56,27 +56,27 @@ enum CoreStatus: string
     public function phaseLabel(): string
     {
         return match ($this->phase()) {
-            1 => __('Entrada'),
-            2 => __('Diseño'),
-            3 => __('Revisión'),
-            4 => __('Cliente'),
-            default => __('Producción'),
+            1 => __('Intake'),
+            2 => __('Design'),
+            3 => __('Review'),
+            4 => __('Client'),
+            default => __('Production'),
         };
     }
 
     public function shortLabel(): string
     {
         return match ($this) {
-            self::ENTRANTE => __('Entrante'),
+            self::ENTRANTE => __('Incoming'),
             self::EURALIZ_ORDERS_RECEIVED => __('Euralíz'),
             self::ADRIAN_ORDERS_RECEIVED => __('Adrián'),
             self::CESAR_ORDERS_RECEIVED => __('César'),
             self::TO_DO_TODAY => __('Working'),
             self::ENVIADO_A_CAMILA => __('Camila'),
-            self::ENVIADO_AL_CLIENTE => __('Cliente'),
-            self::ON_HOLD => __('On Hold'),
-            self::EN_PRODUCCION => __('Producción'),
-            self::ARCHIVED => __('Archivado'),
+            self::ENVIADO_AL_CLIENTE => __('Client'),
+            self::ON_HOLD => __('On hold'),
+            self::EN_PRODUCCION => __('Production'),
+            self::ARCHIVED => __('Archived'),
         };
     }
 

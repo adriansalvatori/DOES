@@ -66,8 +66,8 @@ class ColorCodingSettingsTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Color coding');
         $response->assertSee('Camila (QA & Revisiones)');
-        $response->assertSee('Producción (ALTA & Taller)');
-        $response->assertSee('Euralíz (Lead Designer)');
+        $response->assertSee('Production (production files & workshop)');
+        $response->assertSee('Euralíz (Lead designer)');
     }
 
     public function test_color_coding_settings_forbidden_for_regular_designer(): void
@@ -263,7 +263,7 @@ class ColorCodingSettingsTest extends TestCase
         $this->assertStringContainsString('var(--cc-urgent-bg-light)', $urgentSubtask->systemBadgeStyle());
         $this->assertStringContainsString('var(--cc-urgent-solid)', $urgentSubtask->systemDotStyle());
         $this->assertStringContainsString('var(--cc-urgent-text-dark)', $urgentSubtask->systemTextStyle());
-        $this->assertEquals(__('Urgente'), $urgentSubtask->colorCodingShortLabel());
+        $this->assertEquals(__('Urgent'), $urgentSubtask->colorCodingShortLabel());
 
         $altaSubtask = RelatedTask::create([
             'order_id' => $order->id,

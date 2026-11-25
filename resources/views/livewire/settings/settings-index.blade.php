@@ -1,5 +1,5 @@
 <div class="h-full flex flex-col gap-6 min-h-0 overflow-y-auto custom-vertical-scrollbar w-full max-w-4xl mx-auto">
-    <x-ui.page-header :title="__('Ajustes')" :subtitle="__('Cómo está configurado el espacio de trabajo. Ves solo lo que tu rol puede cambiar.')" />
+    <x-ui.page-header :title="__('Settings')" :subtitle="__('How the workspace is set up. You only see what your role can change.')" />
 
     @foreach($groups as $group)
         <section class="space-y-2" aria-labelledby="settings-group-{{ $group['key'] }}">

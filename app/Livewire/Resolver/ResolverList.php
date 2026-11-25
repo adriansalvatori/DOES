@@ -69,14 +69,14 @@ class ResolverList extends Component
         $this->validate([
             'unblockReason' => 'required|string|min:3',
         ], [
-            'unblockReason.required' => __('Ingresa el motivo o forma en que se resolvió el bloqueo.'),
-            'unblockReason.min' => __('El motivo debe contener al menos 3 caracteres.'),
+            'unblockReason.required' => __('Enter the reason or how the block was resolved.'),
+            'unblockReason.min' => __('The reason must contain at least 3 characters.'),
         ]);
 
         $order = Order::findOrFail($this->unblockOrderId);
         $order->unblock($this->unblockReason);
 
-        session()->flash('message', __('Orden :company desbloqueada y devuelta a la lista del diseñador.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company unblocked and returned to designer list.', ['company' => $order->company_name]));
 
         $this->closeUnblockModal();
         $this->dispatch('order-updated');
@@ -97,7 +97,7 @@ class ResolverList extends Component
             } catch (\Throwable $e) {
             }
         }
-        session()->flash('message', __('Orden :company enviada a Camila.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company sent to Camila.', ['company' => $order->company_name]));
         $this->dispatch('order-updated');
     }
 
@@ -116,7 +116,7 @@ class ResolverList extends Component
             } catch (\Throwable $e) {
             }
         }
-        session()->flash('message', __('Orden :company enviada al Cliente.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company sent to the client.', ['company' => $order->company_name]));
         $this->dispatch('order-updated');
     }
 
@@ -126,7 +126,7 @@ class ResolverList extends Component
 
         if (! $order->approved) {
             $this->dispatch('open-order-detail', orderId: $orderId, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-            session()->flash('message', __('La orden requiere aprobación antes de pasar a Producción.'));
+            session()->flash('message', __('The order requires approval before moving to production.'));
 
             return;
         }
@@ -144,7 +144,7 @@ class ResolverList extends Component
             } catch (\Throwable $e) {
             }
         }
-        session()->flash('message', __('Orden :company enviada a Producción.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company sent to production.', ['company' => $order->company_name]));
         $this->dispatch('order-updated');
     }
 
@@ -152,7 +152,7 @@ class ResolverList extends Component
     {
         $order = Order::findOrFail($orderId);
         $order->update(['done_today' => false]);
-        session()->flash('message', __('Orden :company conservada en trabajo pendiente del diseñador.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company kept in the designer\'s backlog.', ['company' => $order->company_name]));
         $this->dispatch('order-updated');
     }
 

@@ -308,7 +308,7 @@ class WeeklyPlanner extends Component
             }
         }
 
-        $this->recordAction('move', $previousStates, __('Subtareas reordenadas'));
+        $this->recordAction('move', $previousStates, __('Subtasks reordered'));
         $this->dispatch('order-updated');
     }
 
@@ -558,7 +558,7 @@ class WeeklyPlanner extends Component
     public function scheduleOrder($orderId, $dateString)
     {
         $order = Order::findOrFail($orderId);
-        $this->scheduleSubtask($orderId, $order->task_name ?: __('Trabajo programado'), $dateString);
+        $this->scheduleSubtask($orderId, $order->task_name ?: __('Scheduled work'), $dateString);
     }
 
     public function scheduleSubtask($orderId = null, $title = '', $dateString = '', $designerId = null, $isWorkTask = true, ?string $blockResolution = null, ?string $approvalImpact = null)
@@ -568,7 +568,7 @@ class WeeklyPlanner extends Component
         if (! empty($orderId)) {
             $order = Order::findOrFail($orderId);
             $assigneeId = $designerId ?: ($order->designer_id ?? $order->designers->first()?->id);
-            $rawTitle = trim($title) ?: ($order->task_name ?: __('Trabajo programado'));
+            $rawTitle = trim($title) ?: ($order->task_name ?: __('Scheduled work'));
             $taskTitle = RelatedTask::cleanTitleForOrder($rawTitle, $order);
 
             $preset = SubtaskPreset::where('title', $rawTitle)->orWhere('title', $taskTitle)->first();
@@ -595,9 +595,9 @@ class WeeklyPlanner extends Component
                     'isWorkTask' => $isWorkTask,
                     'isOrderBlocked' => $isOrderBlocked,
                     'isOrderApproved' => $isOrderApproved,
-                    'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Bloqueada')),
-                    'approvalType' => $order->approval_type ?? __('Cliente'),
-                    'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previamente'),
+                    'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Blocked')),
+                    'approvalType' => $order->approval_type ?? __('Client'),
+                    'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previously'),
                 ];
                 $this->subtaskBlockResolution = ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS) ? 'unblock' : 'keep_blocked';
                 $this->subtaskApprovalImpact = ($category === SubtaskCategory::CLIENT_ADJUSTMENTS) ? 'invalidate' : 'keep';
@@ -615,7 +615,7 @@ class WeeklyPlanner extends Component
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'APPROVAL_RESET',
-                    'actor' => auth()->user()?->name ?? __('Diseñador'),
+                    'actor' => auth()->user()?->name ?? __('Designer'),
                     'previous_value' => 'approved: true',
                     'new_value' => 'approved: false (Anulada por nueva subtarea: '.$taskTitle.')',
                     'metadata' => [
@@ -633,7 +633,7 @@ class WeeklyPlanner extends Component
                     if ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS || str_contains(mb_strtolower($taskTitle, 'UTF-8'), 'medida')) {
                         $order->update(['measures_confirmed' => true]);
                     }
-                    $order->unblock(__('Medidas/información confirmadas al programar subtarea: :title', ['title' => $taskTitle]));
+                    $order->unblock(__('Details confirmed when scheduling subtask: :title', ['title' => $taskTitle]));
                     $order->refresh();
                 } else {
                     $isWorkTask = false;
@@ -696,7 +696,7 @@ class WeeklyPlanner extends Component
                     $order->fresh(),
                     $previousStatus,
                     CoreStatus::TO_DO_TODAY,
-                    auth()->user()?->name ?? __('Diseñador')
+                    auth()->user()?->name ?? __('Designer')
                 );
                 $order->refresh();
             } elseif ($isWorkTask && $previousStatus === CoreStatus::ENVIADO_AL_CLIENTE) {
@@ -710,7 +710,7 @@ class WeeklyPlanner extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'SUBTASK_SCHEDULED',
-                'actor' => auth()->user()?->name ?? __('Diseñador'),
+                'actor' => auth()->user()?->name ?? __('Designer'),
                 'new_value' => $taskTitle,
                 'metadata' => [
                     'task_id' => $subtask->id,
@@ -732,14 +732,14 @@ class WeeklyPlanner extends Component
                     'days_overdue' => max(1, $daysOverdue),
                 ];
                 $this->showSlaWarningModal = true;
-                session()->flash('warning', __('Atención: Subtarea ":title" programada para :company el :date supera la fecha límite del SLA (:due).', [
+                session()->flash('warning', __('Heads up: subtask ":title" for :company is scheduled on :date, past the SLA deadline (:due).', [
                     'title' => $taskTitle,
                     'company' => $order->company_name,
                     'date' => $scheduledDate->format('d M'),
                     'due' => $order->current_due_date->format('d M'),
                 ]));
             } else {
-                session()->flash('message', __('Subtarea ":title" programada para :company el :date.', [
+                session()->flash('message', __('Subtask ":title" scheduled for :company on :date.', [
                     'title' => $taskTitle,
                     'company' => $order->company_name,
                     'date' => $scheduledDate->format('d M'),
@@ -747,7 +747,7 @@ class WeeklyPlanner extends Component
             }
         } else {
             // Note type subtask (no order attached)
-            $taskTitle = trim($title) ?: __('Nota sin nombre');
+            $taskTitle = trim($title) ?: __('Untitled note');
             $preset = SubtaskPreset::where('title', $taskTitle)->first();
             $category = $preset?->category ?? SubtaskCategory::MANAGEMENT;
             $isWorkTask = $preset ? (bool) $preset->is_work_task : (bool) $isWorkTask;
@@ -767,7 +767,7 @@ class WeeklyPlanner extends Component
                 'sort_order' => $nextSortOrder,
             ]);
 
-            session()->flash('message', __('Nota ":title" creada para el :date.', [
+            session()->flash('message', __('Note ":title" created for :date.', [
                 'title' => $taskTitle,
                 'date' => $scheduledDate->format('d M'),
             ]));
@@ -838,14 +838,14 @@ class WeeklyPlanner extends Component
                     $order->fresh(),
                     $previousStatus,
                     CoreStatus::TO_DO_TODAY,
-                    auth()->user()?->name ?? __('Diseñador')
+                    auth()->user()?->name ?? __('Designer')
                 );
                 $order->refresh();
                 $subtask->refresh();
             }
         }
 
-        $msg = __('Subtarea ":title" reprogramada para el :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]);
+        $msg = __('Subtask ":title" rescheduled for :date.', ['title' => $subtask->title, 'date' => $scheduledDate->format('d M')]);
 
         if (! $subtask->isDone() && $subtask->order && ! $subtask->order->isSlaExempt() && ! $subtask->isFollowUp() && $subtask->order->current_due_date && $scheduledDate->isAfter($subtask->order->current_due_date)) {
             $daysOverdue = (int) $subtask->order->current_due_date->diffInDays($scheduledDate);
@@ -858,7 +858,7 @@ class WeeklyPlanner extends Component
                 'days_overdue' => max(1, $daysOverdue),
             ];
             $this->showSlaWarningModal = true;
-            session()->flash('warning', __('Atención: Subtarea ":title" reprogramada para el :date supera la fecha límite del SLA (:due).', [
+            session()->flash('warning', __('Heads up: subtask ":title" rescheduled to :date is past the SLA deadline (:due).', [
                 'title' => $subtask->title,
                 'date' => $scheduledDate->format('d M'),
                 'due' => $subtask->order->current_due_date->format('d M'),
@@ -936,8 +936,8 @@ class WeeklyPlanner extends Component
         $count = count($taskIds);
         $dateFormatted = $targetDate ? $targetDate->format('d M') : '';
         $msg = $targetDate
-            ? ($count === 1 ? __('Subtarea movida al :date', ['date' => $dateFormatted]) : __(':count subtareas movidas al :date', ['count' => $count, 'date' => $dateFormatted]))
-            : ($count === 1 ? __('Subtarea reasignada') : __(':count subtareas reasignadas', ['count' => $count]));
+            ? ($count === 1 ? __('Subtask moved to :date', ['date' => $dateFormatted]) : __(':count subtasks moved to :date', ['count' => $count, 'date' => $dateFormatted]))
+            : ($count === 1 ? __('Subtask reassigned') : __(':count subtasks reassigned', ['count' => $count]));
 
         $this->recordAction('move', $previousStates, $msg);
         $this->changePlannerSortBy('custom');
@@ -969,7 +969,7 @@ class WeeklyPlanner extends Component
                 OrderEvent::create([
                     'order_id' => $stask->order->id,
                     'event_type' => 'SUBTASK_COMPLETED',
-                    'actor' => auth()->user()?->name ?? __('Diseñador'),
+                    'actor' => auth()->user()?->name ?? __('Designer'),
                     'new_value' => $stask->title,
                     'metadata' => [
                         'task_id' => $stask->id,
@@ -982,8 +982,8 @@ class WeeklyPlanner extends Component
 
         $count = $subtasks->count();
         $msg = $complete
-            ? __(':count subtareas marcadas como completadas.', ['count' => $count])
-            : __(':count subtareas marcadas como pendientes.', ['count' => $count]);
+            ? __(':count subtasks marked as done.', ['count' => $count])
+            : __(':count subtasks marked as pending.', ['count' => $count]);
 
         $this->dispatch('order-updated');
         session()->flash('message', $msg);
@@ -994,7 +994,7 @@ class WeeklyPlanner extends Component
         $subtask = RelatedTask::with('order')->findOrFail($taskId);
 
         if ($subtask->isNote()) {
-            session()->flash('warning', __('Para marcar como completada, es obligatorio vincular la nota a una tarjeta existente del workspace.'));
+            session()->flash('warning', __('To complete it, link the note to an existing workspace card.'));
             $this->dispatch('open-link-note-modal', taskId: $subtask->id, noteTitle: $subtask->title);
 
             return;
@@ -1007,7 +1007,7 @@ class WeeklyPlanner extends Component
         if ($order && $willBeDone && $subtask->isPonerEnAlta()) {
             if (! $order->approved) {
                 $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-                session()->flash('warning', __('La orden requiere aprobación antes de ser enviada a producción.'));
+                session()->flash('warning', __('The order needs approval before it goes to production.'));
 
                 return;
             }
@@ -1023,7 +1023,7 @@ class WeeklyPlanner extends Component
 
             if ($hasWorkAfterApproval) {
                 $this->dispatch('open-order-detail', orderId: $order->id, openApproval: true, targetStatus: CoreStatus::EN_PRODUCCION->value);
-                session()->flash('warning', __('Se detectaron cambios o tareas completadas después de la última aprobación. Se requiere confirmar una nueva aprobación antes de enviar a producción.'));
+                session()->flash('warning', __('Changes or completed tasks were found after the last approval. Confirm a new approval before sending to production.'));
 
                 return;
             }
@@ -1046,7 +1046,7 @@ class WeeklyPlanner extends Component
                         $order,
                         $previousOrderStatus,
                         CoreStatus::EN_PRODUCCION,
-                        auth()->user()?->name ?? __('Diseñador')
+                        auth()->user()?->name ?? __('Designer')
                     );
                     $order->update([
                         'substatus' => Substatus::ENVIADO_EN_ALTA,
@@ -1059,7 +1059,7 @@ class WeeklyPlanner extends Component
                 OrderEvent::create([
                     'order_id' => $order->id,
                     'event_type' => 'MOVED_TO_PRODUCTION',
-                    'actor' => auth()->user()?->name ?? __('Diseñador'),
+                    'actor' => auth()->user()?->name ?? __('Designer'),
                     'previous_value' => $previousOrderStatus?->value,
                     'new_value' => CoreStatus::EN_PRODUCCION->value,
                     'metadata' => [
@@ -1069,7 +1069,7 @@ class WeeklyPlanner extends Component
                     ],
                 ]);
 
-                session()->flash('message', __('Subtarea completada y orden :company enviada a Producción.', ['company' => $order->company_name]));
+                session()->flash('message', __('Subtask completed and order :company sent to production.', ['company' => $order->company_name]));
             }
         }
 
@@ -1128,7 +1128,7 @@ class WeeklyPlanner extends Component
         OrderEvent::create([
             'order_id' => $order->id,
             'event_type' => 'SUBTASK_SCHEDULED',
-            'actor' => auth()->user()?->name ?? __('Diseñador'),
+            'actor' => auth()->user()?->name ?? __('Designer'),
             'new_value' => $cleanedTitle,
             'metadata' => [
                 'task_id' => $subtask->id,
@@ -1139,7 +1139,7 @@ class WeeklyPlanner extends Component
             ],
         ]);
 
-        session()->flash('message', __('Nota vinculada a :company como subtarea ":title".', [
+        session()->flash('message', __('Note linked to :company as subtask ":title".', [
             'company' => $order->company_name,
             'title' => $cleanedTitle,
         ]));
@@ -1153,7 +1153,7 @@ class WeeklyPlanner extends Component
         $subtask->delete();
         $this->recentlyDeletedSubtaskIds[] = (int) $taskId;
 
-        $msg = __('Subtarea eliminada');
+        $msg = __('Subtask deleted');
         $this->recordAction('delete', ['task_id' => (int) $taskId], $msg);
 
         $this->dispatch('subtask-deleted', message: $msg);
@@ -1183,7 +1183,7 @@ class WeeklyPlanner extends Component
                 $subtask->restore();
                 $this->dispatch('subtask-restored');
                 $this->dispatch('order-updated');
-                session()->flash('message', __('Subtarea restaurada.'));
+                session()->flash('message', __('Subtask restored.'));
             }
         }
     }
@@ -1207,7 +1207,7 @@ class WeeklyPlanner extends Component
                     $subtask->restore();
                     $this->dispatch('subtask-restored');
                     $this->dispatch('order-updated');
-                    session()->flash('message', __('Subtarea restaurada.'));
+                    session()->flash('message', __('Subtask restored.'));
 
                     return;
                 }
@@ -1229,7 +1229,7 @@ class WeeklyPlanner extends Component
 
             $this->dispatch('subtask-restored');
             $this->dispatch('order-updated');
-            session()->flash('message', __('Movimiento deshecho.'));
+            session()->flash('message', __('Move undone.'));
         }
     }
 
@@ -1245,7 +1245,7 @@ class WeeklyPlanner extends Component
         }
 
         $order->update($updateData);
-        session()->flash('message', __('Orden :company quitada de la agenda.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company removed from schedule.', ['company' => $order->company_name]));
     }
 
     public function toggleDoneToday($orderId)
@@ -1264,11 +1264,11 @@ class WeeklyPlanner extends Component
             $dayDate = $startDate->copy()->addDays($i);
             $days[] = [
                 'day_name' => match ($i) {
-                    0 => __('Lunes'),
-                    1 => __('Martes'),
-                    2 => __('Miércoles'),
-                    3 => __('Jueves'),
-                    4 => __('Viernes'),
+                    0 => __('Monday'),
+                    1 => __('Tuesday'),
+                    2 => __('Wednesday'),
+                    3 => __('Thursday'),
+                    4 => __('Friday'),
                 },
                 'is_next_week' => false,
                 'date' => $dayDate,
@@ -1280,7 +1280,7 @@ class WeeklyPlanner extends Component
         $nextWeekFriday = $nextWeekMonday->copy()->addDays(4);
 
         $nextWeekItem = [
-            'day_name' => __('Próxima Semana'),
+            'day_name' => __('Next Week'),
             'is_next_week' => true,
             'date' => $nextWeekMonday,
             'date_string' => $nextWeekMonday->toDateString(),
@@ -1384,7 +1384,7 @@ class WeeklyPlanner extends Component
                                 'type' => 'order',
                                 'order_id' => $ord->id,
                                 'company_name' => $ord->company_name,
-                                'task_name' => $ord->task_name ?? __('Orden Principal'),
+                                'task_name' => $ord->task_name ?? __('Main order'),
                                 'scheduled_date' => $ord->scheduled_date->format('d M, Y'),
                                 'current_due_date' => $ord->current_due_date->format('d M, Y'),
                                 'days_overdue' => $daysOverdue,
@@ -1410,7 +1410,7 @@ class WeeklyPlanner extends Component
             'backlogOrders' => $backlogOrders,
             'slaBreachedList' => $slaBreachedList,
             'subtaskPresets' => SubtaskPreset::where('is_active', true)->orderBy('sort_order')->get(),
-        ])->layout('components.layouts.app', ['title' => __('Planificador Semanal - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Weekly planner - ').config('app.name')]);
     }
 
     public function confirmSubtaskWarning()

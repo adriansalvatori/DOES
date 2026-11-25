@@ -15,7 +15,7 @@ class TrashBin extends Component
     {
         $user = Auth::user();
         if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
-            abort(403, __('No tiene permisos para acceder a la papelera.'));
+            abort(403, __('You don\'t have permission to access the trash.'));
         }
     }
 
@@ -33,28 +33,28 @@ class TrashBin extends Component
             'metadata' => ['comment' => 'Orden restaurada desde la papelera.'],
         ]);
 
-        session()->flash('message', __('Orden \':company\' restaurada correctamente.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order \':company\' restored.', ['company' => $order->company_name]));
     }
 
     public function forceDeleteOrder(int $orderId): void
     {
         $user = Auth::user();
         if ($user && ! $user->canDeleteOrders()) {
-            abort(403, __('No tiene permisos para eliminar órdenes.'));
+            abort(403, __('You don\'t have permission to delete orders.'));
         }
 
         $order = Order::withTrashed()->findOrFail($orderId);
-        $company = $order->company_name ?? __('Orden');
+        $company = $order->company_name ?? __('Order');
         $order->forceDelete();
 
-        session()->flash('message', __('Orden \':company\' eliminada permanentemente de la app y de Trello.', ['company' => $company]));
+        session()->flash('message', __('Order \':company\' permanently deleted from the app and Trello.', ['company' => $company]));
     }
 
     public function emptyTrash(): void
     {
         $user = Auth::user();
         if ($user && ! $user->canDeleteOrders()) {
-            abort(403, __('No tiene permisos para vaciar la papelera.'));
+            abort(403, __('You don\'t have permission to empty the trash.'));
         }
 
         $trashedOrders = Order::onlyTrashed()->get();
@@ -64,7 +64,7 @@ class TrashBin extends Component
             $order->forceDelete();
         }
 
-        session()->flash('message', trans_choice('{1} Se eliminó permanentemente :count orden de la papelera y de Trello.|[0,*] Se eliminaron permanentemente :count órdenes de la papelera y de Trello.', $count));
+        session()->flash('message', trans_choice('{1} :count order permanently deleted from the trash and Trello.|[0,*] :count orders permanently deleted from the trash and Trello.', $count));
     }
 
     public function render()
@@ -79,6 +79,6 @@ class TrashBin extends Component
 
         return view('livewire.orders.trash-bin', [
             'trashedOrders' => $trashedOrders,
-        ])->layout('components.layouts.app', ['title' => __('Papelera — ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Trash — ').config('app.name')]);
     }
 }

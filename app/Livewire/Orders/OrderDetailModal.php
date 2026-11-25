@@ -518,8 +518,8 @@ class OrderDetailModal extends Component
         $this->validate([
             'attachmentFiles.*' => 'file|max:10240',
         ], [
-            'attachmentFiles.*.file' => __('Uno o más archivos seleccionados no son válidos.'),
-            'attachmentFiles.*.max' => __('Los archivos no deben superar los 10 MB (límite de Trello).'),
+            'attachmentFiles.*.file' => __('One or more of the selected files are not valid.'),
+            'attachmentFiles.*.max' => __('Files must not exceed 10 MB (Trello limit).'),
         ]);
 
         $this->isUploadingAttachment = true;
@@ -614,8 +614,8 @@ class OrderDetailModal extends Component
         $this->validate([
             'attachmentFile' => 'file|max:10240',
         ], [
-            'attachmentFile.file' => __('El archivo seleccionado no es válido.'),
-            'attachmentFile.max' => __('El archivo no debe superar los 10 MB (límite de Trello).'),
+            'attachmentFile.file' => __('The selected file is not valid.'),
+            'attachmentFile.max' => __('The file must not exceed 10 MB (Trello limit).'),
         ]);
 
         $this->isUploadingAttachment = true;
@@ -721,7 +721,7 @@ class OrderDetailModal extends Component
     public function downloadAllAttachments()
     {
         if (! $this->orderId || empty($this->trelloAttachments)) {
-            $this->dispatch('toast', message: __('No hay archivos adjuntos para descargar.'));
+            $this->dispatch('toast', message: __('There are no attachments to download.'));
 
             return null;
         }
@@ -736,7 +736,7 @@ class OrderDetailModal extends Component
         $zip = new \ZipArchive;
 
         if ($zip->open($tempZip, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-            $this->dispatch('toast', message: __('No se pudo generar el archivo comprimido.'));
+            $this->dispatch('toast', message: __('The compressed file could not be generated.'));
 
             return null;
         }
@@ -772,7 +772,7 @@ class OrderDetailModal extends Component
 
         if ($addedCount === 0) {
             @unlink($tempZip);
-            $this->dispatch('toast', message: __('No se pudieron obtener los archivos desde Trello.'));
+            $this->dispatch('toast', message: __('The files could not be retrieved from Trello.'));
 
             return null;
         }
@@ -821,7 +821,7 @@ class OrderDetailModal extends Component
         $order = Order::findOrFail($this->orderId);
 
         if ($order->trello_card_id) {
-            session()->flash('error', __('La orden ya está vinculada a una tarjeta de Trello.'));
+            session()->flash('error', __('The order is already linked to a Trello card.'));
 
             return;
         }
@@ -831,11 +831,11 @@ class OrderDetailModal extends Component
         if ($res['success']) {
             $order->refresh();
             $this->editTrelloCardId = $order->trello_card_id;
-            session()->flash('message', __('Tarjeta de Trello creada y vinculada exitosamente.'));
+            session()->flash('message', __('Trello card created and linked successfully.'));
             $this->dispatch('order-updated');
             $this->refreshTrelloData();
         } else {
-            session()->flash('error', __('Error al crear la tarjeta en Trello: :error', ['error' => $res['error'] ?? __('Error desconocido')]));
+            session()->flash('error', __('Error creating card in Trello: :error', ['error' => $res['error'] ?? __('Unknown error')]));
         }
     }
 
@@ -850,7 +850,7 @@ class OrderDetailModal extends Component
 
         $order = Order::findOrFail($this->orderId);
         if (! $order->trello_card_id) {
-            session()->flash('error', __('La orden no tiene una tarjeta de Trello vinculada.'));
+            session()->flash('error', __('Order does not have a linked Trello card.'));
 
             return;
         }
@@ -866,8 +866,8 @@ class OrderDetailModal extends Component
             $this->validate([
                 'commentPhotos.*' => 'image|max:10240',
             ], [
-                'commentPhotos.*.image' => __('Uno o más archivos seleccionados no son imágenes válidas.'),
-                'commentPhotos.*.max' => __('Las fotos no deben superar los 10 MB cada una.'),
+                'commentPhotos.*.image' => __('One or more selected files are not valid images.'),
+                'commentPhotos.*.max' => __('Photos must not exceed 10 MB each.'),
             ]);
 
             foreach ($photos as $photo) {
@@ -891,7 +891,7 @@ class OrderDetailModal extends Component
                         OrderEvent::create([
                             'order_id' => $order->id,
                             'event_type' => 'TRELLO_ATTACHMENT_ADDED',
-                            'actor' => $authorName ?? __('Usuario'),
+                            'actor' => $authorName ?? __('User'),
                             'previous_value' => null,
                             'new_value' => $attachName,
                             'metadata' => [
@@ -919,8 +919,8 @@ class OrderDetailModal extends Component
             $photosBlock = implode("\n\n", $uploadedPhotoMarkdown);
             if (empty($commentText)) {
                 $commentText = count($uploadedPhotoMarkdown) === 1
-                    ? __('📷 Foto adjunta').":\n\n".$photosBlock
-                    : __('📷 Fotos adjuntas').":\n\n".$photosBlock;
+                    ? __('📷 Attached photo').":\n\n".$photosBlock
+                    : __('📷 Attached photos').":\n\n".$photosBlock;
             } else {
                 $commentText .= "\n\n".$photosBlock;
             }
@@ -936,7 +936,7 @@ class OrderDetailModal extends Component
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'TRELLO_COMMENT_ADDED',
-                'actor' => $authorName ?? __('Usuario'),
+                'actor' => $authorName ?? __('User'),
                 'previous_value' => null,
                 'new_value' => null,
                 'metadata' => [
@@ -959,11 +959,11 @@ class OrderDetailModal extends Component
             if ($hasPhotos) {
                 $this->loadTrelloDetails();
             }
-            session()->flash('message', __('Comentario publicado en Trello correctamente.'));
+            session()->flash('message', __('Comment posted to Trello successfully.'));
             $this->dispatch('order-updated');
         } else {
-            $this->trelloCommentError = $res['error'] ?? __('No se pudo publicar el comentario en Trello.');
-            session()->flash('error', __('Error al publicar comentario en Trello: :error', ['error' => $res['error'] ?? __('Desconocido')]));
+            $this->trelloCommentError = $res['error'] ?? __('Could not post comment to Trello.');
+            session()->flash('error', __('Error posting comment to Trello: :error', ['error' => $res['error'] ?? __('Unknown')]));
         }
     }
 
@@ -983,12 +983,12 @@ class OrderDetailModal extends Component
 
         $order = Order::find($this->orderId);
         if (! $order || ! $order->trello_card_id) {
-            session()->flash('error', __('La orden no tiene una tarjeta de Trello vinculada.'));
+            session()->flash('error', __('Order does not have a linked Trello card.'));
 
             return;
         }
 
-        $authorName = auth()->user()?->name ?? __('Usuario');
+        $authorName = auth()->user()?->name ?? __('User');
         $res = app(TrelloSyncService::class)->deleteCardComment($actionId);
 
         if ($res['success']) {
@@ -1006,10 +1006,10 @@ class OrderDetailModal extends Component
             ]);
 
             $this->loadTrelloComments();
-            session()->flash('message', __('Comentario eliminado de Trello exitosamente.'));
+            session()->flash('message', __('Comment deleted from Trello successfully.'));
             $this->dispatch('order-updated');
         } else {
-            session()->flash('error', __('Error al eliminar el comentario de Trello: :error', ['error' => $res['error'] ?? __('Desconocido')]));
+            session()->flash('error', __('Error deleting comment from Trello: :error', ['error' => $res['error'] ?? __('Unknown')]));
         }
     }
 
@@ -1080,11 +1080,11 @@ class OrderDetailModal extends Component
             if ($commentId) {
                 $escapedCommentId = addslashes($commentId);
                 if ($isChecked) {
-                    $checkboxButton = '<button type="button" wire:click="toggleCommentChecklist(\''.$escapedCommentId.'\', '.$idx.')" wire:loading.attr="disabled" class="mt-0.5 w-4 h-4 rounded border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs group/chk focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="'.__('Desmarcar tarea').'">'
+                    $checkboxButton = '<button type="button" wire:click="toggleCommentChecklist(\''.$escapedCommentId.'\', '.$idx.')" wire:loading.attr="disabled" class="mt-0.5 w-4 h-4 rounded border border-emerald-600 bg-emerald-600 hover:bg-emerald-700 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs group/chk focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="'.__('Uncheck task').'">'
                         .'<svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>'
                         .'</button>';
                 } else {
-                    $checkboxButton = '<button type="button" wire:click="toggleCommentChecklist(\''.$escapedCommentId.'\', '.$idx.')" wire:loading.attr="disabled" class="mt-0.5 w-4 h-4 rounded border border-stone-300 hover:border-emerald-500 bg-white hover:bg-emerald-50 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs group/chk focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="'.__('Marcar como completada').'">'
+                    $checkboxButton = '<button type="button" wire:click="toggleCommentChecklist(\''.$escapedCommentId.'\', '.$idx.')" wire:loading.attr="disabled" class="mt-0.5 w-4 h-4 rounded border border-stone-300 hover:border-emerald-500 bg-white hover:bg-emerald-50 transition-colors flex items-center justify-center shrink-0 cursor-pointer shadow-2xs group/chk focus:outline-none focus:ring-2 focus:ring-emerald-500/20" title="'.__('Mark as completed').'">'
                         .'<svg class="w-3 h-3 text-emerald-600 opacity-0 group-hover/chk:opacity-40 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>'
                         .'</button>';
                 }
@@ -1146,13 +1146,13 @@ class OrderDetailModal extends Component
             return '<div class="my-2 not-prose block">'
                 .'<div class="group/cphoto relative inline-flex flex-col rounded-xl overflow-hidden border border-stone-200/90 hover:border-sky-400 bg-stone-50 shadow-2xs hover:shadow-xs transition cursor-pointer max-w-sm" '
                 .'wire:click="openMediaPreview(\''.$escapedSrc.'\', \''.$escapedAlt.'\')" '
-                .'role="button" tabindex="0" title="'.__('Clic para ampliar').'">'
+                .'role="button" tabindex="0" title="'.__('Click to enlarge').'">'
                 .'<div class="relative overflow-hidden bg-stone-100 flex items-center justify-center max-h-64">'
                 .'<img src="'.htmlspecialchars($displayUrl, ENT_QUOTES, 'UTF-8').'" alt="'.$safeAlt.'" class="max-h-64 w-auto max-w-full rounded-t-xl object-contain block group-hover/cphoto:scale-[1.02] transition-transform duration-200" loading="lazy" onerror="this.onerror=null; this.classList.add(\'opacity-40\');" />'
                 .'<div class="absolute inset-0 bg-stone-900/25 opacity-0 group-hover/cphoto:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">'
                 .'<span class="px-2.5 py-1 rounded-lg bg-white/95 text-stone-900 text-[11px] font-semibold shadow-xs flex items-center gap-1.5 backdrop-blur-xs">'
                 .'<svg class="w-3.5 h-3.5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>'
-                .__('Ampliar foto')
+                .__('Enlarge photo')
                 .'</span>'
                 .'</div>'
                 .'</div>'
@@ -1161,7 +1161,7 @@ class OrderDetailModal extends Component
                 .'<svg class="w-3 h-3 text-sky-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>'
                 .$safeAlt
                 .'</span>'
-                .'<span class="text-sky-600 hover:text-sky-700 text-[10px] font-semibold shrink-0">'.__('Ver').'</span>'
+                .'<span class="text-sky-600 hover:text-sky-700 text-[10px] font-semibold shrink-0">'.__('View').'</span>'
                 .'</div>'
                 .'</div>'
                 .'</div>';
@@ -1231,7 +1231,7 @@ class OrderDetailModal extends Component
             $this->trelloComments[$commentIndex] = $previousComment;
             $this->dispatch('toast', [
                 'type' => 'error',
-                'message' => __('No se pudo actualizar el checklist en Trello: :error', ['error' => $res['error'] ?? __('Error desconocido')]),
+                'message' => __('The checklist could not be updated in Trello: :error', ['error' => $res['error'] ?? __('Unknown error')]),
             ]);
         } else {
             app(TrelloSyncService::class)->forgetCardReadCache(Order::whereKey($this->orderId)->value('trello_card_id'));
@@ -1363,7 +1363,7 @@ class OrderDetailModal extends Component
         }
 
         $this->dispatch('order-updated');
-        session()->flash('message', __("Estado de la orden actualizado a ':status'.", [
+        session()->flash('message', __("Order status updated to ':status'.", [
             'status' => $newCoreStatus->label(),
         ]));
     }
@@ -1512,7 +1512,7 @@ class OrderDetailModal extends Component
 
         $this->closeModal();
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden archivada exitosamente con el subestatus seleccionado.'));
+        session()->flash('message', __('Order archived successfully with selected substatus.'));
     }
 
     public function openOnHoldModal(): void
@@ -1536,8 +1536,8 @@ class OrderDetailModal extends Component
         $this->validate([
             'onHoldReason' => 'required|string|min:3',
         ], [
-            'onHoldReason.required' => __('Debes ingresar un motivo para poner la orden en On Hold.'),
-            'onHoldReason.min' => __('El motivo debe tener al menos 3 caracteres.'),
+            'onHoldReason.required' => __('You must enter a reason to put the order on On Hold.'),
+            'onHoldReason.min' => __('The reason must have at least 3 characters.'),
         ]);
 
         $this->showOnHoldModal = false;
@@ -1586,7 +1586,7 @@ class OrderDetailModal extends Component
         $this->onHoldReason = '';
         $this->openModal($this->orderId);
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden :company movida a On Hold.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company moved to On Hold.', ['company' => $order->company_name]));
     }
 
     public function openResumeModal(?string $targetStatus = null): void
@@ -1612,8 +1612,8 @@ class OrderDetailModal extends Component
         $this->validate([
             'resumeReason' => 'required|string|min:3',
         ], [
-            'resumeReason.required' => __('Debes ingresar un motivo para reanudar la orden.'),
-            'resumeReason.min' => __('El motivo debe tener al menos 3 caracteres.'),
+            'resumeReason.required' => __('You must enter a reason to resume the order.'),
+            'resumeReason.min' => __('The reason must have at least 3 characters.'),
         ]);
 
         $this->showResumeModal = false;
@@ -1679,7 +1679,7 @@ class OrderDetailModal extends Component
         $this->resumeReason = '';
         $this->openModal($this->orderId);
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden :company reanudada.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company resumed.', ['company' => $order->company_name]));
     }
 
     public function openBlockModal()
@@ -1719,7 +1719,7 @@ class OrderDetailModal extends Component
         $this->editSubstatus = Substatus::BLOQUEADA->value;
         $this->closeBlockModal();
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden :company marcada como Bloqueada.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company marked as Blocked.', ['company' => $order->company_name]));
     }
 
     public function acceptPendingWo()
@@ -1730,7 +1730,7 @@ class OrderDetailModal extends Component
 
         $user = Auth::user();
         if ($user && ! $user->canManageWorkOrders()) {
-            abort(403, __('No tiene permisos para modificar el número de WO.'));
+            abort(403, __('You don\'t have permission to edit the WO number.'));
         }
 
         $order = Order::findOrFail($this->orderId);
@@ -1761,7 +1761,7 @@ class OrderDetailModal extends Component
             ],
         ]);
 
-        session()->flash('message', __('Número de WO actualizado a :wo (Trello) correctamente.', ['wo' => $newWo]));
+        session()->flash('message', __('WO number updated to :wo (Trello) successfully.', ['wo' => $newWo]));
         $this->dispatch('order-updated');
     }
 
@@ -1777,8 +1777,8 @@ class OrderDetailModal extends Component
             'pending_wo_number' => null,
         ]);
 
-        $currentWoLabel = $order->wo_number ?: __('actual');
-        session()->flash('message', __('Sugerencia de WO descartada. Se conserva el WO :wo (DOES).', ['wo' => $currentWoLabel]));
+        $currentWoLabel = $order->wo_number ?: __('current');
+        session()->flash('message', __('WO suggestion discarded. Retaining WO :wo (DOES).', ['wo' => $currentWoLabel]));
         $this->dispatch('order-updated');
     }
 
@@ -1808,14 +1808,14 @@ class OrderDetailModal extends Component
         $this->validate([
             'unblockReason' => 'required|string|min:3',
         ], [
-            'unblockReason.required' => __('Ingresa el motivo o forma en que se resolvió el bloqueo.'),
-            'unblockReason.min' => __('El motivo debe contener al menos 3 caracteres.'),
+            'unblockReason.required' => __('Enter the reason or how the block was resolved.'),
+            'unblockReason.min' => __('The reason must contain at least 3 characters.'),
         ]);
 
         $order = Order::findOrFail($this->orderId);
         $order->unblock($this->unblockReason);
 
-        session()->flash('message', __('Orden :company desbloqueada y devuelta a la lista del diseñador.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company unblocked and returned to designer list.', ['company' => $order->company_name]));
 
         $this->closeUnblockModal();
         $this->dispatch('order-updated');
@@ -1973,7 +1973,7 @@ class OrderDetailModal extends Component
         $newSubVal = $newSubstatus instanceof Substatus ? $newSubstatus->value : (string) $newSubstatus;
         if ($prevSubVal !== $newSubVal) {
             $subEnum = Substatus::tryFrom($newSubVal);
-            $subLabel = $subEnum ? $subEnum->label() : ($newSubVal ?: __('Ninguno'));
+            $subLabel = $subEnum ? $subEnum->label() : ($newSubVal ?: __('None'));
             OrderEvent::create([
                 'order_id' => $order->id,
                 'event_type' => 'SUBSTATUS_CHANGED',
@@ -1981,7 +1981,7 @@ class OrderDetailModal extends Component
                 'previous_value' => $prevSubVal ?: null,
                 'new_value' => $newSubVal ?: null,
                 'metadata' => [
-                    'description' => __('Subestatus actualizado a: :status', ['status' => $subLabel]),
+                    'description' => __('Substatus updated to: :status', ['status' => $subLabel]),
                 ],
             ]);
         }
@@ -2042,9 +2042,9 @@ class OrderDetailModal extends Component
         $this->dispatch('order-updated');
 
         if ($addToWorkspace) {
-            session()->flash('message', __('Orden :company actualizada y añadida al Workspace activo.', ['company' => $order->company_name]));
+            session()->flash('message', __('Order :company updated and added to active Workspace.', ['company' => $order->company_name]));
         } else {
-            session()->flash('message', __('Orden :company actualizada correctamente.', ['company' => $order->company_name]));
+            session()->flash('message', __('Order :company updated successfully.', ['company' => $order->company_name]));
         }
     }
 
@@ -2071,7 +2071,7 @@ class OrderDetailModal extends Component
         OrderEvent::create([
             'order_id' => $newOrder->id,
             'event_type' => 'ORDER_DUPLICATED',
-            'actor' => auth()->user()?->name ?? __('Usuario'),
+            'actor' => auth()->user()?->name ?? __('User'),
             'previous_value' => null,
             'new_value' => $newOrder->core_status?->value,
             'metadata' => [
@@ -2082,7 +2082,7 @@ class OrderDetailModal extends Component
 
         $this->orderId = $newOrder->id;
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden \':company\' duplicada correctamente.', ['company' => $newOrder->company_name]));
+        session()->flash('message', __('Order \':company\' duplicated successfully.', ['company' => $newOrder->company_name]));
     }
 
     public function toggleDoneToday()
@@ -2114,7 +2114,7 @@ class OrderDetailModal extends Component
         $this->editDueDate = '';
         app(AutomationEngine::class)->dismissPendingOverdueTasks($order);
         $this->dispatch('order-updated');
-        session()->flash('message', __('Fecha límite de :company establecida a Ninguna (Sin Fecha).', ['company' => $order->company_name]));
+        session()->flash('message', __('Due date for :company set to None (No Date).', ['company' => $order->company_name]));
     }
 
     public function openMediaPreview(string $url, string $title = 'Archivo')
@@ -2204,7 +2204,7 @@ class OrderDetailModal extends Component
         $order->update(['in_workspace' => false]);
         $this->closeModal();
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden :company movida de regreso al Backlog.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company moved back to Backlog.', ['company' => $order->company_name]));
     }
 
     public function deleteOrder()
@@ -2217,16 +2217,16 @@ class OrderDetailModal extends Component
         $user = Auth::user();
 
         if ($user && ! $user->canDeleteOrders()) {
-            abort(403, __('No tiene permisos para enviar órdenes a la papelera.'));
+            abort(403, __('You do not have permission to send orders to the trash.'));
         }
 
-        $name = $order->company_name ?? __('Orden');
+        $name = $order->company_name ?? __('Order');
 
         $order->delete();
 
         $this->closeModal();
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden \':name\' movida a la Papelera de Reciclaje.', ['name' => $name]));
+        session()->flash('message', __('Order \':name\' moved to Recycling Bin.', ['name' => $name]));
     }
 
     public function addToWorkspaceDirectly()
@@ -2252,7 +2252,7 @@ class OrderDetailModal extends Component
 
         $order->update($updateData);
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden :company añadida al Workspace activo.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company added to active Workspace.', ['company' => $order->company_name]));
     }
 
     public function openApprovalModal(?string $targetStatus = null): void
@@ -2304,7 +2304,7 @@ class OrderDetailModal extends Component
         $hasImage = (bool) $this->approvalImage;
 
         if (! $hasComment && ! $hasImage) {
-            $this->addError('approvalSupport', __('Debes ingresar un comentario o adjuntar una imagen como soporte de la aprobación.'));
+            $this->addError('approvalSupport', __('You must enter a comment or attach an image as proof of approval.'));
 
             return;
         }
@@ -2313,9 +2313,9 @@ class OrderDetailModal extends Component
             'approvalType' => 'required|in:camila,manager,gabriela,cliente',
             'approvalImage' => 'nullable|image|max:12288',
         ], [
-            'approvalType.required' => __('Debes seleccionar quién aprobó el diseño.'),
-            'approvalImage.image' => __('El archivo adjunto debe ser una imagen válida.'),
-            'approvalImage.max' => __('La imagen no debe superar los 12MB.'),
+            'approvalType.required' => __('You must select who approved the design.'),
+            'approvalImage.image' => __('The attached file must be a valid image.'),
+            'approvalImage.max' => __('Image must not exceed 12MB.'),
         ]);
 
         $order = Order::findOrFail($this->orderId);
@@ -2422,7 +2422,7 @@ class OrderDetailModal extends Component
         $this->pendingProductionStatus = null;
         $this->closeModal();
         $this->dispatch('order-updated');
-        session()->flash('message', __('Aprobación procesada para :company.', ['company' => $order->company_name]));
+        session()->flash('message', __('Approval processed for :company.', ['company' => $order->company_name]));
     }
 
     public function submitDelayResolution()
@@ -2441,7 +2441,7 @@ class OrderDetailModal extends Component
 
         $this->showDelayModal = false;
         $this->dispatch('order-updated');
-        session()->flash('message', __('Atraso resuelto y nueva fecha fijada al :date.', ['date' => $this->clientPromisedDate]));
+        session()->flash('message', __('Delay resolved and new date set to :date.', ['date' => $this->clientPromisedDate]));
     }
 
     public function addTask()
@@ -2485,9 +2485,9 @@ class OrderDetailModal extends Component
                 'isWork' => $isWork,
                 'isOrderBlocked' => $isOrderBlocked,
                 'isOrderApproved' => $isOrderApproved,
-                'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Bloqueada')),
-                'approvalType' => $order->approval_type ?? __('Cliente'),
-                'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previamente'),
+                'blockingReason' => $order->blocking_reason?->label() ?? ($order->substatus?->label() ?? __('Blocked')),
+                'approvalType' => $order->approval_type ?? __('Client'),
+                'approvedAt' => $order->approved_at?->format('d M, Y') ?? __('Previously'),
             ];
             $this->subtaskBlockResolution = ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS) ? 'unblock' : 'keep_blocked';
             $this->subtaskApprovalImpact = ($category === SubtaskCategory::CLIENT_ADJUSTMENTS) ? 'invalidate' : 'keep';
@@ -2559,7 +2559,7 @@ class OrderDetailModal extends Component
                 if ($order->blocking_reason === BlockingReason::FALTAN_MEDIDAS || str_contains(mb_strtolower($rawTitle, 'UTF-8'), 'medida')) {
                     $order->update(['measures_confirmed' => true]);
                 }
-                $order->unblock(__('Medidas/información confirmadas al programar subtarea: :title', ['title' => $rawTitle]));
+                $order->unblock(__('Details confirmed when scheduling subtask: :title', ['title' => $rawTitle]));
                 $order->refresh();
             } else {
                 $isWork = false;
@@ -2650,7 +2650,7 @@ class OrderDetailModal extends Component
                 'return_core_status' => $cat->defaultReturnCoreStatus() ?? $task->return_core_status,
             ]);
             $this->dispatch('order-updated');
-            session()->flash('message', __('Categoría de subtarea actualizada a :cat.', ['cat' => $cat->label()]));
+            session()->flash('message', __('Subtask category updated to :cat.', ['cat' => $cat->label()]));
         }
     }
 
@@ -2665,7 +2665,7 @@ class OrderDetailModal extends Component
         if ($task) {
             $task->update(['title' => $newTitle]);
             $this->dispatch('order-updated');
-            session()->flash('message', __('Subtarea actualizada correctamente.'));
+            session()->flash('message', __('Subtask updated successfully.'));
         }
     }
 
@@ -2675,7 +2675,7 @@ class OrderDetailModal extends Component
         if ($task) {
             $task->update(['is_work_task' => $isWork]);
             $this->dispatch('order-updated');
-            session()->flash('message', __('Tipo de subtarea actualizado a :type.', ['type' => $isWork ? __('Trabajo') : __('Gestión')]));
+            session()->flash('message', __('Subtask type updated to :type.', ['type' => $isWork ? __('Work') : __('Admin')]));
         }
     }
 
@@ -2686,7 +2686,7 @@ class OrderDetailModal extends Component
             $newIsWork = ! ($task->is_work_task ?? true);
             $task->update(['is_work_task' => $newIsWork]);
             $this->dispatch('order-updated');
-            session()->flash('message', __('Tipo de subtarea actualizado a :type.', ['type' => $newIsWork ? __('Trabajo') : __('Gestión')]));
+            session()->flash('message', __('Subtask type updated to :type.', ['type' => $newIsWork ? __('Work') : __('Admin')]));
         }
     }
 
@@ -2742,7 +2742,7 @@ class OrderDetailModal extends Component
             }
 
             $this->dispatch('order-updated');
-            session()->flash('message', $parsedDate ? __('Fecha de la subtarea actualizada para el :date.', ['date' => Carbon::parse($parsedDate)->format('d M')]) : __('Fecha de la subtarea eliminada.'));
+            session()->flash('message', $parsedDate ? __('Subtask date updated to :date.', ['date' => Carbon::parse($parsedDate)->format('d M')]) : __('Subtask date removed.'));
         }
     }
 
@@ -2754,8 +2754,8 @@ class OrderDetailModal extends Component
             $task->update(['assignee_id' => $assigneeId]);
             $this->dispatch('order-updated');
 
-            $designerName = $assigneeId ? (Designer::find($assigneeId)?->name ?? __('Diseñador')) : __('Sin asignar');
-            session()->flash('message', __('Responsable de la subtarea actualizado: :designer.', ['designer' => $designerName]));
+            $designerName = $assigneeId ? (Designer::find($assigneeId)?->name ?? __('Designer')) : __('Unassigned');
+            session()->flash('message', __('Subtask assignee updated: :designer.', ['designer' => $designerName]));
         }
     }
 
@@ -2766,7 +2766,7 @@ class OrderDetailModal extends Component
             $taskName = $task->title;
             $task->delete();
             $this->dispatch('order-updated');
-            session()->flash('message', __('Tarea \':task\' eliminada.', ['task' => $taskName]));
+            session()->flash('message', __('Task \':task\' deleted.', ['task' => $taskName]));
         }
     }
 
@@ -2777,7 +2777,7 @@ class OrderDetailModal extends Component
             $taskName = $task->title;
             $task->forceDelete();
             $this->dispatch('order-updated');
-            session()->flash('message', __('Subtarea \':task\' descartada.', ['task' => $taskName]));
+            session()->flash('message', __('Subtask \':task\' discarded.', ['task' => $taskName]));
         }
     }
 
@@ -2791,7 +2791,7 @@ class OrderDetailModal extends Component
             if ($order && $willBeDone && $task->isPonerEnAlta() && ! $task->order_element_id && ! $task->order_stage_id) {
                 if (! $order->approved) {
                     $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
-                    session()->flash('warning', __('La orden requiere aprobación antes de ser enviada a producción.'));
+                    session()->flash('warning', __('The order needs approval before it goes to production.'));
 
                     return;
                 }
@@ -2807,7 +2807,7 @@ class OrderDetailModal extends Component
 
                 if ($hasWorkAfterApproval) {
                     $this->openApprovalModal(CoreStatus::EN_PRODUCCION->value);
-                    session()->flash('warning', __('Se detectaron cambios o tareas completadas después de la última aprobación. Se requiere confirmar una nueva aprobación antes de enviar a producción.'));
+                    session()->flash('warning', __('Changes or completed tasks were found after the last approval. Confirm a new approval before sending to production.'));
 
                     return;
                 }
@@ -3235,7 +3235,7 @@ class OrderDetailModal extends Component
         $this->resetErrorBag();
 
         if (empty(trim((string) $this->pieceApprovalNote))) {
-            $this->addError('pieceApprovalNote', __('Debes ingresar el soporte de aprobación y notas adicionales.'));
+            $this->addError('pieceApprovalNote', __('You must enter the approval proof and additional notes.'));
 
             return;
         }
@@ -3243,7 +3243,7 @@ class OrderDetailModal extends Component
         $this->validate([
             'pieceApprovalType' => 'required|in:camila,manager,gabriela,cliente',
         ], [
-            'pieceApprovalType.required' => __('Debes seleccionar quién validó la aprobación.'),
+            'pieceApprovalType.required' => __('You must select who validated the approval.'),
         ]);
 
         $element = OrderElement::where('order_id', $this->orderId)->find($this->pieceApprovalElementId);

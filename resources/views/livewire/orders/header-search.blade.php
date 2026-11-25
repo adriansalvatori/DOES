@@ -52,7 +52,7 @@
         class="w-44 md:w-64 lg:w-72 min-w-0 h-8 px-2.5 rounded-control border border-line bg-surface text-body text-ink-3 hover:border-line-strong transition flex items-center gap-2 cursor-pointer"
         aria-haspopup="dialog">
         <x-lucide-search class="w-4 h-4 shrink-0" aria-hidden="true" />
-        <span class="truncate">{{ __('Buscar o ir a…') }}</span>
+        <span class="truncate">{{ __('Search or jump to…') }}</span>
         <kbd class="ui-kbd ml-auto hidden sm:inline-flex">⌘K</kbd>
     </button>
 
@@ -60,9 +60,9 @@
         type="button"
         @click="$dispatch('open-create-order')"
         class="ui-btn ui-btn-primary"
-        title="{{ __('Nueva Orden') }}">
+        title="{{ __('New Order') }}">
         <x-lucide-plus aria-hidden="true" />
-        <span class="hidden sm:inline">{{ __('Nueva Orden') }}</span>
+        <span class="hidden sm:inline">{{ __('New Order') }}</span>
     </button>
 
     <!-- Palette dialog -->
@@ -73,7 +73,7 @@
         class="fixed inset-0 z-[60] flex items-start justify-center px-4 pt-[12vh]"
         role="dialog"
         aria-modal="true"
-        aria-label="{{ __('Buscar o ir a…') }}"
+        aria-label="{{ __('Search or jump to…') }}"
         @keydown.escape.prevent.stop="closePalette()"
     >
         <div class="fixed inset-0 bg-stone-900/30" @click="closePalette()"></div>
@@ -96,11 +96,11 @@
                     @keydown.arrow-down.prevent="move(1)"
                     @keydown.arrow-up.prevent="move(-1)"
                     @keydown.enter.prevent="activate()"
-                    placeholder="{{ __('WO, cliente, contacto o sección…') }}"
+                    placeholder="{{ __('WO, client, contact or section…') }}"
                     autocomplete="off"
                     spellcheck="false"
                     class="flex-1 h-12 bg-transparent text-row text-ink placeholder:text-ink-3 focus:outline-none"
-                    aria-label="{{ __('Buscar o ir a…') }}"
+                    aria-label="{{ __('Search or jump to…') }}"
                 />
                 <span wire:loading wire:target="search" class="text-ink-3" aria-hidden="true">
                     <x-lucide-loader-2 class="w-4 h-4 animate-spin" />
@@ -112,7 +112,7 @@
 
                 @if($hasQuery && count($results) > 0)
                     <div>
-                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Órdenes') }}</p>
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Orders') }}</p>
                         @foreach($results as $order)
                             <div
                                 wire:key="palette-order-{{ $order->id }}"
@@ -145,7 +145,7 @@
 
                 @if($hasQuery && count($clientResults) > 0)
                     <div>
-                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Clientes') }}</p>
+                        <p class="px-2 py-1 text-meta text-ink-3">{{ __('Clients') }}</p>
                         @foreach($clientResults as $client)
                             <div
                                 wire:key="palette-client-{{ $client->id }}"
@@ -164,7 +164,7 @@
                                 <div class="min-w-0 flex-1">
                                     <p class="text-row font-medium text-ink truncate">{{ $client->name }}</p>
                                     <p class="text-meta text-ink-3 truncate">
-                                        {{ trans_choice(':count orden activa|:count órdenes activas', $client->active_orders_count, ['count' => $client->active_orders_count]) }}
+                                        {{ trans_choice(':count active order|:count active orders', $client->active_orders_count, ['count' => $client->active_orders_count]) }}
                                         @if($client->primaryContact) · {{ $client->primaryContact->name }} @endif
                                     </p>
                                 </div>
@@ -174,8 +174,8 @@
                 @endif
 
                 <!-- Quick actions -->
-                <div x-show="matches(@js(mb_strtolower(__('Nueva Orden') . ' crear')))">
-                    <p class="px-2 py-1 text-meta text-ink-3">{{ __('Acciones') }}</p>
+                <div x-show="matches(@js(mb_strtolower(__('New Order') . ' crear')))">
+                    <p class="px-2 py-1 text-meta text-ink-3">{{ __('Actions') }}</p>
                     <div
                         data-palette-item
                         role="option"
@@ -189,7 +189,7 @@
                         <span class="grid h-7 w-7 shrink-0 place-items-center rounded-control bg-ink text-white">
                             <x-lucide-plus class="w-4 h-4" aria-hidden="true" />
                         </span>
-                        <span class="text-row text-ink">{{ __('Nueva Orden') }}</span>
+                        <span class="text-row text-ink">{{ __('New Order') }}</span>
                     </div>
                 </div>
 
@@ -223,15 +223,15 @@
 
                 @if($hasQuery && count($results) === 0 && count($clientResults) === 0)
                     <p class="px-2 py-6 text-center text-body text-ink-3" x-show="items().length === 0">
-                        {{ __('Sin resultados para «:query».', ['query' => trim($search)]) }}
+                        {{ __('No results for “:query”.', ['query' => trim($search)]) }}
                     </p>
                 @endif
             </div>
 
             <div class="flex items-center gap-4 px-3 py-2 border-t border-line text-meta text-ink-3">
-                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">↑</kbd><kbd class="px-1 rounded border border-line font-sans">↓</kbd> {{ __('para moverte') }}</span>
-                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">↵</kbd> {{ __('para abrir') }}</span>
-                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">Esc</kbd> {{ __('para cerrar') }}</span>
+                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">↑</kbd><kbd class="px-1 rounded border border-line font-sans">↓</kbd> {{ __('to move') }}</span>
+                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">↵</kbd> {{ __('to open') }}</span>
+                <span class="inline-flex items-center gap-1"><kbd class="px-1 rounded border border-line font-sans">Esc</kbd> {{ __('to close') }}</span>
             </div>
         </div>
     </div>

@@ -6,7 +6,7 @@
     @form-saved.window="handleFormSaved()"
     class="h-full w-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 max-w-4xl pb-28">
     
-    <x-ui.page-header :title="__('Mi Perfil y Configuración')" />
+    <x-ui.page-header :title="__('My profile and settings')" />
 
     <!-- User Mini Hero Card -->
     <div class="bg-surface border border-line rounded-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
@@ -29,9 +29,9 @@
             <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
                     <h2 class="text-section font-semibold text-ink truncate">{{ $user->name }}</h2>
-                    <x-ui.tag tone="neutral">{{ $user->role?->label() ?? __('Diseñador') }}</x-ui.tag>
+                    <x-ui.tag tone="neutral">{{ $user->role?->label() ?? __('Designer') }}</x-ui.tag>
                     @if($user->designer && $user->designer->is_lead)
-                        <x-ui.tag tone="neutral">{{ __('Lead Designer') }}</x-ui.tag>
+                        <x-ui.tag tone="neutral">{{ __('Lead designer') }}</x-ui.tag>
                     @endif
                 </div>
                 <p class="text-xs text-ink-3 mt-0.5 truncate">{{ $user->email }}</p>
@@ -45,7 +45,7 @@
                     @if($user->last_login_at)
                         <span class="flex items-center gap-1">
                             <x-lucide-clock class="w-3 h-3" />
-                            {{ __('Último acceso') }}: {{ $user->last_login_at->diffForHumans() }}
+                            {{ __('Last seen') }}: {{ $user->last_login_at->diffForHumans() }}
                         </span>
                     @endif
                 </div>
@@ -55,7 +55,7 @@
         @if($user->designer)
             <div class="flex items-center gap-3 border-t md:border-t-0 md:border-l border-stone-100 pt-3 md:pt-0 md:pl-5 shrink-0">
                 <div class="text-right">
-                    <p class="text-meta text-ink-3 font-semibold">{{ __('Diseñador Vinculado') }}</p>
+                    <p class="text-meta text-ink-3 font-semibold">{{ __('Linked designer') }}</p>
                     <p class="text-xs font-semibold text-ink">{{ $user->designer->name }}</p>
                 </div>
                 <div class="w-4 h-4 rounded-full border border-stone-300 shrink-0" style="background-color: {{ $user->designer->hex_color ?? '#06b6d4' }}" title="{{ $user->designer->color_type ?? 'Color de diseñador' }}"></div>
@@ -69,7 +69,7 @@
             type="button"
             @click="switchTab('general')" 
             class="px-3 py-2 transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'general' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
-            <span>{{ __('General & Perfil') }}</span>
+            <span>{{ __('General and profile') }}</span>
         </button>
 
 
@@ -77,14 +77,14 @@
             type="button"
             @click="switchTab('preferences')" 
             class="px-3 py-2 transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'preferences' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
-            <span>{{ __('Entorno & Idioma') }}</span>
+            <span>{{ __('Environment and language') }}</span>
         </button>
 
         <button 
             type="button"
             @click="switchTab('security')" 
             class="px-3 py-2 transition flex items-center gap-2 border-b-2 cursor-pointer whitespace-nowrap shrink-0 {{ $activeTab === 'security' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
-            <span>{{ __('Seguridad & Sesión') }}</span>
+            <span>{{ __('Security and session') }}</span>
         </button>
     </div>
 
@@ -102,13 +102,13 @@
 
             <div class="bg-surface border border-line rounded-card p-5 space-y-5">
                 <div>
-                    <h3 class="font-semibold text-sm text-ink">{{ __('Información Personal') }}</h3>
-                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Tus datos de identificación dentro del equipo de Kudos.') }}</p>
+                    <h3 class="font-semibold text-sm text-ink">{{ __('Personal information') }}</h3>
+                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Your identity details within the Kudos team.') }}</p>
                 </div>
 
                 <form wire:submit="updateProfile" class="space-y-4 max-w-xl">
                     <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Nombre Completo') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Full name') }}</label>
                         <input 
                             wire:model="name" 
                             type="text" 
@@ -118,7 +118,7 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Correo Electrónico') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Email') }}</label>
                         <input 
                             wire:model="email" 
                             type="email" 
@@ -205,7 +205,7 @@
                             }
                         }"
                         class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Teléfono / WhatsApp') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Phone / WhatsApp') }}</label>
                         
                         <div class="relative flex items-center rounded-control border border-stone-300 bg-white focus-within:ring-2 focus-within:ring-stone-900 focus-within:border-stone-900 transition">
                             <!-- Country Selector Trigger Button -->
@@ -250,7 +250,7 @@
                                         x-ref="searchInput"
                                         x-model="search"
                                         type="text" 
-                                        placeholder="{{ __('Buscar país o código...') }}"
+                                        placeholder="{{ __('Search country or code…') }}"
                                         class="ui-input pl-8 pr-7" />
                                     <button 
                                         x-show="search.length > 0"
@@ -279,20 +279,20 @@
                                     </template>
                                     
                                     <div x-show="filteredCountries.length === 0" class="py-4 text-center text-xs text-ink-3">
-                                        {{ __('No se encontraron países') }}
+                                        {{ __('No countries found') }}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <p class="text-meta text-ink-3 mt-0.5">{{ __('Para coordinación interna y avisos urgentes de operaciones.') }}</p>
+                        <p class="text-meta text-ink-3 mt-0.5">{{ __('For internal coordination and urgent operations alerts.') }}</p>
                         @error('phone') <p class="text-meta text-red-600 mt-0.5">{{ $message }}</p> @enderror
                         @error('phone_number') <p class="text-meta text-red-600 mt-0.5">{{ $message }}</p> @enderror
                     </div>
 
                     <!-- Foto de Perfil / Avatar Upload Section -->
                     <div class="space-y-3 pt-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Foto de Perfil') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Profile photo') }}</label>
                         
                         <div class="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-control bg-stone-50/70 border border-stone-200">
                             <!-- Avatar Preview -->
@@ -317,7 +317,7 @@
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <label for="avatar_file_input" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-control transition cursor-pointer select-none">
                                         <x-lucide-upload class="w-3.5 h-3.5" />
-                                        <span>{{ ($avatar_file || $avatar_url) ? __('Cambiar Foto') : __('Subir Foto') }}</span>
+                                        <span>{{ ($avatar_file || $avatar_url) ? __('Change photo') : __('Upload photo') }}</span>
                                     </label>
                                     <input 
                                         id="avatar_file_input" 
@@ -333,13 +333,13 @@
                                             wire:loading.attr="disabled"
                                             class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 bg-white hover:bg-red-50 text-red-600 text-xs font-semibold rounded-control transition cursor-pointer">
                                             <x-lucide-trash-2 class="w-3.5 h-3.5" />
-                                            <span>{{ __('Eliminar') }}</span>
+                                            <span>{{ __('Delete') }}</span>
                                         </button>
                                     @endif
                                 </div>
 
                                 <div class="flex items-center gap-3 text-meta text-ink-3">
-                                    <span>{{ __('Formatos:') }} <strong>PNG, JPG o WEBP</strong> (máx. 3 MB)</span>
+                                    <span>{{ __('Formats:') }} <strong>PNG, JPG o WEBP</strong> (máx. 3 MB)</span>
                                 </div>
 
                                 @error('avatar_file')
@@ -355,7 +355,7 @@
                                 @click="showUrl = !showUrl" 
                                 class="text-meta text-ink-3 hover:text-ink font-medium inline-flex items-center gap-1 transition cursor-pointer">
                                 <x-lucide-link class="w-3 h-3 text-ink-3" />
-                                <span x-text="showUrl ? '{{ __('Ocultar URL de imagen externa') }}' : '{{ __('O ingresar una URL externa de imagen...') }}'"></span>
+                                <span x-text="showUrl ? '{{ __('Hide external image URL') }}' : '{{ __('Or enter an external image URL…') }}'"></span>
                             </button>
                             <div x-show="showUrl" x-cloak class="mt-2 space-y-1">
                                 <input 
@@ -363,14 +363,14 @@
                                     type="url" 
                                     placeholder="https://ejemplo.com/avatar.jpg"
                                     class="ui-input font-mono" />
-                                <p class="text-meta text-ink-3">{{ __('Enlace directo HTTP/HTTPS a tu imagen o avatar de servicio externo.') }}</p>
+                                <p class="text-meta text-ink-3">{{ __('Direct HTTP/HTTPS link to your image or an external avatar service.') }}</p>
                                 @error('avatar_url') <p class="text-meta text-red-600 mt-0.5">{{ $message }}</p> @enderror
                             </div>
                         </div>
                     </div>
 
                     <div class="pt-2">
-                        <flux:button type="submit" variant="primary" size="sm" :loading="false" x-bind:disabled="!isDirty">{{ __('Guardar Cambios') }}</flux:button>
+                        <flux:button type="submit" variant="primary" size="sm" :loading="false" x-bind:disabled="!isDirty">{{ __('Save Changes') }}</flux:button>
                     </div>
                 </form>
             </div>
@@ -392,15 +392,15 @@
 
             <div class="bg-surface border border-line rounded-card p-5 space-y-5">
                 <div>
-                    <h3 class="font-semibold text-sm text-ink">{{ __('Entorno y Preferencias de Interfaz') }}</h3>
-                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Personaliza cómo se muestra la plataforma al iniciar sesión.') }}</p>
+                    <h3 class="font-semibold text-sm text-ink">{{ __('Environment and interface preferences') }}</h3>
+                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Customize how the app looks when you sign in.') }}</p>
                 </div>
 
                 <form wire:submit="updatePreferences" class="space-y-6 max-w-xl">
                     
                     <!-- Language Picker -->
                     <div class="space-y-2">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Idioma de la Interfaz') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Interface language') }}</label>
                         <!-- Hidden input to track selected locale in form snapshot -->
                         <input type="hidden" name="locale" value="{{ $locale }}" />
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -421,7 +421,7 @@
                                 @if($locale === 'es')
                                     <span class="px-2.5 py-0.5 rounded-full bg-stone-900 text-white text-meta font-semibold flex items-center gap-1">
                                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
-                                        <span>{{ __('Activo') }}</span>
+                                        <span>{{ __('Active') }}</span>
                                     </span>
                                 @endif
                             </button>
@@ -443,7 +443,7 @@
                                 @if($locale === 'en')
                                     <span class="px-2.5 py-0.5 rounded-full bg-stone-900 text-white text-meta font-semibold flex items-center gap-1">
                                         <x-lucide-check class="w-3 h-3 stroke-[3]" />
-                                        <span>{{ __('Activo') }}</span>
+                                        <span>{{ __('Active') }}</span>
                                     </span>
                                 @endif
                             </button>
@@ -452,22 +452,22 @@
 
                     <!-- Default Landing Page -->
                     <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Pantalla Inicial al Iniciar Sesión') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Start page after sign-in') }}</label>
                         <select 
                             wire:model="default_landing_page" 
                             class="ui-select">
-                            <option value="dashboard">{{ __('Dashboard Principal (Centro de Control)') }}</option>
-                            <option value="kanban">{{ __('Tablero Kanban General') }}</option>
-                            <option value="planner">{{ __('Weekly Planner (Agenda Semanal)') }}</option>
-                            <option value="backlog">{{ __('Backlog de Órdenes') }}</option>
-                            <option value="resolver">{{ __('Cola Resolver (Atención de Bloqueos)') }}</option>
+                            <option value="dashboard">{{ __('Main dashboard (control center)') }}</option>
+                            <option value="kanban">{{ __('Kanban board') }}</option>
+                            <option value="planner">{{ __('Weekly planner') }}</option>
+                            <option value="backlog">{{ __('Order Backlog') }}</option>
+                            <option value="resolver">{{ __('Resolver queue (blocked orders)') }}</option>
                         </select>
-                        <p class="text-meta text-ink-3 mt-0.5">{{ __('A dónde se te redirige automáticamente tras autenticarte.') }}</p>
+                        <p class="text-meta text-ink-3 mt-0.5">{{ __('Where you land automatically after signing in.') }}</p>
                     </div>
 
                     <!-- Date Format -->
                     <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Formato de Fecha') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Date format') }}</label>
                         <select 
                             wire:model="date_format" 
                             class="ui-select">
@@ -477,7 +477,7 @@
                     </div>
 
                     <div class="pt-2">
-                        <flux:button type="submit" variant="primary" size="sm" :loading="false" x-bind:disabled="!isDirty">{{ __('Guardar Preferencias de Entorno') }}</flux:button>
+                        <flux:button type="submit" variant="primary" size="sm" :loading="false" x-bind:disabled="!isDirty">{{ __('Save preferences') }}</flux:button>
                     </div>
                 </form>
             </div>
@@ -499,19 +499,19 @@
             <!-- Password Change Form -->
             <div class="bg-surface border border-line rounded-card p-5 space-y-5">
                 <div>
-                    <h3 class="font-semibold text-sm text-ink">{{ __('Cambiar Contraseña') }}</h3>
-                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Asegúrate de utilizar una contraseña segura de al menos 8 caracteres.') }}</p>
+                    <h3 class="font-semibold text-sm text-ink">{{ __('Change password') }}</h3>
+                    <p class="text-xs text-ink-3 mt-0.5">{{ __('Use a strong password of at least 8 characters.') }}</p>
                 </div>
 
                 <form wire:submit="updatePassword" class="space-y-4 max-w-xl">
                     <div class="space-y-1">
                         <div class="flex items-center justify-between">
-                            <label class="block text-xs font-semibold text-ink-2">{{ __('Contraseña Actual') }}</label>
+                            <label class="block text-xs font-semibold text-ink-2">{{ __('Current password') }}</label>
                             <button 
                                 type="button" 
                                 wire:click="openRecoveryModal"
                                 class="text-xs text-blue-600 hover:text-blue-800 font-semibold hover:underline cursor-pointer">
-                                {{ __('¿Olvidaste tu contraseña?') }}
+                                {{ __('Forgot your password?') }}
                             </button>
                         </div>
                         <input 
@@ -527,14 +527,14 @@
                                     type="button" 
                                     wire:click="openRecoveryModal"
                                     class="text-blue-600 hover:text-blue-800 font-semibold underline cursor-pointer">
-                                    {{ __('Recupérala aquí') }} &rarr;
+                                    {{ __('Recover it here') }} &rarr;
                                 </button>
                             </div>
                         @enderror
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Nueva Contraseña') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('New password') }}</label>
                         <input 
                             wire:model="new_password" 
                             type="{{ $show_passwords ? 'text' : 'password' }}" 
@@ -545,7 +545,7 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-xs font-semibold text-ink-2">{{ __('Confirmar Nueva Contraseña') }}</label>
+                        <label class="block text-xs font-semibold text-ink-2">{{ __('Confirm new password') }}</label>
                         <input 
                             wire:model="new_password_confirmation" 
                             type="{{ $show_passwords ? 'text' : 'password' }}" 
@@ -557,19 +557,19 @@
                     <div class="flex items-center justify-between pt-1">
                         <label class="flex items-center gap-2 cursor-pointer text-xs text-ink-2 select-none">
                             <input type="checkbox" wire:model.live="show_passwords" class="w-3.5 h-3.5 text-stone-900 rounded border-stone-300" />
-                            <span>{{ __('Mostrar contraseñas') }}</span>
+                            <span>{{ __('Show passwords') }}</span>
                         </label>
 
-                        <flux:button type="submit" variant="primary" size="sm" :loading="false" x-bind:disabled="!isDirty">{{ __('Actualizar Contraseña') }}</flux:button>
+                        <flux:button type="submit" variant="primary" size="sm" :loading="false" x-bind:disabled="!isDirty">{{ __('Update password') }}</flux:button>
                     </div>
                 </form>
             </div>
 
             <!-- Session info. Sign-out lives in the sidebar account menu. -->
             <div class="px-1 text-meta text-ink-3 flex items-center gap-4 flex-wrap">
-                <span>{{ __('IP Actual:') }} <strong class="font-mono font-medium text-ink-2">{{ request()->ip() }}</strong></span>
+                <span>{{ __('Current IP:') }} <strong class="font-mono font-medium text-ink-2">{{ request()->ip() }}</strong></span>
                 @if($user->last_login_at)
-                    <span>{{ __('Último inicio de sesión:') }} <strong class="font-medium text-ink-2">{{ $user->last_login_at->format('d/m/Y H:i') }}</strong></span>
+                    <span>{{ __('Last sign-in:') }} <strong class="font-medium text-ink-2">{{ $user->last_login_at->format('d/m/Y H:i') }}</strong></span>
                 @endif
             </div>
 
@@ -586,8 +586,8 @@
                                     <x-lucide-key-round class="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 class="font-semibold text-base text-ink">{{ __('Recuperar Contraseña') }}</h3>
-                                    <p class="text-xs text-ink-3">{{ __('Sesión verificada de') }} {{ $user->email }}</p>
+                                    <h3 class="font-semibold text-base text-ink">{{ __('Recover password') }}</h3>
+                                    <p class="text-xs text-ink-3">{{ __('Session verified for') }} {{ $user->email }}</p>
                                 </div>
                             </div>
                             <button 
@@ -606,29 +606,29 @@
                         @endif
 
                         <p class="text-xs text-ink-2 leading-relaxed">
-                            {{ __('Como tienes una sesión activa en este navegador, puedes establecer una nueva contraseña directamente sin necesidad de recordar la anterior.') }}
+                            {{ __('Since you\'re signed in on this browser, you can set a new password without entering the old one.') }}
                         </p>
 
                         <form wire:submit="resetPasswordWithSession" class="space-y-3.5">
                             <div class="space-y-1">
-                                <label class="block text-xs font-semibold text-ink-2">{{ __('Nueva Contraseña') }}</label>
+                                <label class="block text-xs font-semibold text-ink-2">{{ __('New password') }}</label>
                                 <input 
                                     wire:model="recovery_new_password" 
                                     type="{{ $recovery_show_passwords ? 'text' : 'password' }}" 
                                     autocomplete="new-password"
-                                    placeholder="{{ __('Mínimo 8 caracteres') }}"
+                                    placeholder="{{ __('At least 8 characters') }}"
                                     required 
                                     class="ui-input" />
                                 @error('recovery_new_password') <p class="text-meta text-red-600 mt-0.5">{{ $message }}</p> @enderror
                             </div>
 
                             <div class="space-y-1">
-                                <label class="block text-xs font-semibold text-ink-2">{{ __('Confirmar Nueva Contraseña') }}</label>
+                                <label class="block text-xs font-semibold text-ink-2">{{ __('Confirm new password') }}</label>
                                 <input 
                                     wire:model="recovery_new_password_confirmation" 
                                     type="{{ $recovery_show_passwords ? 'text' : 'password' }}" 
                                     autocomplete="new-password"
-                                    placeholder="{{ __('Repite tu nueva contraseña') }}"
+                                    placeholder="{{ __('Repeat your new password') }}"
                                     required 
                                     class="ui-input" />
                             </div>
@@ -636,13 +636,13 @@
                             <div class="flex items-center justify-between pt-1">
                                 <label class="flex items-center gap-2 cursor-pointer text-xs text-ink-2 select-none">
                                     <input type="checkbox" wire:model.live="recovery_show_passwords" class="w-3.5 h-3.5 text-stone-900 rounded border-stone-300" />
-                                    <span>{{ __('Mostrar contraseñas') }}</span>
+                                    <span>{{ __('Show passwords') }}</span>
                                 </label>
 
                                 <button 
                                     type="submit" 
                                     class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-control shadow transition cursor-pointer">
-                                    {{ __('Restablecer Contraseña') }}
+                                    {{ __('Reset password') }}
                                 </button>
                             </div>
                         </form>
@@ -653,14 +653,14 @@
                                 wire:click="sendPasswordResetEmail"
                                 class="text-meta text-ink-3 hover:text-stone-900 font-medium flex items-center gap-1.5 transition cursor-pointer">
                                 <x-lucide-mail class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Enviar enlace a mi correo') }}</span>
+                                <span>{{ __('Email me a link') }}</span>
                             </button>
 
                             <button 
                                 type="button" 
                                 wire:click="closeRecoveryModal" 
                                 class="text-xs text-ink-3 hover:text-ink font-medium cursor-pointer">
-                                {{ __('Cancelar') }}
+                                {{ __('Cancel') }}
                             </button>
                         </div>
 
@@ -676,8 +676,8 @@
         x-cloak
         class="fixed bottom-6 inset-x-0 mx-auto max-w-md z-40 px-4 pointer-events-auto">
         <div class="bg-surface text-ink px-4 py-2.5 rounded-card shadow-menu border border-line flex items-center justify-between gap-3">
-            <p class="text-body text-ink-2 truncate">{{ __('Tienes cambios sin guardar') }}</p>
-            <flux:button type="button" @click="discardChanges()" variant="subtle" size="sm">{{ __('Descartar') }}</flux:button>
+            <p class="text-body text-ink-2 truncate">{{ __('You have unsaved changes') }}</p>
+            <flux:button type="button" @click="discardChanges()" variant="subtle" size="sm">{{ __('Dismiss') }}</flux:button>
         </div>
     </div>
 
@@ -703,10 +703,10 @@
                 </div>
                 <div class="space-y-1">
                     <h3 class="font-semibold text-base text-ink">
-                        {{ __('¿Salir sin guardar los cambios?') }}
+                        {{ __('Leave without saving?') }}
                     </h3>
                     <p class="text-xs text-ink-2 leading-relaxed">
-                        {{ __('Tienes cambios sin guardar en tu configuración. Si cambias de vista o de sección perderás las modificaciones realizadas.') }}
+                        {{ __('You have unsaved changes in your settings. Switching views or sections will lose them.') }}
                     </p>
                 </div>
             </div>
@@ -716,14 +716,14 @@
                     type="button" 
                     @click="cancelNavigation()" 
                     class="px-4 py-2 border border-stone-200 hover:bg-stone-50 text-ink-2 text-xs font-semibold rounded-control transition cursor-pointer">
-                    {{ __('Permanecer aquí') }}
+                    {{ __('Stay here') }}
                 </button>
 
                 <button 
                     type="button" 
                     @click="confirmNavigation()" 
                     class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-control shadow transition cursor-pointer">
-                    {{ __('Descartar y salir') }}
+                    {{ __('Discard and leave') }}
                 </button>
             </div>
         </div>

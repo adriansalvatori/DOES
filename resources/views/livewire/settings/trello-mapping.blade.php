@@ -19,17 +19,17 @@
     <div x-show="isDirty()" x-transition class="bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl text-xs font-semibold flex items-center justify-between shadow-2xs">
         <div class="flex items-center gap-2">
             <x-lucide-alert-triangle class="w-4 h-4 text-amber-600 shrink-0" />
-            <span>{{ __('Tienes asignaciones de listas sin guardar. Recuerda hacer clic en "Guardar Mapeo".') }}</span>
+            <span>{{ __('You have unsaved list mappings. Remember to click "Save Mapping".') }}</span>
         </div>
         <button wire:click="saveMappings" @click="snapshot()" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition shadow-xs cursor-pointer">
-            {{ __('Guardar Mapeo Ahora') }}
+            {{ __('Save Mapping Now') }}
         </button>
     </div>
     
     <!-- Top Notch Notion Header -->
     <div class="bg-white border border-line rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-2xs shrink-0">
         <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-semibold text-zinc-900 ">{{ __('Mapeo de Listas Trello') }}</h1>
+            <h1 class="text-2xl sm:text-3xl font-semibold text-zinc-900 ">{{ __('Trello List Mapping') }}</h1>
         </div>
 
         <div class="flex items-center gap-2.5">
@@ -37,9 +37,9 @@
             <button 
                 wire:click="autoDetectMappings" 
                 class="px-3 py-1.5 rounded-md bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-200 font-medium text-xs transition flex items-center gap-1.5 cursor-pointer"
-                title="{{ __('Detectar coincidencias basadas en el nombre de la lista') }}">
+                title="{{ __('Detect matches based on list name') }}">
                 <x-lucide-sparkles class="w-3.5 h-3.5 text-stone-600" />
-                <span>{{ __('Auto-detectar') }}</span>
+                <span>{{ __('Auto-detect') }}</span>
             </button>
 
             <!-- Save Mappings Button -->
@@ -50,7 +50,7 @@
                 :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
                 class="px-3.5 py-1.5 rounded-md font-semibold text-xs transition flex items-center gap-2">
                 <x-lucide-save class="w-3.5 h-3.5" />
-                <span>{{ __('Guardar Mapeo') }}</span>
+                <span>{{ __('Save Mapping') }}</span>
             </button>
         </div>
     </div>
@@ -66,11 +66,11 @@
     <div class="bg-white border border-line rounded-xl p-4 space-y-4 shadow-2xs flex-1">
         <div class="flex items-center justify-between border-b border-line pb-3">
             <h3 class="font-semibold text-xs text-zinc-800  r flex items-center gap-2">
-                <x-lucide-arrow-right-left class="w-4 h-4 text-zinc-500" /> {{ __('Asignación de Columnas') }}
+                <x-lucide-arrow-right-left class="w-4 h-4 text-zinc-500" /> {{ __('Column Assignment') }}
             </h3>
             
             <span class="text-meta text-zinc-500 font-mono">
-                {{ __('Total Listas Trello Obtenidas:') }} <strong>{{ count($trelloLists) }}</strong>
+                {{ __('Total Trello Lists Fetched:') }} <strong>{{ count($trelloLists) }}</strong>
             </span>
         </div>
 
@@ -89,13 +89,13 @@
                         <div class="w-3.5 h-3.5 rounded-full bg-{{ $status->color() }}-500 shrink-0 shadow-2xs"></div>
                         <div class="min-w-0">
                             <span class="font-semibold text-xs text-zinc-900 block truncate">{{ $status->label() }}</span>
-                            <span class="font-mono text-meta text-zinc-400 block truncate">{{ __('Estatus Local:') }} {{ $val }}</span>
+                            <span class="font-mono text-meta text-zinc-400 block truncate">{{ __('Local Status:') }} {{ $val }}</span>
                         </div>
                     </div>
 
                     <!-- Middle: Mapping Arrow -->
                     <div class="hidden md:flex items-center gap-1.5 text-zinc-400 text-xs shrink-0">
-                        <span class="text-meta font-mono text-zinc-400 ">{{ __('Mapea a') }}</span>
+                        <span class="text-meta font-mono text-zinc-400 ">{{ __('Maps to') }}</span>
                         <x-lucide-arrow-right class="w-4 h-4 text-zinc-400" />
                     </div>
 
@@ -126,7 +126,7 @@
                                 @focus="open = true"
                                 @click="open = true"
                                 autocomplete="off"
-                                :placeholder="selectedName ? selectedName : @js(__('-- Seleccionar o Buscar Lista Trello --'))" 
+                                :placeholder="selectedName ? selectedName : @js(__('-- Select or Search Trello List --'))" 
                                 class="ui-input pl-3 pr-8">
 
                             <button 
@@ -149,7 +149,7 @@
                                 type="button"
                                 @click="selectList('', '')"
                                 class="w-full text-left p-2.5 hover:bg-stone-100 focus:bg-stone-100 focus:outline-none cursor-pointer text-zinc-500 italic transition flex items-center justify-between">
-                                <span>{{ __('-- Sin asignar (Detección por nombre) --') }}</span>
+                                <span>{{ __('-- Unassigned (Name-based detection) --') }}</span>
                                 <template x-if="selectedId === ''">
                                     <x-lucide-check class="w-3.5 h-3.5 text-emerald-600" />
                                 </template>
@@ -183,7 +183,7 @@
                 :class="isDirty() ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-sm shadow-emerald-600/20' : 'bg-stone-200 text-stone-400 border border-stone-200 cursor-not-allowed'"
                 class="px-4 py-2 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 font-semibold">
                 <x-lucide-save class="w-3.5 h-3.5" />
-                <span>{{ __('Guardar Cambios de Mapeo') }}</span>
+                <span>{{ __('Save Mapping Changes') }}</span>
             </button>
         </div>
     </div>

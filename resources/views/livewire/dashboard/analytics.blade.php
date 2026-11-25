@@ -12,18 +12,18 @@
 
 <div class="h-full flex flex-col gap-6 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-6">
 
-    <x-ui.page-header id="tour-analytics-header" :title="__('Analytics')" :subtitle="trans_choice('{1} :count orden activa|[2,*] :count órdenes activas', $totalOrders, ['count' => $totalOrders])" />
+    <x-ui.page-header id="tour-analytics-header" :title="__('Analytics')" :subtitle="trans_choice('{1} :count active order|[2,*] :count active orders', $totalOrders, ['count' => $totalOrders])" />
 
     {{-- 1. Order map --}}
     <section class="ui-card p-5 space-y-4">
-        <h2 class="ui-section-title">{{ __('Mapa de Órdenes en Curso') }}</h2>
+        <h2 class="ui-section-title">{{ __('Current Orders Map') }}</h2>
 
         <div class="w-full h-2 rounded-full overflow-hidden bg-sunken flex gap-px">
             @if($totalOrders > 0)
                 @foreach($coreStatusCounts as $i => $item)
                     @if($item['count'] > 0)
                         <div class="h-full" style="width: {{ max($item['percentage'], 1.5) }}%; background-color: {{ $stageColor($item['status'], $i) }};"
-                            title="{{ $item['label'] }}: {{ trans_choice('{1} :count orden|[2,*] :count órdenes', $item['count'], ['count' => $item['count']]) }} ({{ $item['percentage'] }}%)"></div>
+                            title="{{ $item['label'] }}: {{ trans_choice('{1} :count order|[2,*] :count orders', $item['count'], ['count' => $item['count']]) }} ({{ $item['percentage'] }}%)"></div>
                     @endif
                 @endforeach
             @endif
@@ -47,7 +47,7 @@
 
     {{-- 2. Availability by designer --}}
     <section class="ui-card p-5 space-y-4">
-        <h2 class="ui-section-title">{{ __('Disponibilidad Actual por Diseñador') }}</h2>
+        <h2 class="ui-section-title">{{ __('Current Availability by Designer') }}</h2>
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
             <div class="lg:col-span-4 rounded-card border border-line bg-canvas p-4 flex flex-col gap-3">
@@ -88,7 +88,7 @@
                     @foreach([[$tintCamila, \App\Enums\CoreStatus::ENVIADO_A_CAMILA], [$tintWorking, \App\Enums\CoreStatus::TO_DO_TODAY], [$tintQueue, \App\Enums\CoreStatus::ENTRANTE]] as [$tint, $case])
                         <span class="inline-flex items-center gap-1.5">
                             <span class="w-2.5 h-2.5 rounded-xs" style="background-color: {{ $tint }}"></span>
-                            {{ $case === \App\Enums\CoreStatus::ENTRANTE ? __('En cola') : $case->shortLabel() }}
+                            {{ $case === \App\Enums\CoreStatus::ENTRANTE ? __('Queue') : $case->shortLabel() }}
                         </span>
                     @endforeach
                 </div>
@@ -104,7 +104,7 @@
                         <div class="p-3 border-b border-line space-y-2">
                             <div class="flex items-center justify-between gap-2">
                                 <x-ui.person :person="$des" size="sm" show-name />
-                                <span class="text-body font-medium tabular-nums text-ink shrink-0">{{ trans_choice('{1} :count activa|[2,*] :count activas', $st['total_active'], ['count' => $st['total_active']]) }}</span>
+                                <span class="text-body font-medium tabular-nums text-ink shrink-0">{{ trans_choice('{1} :count active|[2,*] :count active', $st['total_active'], ['count' => $st['total_active']]) }}</span>
                             </div>
                             <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-ink-3">
                                 <span>{{ $st['queue_status']->shortLabel() }} <span class="tabular-nums text-ink-2">{{ $st['incoming_count'] }}</span></span>
@@ -112,7 +112,7 @@
                                 <span>{{ \App\Enums\CoreStatus::ENVIADO_A_CAMILA->shortLabel() }} <span class="tabular-nums text-ink-2">{{ $st['sent_to_camila_count'] }}</span></span>
                             </div>
                             @if($isLowestCount)
-                                <x-ui.tag tone="ok" title="{{ __('Diseñador con menor número de órdenes activas') }}">{{ __('Menor Carga') }}</x-ui.tag>
+                                <x-ui.tag tone="ok" title="{{ __('Designer with the fewest active orders') }}">{{ __('Lowest load') }}</x-ui.tag>
                             @endif
                         </div>
 
@@ -127,7 +127,7 @@
                                     <p class="text-meta text-ink-3 truncate mt-0.5" title="{{ $order->clean_task_name }}">{{ $order->clean_task_name }}</p>
                                 </div>
                             @empty
-                                <p class="p-4 text-center text-body text-ink-3">{{ __('Sin órdenes en proceso') }}</p>
+                                <p class="p-4 text-center text-body text-ink-3">{{ __('No orders in progress') }}</p>
                             @endforelse
                         </div>
                     </div>
@@ -140,8 +140,8 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         <section class="lg:col-span-7 ui-card p-5 space-y-4">
             <div>
-                <h2 class="ui-section-title">{{ __('Carga de Trabajo por Diseñador') }}</h2>
-                <p class="text-body text-ink-3 mt-0.5">{{ __('Distribución porcentual de órdenes asignadas activas por integrante.') }}</p>
+                <h2 class="ui-section-title">{{ __('Workload by Designer') }}</h2>
+                <p class="text-body text-ink-3 mt-0.5">{{ __('Percentage distribution of active assigned orders per member.') }}</p>
             </div>
 
             @php
@@ -167,7 +167,7 @@
                 <div class="relative w-40 h-40 shrink-0 rounded-full grid place-items-center" style="background: conic-gradient({{ $conicGradient }});">
                     <div class="w-28 h-28 bg-surface rounded-full flex flex-col items-center justify-center text-center">
                         <span class="text-title font-semibold tabular-nums text-ink leading-none">{{ $totalOrders }}</span>
-                        <span class="text-meta text-ink-3 mt-1">{{ __('Órdenes') }}</span>
+                        <span class="text-meta text-ink-3 mt-1">{{ __('Orders') }}</span>
                     </div>
                 </div>
 
@@ -177,11 +177,11 @@
                             <div class="flex items-center gap-2 min-w-0">
                                 <x-ui.person :person="$st['designer']" size="sm" show-name />
                                 @if($st['overdue'] > 0)
-                                    <x-ui.tag tone="danger" title="{{ __('Órdenes Atrasadas') }}">{{ $st['overdue'] }} {{ trans_choice('{1} atrasada|[2,*] atrasadas', $st['overdue']) }}</x-ui.tag>
+                                    <x-ui.tag tone="danger" title="{{ __('Overdue Orders') }}">{{ $st['overdue'] }} {{ trans_choice('{1} overdue|[2,*] overdue', $st['overdue']) }}</x-ui.tag>
                                 @endif
                             </div>
                             <div class="flex items-center gap-4 shrink-0 text-body tabular-nums">
-                                <span class="text-ink-2">{{ $st['count'] }} {{ trans_choice('{1} orden|[2,*] órdenes', $st['count']) }}</span>
+                                <span class="text-ink-2">{{ $st['count'] }} {{ trans_choice('{1} order|[2,*] orders', $st['count']) }}</span>
                                 <span class="font-medium text-ink w-12 text-right">{{ $st['workload_pct'] }}%</span>
                             </div>
                         </div>
@@ -190,7 +190,7 @@
                         <div class="flex items-center justify-between gap-3 py-2.5">
                             <x-ui.person :person="null" />
                             <div class="flex items-center gap-4 shrink-0 text-body tabular-nums">
-                                <span class="text-ink-2">{{ $unassignedCount }} {{ trans_choice('{1} orden|[2,*] órdenes', $unassignedCount) }}</span>
+                                <span class="text-ink-2">{{ $unassignedCount }} {{ trans_choice('{1} order|[2,*] orders', $unassignedCount) }}</span>
                                 <span class="font-medium text-ink w-12 text-right">{{ $unassignedPct }}%</span>
                             </div>
                         </div>
@@ -202,34 +202,34 @@
         <div class="lg:col-span-5 flex flex-col gap-6">
             <section class="ui-card p-5 flex-1 flex flex-col gap-3">
                 <div>
-                    <h2 class="ui-section-title">{{ __('Órdenes Activas') }}</h2>
-                    <p class="text-body text-ink-3 mt-0.5">{{ __('Volumen actual en el tablero operativo') }}</p>
+                    <h2 class="ui-section-title">{{ __('Active Orders') }}</h2>
+                    <p class="text-body text-ink-3 mt-0.5">{{ __('Current volume in the operational board') }}</p>
                 </div>
                 <span class="text-[32px] leading-10 font-semibold tabular-nums text-ink">{{ $totalOrders }}</span>
                 <p class="mt-auto pt-3 border-t border-line text-body text-ink-3 flex flex-wrap justify-between gap-2">
-                    <span>{{ __('Excluye Backlog y En Producción') }}</span>
-                    <span class="text-ink-2">{{ $inProductionCount }} {{ __('completadas en producción') }}</span>
+                    <span>{{ __('Excludes Backlog and In Production') }}</span>
+                    <span class="text-ink-2">{{ $inProductionCount }} {{ __('completed in production') }}</span>
                 </p>
             </section>
 
             <section class="ui-card p-5 flex-1 flex flex-col gap-3">
                 <div>
-                    <h2 class="ui-section-title">{{ __('Cumplimiento del SLA') }}</h2>
-                    <p class="text-body text-ink-3 mt-0.5">{{ __('Porcentaje de puntualidad en los tiempos pactados/esperados de entrega') }}</p>
+                    <h2 class="ui-section-title">{{ __('SLA Compliance') }}</h2>
+                    <p class="text-body text-ink-3 mt-0.5">{{ __('Percentage of punctuality in agreed/expected delivery times') }}</p>
                 </div>
                 <div class="flex items-baseline gap-2">
                     <span class="text-[32px] leading-10 font-semibold tabular-nums text-ink">{{ $slaComplianceRate }}%</span>
-                    <span class="text-body text-ink-3">{{ __('órdenes a tiempo') }}</span>
+                    <span class="text-body text-ink-3">{{ __('ontime orders') }}</span>
                 </div>
                 <div class="w-full bg-sunken rounded-full h-1.5 overflow-hidden">
                     <div class="bg-ink h-full rounded-full" style="width: {{ $slaComplianceRate }}%"></div>
                 </div>
                 <p class="mt-auto pt-3 border-t border-line text-body flex flex-wrap justify-between gap-2">
-                    <span class="text-ink-2 tabular-nums">{{ max(0, $totalOrders - $overdueCount) }} {{ __('órdenes a tiempo') }}</span>
+                    <span class="text-ink-2 tabular-nums">{{ max(0, $totalOrders - $overdueCount) }} {{ __('ontime orders') }}</span>
                     @if($overdueCount > 0)
-                        <span class="text-danger font-medium tabular-nums">{{ $overdueCount }} {{ __('Órdenes Atrasadas') }} ({{ $overdueRate }}%)</span>
+                        <span class="text-danger font-medium tabular-nums">{{ $overdueCount }} {{ __('Overdue Orders') }} ({{ $overdueRate }}%)</span>
                     @else
-                        <span class="text-ink-3">{{ __('Sin entregas vencidas') }}</span>
+                        <span class="text-ink-3">{{ __('No overdue deliveries') }}</span>
                     @endif
                 </p>
             </section>

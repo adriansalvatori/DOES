@@ -51,7 +51,7 @@ Route::get('/portal/{token}', function (string $token) {
 Route::middleware(['guest'])->group(function () {
     Route::get('/login', Login::class)->name('login');
     Route::get('/reset-password/{token}', function (Request $request, string $token) {
-        return redirect()->route('login')->with('status', __('Enlace de recuperación validado.'));
+        return redirect()->route('login')->with('status', __('Recovery link validated.'));
     })->name('password.reset');
 });
 

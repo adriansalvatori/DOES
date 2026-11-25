@@ -18,29 +18,29 @@
     @if(session()->has('message'))
         <div x-data="{ show: true }" x-show="show" class="flex shrink-0 items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2 text-body text-ink">
             <span class="flex items-center gap-2"><x-lucide-check-circle class="h-4 w-4 shrink-0 text-ok" />{{ session('message') }}</span>
-            <button type="button" @click="show = false" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+            <button type="button" @click="show = false" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
         </div>
     @endif
 
-    <x-ui.page-header :title="__('Órdenes archivadas')" :count="$totalArchivedCount">
+    <x-ui.page-header :title="__('Archived orders')" :count="$totalArchivedCount">
         <x-slot:toolbar>
             <div class="relative w-64">
                 <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
-                <input wire:model.live.debounce.250ms="search" type="text" placeholder="{{ __('Buscar en archivo') }}" class="ui-input pl-8">
+                <input wire:model.live.debounce.250ms="search" type="text" placeholder="{{ __('Search in archive') }}" class="ui-input pl-8">
             </div>
-            <select wire:model.live="substatusFilter" class="ui-select w-48" aria-label="{{ __('Cierre') }}">
-                <option value="all">{{ __('Todos los cierres') }}</option>
-                <option value="finalizada">{{ __('Finalizadas con Éxito') }}</option>
-                <option value="cancelada">{{ __('Canceladas') }}</option>
-                <option value="no_responsive">{{ __('Cliente No Responsive') }}</option>
+            <select wire:model.live="substatusFilter" class="ui-select w-48" aria-label="{{ __('Closing') }}">
+                <option value="all">{{ __('All outcomes') }}</option>
+                <option value="finalizada">{{ __('Completed successfully') }}</option>
+                <option value="cancelada">{{ __('Canceled') }}</option>
+                <option value="no_responsive">{{ __('Unresponsive Client') }}</option>
             </select>
-            <select wire:model.live="timeFilter" class="ui-select w-40" aria-label="{{ __('Período') }}">
-                <option value="all">{{ __('Todo el tiempo') }}</option>
-                <option value="this_month">{{ __('Este mes') }}</option>
-                <option value="this_week">{{ __('Esta semana') }}</option>
+            <select wire:model.live="timeFilter" class="ui-select w-40" aria-label="{{ __('Period') }}">
+                <option value="all">{{ __('All time') }}</option>
+                <option value="this_month">{{ __('This month') }}</option>
+                <option value="this_week">{{ __('This week') }}</option>
             </select>
-            <select wire:model.live="designerFilter" class="ui-select w-48" aria-label="{{ __('Diseñador') }}">
-                <option value="all">{{ __('Todos los diseñadores') }}</option>
+            <select wire:model.live="designerFilter" class="ui-select w-48" aria-label="{{ __('Designer') }}">
+                <option value="all">{{ __('All Designers') }}</option>
                 @foreach($designers as $des)
                     <option value="{{ $des->id }}">{{ $des->name }}</option>
                 @endforeach
@@ -48,33 +48,33 @@
         </x-slot:toolbar>
     </x-ui.page-header>
 
-    @php $emptyHint = __('Arrastra órdenes desde la columna "En Producción" o desde el Kanban para archivarlas.'); @endphp
+    @php $emptyHint = __('Drag orders from the In Production column or from the Kanban board to archive them.'); @endphp
     @php $topDesigner = collect($designerStats)->sortByDesc('count')->first(); @endphp
 
     <!-- KPIs -->
     <div class="grid shrink-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="ui-card p-4">
-            <p class="text-meta text-ink-3">{{ __('Total Archivadas') }}</p>
+            <p class="text-meta text-ink-3">{{ __('Total Archived') }}</p>
             <p class="mt-1 text-title font-semibold tabular-nums text-ink">{{ $totalArchivedCount }}</p>
             <p class="mt-2 border-t border-line pt-2 text-meta text-ink-3">
-                {{ __(':count éxito', ['count' => $successfulCount]) }} · {{ __(':count canceladas', ['count' => $canceledCount]) }} · {{ __(':count sin respuesta', ['count' => $nonResponsiveCount]) }}
+                {{ __(':count successful', ['count' => $successfulCount]) }} · {{ __(':count canceled', ['count' => $canceledCount]) }} · {{ __(':count unresponsive', ['count' => $nonResponsiveCount]) }}
             </p>
         </div>
         <div class="ui-card p-4">
-            <p class="text-meta text-ink-3">{{ __('En Producción') }}</p>
+            <p class="text-meta text-ink-3">{{ __('In Production') }}</p>
             <p class="mt-1 text-title font-semibold tabular-nums text-ink">{{ $inProductionOrders->count() }}</p>
-            <p class="mt-2 border-t border-line pt-2 text-meta text-ink-3">{{ __('listas para archivar') }}</p>
+            <p class="mt-2 border-t border-line pt-2 text-meta text-ink-3">{{ __('ready to archive') }}</p>
         </div>
         <div class="ui-card p-4">
-            <p class="text-meta text-ink-3">{{ __('Tiempo de Cierre Prom.') }}</p>
-            <p class="mt-1 text-title font-semibold tabular-nums text-ink">{{ $globalAvgTurnaround }} <span class="text-body font-normal text-ink-3">{{ __('días') }}</span></p>
-            <p class="mt-2 border-t border-line pt-2 text-meta text-ink-3">{{ __('Inicio vs Cierre') }}</p>
+            <p class="text-meta text-ink-3">{{ __('Avg. time to close') }}</p>
+            <p class="mt-1 text-title font-semibold tabular-nums text-ink">{{ $globalAvgTurnaround }} <span class="text-body font-normal text-ink-3">{{ __('days') }}</span></p>
+            <p class="mt-2 border-t border-line pt-2 text-meta text-ink-3">{{ __('Start vs close') }}</p>
         </div>
         <div class="ui-card p-4">
-            <p class="text-meta text-ink-3">{{ __('Diseñador Líder') }}</p>
-            <p class="mt-1 truncate text-title font-semibold text-ink">{{ $topDesigner['designer']->name ?? __('Sin datos') }}</p>
+            <p class="text-meta text-ink-3">{{ __('Top designer') }}</p>
+            <p class="mt-1 truncate text-title font-semibold text-ink">{{ $topDesigner['designer']->name ?? __('No data') }}</p>
             <p class="mt-2 border-t border-line pt-2 text-meta text-ink-3">
-                {{ trans_choice('{1} :count orden cerrada|[0,*] :count órdenes cerradas', $topDesigner['count'] ?? 0) }} ({{ $topDesigner['percentage'] ?? 0 }}%) · {{ __(':days d de promedio', ['days' => $topDesigner['avg_days'] ?? 0]) }}
+                {{ trans_choice('{1} :count order closed|[0,*] :count orders closed', $topDesigner['count'] ?? 0) }} ({{ $topDesigner['percentage'] ?? 0 }}%) · {{ __(':days d average', ['days' => $topDesigner['avg_days'] ?? 0]) }}
             </p>
         </div>
     </div>
@@ -82,8 +82,8 @@
     <!-- Charts -->
     <div class="grid shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
         <div class="ui-card p-4">
-            <h3 class="ui-section-title">{{ __('Distribución por Diseñador') }}</h3>
-            <p class="text-meta text-ink-3">{{ __('Porcentaje de órdenes archivadas por diseñador') }}</p>
+            <h3 class="ui-section-title">{{ __('Distribution by designer') }}</h3>
+            <p class="text-meta text-ink-3">{{ __('Share of archived orders by designer') }}</p>
             <div class="mt-3 flex flex-col items-center justify-around gap-4 sm:flex-row">
                 @php
                     $colors = [
@@ -131,7 +131,7 @@
                     </svg>
                     <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
                         <span class="text-title font-semibold tabular-nums text-ink">{{ $totalArchivedCount }}</span>
-                        <span class="text-meta text-ink-3">{{ __('Cerradas') }}</span>
+                        <span class="text-meta text-ink-3">{{ __('Closed') }}</span>
                     </div>
                 </div>
                 <div class="w-full space-y-2 text-body sm:w-auto">
@@ -150,10 +150,10 @@
         <div class="ui-card p-4 lg:col-span-2">
             <div class="flex items-start justify-between gap-3">
                 <div>
-                    <h3 class="ui-section-title">{{ __('Velocidad de cierre') }}</h3>
-                    <p class="text-meta text-ink-3">{{ __('Días promedio desde el inicio hasta el cierre, por diseñador') }}</p>
+                    <h3 class="ui-section-title">{{ __('Closing speed') }}</h3>
+                    <p class="text-meta text-ink-3">{{ __('Average days from start to close, by designer') }}</p>
                 </div>
-                <x-ui.tag tone="neutral">{{ __('Promedio global:') }} {{ $globalAvgTurnaround }} {{ __('días') }}</x-ui.tag>
+                <x-ui.tag tone="neutral">{{ __('Overall average:') }} {{ $globalAvgTurnaround }} {{ __('days') }}</x-ui.tag>
             </div>
             <div class="mt-4 space-y-3">
                 @php $maxDays = max(1, collect($designerStats)->max('avg_days')); @endphp
@@ -165,8 +165,8 @@
                                 <span class="h-2.5 w-2.5 rounded-full bg-ink-3" style="{{ $ds['designer']->dot_inline_style }}"></span>{{ $ds['designer']->name }}
                             </span>
                             <span class="text-meta tabular-nums text-ink-3">
-                                {{ trans_choice('{1} :count orden|[0,*] :count órdenes', $ds['count']) }} · {{ __(':count revisiones', ['count' => $ds['total_revisions']]) }} ·
-                                <span class="font-medium text-ink">{{ $ds['avg_days'] }} {{ __('días prom.') }}</span>
+                                {{ trans_choice('{1} :count order|[0,*] :count orders', $ds['count']) }} · {{ __(':count revisions', ['count' => $ds['total_revisions']]) }} ·
+                                <span class="font-medium text-ink">{{ $ds['avg_days'] }} {{ __('avg. days') }}</span>
                             </span>
                         </div>
                         <div class="h-2 w-full overflow-hidden rounded-full bg-sunken">
@@ -183,7 +183,7 @@
         <div class="space-y-4 2xl:col-span-2">
             @if($totalArchivedCount === 0)
                 <div class="ui-card">
-                    <x-ui.empty icon="archive-restore" :title="__('No hay órdenes archivadas')" :description="$emptyHint" />
+                    <x-ui.empty icon="archive-restore" :title="__('No archived orders')" :description="$emptyHint" />
                 </div>
             @else
                 @foreach($designerStats as $ds)
@@ -194,17 +194,17 @@
                                     <x-ui.person :person="$ds['designer']" size="sm" show-name />
                                     <span class="rounded-full bg-sunken px-2 py-0.5 text-meta tabular-nums text-ink-2">{{ $ds['count'] }}</span>
                                 </div>
-                                <span class="text-meta text-ink-3">{{ __('Prom. cierre:') }} {{ $ds['avg_days'] }}d · {{ __('Revisiones:') }} {{ $ds['total_revisions'] }}</span>
+                                <span class="text-meta text-ink-3">{{ __('Avg. close:') }} {{ $ds['avg_days'] }}d · {{ __('Revisions:') }} {{ $ds['total_revisions'] }}</span>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="ui-table">
                                     <thead>
                                         <tr>
                                             <th>{{ __('WO') }}</th>
-                                            <th>{{ __('Empresa') }}</th>
-                                            <th>{{ __('Cierre') }}</th>
-                                            <th>{{ __('Resultado') }}</th>
-                                            <th class="is-num">{{ __('Días') }}</th>
+                                            <th>{{ __('Company') }}</th>
+                                            <th>{{ __('Closing') }}</th>
+                                            <th>{{ __('Outcome') }}</th>
+                                            <th class="is-num">{{ __('Days') }}</th>
                                             <th class="is-num">{{ __('Rev.') }}</th>
                                             <th class="w-px"></th>
                                         </tr>
@@ -227,15 +227,15 @@
                                                 <td x-on:click.stop="" class="whitespace-nowrap">
                                                     <select wire:change="updateSubstatus({{ $order->id }}, $event.target.value)"
                                                             x-data x-on:pointerenter="fillSubstatusOptions($el)" x-on:focus="fillSubstatusOptions($el)"
-                                                            data-current="{{ $subVal }}" class="ui-select h-7 w-44 text-meta" aria-label="{{ __('Resultado') }}">
+                                                            data-current="{{ $subVal }}" class="ui-select h-7 w-44 text-meta" aria-label="{{ __('Outcome') }}">
                                                         <option value="{{ $subVal }}" selected>{{ $archivedSubstatuses->firstWhere('name', $subVal)?->label() ?? $subVal }}</option>
                                                     </select>
                                                 </td>
                                                 <td class="is-num text-ink-2">{{ $order->days_to_close ?? 0 }}</td>
                                                 <td class="is-num text-ink-2">{{ $order->client_revision_count }}</td>
                                                 <td x-on:click.stop="" class="text-right">
-                                                    <button type="button" wire:click="restoreOrder({{ $order->id }})" wire:confirm="{{ __('¿Desarchivar esta orden y devolverla a En Producción?') }}"
-                                                            class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" title="{{ __('Reabrir / Restaurar a En Producción') }}" aria-label="{{ __('Reabrir / Restaurar a En Producción') }}">
+                                                    <button type="button" wire:click="restoreOrder({{ $order->id }})" wire:confirm="{{ __('Unarchive this order and return it to In Production?') }}"
+                                                            class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" title="{{ __('Reopen / restore to In Production') }}" aria-label="{{ __('Reopen / restore to In Production') }}">
                                                         <x-lucide-rotate-ccw />
                                                     </button>
                                                 </td>
@@ -267,15 +267,15 @@
                  class="ui-card space-y-3 p-4 2xl:sticky 2xl:top-0">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h3 class="ui-section-title">{{ __('En Producción') }}</h3>
-                        <p class="text-meta text-ink-3">{{ __('Listas para archivar y cerrar') }}</p>
+                        <h3 class="ui-section-title">{{ __('In Production') }}</h3>
+                        <p class="text-meta text-ink-3">{{ __('Ready to archive and close') }}</p>
                     </div>
                     <span class="rounded-full bg-sunken px-2 py-0.5 text-meta tabular-nums text-ink-2">{{ $inProductionOrders->count() }}</span>
                 </div>
 
                 <div class="rounded-control border border-dashed border-line-strong px-3 py-3 text-center">
-                    <p class="text-body font-medium text-ink-2">{{ __('Dropzone de Archivo') }}</p>
-                    <p class="text-meta text-ink-3">{{ __('Arrastra una tarjeta desde abajo hacia este recuadro para archivarla de inmediato.') }}</p>
+                    <p class="text-body font-medium text-ink-2">{{ __('Archive drop zone') }}</p>
+                    <p class="text-meta text-ink-3">{{ __('Drag a card from below into this box to archive it right away.') }}</p>
                 </div>
 
                 <div class="max-h-[calc(100vh-380px)] space-y-2 overflow-y-auto custom-vertical-scrollbar">
@@ -288,18 +288,18 @@
                                     <p class="mt-1 truncate text-body font-medium text-ink">{{ $order->company_name }}</p>
                                     <p class="truncate text-meta text-ink-3">{{ $order->task_name }}</p>
                                 </div>
-                                <button type="button" wire:click="archiveOrder({{ $order->id }})" class="ui-btn ui-btn-secondary ui-btn-sm" title="{{ __('Archivar orden') }}">{{ __('Archivar') }}</button>
+                                <button type="button" wire:click="archiveOrder({{ $order->id }})" class="ui-btn ui-btn-secondary ui-btn-sm" title="{{ __('Archive order') }}">{{ __('Archive') }}</button>
                             </div>
                             <div class="mt-2 flex items-center justify-between border-t border-line pt-2 text-meta text-ink-3">
-                                <span>{{ $order->designer?->name ?? __('Sin asignar') }}</span>
+                                <span>{{ $order->designer?->name ?? __('Unassigned') }}</span>
                                 <span>{{ ($order->start_date ? \Illuminate\Support\Carbon::parse($order->start_date) : $order->created_at)->translatedFormat('d M') }}</span>
                             </div>
                         </div>
                     @empty
-                        <p class="rounded-control border border-dashed border-line p-6 text-center text-body text-ink-3">{{ __('No hay órdenes en producción actualmente.') }}</p>
+                        <p class="rounded-control border border-dashed border-line p-6 text-center text-body text-ink-3">{{ __('No orders in production right now.') }}</p>
                     @endforelse
                     @if($inProductionOrders->count() > $productionLimit)
-                        <button type="button" wire:click="showMoreProduction" class="ui-btn ui-btn-secondary ui-btn-sm w-full">{{ __('Ver más') }}</button>
+                        <button type="button" wire:click="showMoreProduction" class="ui-btn ui-btn-secondary ui-btn-sm w-full">{{ __('Show more') }}</button>
                     @endif
                 </div>
             </div>

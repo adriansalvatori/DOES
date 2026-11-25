@@ -51,7 +51,7 @@ class OrderComment extends Model
 
     public function getDisplayAuthorNameAttribute(): string
     {
-        return $this->user?->name ?: ($this->author_name ?: __('Usuario'));
+        return $this->user?->name ?: ($this->author_name ?: __('User'));
     }
 
     public function isImportedFromTrello(): bool

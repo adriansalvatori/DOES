@@ -40,10 +40,10 @@
                     <x-ui.person :name="$name !== '' ? $name : '?'" color="#1c1917" size="lg" />
                     <div class="min-w-0">
                         <p class="text-meta text-ink-3">
-                            {{ $contactId ? __('Ficha de contacto') : __('Nuevo contacto') }}
+                            {{ $contactId ? __('Contact profile') : __('New contact') }}
                         </p>
                         <h2 class="text-section font-semibold text-ink truncate">
-                            {{ !empty($name) ? $name : __('Sin nombre') }}
+                            {{ !empty($name) ? $name : __('No name') }}
                         </h2>
                     </div>
                 </div>
@@ -51,9 +51,9 @@
                 <div class="flex items-center gap-2 shrink-0">
                     <button type="button" @click="confirmSave()" class="ui-btn ui-btn-primary">
                         <x-lucide-check />
-                        {{ __('Guardar') }}
+                        {{ __('Save') }}
                     </button>
-                    <button type="button" wire:click="close" class="ui-btn ui-btn-ghost ui-btn-icon" title="{{ __('Cerrar') }}" aria-label="{{ __('Cerrar') }}">
+                    <button type="button" wire:click="close" class="ui-btn ui-btn-ghost ui-btn-icon" title="{{ __('Close') }}" aria-label="{{ __('Close') }}">
                         <x-lucide-x />
                     </button>
                 </div>
@@ -69,14 +69,14 @@
 
                 @if($contactId)
                     <button type="button" wire:click="$set('activeTab', 'orders')" class="{{ $tabClass('orders') }}">
-                        {{ __('Órdenes asignadas') }}
+                        {{ __('Assigned orders') }}
                         @if($assignedOrders->count() > 0)
                             <span class="rounded-full bg-sunken px-1.5 text-meta tabular-nums text-ink-2">{{ $assignedOrders->count() }}</span>
                         @endif
                     </button>
 
                     <button type="button" wire:click="$set('activeTab', 'merge')" class="{{ $tabClass('merge') }}">
-                        {{ __('Fusionar / duplicados') }}
+                        {{ __('Merge / duplicates') }}
                         @if(count($mergeSuggestions) > 0)
                             <span class="rounded-full bg-warn-soft px-1.5 text-meta tabular-nums text-warn">{{ count($mergeSuggestions) }}</span>
                         @endif
@@ -90,23 +90,23 @@
                 {{-- TAB: GENERAL --}}
                 @if($activeTab === 'general')
                     <div class="ui-card p-4 space-y-4">
-                        <h3 class="ui-section-title">{{ __('Datos personales y contacto') }}</h3>
+                        <h3 class="ui-section-title">{{ __('Personal and contact details') }}</h3>
 
                         <div class="space-y-3">
                             <div>
-                                <label class="ui-label">{{ __('Nombre completo') }} <span class="text-danger">*</span></label>
-                                <input type="text" wire:model.defer="name" placeholder="{{ __('Ej: MARCELA DUQUE') }}" class="ui-input font-medium" />
+                                <label class="ui-label">{{ __('Full name') }} <span class="text-danger">*</span></label>
+                                <input type="text" wire:model.defer="name" placeholder="{{ __('E.g. MARCELA DUQUE') }}" class="ui-input font-medium" />
                                 @error('name') <span class="text-danger text-meta mt-0.5 block">{{ $message }}</span> @enderror
                             </div>
 
                             <div>
-                                <label class="ui-label">{{ __('Cargo / rol / departamento (opcional)') }}</label>
-                                <input type="text" wire:model.defer="role_title" placeholder="{{ __('Ej: Gerente de Compras, Project Manager, Owner') }}" class="ui-input" />
+                                <label class="ui-label">{{ __('Job title or department (optional)') }}</label>
+                                <input type="text" wire:model.defer="role_title" placeholder="{{ __('E.g. Purchasing manager, Project manager, Owner') }}" class="ui-input" />
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div>
-                                    <label class="ui-label">{{ __('Teléfono') }}</label>
+                                    <label class="ui-label">{{ __('Phone') }}</label>
                                     <input
                                         type="text"
                                         wire:model.defer="phone"
@@ -126,8 +126,8 @@
                                 </div>
 
                                 <div>
-                                    <label class="ui-label">{{ __('Correo electrónico') }}</label>
-                                    <input type="email" wire:model.defer="email" placeholder="{{ __('ejemplo@empresa.com') }}" class="ui-input" />
+                                    <label class="ui-label">{{ __('Email') }}</label>
+                                    <input type="email" wire:model.defer="email" placeholder="{{ __('name@company.com') }}" class="ui-input" />
                                     @error('email') <span class="text-danger text-meta mt-0.5 block">{{ $message }}</span> @enderror
                                 </div>
                             </div>
@@ -135,21 +135,21 @@
                     </div>
 
                     <div class="ui-card p-4 space-y-4">
-                        <h3 class="ui-section-title">{{ __('Preferencias de comunicación') }}</h3>
+                        <h3 class="ui-section-title">{{ __('Communication preferences') }}</h3>
 
                         <div>
-                            <label class="ui-label">{{ __('Canal preferido') }}</label>
+                            <label class="ui-label">{{ __('Preferred channel') }}</label>
                             <div class="flex flex-wrap gap-1.5">
-                                @foreach(['whatsapp' => 'WhatsApp', 'call' => __('Llamada'), 'email' => 'Email', 'any' => __('Cualquiera')] as $channelKey => $channelLabel)
+                                @foreach(['whatsapp' => 'WhatsApp', 'call' => __('Call'), 'email' => 'Email', 'any' => __('Any')] as $channelKey => $channelLabel)
                                     <button type="button" wire:click="$set('preferred_channel', '{{ $channelKey }}')" class="ui-chip" aria-pressed="{{ $preferred_channel === $channelKey ? 'true' : 'false' }}">{{ $channelLabel }}</button>
                                 @endforeach
                             </div>
                         </div>
 
                         <div>
-                            <label class="ui-label">{{ __('Idioma de contacto') }}</label>
+                            <label class="ui-label">{{ __('Contact language') }}</label>
                             <div class="flex flex-wrap gap-1.5">
-                                @foreach(['es' => __('Español'), 'en' => __('Inglés'), 'both' => __('Bilingüe')] as $langKey => $langLabel)
+                                @foreach(['es' => __('Spanish'), 'en' => __('English'), 'both' => __('Bilingual')] as $langKey => $langLabel)
                                     <button type="button" wire:click="$set('preferred_language', '{{ $langKey }}')" class="ui-chip" aria-pressed="{{ $preferred_language === $langKey ? 'true' : 'false' }}">{{ $langLabel }}</button>
                                 @endforeach
                             </div>
@@ -159,10 +159,10 @@
                     {{-- Linked companies --}}
                     <div class="ui-card p-4 space-y-3">
                         <div class="flex items-center justify-between">
-                            <h3 class="ui-section-title">{{ __('Compañías vinculadas') }}</h3>
-                            <span class="text-meta text-ink-3">{{ trans_choice('{0} Ninguna vinculada|{1} :count vinculada|[2,*] :count vinculadas', count($linkedClientIds), ['count' => count($linkedClientIds)]) }}</span>
+                            <h3 class="ui-section-title">{{ __('Linked companies') }}</h3>
+                            <span class="text-meta text-ink-3">{{ trans_choice('{0} None linked|{1} :count linked|[2,*] :count linked', count($linkedClientIds), ['count' => count($linkedClientIds)]) }}</span>
                         </div>
-                        <p class="text-meta text-ink-3">{{ __('Este contacto podrá atender órdenes de cualquiera de las compañías vinculadas a continuación:') }}</p>
+                        <p class="text-meta text-ink-3">{{ __('This contact can handle orders for any of the companies linked below:') }}</p>
 
                         <div class="flex flex-wrap gap-1.5 min-h-10 p-2 bg-sunken/60 border border-line rounded-control">
                             @php
@@ -179,29 +179,29 @@
                                     <span>{{ $lClient->name }}</span>
 
                                     @if($isPrimary)
-                                        <x-ui.tag icon="star" title="{{ __('Contacto principal de esta compañía') }}">{{ __('Principal') }}</x-ui.tag>
+                                        <x-ui.tag icon="star" title="{{ __('Primary contact for this company') }}">{{ __('Primary') }}</x-ui.tag>
                                     @elseif($currentContact)
                                         <button
                                             type="button"
-                                            x-on:click="KudosConfirmChange({ field: @js(__('Contacto principal de :company', ['company' => $lClient->name])), from: @js($currentMainName), to: @js($currentContact->name) }).then(ok => ok && $wire.setAsPrimaryClient({{ $lClient->id }}))"
+                                            x-on:click="KudosConfirmChange({ field: @js(__('Primary contact for :company', ['company' => $lClient->name])), from: @js($currentMainName), to: @js($currentContact->name) }).then(ok => ok && $wire.setAsPrimaryClient({{ $lClient->id }}))"
                                             class="text-ink-3 hover:text-ink hover:underline cursor-pointer"
-                                            title="{{ __('Establecer como contacto principal de esta compañía') }}"
-                                        >{{ __('Hacer principal') }}</button>
+                                            title="{{ __('Set as this company\'s primary contact') }}"
+                                        >{{ __('Make primary') }}</button>
                                     @endif
 
-                                    <button type="button" wire:click="toggleClientLink({{ $lClient->id }})" class="text-ink-3 hover:text-danger transition cursor-pointer rounded-full p-0.5" title="{{ __('Desvincular compañía') }}" aria-label="{{ __('Desvincular compañía') }}">
+                                    <button type="button" wire:click="toggleClientLink({{ $lClient->id }})" class="text-ink-3 hover:text-danger transition cursor-pointer rounded-full p-0.5" title="{{ __('Unlink company') }}" aria-label="{{ __('Unlink company') }}">
                                         <x-lucide-x class="w-3.5 h-3.5" />
                                     </button>
                                 </span>
                             @empty
-                                <span class="text-body text-ink-3 py-0.5">{{ __('Sin compañías vinculadas. Busca y agrega una abajo:') }}</span>
+                                <span class="text-body text-ink-3 py-0.5">{{ __('No linked companies. Search and add one below:') }}</span>
                             @endforelse
                         </div>
 
                         <div class="pt-1">
                             <div class="relative mb-2">
                                 <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
-                                <input type="text" wire:model.live.debounce.150ms="clientSearch" placeholder="{{ __('Buscar compañía para vincular...') }}" class="ui-input pl-8" />
+                                <input type="text" wire:model.live.debounce.150ms="clientSearch" placeholder="{{ __('Search a company to link...') }}" class="ui-input pl-8" />
                             </div>
 
                             <div class="max-h-40 overflow-y-auto custom-vertical-scrollbar border border-line rounded-control p-1 bg-surface">
@@ -214,9 +214,9 @@
                                     >
                                         <span class="truncate">{{ $clientOpt->name }}</span>
                                         @if($isLinked)
-                                            <span class="text-meta text-ink-3 flex items-center gap-1"><x-lucide-check class="w-3.5 h-3.5" />{{ __('Vinculada') }}</span>
+                                            <span class="text-meta text-ink-3 flex items-center gap-1"><x-lucide-check class="w-3.5 h-3.5" />{{ __('Linked') }}</span>
                                         @else
-                                            <span class="text-meta text-ink-3">{{ __('Vincular') }}</span>
+                                            <span class="text-meta text-ink-3">{{ __('Link') }}</span>
                                         @endif
                                     </button>
                                 @endforeach
@@ -225,8 +225,8 @@
                     </div>
 
                     <div class="ui-card p-4 space-y-2">
-                        <h3 class="ui-section-title">{{ __('Notas de atención') }}</h3>
-                        <textarea wire:model.defer="notes" rows="3" placeholder="{{ __('Ej: Solo contactar por las mañanas. Muy exigente con los pantones. etc.') }}" class="ui-input"></textarea>
+                        <h3 class="ui-section-title">{{ __('Handling notes') }}</h3>
+                        <textarea wire:model.defer="notes" rows="3" placeholder="{{ __('E.g. Only contact in the mornings. Very picky about Pantones.') }}" class="ui-input"></textarea>
                     </div>
                 @endif
 
@@ -235,10 +235,10 @@
                     <div class="space-y-4">
                         <div class="flex items-center justify-between gap-3">
                             <div>
-                                <h3 class="ui-section-title">{{ __('Órdenes de :name', ['name' => $currentContact->name]) }}</h3>
-                                <p class="text-meta text-ink-3">{{ __('Solo las órdenes donde este contacto es el responsable asignado:') }}</p>
+                                <h3 class="ui-section-title">{{ __('Orders for :name', ['name' => $currentContact->name]) }}</h3>
+                                <p class="text-meta text-ink-3">{{ __('Only orders where this contact is the assigned owner:') }}</p>
                             </div>
-                            <span class="text-meta text-ink-3 whitespace-nowrap">{{ trans_choice('{1} :count activa|[0,*] :count activas', $assignedOrders->count(), ['count' => $assignedOrders->count()]) }}</span>
+                            <span class="text-meta text-ink-3 whitespace-nowrap">{{ trans_choice('{1} :count active|[0,*] :count active', $assignedOrders->count(), ['count' => $assignedOrders->count()]) }}</span>
                         </div>
 
                         <div class="rounded-card border border-line bg-surface overflow-hidden">
@@ -247,10 +247,10 @@
                                     <thead>
                                         <tr>
                                             <th>{{ __('WO') }}</th>
-                                            <th>{{ __('Tarea / Compañía') }}</th>
-                                            <th>{{ __('Diseñador') }}</th>
-                                            <th>{{ __('Estado') }}</th>
-                                            <th class="is-num">{{ __('Entrega') }}</th>
+                                            <th>{{ __('Task / Company') }}</th>
+                                            <th>{{ __('Designer') }}</th>
+                                            <th>{{ __('Status') }}</th>
+                                            <th class="is-num">{{ __('Delivery') }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -264,7 +264,7 @@
                                                     <span class="flex items-center gap-1.5 min-w-0 text-meta text-ink-3">
                                                         <span class="truncate">{{ $ord->company_name ?: ($ord->client?->name ?? '-') }}</span>
                                                         @if($ord->contact_id !== $currentContact->id && $ord->responsible_person !== $currentContact->name)
-                                                            <span class="shrink-0">· {{ __('Vía contacto principal') }}</span>
+                                                            <span class="shrink-0">· {{ __('Via primary contact') }}</span>
                                                         @endif
                                                     </span>
                                                 </td>
@@ -274,7 +274,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="!h-auto py-8 text-center text-ink-3">{{ __('No tiene órdenes activas en este momento.') }}</td>
+                                                <td colspan="5" class="!h-auto py-8 text-center text-ink-3">{{ __('No active orders right now.') }}</td>
                                             </tr>
                                         @endforelse
                                     </tbody>
@@ -284,11 +284,11 @@
 
                         <div class="grid grid-cols-2 gap-3">
                             <div class="ui-card p-3">
-                                <span class="text-meta text-ink-3 block">{{ __('Órdenes en backlog') }}</span>
+                                <span class="text-meta text-ink-3 block">{{ __('Backlog orders') }}</span>
                                 <span class="text-title font-semibold text-ink tabular-nums">{{ $backlogOrders->count() }}</span>
                             </div>
                             <div class="ui-card p-3">
-                                <span class="text-meta text-ink-3 block">{{ __('Órdenes archivadas') }}</span>
+                                <span class="text-meta text-ink-3 block">{{ __('Archived orders') }}</span>
                                 <span class="text-title font-semibold text-ink tabular-nums">{{ $archivedOrders->count() }}</span>
                             </div>
                         </div>
@@ -299,13 +299,13 @@
                 @if($activeTab === 'merge' && $currentContact)
                     <div class="space-y-4">
                         <div>
-                            <h3 class="ui-section-title">{{ __('Herramienta de fusión de contactos') }}</h3>
-                            <p class="text-meta text-ink-3">{{ __('Si este contacto está duplicado, puedes fusionarlo con otro. Se transferirán todas sus órdenes y compañías vinculadas:') }}</p>
+                            <h3 class="ui-section-title">{{ __('Contact merge tool') }}</h3>
+                            <p class="text-meta text-ink-3">{{ __('If this contact is a duplicate, you can merge it into another one. All its orders and linked companies will be transferred:') }}</p>
                         </div>
 
                         @if(count($mergeSuggestions) > 0)
                             <div class="ui-card p-4 space-y-3">
-                                <h4 class="text-body font-medium text-ink">{{ __('Posibles duplicados detectados') }}</h4>
+                                <h4 class="text-body font-medium text-ink">{{ __('Possible duplicates found') }}</h4>
                                 <div class="space-y-2">
                                     @foreach($mergeSuggestions as $sugg)
                                         @php $candidate = $sugg['contact']; @endphp
@@ -319,9 +319,9 @@
                                             </div>
                                             <button
                                                 type="button"
-                                                x-on:click="KudosConfirmChange({ field: @js(__('Fusionar contactos')), from: @js($currentContact->name), to: @js($candidate->name), note: @js(__('Se transferirán todas sus órdenes y compañías vinculadas. Esta acción es irreversible.')), confirmText: @js(__('Fusionar')) }).then(ok => ok && $wire.executeMerge({{ $candidate->id }}))"
+                                                x-on:click="KudosConfirmChange({ field: @js(__('Merge contacts')), from: @js($currentContact->name), to: @js($candidate->name), note: @js(__('All its orders and linked companies will be transferred. This can\'t be undone.')), confirmText: @js(__('Merge')) }).then(ok => ok && $wire.executeMerge({{ $candidate->id }}))"
                                                 class="ui-btn ui-btn-secondary ui-btn-sm"
-                                            >{{ __('Fusionar aquí') }}</button>
+                                            >{{ __('Merge here') }}</button>
                                         </div>
                                     @endforeach
                                 </div>
@@ -329,14 +329,14 @@
                         @endif
 
                         <div class="ui-card p-4 space-y-3">
-                            <h4 class="text-body font-medium text-ink">{{ __('Fusionar manualmente con otro contacto') }}</h4>
-                            <p class="text-meta text-ink-3">{{ __('Selecciona el contacto destino que conservará toda la información:') }}</p>
+                            <h4 class="text-body font-medium text-ink">{{ __('Merge manually with another contact') }}</h4>
+                            <p class="text-meta text-ink-3">{{ __('Pick the target contact that will keep all the information:') }}</p>
 
                             <div class="space-y-2">
                                 <select wire:model="selectedMergeTargetId" class="ui-select">
-                                    <option value="">{{ __('-- Seleccionar contacto destino --') }}</option>
+                                    <option value="">{{ __('-- Select target contact --') }}</option>
                                     @foreach($allOtherContacts as $otherC)
-                                        <option value="{{ $otherC->id }}">{{ $otherC->name }} ({{ $otherC->phone ?: __('Sin teléfono') }})</option>
+                                        <option value="{{ $otherC->id }}">{{ $otherC->name }} ({{ $otherC->phone ?: __('No phone') }})</option>
                                     @endforeach
                                 </select>
 
@@ -344,9 +344,9 @@
                                     @php $mergeTarget = $allOtherContacts->firstWhere('id', $selectedMergeTargetId); @endphp
                                     <button
                                         type="button"
-                                        x-on:click="KudosConfirmChange({ field: @js(__('Fusionar contactos')), from: @js($currentContact->name), to: @js($mergeTarget?->name ?? ''), note: @js(__('Todas las órdenes y compañías se transferirán.')), confirmText: @js(__('Fusionar')) }).then(ok => ok && $wire.executeMerge({{ $selectedMergeTargetId }}))"
+                                        x-on:click="KudosConfirmChange({ field: @js(__('Merge contacts')), from: @js($currentContact->name), to: @js($mergeTarget?->name ?? ''), note: @js(__('All orders and companies will be transferred.')), confirmText: @js(__('Merge')) }).then(ok => ok && $wire.executeMerge({{ $selectedMergeTargetId }}))"
                                         class="ui-btn ui-btn-primary w-full"
-                                    >{{ __('Confirmar fusión') }}</button>
+                                    >{{ __('Confirm merge') }}</button>
                                 @endif
                             </div>
                         </div>

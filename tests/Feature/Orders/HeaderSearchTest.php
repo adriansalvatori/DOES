@@ -241,7 +241,7 @@ class HeaderSearchTest extends TestCase
 
             Livewire::test(HeaderSearch::class)
                 ->assertStatus(200)
-                ->assertSee(__('Buscar o ir a…'))
+                ->assertSee(__('Search or jump to…'))
                 ->assertDontSeeHtml('runTrelloSyncOnlyNew');
         }
     }

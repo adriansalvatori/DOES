@@ -1,16 +1,16 @@
 <div class="h-full flex flex-col min-h-0">
     <div id="tour-client-header">
-        <x-ui.page-header :title="__('Compañías')" :count="$totalClientsCount">
+        <x-ui.page-header :title="__('Companies')" :count="$totalClientsCount">
             <x-slot:actions>
                 <button id="tour-client-new-btn" type="button" wire:click="openClientDetail" class="ui-btn ui-btn-primary">
                     <x-lucide-plus />
-                    {{ __('Nueva compañía') }}
+                    {{ __('New company') }}
                 </button>
             </x-slot:actions>
             <x-slot:toolbar>
                 <div class="relative w-72 max-w-full">
                     <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
-                    <input id="tour-client-search" type="text" wire:model.live.debounce.200ms="search" placeholder="{{ __('Buscar compañía...') }}" class="ui-input pl-8">
+                    <input id="tour-client-search" type="text" wire:model.live.debounce.200ms="search" placeholder="{{ __('Search companies...') }}" class="ui-input pl-8">
                 </div>
             </x-slot:toolbar>
         </x-ui.page-header>
@@ -20,11 +20,11 @@
         <table class="ui-table">
             <thead>
                 <tr>
-                    <th>{{ __('Compañía') }}</th>
-                    <th>{{ __('Contacto principal') }}</th>
-                    <th>{{ __('Teléfono o email') }}</th>
-                    <th class="is-num">{{ __('Activas') }}</th>
-                    <th class="is-num">{{ __('Archivadas') }}</th>
+                    <th>{{ __('Company') }}</th>
+                    <th>{{ __('Primary contact') }}</th>
+                    <th>{{ __('Phone or email') }}</th>
+                    <th class="is-num">{{ __('Active') }}</th>
+                    <th class="is-num">{{ __('Archived') }}</th>
                     <th class="is-num">{{ __('Backlog') }}</th>
                     <th class="w-10"></th>
                 </tr>
@@ -46,7 +46,7 @@
                                 @if($mainLocationText !== '')
                                     <x-orders.location :location="$mainLocationText" class="min-w-0 shrink" />
                                     @if($locations->count() > 1)
-                                        <span class="shrink-0 text-meta text-ink-3" title="{{ trans_choice('{1} :count ubicación|[2,*] :count ubicaciones', $locations->count(), ['count' => $locations->count()]) }}">+{{ $locations->count() - 1 }}</span>
+                                        <span class="shrink-0 text-meta text-ink-3" title="{{ trans_choice('{1} :count location|[2,*] :count locations', $locations->count(), ['count' => $locations->count()]) }}">+{{ $locations->count() - 1 }}</span>
                                     @endif
                                 @endif
                             </div>
@@ -72,7 +72,7 @@
                             <div
                                 x-data="{
                                     copy(text) {
-                                        const done = () => $dispatch('toast', { message: @js(__('Dirección copiada')) });
+                                        const done = () => $dispatch('toast', { message: @js(__('Address copied')) });
                                         if (navigator.clipboard && window.isSecureContext) {
                                             navigator.clipboard.writeText(text).then(done).catch(() => this.fallback(text, done));
                                         } else { this.fallback(text, done); }
@@ -87,17 +87,17 @@
                                 }"
                             >
                                 <flux:dropdown position="bottom" align="end">
-                                    <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Acciones') }}" />
+                                    <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Actions') }}" />
                                     <flux:menu>
                                         @if($mainAddress !== '')
-                                            <flux:menu.item icon="document-duplicate" x-on:click="copy({{ \Illuminate\Support\Js::from($mainAddress) }})">{{ __('Copiar dirección') }}</flux:menu.item>
+                                            <flux:menu.item icon="document-duplicate" x-on:click="copy({{ \Illuminate\Support\Js::from($mainAddress) }})">{{ __('Copy address') }}</flux:menu.item>
                                             <flux:menu.separator />
                                         @endif
                                         <flux:menu.item
                                             variant="danger"
                                             icon="trash"
                                             wire:click="deleteClient({{ $client->id }})"
-                                            wire:confirm="{{ __('¿Eliminar la compañía :name? Se moverá a la papelera.', ['name' => $client->name]) }}">{{ __('Eliminar compañía') }}</flux:menu.item>
+                                            wire:confirm="{{ __('Delete :name? The company will be moved to the trash.', ['name' => $client->name]) }}">{{ __('Delete company') }}</flux:menu.item>
                                     </flux:menu>
                                 </flux:dropdown>
                             </div>
@@ -106,7 +106,7 @@
                 @empty
                     <tr>
                         <td colspan="7" class="!h-auto py-10">
-                            <x-ui.empty icon="building-2" :title="__('No hay compañías')" :description="filled($search) ? __('Ninguna compañía coincide con la búsqueda.') : null" />
+                            <x-ui.empty icon="building-2" :title="__('No companies')" :description="filled($search) ? __('No company matches your search.') : null" />
                         </td>
                     </tr>
                 @endforelse

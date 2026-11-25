@@ -195,8 +195,8 @@ class OverviewIndex extends Component
             $pal = \App\Models\Substatus::resolvePalette(null);
             $filters['otros'] = [
                 'key' => 'otros',
-                'label' => mb_strtoupper(__('Otros')),
-                'short_label' => mb_strtoupper(__('Otros')),
+                'label' => mb_strtoupper(__('Other')),
+                'short_label' => mb_strtoupper(__('Other')),
                 'count' => $nullCount,
                 'bg_color' => $pal['bg_color'],
                 'text_color' => $pal['text_color'],
@@ -235,37 +235,37 @@ class OverviewIndex extends Component
 
         $coreOrder = [
             'ENTRANTE' => [
-                'title' => __('1. Entrante / Bloqueada'),
+                'title' => __('1. Incoming / Blocked'),
                 'dot' => 'bg-orange-500',
                 'badge' => 'border-orange-200 bg-orange-50 text-orange-900',
             ],
             'EURALIZ ORDERS RECEIVED' => [
-                'title' => __('2. Colas de Diseño'),
+                'title' => __('2. Design queues'),
                 'dot' => 'bg-emerald-500',
                 'badge' => 'border-emerald-200 bg-emerald-50 text-emerald-900',
             ],
             'ENVIADO A CAMILA' => [
-                'title' => __('3. Enviado a Camila (QA)'),
+                'title' => __('3. Sent to Camila (QA)'),
                 'dot' => 'bg-purple-500',
                 'badge' => 'border-purple-200 bg-purple-50 text-purple-900',
             ],
             'ENVIADO AL CLIENTE' => [
-                'title' => __('4. Enviado al Cliente'),
+                'title' => __('4. Sent to client'),
                 'dot' => 'bg-sky-500',
                 'badge' => 'border-sky-200 bg-sky-50 text-sky-900',
             ],
             'ON HOLD' => [
-                'title' => __('5. En Pausa (On Hold)'),
+                'title' => __('5. On hold'),
                 'dot' => 'bg-stone-500',
                 'badge' => 'border-stone-300 bg-stone-100 text-stone-900',
             ],
             'EN PRODUCCIÓN' => [
-                'title' => __('6. En Producción'),
+                'title' => __('6. In production'),
                 'dot' => 'bg-pink-500',
                 'badge' => 'border-pink-200 bg-pink-50 text-pink-900',
             ],
             'ARCHIVED' => [
-                'title' => __('7. Archivado / Cierre'),
+                'title' => __('7. Archived / Closed'),
                 'dot' => 'bg-teal-500',
                 'badge' => 'border-teal-200 bg-teal-50 text-teal-900',
             ],
@@ -283,7 +283,7 @@ class OverviewIndex extends Component
         }
         $groups['OTROS'] = [
             'key' => 'OTROS',
-            'title' => __('8. Otros'),
+            'title' => __('8. Other'),
             'dot' => 'bg-stone-400',
             'badge' => 'border-stone-200 bg-stone-50 text-stone-700',
             'items' => [],
@@ -332,7 +332,7 @@ class OverviewIndex extends Component
     public function refreshCache(): void
     {
         $this->clearOverviewCache();
-        $this->dispatch('toast', message: __('Caché en disco renovado exitosamente.'));
+        $this->dispatch('toast', message: __('Disk cache refreshed.'));
     }
 
     /**
@@ -678,7 +678,7 @@ class OverviewIndex extends Component
         if (! empty(trim($this->search))) {
             $filters[] = [
                 'key' => 'search',
-                'label' => __('Búsqueda'),
+                'label' => __('Search'),
                 'value' => trim($this->search),
             ];
         }
@@ -698,7 +698,7 @@ class OverviewIndex extends Component
 
             $filters[] = [
                 'key' => 'filterClient',
-                'label' => __('Cliente'),
+                'label' => __('Client'),
                 'value' => (string) ($clientName ?: $this->filterClient),
             ];
         }
@@ -708,7 +708,7 @@ class OverviewIndex extends Component
 
             $filters[] = [
                 'key' => 'filterDesigner',
-                'label' => __('Diseñador'),
+                'label' => __('Designer'),
                 'value' => (string) ($designerName ?: $this->filterDesigner),
             ];
         }
@@ -717,13 +717,13 @@ class OverviewIndex extends Component
             $reviewLabel = match ($this->filterReviewStatus) {
                 'CS' => 'CS',
                 'CAMILA' => 'Camila',
-                'NONE' => __('Sin revisión'),
+                'NONE' => __('No review'),
                 default => $this->filterReviewStatus,
             };
 
             $filters[] = [
                 'key' => 'filterReviewStatus',
-                'label' => __('Revisión'),
+                'label' => __('Review'),
                 'value' => $reviewLabel,
             ];
         }
@@ -731,21 +731,21 @@ class OverviewIndex extends Component
         if (! empty(trim($this->filterInstallation))) {
             $filters[] = [
                 'key' => 'filterInstallation',
-                'label' => __('Instalación'),
-                'value' => $this->filterInstallation === 'NONE' ? __('Sin información') : $this->filterInstallation,
+                'label' => __('Installation'),
+                'value' => $this->filterInstallation === 'NONE' ? __('No info') : $this->filterInstallation,
             ];
         }
 
         if (! empty(trim($this->filterDateRange))) {
             $dateLabel = match ($this->filterDateRange) {
-                'today' => __('Hoy'),
-                'week' => __('Esta semana'),
+                'today' => __('Today'),
+                'week' => __('This week'),
                 default => $this->filterDateRange,
             };
 
             $filters[] = [
                 'key' => 'filterDateRange',
-                'label' => __('Fecha'),
+                'label' => __('Date'),
                 'value' => $dateLabel,
             ];
         }
@@ -753,16 +753,16 @@ class OverviewIndex extends Component
         if ($this->filterUrgent) {
             $filters[] = [
                 'key' => 'filterUrgent',
-                'label' => __('Prioridad'),
-                'value' => __('Urgente'),
+                'label' => __('Priority'),
+                'value' => __('Urgent'),
             ];
         }
 
         if ($this->filterWithDueDate) {
             $filters[] = [
                 'key' => 'filterWithDueDate',
-                'label' => __('Entrega'),
-                'value' => __('Con Due Date'),
+                'label' => __('Delivery'),
+                'value' => __('With due date'),
             ];
         }
 
@@ -877,7 +877,7 @@ class OverviewIndex extends Component
         $this->clearOverviewCache();
         $this->cancelEdit();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Orden actualizada exitosamente.'));
+        $this->dispatch('toast', message: __('Order updated.'));
     }
 
     #[Renderless]
@@ -990,7 +990,7 @@ class OverviewIndex extends Component
 
         $this->syncTrelloAndLog($order, 'ORDER_UPDATED', "Campo {$field} actualizado", $prevVal, $value);
         $this->clearOverviewCache();
-        $this->dispatch('toast', message: __('Guardado.'));
+        $this->dispatch('toast', message: __('Saved.'));
 
         if ($field !== 'wo_number') {
             // The cell already shows the saved value; only a new WO swaps its input for the WO badge.
@@ -1014,7 +1014,7 @@ class OverviewIndex extends Component
         $this->clearOverviewCache();
         $this->syncTrelloAndLog($order, 'REVIEW_STATUS_CHANGED', 'Revisión actualizada: '.($status ?? 'Ninguna'));
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Estado de revisión actualizado.'));
+        $this->dispatch('toast', message: __('Review status updated.'));
     }
 
     #[Renderless]
@@ -1037,7 +1037,7 @@ class OverviewIndex extends Component
         $this->clearOverviewCache();
         $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Tipo de instalación actualizado: '.($clean ?? 'Vacío'));
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Instalación actualizada.'));
+        $this->dispatch('toast', message: __('Installation updated.'));
     }
 
     #[Renderless]
@@ -1060,7 +1060,7 @@ class OverviewIndex extends Component
         $types = $order->installation_types_list;
         $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación actualizada: '.(empty($types) ? 'Vacío' : implode(', ', $types)));
         $this->dispatch('order-updated', source: 'OverviewIndex');
-        $this->dispatch('toast', message: __('Instalación actualizada.'));
+        $this->dispatch('toast', message: __('Installation updated.'));
     }
 
     #[Renderless]
@@ -1083,7 +1083,7 @@ class OverviewIndex extends Component
         $this->clearOverviewCache();
         $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación actualizada: '.(empty($cleanTypes) ? 'Vacío' : implode(', ', $cleanTypes)));
         $this->dispatch('order-updated', source: 'OverviewIndex');
-        $this->dispatch('toast', message: __('Instalación actualizada.'));
+        $this->dispatch('toast', message: __('Installation updated.'));
     }
 
     #[Renderless]
@@ -1105,7 +1105,7 @@ class OverviewIndex extends Component
         $this->clearOverviewCache();
         $this->syncTrelloAndLog($order, 'INSTALLATION_CHANGED', 'Instalación eliminada');
         $this->dispatch('order-updated', source: 'OverviewIndex');
-        $this->dispatch('toast', message: __('Instalación vaciada.'));
+        $this->dispatch('toast', message: __('Installation cleared.'));
     }
 
     #[Renderless]
@@ -1158,7 +1158,7 @@ class OverviewIndex extends Component
 
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Subestatus / Bandera actualizada.'));
+        $this->dispatch('toast', message: __('Substatus / flag updated.'));
     }
 
     #[Renderless]
@@ -1179,7 +1179,7 @@ class OverviewIndex extends Component
 
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Bandera actualizada.'));
+        $this->dispatch('toast', message: __('Flag updated.'));
     }
 
     #[Renderless]
@@ -1222,7 +1222,7 @@ class OverviewIndex extends Component
         $this->syncTrelloAndLog($order, 'DESIGNER_ASSIGNED', 'Diseñador asignado actualizado');
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Diseñador actualizado.'));
+        $this->dispatch('toast', message: __('Designer updated.'));
     }
 
     public function moveToWorkspace(int $orderId): void
@@ -1236,7 +1236,7 @@ class OverviewIndex extends Component
         $this->syncTrelloAndLog($order, 'MOVED_TO_WORKSPACE', 'Orden movida al workspace activo');
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Orden movida al Workspace activo.'));
+        $this->dispatch('toast', message: __('Order moved to the active Workspace.'));
     }
 
     public function moveToBacklog(int $orderId): void
@@ -1250,7 +1250,7 @@ class OverviewIndex extends Component
         $this->syncTrelloAndLog($order, 'MOVED_TO_BACKLOG', 'Orden movida al backlog');
         $this->clearOverviewCache();
         $this->dispatch('order-updated');
-        $this->dispatch('toast', message: __('Orden movida al Backlog.'));
+        $this->dispatch('toast', message: __('Order moved to the Backlog.'));
     }
 
     private function syncTrelloAndLog(Order $order, string $eventType, string $description, ?string $newValue = null, ?string $previousValue = null): void

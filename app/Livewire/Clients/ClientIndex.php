@@ -38,7 +38,7 @@ class ClientIndex extends Component
                 'client_location_id' => null,
             ]);
             $client->delete();
-            $this->dispatch('toast', message: __('Compañía ":name" eliminada.', ['name' => $name]));
+            $this->dispatch('toast', message: __('Company ":name" deleted.', ['name' => $name]));
             $this->dispatch('client-updated');
         }
     }

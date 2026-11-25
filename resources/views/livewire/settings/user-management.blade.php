@@ -1,8 +1,8 @@
 <div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 w-full max-w-5xl pb-10">
 
-    <x-ui.page-header :title="__('Gestión de Usuarios y Roles')">
+    <x-ui.page-header :title="__('Users and roles')">
         <x-slot:actions>
-            <flux:button wire:click="openCreateModal" type="button" variant="primary" size="sm" icon="user-plus">{{ __('Crear Usuario') }}</flux:button>
+            <flux:button wire:click="openCreateModal" type="button" variant="primary" size="sm" icon="user-plus">{{ __('Create user') }}</flux:button>
         </x-slot:actions>
     </x-ui.page-header>
 
@@ -10,9 +10,9 @@
         {{-- CS WhatsApp Phone Configuration (admin only) --}}
         <div class="bg-surface border border-line rounded-card p-4 flex flex-col gap-3">
             <div>
-                <h2 class="text-row font-semibold text-ink">{{ __('WhatsApp de Atención al Cliente (CS)') }}</h2>
+                <h2 class="text-row font-semibold text-ink">{{ __('Customer service WhatsApp') }}</h2>
                 <p class="text-meta text-ink-3 mt-0.5">
-                    {{ __('Este número se utiliza en el Portal del Cliente para las consultas dirigidas al equipo de Customer Service.') }}
+                    {{ __('This number is used in the client portal for questions to the customer service team.') }}
                 </p>
             </div>
 
@@ -26,7 +26,7 @@
                         class="ui-input pl-8 pr-3 font-mono"
                     />
                 </div>
-                <flux:button type="submit" variant="primary" size="sm" class="shrink-0">{{ __('Guardar') }}</flux:button>
+                <flux:button type="submit" variant="primary" size="sm" class="shrink-0">{{ __('Save') }}</flux:button>
             </form>
 
             @if(session('success_cs'))
@@ -40,20 +40,20 @@
         {{-- Approval Manager Configuration (admin only) --}}
         <div class="bg-surface border border-line rounded-card p-4 flex flex-col gap-3">
             <div>
-                <h2 class="text-row font-semibold text-ink">{{ __('Manager de Aprobaciones') }}</h2>
+                <h2 class="text-row font-semibold text-ink">{{ __('Approvals Manager') }}</h2>
                 <p class="text-meta text-ink-3 mt-0.5">
-                    {{ __('Selecciona el usuario que actúa como Manager para las aprobaciones de órdenes.') }}
+                    {{ __('Select the user who acts as Manager for order approvals.') }}
                 </p>
             </div>
 
             <form wire:submit="saveManagerSettings" class="space-y-2">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
-                        <label class="block text-meta text-ink-2 mb-1">{{ __('Usuario Manager') }} <span class="text-danger">*</span></label>
+                        <label class="block text-meta text-ink-2 mb-1">{{ __('Manager User') }} <span class="text-danger">*</span></label>
                         <select
                             wire:model.live="manager_id"
                             class="ui-select">
-                            <option value="">-- {{ __('Seleccionar Usuario') }} --</option>
+                            <option value="">-- {{ __('Select user') }} --</option>
                             @foreach($allUsers as $u)
                                 <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role->label() }})</option>
                             @endforeach
@@ -61,7 +61,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-meta text-ink-2 mb-1">{{ __('Nombre en Aprobación') }} <span class="text-danger">*</span></label>
+                        <label class="block text-meta text-ink-2 mb-1">{{ __('Display Name in Approvals') }} <span class="text-danger">*</span></label>
                         <input
                             type="text"
                             wire:model="manager_name"
@@ -73,9 +73,9 @@
 
                 <div class="flex items-center justify-between gap-2 pt-1">
                     <div class="text-meta text-ink-3 truncate">
-                        {{ __('Opción:') }} <span class="font-medium text-ink-2">"{{ __('Aprobado por :name', ['name' => $manager_name ?: 'Manager']) }}"</span>
+                        {{ __('Option:') }} <span class="font-medium text-ink-2">"{{ __('Approved by :name', ['name' => $manager_name ?: 'Manager']) }}"</span>
                     </div>
-                    <flux:button type="submit" variant="primary" size="sm" class="shrink-0">{{ __('Guardar') }}</flux:button>
+                    <flux:button type="submit" variant="primary" size="sm" class="shrink-0">{{ __('Save') }}</flux:button>
                 </div>
             </form>
 
@@ -104,7 +104,7 @@
             <input
                 wire:model.live.debounce.300ms="search"
                 type="text"
-                placeholder="{{ __('Buscar por nombre o correo...') }}"
+                placeholder="{{ __('Search by name or email…') }}"
                 class="ui-input pl-9 pr-3" />
         </div>
     </div>
@@ -113,11 +113,11 @@
         <table class="w-full text-left text-body text-ink-2">
             <thead class="border-b border-line text-meta font-medium text-ink-3  r">
                 <tr>
-                    <th class="py-2.5 px-4">{{ __('Usuario') }}</th>
-                    <th class="py-2.5 px-4">{{ __('Rol') }}</th>
-                    <th class="py-2.5 px-4">{{ __('Diseñador Vinculado') }}</th>
-                    <th class="py-2.5 px-4">{{ __('Estado') }}</th>
-                    <th class="py-2.5 px-4 text-right">{{ __('Acciones') }}</th>
+                    <th class="py-2.5 px-4">{{ __('User') }}</th>
+                    <th class="py-2.5 px-4">{{ __('Role') }}</th>
+                    <th class="py-2.5 px-4">{{ __('Linked designer') }}</th>
+                    <th class="py-2.5 px-4">{{ __('Status') }}</th>
+                    <th class="py-2.5 px-4 text-right">{{ __('Actions') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-line">
@@ -141,7 +141,7 @@
                             @if($u->designer)
                                 <span class="text-ink">{{ $u->designer->name }}</span>
                             @else
-                                <span class="text-ink-3">{{ __('Sin vincular') }}</span>
+                                <span class="text-ink-3">{{ __('Not linked') }}</span>
                             @endif
                         </td>
                         <td class="py-3 px-4">
@@ -150,9 +150,9 @@
                                 type="button"
                                 class="cursor-pointer">
                                 @if($u->active)
-                                    <x-ui.tag tone="ok">{{ __('Activo') }}</x-ui.tag>
+                                    <x-ui.tag tone="ok">{{ __('Active') }}</x-ui.tag>
                                 @else
-                                    <x-ui.tag tone="neutral">{{ __('Inactivo') }}</x-ui.tag>
+                                    <x-ui.tag tone="neutral">{{ __('Inactive') }}</x-ui.tag>
                                 @endif
                             </button>
                         </td>
@@ -161,14 +161,14 @@
                                 wire:click="openEditModal({{ $u->id }})"
                                 type="button"
                                 class="p-1.5 rounded-control text-ink-3 hover:text-ink hover:bg-sunken transition cursor-pointer"
-                                title="{{ __('Editar') }}">
+                                title="{{ __('Edit') }}">
                                 <x-lucide-pencil class="w-4 h-4" />
                             </button>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="p-6 text-center text-ink-3">{{ __('No se encontraron usuarios.') }}</td>
+                        <td colspan="5" class="p-6 text-center text-ink-3">{{ __('No users found.') }}</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -184,7 +184,7 @@
             <div class="bg-surface rounded-panel shadow-panel border border-line w-full max-w-md p-5 space-y-4">
                 <div class="flex items-center justify-between border-b border-line pb-3">
                     <h3 class="text-section font-semibold text-ink">
-                        {{ $editingUserId ? __('Editar Usuario') : __('Crear Nuevo Usuario') }}
+                        {{ $editingUserId ? __('Edit user') : __('Create user') }}
                     </h3>
                     <button @click="$wire.showModal = false" class="text-ink-3 hover:text-ink">
                         <x-lucide-x class="w-4 h-4" />
@@ -194,28 +194,28 @@
                 <form wire:submit="saveUser" autocomplete="off" class="space-y-3 text-body">
 
                     <div class="space-y-1">
-                        <label class="block text-meta text-ink-2">{{ __('Nombre') }}</label>
+                        <label class="block text-meta text-ink-2">{{ __('Name') }}</label>
                         <input wire:model="name" type="text" required class="ui-input" />
                         @error('name') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-meta text-ink-2">{{ __('Correo electrónico') }}</label>
+                        <label class="block text-meta text-ink-2">{{ __('Email') }}</label>
                         <input wire:model="email" type="email" required class="ui-input" />
                         @error('email') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="space-y-1">
                         <label class="text-meta text-ink-2 flex items-center justify-between">
-                            <span>{{ __('Teléfono / WhatsApp de Contacto') }}</span>
-                            <span class="text-ink-3">{{ __('Para "Chatear con tu Diseñador"') }}</span>
+                            <span>{{ __('Contact phone / WhatsApp') }}</span>
+                            <span class="text-ink-3">{{ __('Used for "Chat with your designer"') }}</span>
                         </label>
                         <input wire:model="phone" type="text" placeholder="+1 (678) 358-0594" class="ui-input font-mono" />
                         @error('phone') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-meta text-ink-2">{{ __('Rol de usuario') }}</label>
+                        <label class="block text-meta text-ink-2">{{ __('User role') }}</label>
                         <select wire:model="role" class="ui-select">
                             @foreach($roles as $r)
                                 <option value="{{ $r->value }}">{{ $r->label() }}</option>
@@ -225,9 +225,9 @@
                     </div>
 
                     <div class="space-y-1">
-                        <label class="block text-meta text-ink-2">{{ __('Vincular Diseñador (Opcional)') }}</label>
+                        <label class="block text-meta text-ink-2">{{ __('Link designer (optional)') }}</label>
                         <select wire:model="designer_id" class="ui-select">
-                            <option value="">-- {{ __('Ninguno') }} --</option>
+                            <option value="">-- {{ __('None') }} --</option>
                             @foreach($designers as $d)
                                 <option value="{{ $d->id }}">{{ $d->name }}</option>
                             @endforeach
@@ -238,7 +238,7 @@
                         <div class="pt-2 border-t border-line">
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input wire:model.live="changePassword" type="checkbox" class="rounded border-line-strong text-ink focus:ring-gold" />
-                                <span class="text-ink-2">{{ __('Cambiar contraseña de este usuario') }}</span>
+                                <span class="text-ink-2">{{ __('Change this user\'s password') }}</span>
                             </label>
                         </div>
                     @endif
@@ -246,7 +246,7 @@
                     @if(! $editingUserId || $changePassword)
                         <div class="space-y-1">
                             <label class="block text-meta text-ink-2">
-                                {{ $editingUserId ? __('Nueva Contraseña (mínimo 8 caracteres)') : __('Contraseña (mínimo 8 caracteres)') }}
+                                {{ $editingUserId ? __('New password (at least 8 characters)') : __('Password (at least 8 characters)') }}
                             </label>
                             <input wire:model="password" type="password" autocomplete="new-password" required class="ui-input" />
                             @error('password') <p class="text-danger text-meta mt-0.5">{{ $message }}</p> @enderror
@@ -255,12 +255,12 @@
 
                     <div class="flex items-center gap-2 pt-1">
                         <input wire:model="active" type="checkbox" id="userActive" class="rounded border-line-strong text-ink focus:ring-gold" />
-                        <label for="userActive" class="text-ink-2 cursor-pointer">{{ __('Usuario Activo') }}</label>
+                        <label for="userActive" class="text-ink-2 cursor-pointer">{{ __('Active user') }}</label>
                     </div>
 
                     <div class="flex items-center justify-end gap-2 pt-3 border-t border-line">
-                        <flux:button type="button" @click="$wire.showModal = false" variant="ghost" size="sm">{{ __('Cancelar') }}</flux:button>
-                        <flux:button type="submit" variant="primary" size="sm">{{ __('Guardar') }}</flux:button>
+                        <flux:button type="button" @click="$wire.showModal = false" variant="ghost" size="sm">{{ __('Cancel') }}</flux:button>
+                        <flux:button type="submit" variant="primary" size="sm">{{ __('Save') }}</flux:button>
                     </div>
 
                 </form>

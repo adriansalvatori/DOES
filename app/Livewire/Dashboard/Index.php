@@ -120,8 +120,8 @@ class Index extends Component
         }
 
         $msg = $newDoneToday
-            ? __('Orden :company marcada como realizada hoy.', ['company' => $order->company_name])
-            : __('Orden :company desmarcada de realizada hoy.', ['company' => $order->company_name]);
+            ? __('Order :company marked as done today.', ['company' => $order->company_name])
+            : __('Order :company unmarked as done today.', ['company' => $order->company_name]);
 
         session()->flash('message', $msg);
     }
@@ -147,7 +147,7 @@ class Index extends Component
             }
         }
 
-        session()->flash('message', __('Tarea \':title\' completada.', ['title' => $task->title]));
+        session()->flash('message', __('Task \':title\' completed.', ['title' => $task->title]));
     }
 
     public function openCamilaModal(int $taskId): void
@@ -187,7 +187,7 @@ class Index extends Component
         ]);
 
         $prevStatus = $order->core_status;
-        $comment = ! empty(trim($this->camilaComment)) ? trim($this->camilaComment) : __('Ajustes solicitados por Camila');
+        $comment = ! empty(trim($this->camilaComment)) ? trim($this->camilaComment) : __('Changes requested by Camila');
 
         $order->update([
             'core_status' => CoreStatus::TO_DO_TODAY,
@@ -210,7 +210,7 @@ class Index extends Component
 
         RelatedTask::create([
             'order_id' => $order->id,
-            'title' => mb_substr(__('Ajustes Camila: :comment', ['comment' => $comment]), 0, 190),
+            'title' => mb_substr(__('Camila\'s changes: :comment', ['comment' => $comment]), 0, 190),
             'type' => RelatedTaskType::SUBTASK,
             'status' => 'todo',
             'assignee_id' => $order->getPrimaryDesignerId(),
@@ -223,7 +223,7 @@ class Index extends Component
         app(AutomationEngine::class)->handleStatusChanged($order, $prevStatus, CoreStatus::TO_DO_TODAY);
         $order->update(['substatus' => Substatus::CAMBIOS_CAMILA]);
 
-        session()->flash('message', __('Ajustes de Camila registrados. Orden :company movida a Para Hoy.', ['company' => $order->company_name]));
+        session()->flash('message', __('Camila\'s changes logged. Order :company moved to Today.', ['company' => $order->company_name]));
         $this->closeCamilaModal();
         $this->dispatch('order-updated');
     }
@@ -247,7 +247,7 @@ class Index extends Component
         ]);
 
         $prevStatus = $order->core_status;
-        $comment = ! empty(trim($this->camilaComment)) ? trim($this->camilaComment) : __('Camila pre-aprueba el diseño. Listo para enviar al cliente.');
+        $comment = ! empty(trim($this->camilaComment)) ? trim($this->camilaComment) : __('Camila pre-approves the design. Ready to send to the client.');
 
         $order->update([
             'core_status' => CoreStatus::TO_DO_TODAY,
@@ -282,7 +282,7 @@ class Index extends Component
         app(AutomationEngine::class)->handleStatusChanged($order, $prevStatus, CoreStatus::TO_DO_TODAY);
         $order->update(['substatus' => null]);
 
-        session()->flash('message', __('Pre-aprobado por Camila. Subtarea creada para enviar proof al cliente.'));
+        session()->flash('message', __('Pre-approved by Camila. Subtask created to send the proof to the client.'));
         $this->closeCamilaModal();
         $this->dispatch('order-updated');
     }
@@ -303,8 +303,8 @@ class Index extends Component
         $this->validate([
             'camilaComment' => 'required|string|min:3',
         ], [
-            'camilaComment.required' => __('Ingresa el comentario o novedad para la orden.'),
-            'camilaComment.min' => __('El comentario debe tener al menos 3 caracteres.'),
+            'camilaComment.required' => __('Enter a comment or update for the order.'),
+            'camilaComment.min' => __('The comment must be at least 3 characters.'),
         ]);
 
         OrderEvent::create([
@@ -321,7 +321,7 @@ class Index extends Component
 
         $order->touch();
 
-        session()->flash('message', __('Comentario registrado en el timeline de la orden :company.', ['company' => $order->company_name]));
+        session()->flash('message', __('Comment added to the timeline of order :company.', ['company' => $order->company_name]));
         $this->closeCamilaModal();
         $this->dispatch('order-updated');
     }
@@ -334,7 +334,7 @@ class Index extends Component
             'is_new_from_trello' => false,
         ]);
 
-        session()->flash('message', __('Orden :company movida al Workspace activo.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company moved to the active Workspace.', ['company' => $order->company_name]));
     }
 
     public function openResolveModal(int $orderId): void
@@ -360,10 +360,10 @@ class Index extends Component
         }
 
         $order = Order::findOrFail($this->resolveOrderId);
-        $reason = ! empty(trim($this->resolveComment)) ? trim($this->resolveComment) : __('Desbloqueado desde Centro de Control');
+        $reason = ! empty(trim($this->resolveComment)) ? trim($this->resolveComment) : __('Unblocked from Today');
         $order->unblock($reason, Auth::user()?->name);
 
-        session()->flash('message', __('Orden :company desbloqueada y devuelta a la cola activa de trabajo.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company unblocked and returned to the active work queue.', ['company' => $order->company_name]));
         $this->closeResolveModal();
         $this->dispatch('order-updated');
     }
@@ -377,8 +377,8 @@ class Index extends Component
         $this->validate([
             'resolveComment' => 'required|string|min:3',
         ], [
-            'resolveComment.required' => __('Ingresa una nota o comentario sobre el seguimiento del bloqueo.'),
-            'resolveComment.min' => __('La nota debe contener al menos 3 caracteres.'),
+            'resolveComment.required' => __('Enter a note about the block follow-up.'),
+            'resolveComment.min' => __('The note must be at least 3 characters.'),
         ]);
 
         $order = Order::findOrFail($this->resolveOrderId);
@@ -398,7 +398,7 @@ class Index extends Component
 
         $order->touch();
 
-        session()->flash('message', __('Seguimiento registrado para la orden :company. Se mantiene bloqueada.', ['company' => $order->company_name]));
+        session()->flash('message', __('Follow-up logged for order :company. It stays blocked.', ['company' => $order->company_name]));
         $this->closeResolveModal();
         $this->dispatch('order-updated');
     }
@@ -491,6 +491,6 @@ class Index extends Component
             'pronosticoAltaOrders' => $pronosticoAltaOrders,
             'newTrelloOrders' => $newTrelloOrders,
             'designers' => Designer::where('active', true)->internal()->orderBy('name')->get(),
-        ])->layout('components.layouts.app', ['title' => __('Hoy')]);
+        ])->layout('components.layouts.app', ['title' => __('Today')]);
     }
 }

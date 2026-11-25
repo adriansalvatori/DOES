@@ -209,7 +209,7 @@ class Order extends Model
         }
 
         if (empty($task)) {
-            $task = $this->location_name ?: ($this->task_name ?: __('Proyecto sin nombre'));
+            $task = $this->location_name ?: ($this->task_name ?: __('Untitled project'));
         }
 
         return mb_strtoupper($task, 'UTF-8');
@@ -394,7 +394,7 @@ class Order extends Model
     {
         $designers = $this->assigned_designers;
         if ($designers->isEmpty()) {
-            return __('Sin Asignar');
+            return __('Unassigned');
         }
 
         return $designers->pluck('name')->join(', ');
@@ -775,9 +775,9 @@ class Order extends Model
         $diffInDays = max(1, (int) ceil($blockedAt->diffInDays($now)));
 
         if ($diffInHours < 24) {
-            $durationText = $diffInHours <= 1 ? __('menos de 1 hora') : __(':hours horas', ['hours' => $diffInHours]);
+            $durationText = $diffInHours <= 1 ? __('less than 1 hour') : __(':hours horas', ['hours' => $diffInHours]);
         } else {
-            $durationText = $diffInDays === 1 ? __('1 día') : __(':days días', ['days' => $diffInDays]);
+            $durationText = $diffInDays === 1 ? __('1 day') : __(':days days', ['days' => $diffInDays]);
         }
 
         $designerStatus = $this->getDesignerOrdersReceivedStatus();

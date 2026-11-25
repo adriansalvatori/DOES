@@ -37,7 +37,7 @@ class SubtaskPresets extends Component
     {
         $user = Auth::user();
         if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
     }
 

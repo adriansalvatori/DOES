@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{{ $title ?? (__('Seguimiento de Pedidos').' · Kudos Print Media') }}</title>
+    <title>{{ $title ?? (__('Order tracking').' · Kudos Print Media') }}</title>
 
     <!-- Web App & Styling -->
     <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">

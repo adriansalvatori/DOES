@@ -35,8 +35,8 @@ class DesignSystemComponentsTest extends TestCase
         $this->assertTrue(Blaze::optimize()->shouldCompile(resource_path('views/components/orders/location.blade.php')));
 
         App::setLocale('es');
-        $this->blade('<x-orders.location location="Sede Norte" />')->assertSee('Locación: Sede Norte', false);
-        $this->blade('<x-ui.person name="" />')->assertSee('Sin Asignar');
+        $this->blade('<x-orders.location location="Sede Norte" />')->assertSee('Ubicación: Sede Norte', false);
+        $this->blade('<x-ui.person name="" />')->assertSee('Sin asignar');
 
         App::setLocale('en');
         $this->blade('<x-orders.location location="Sede Norte" />')->assertSee('Location: Sede Norte', false);
@@ -98,17 +98,17 @@ class DesignSystemComponentsTest extends TestCase
             ->assertSee('CG')
             ->assertSee('color: #ffffff;', false);
 
-        $this->blade('<x-ui.person />')->assertSee(__('Sin Asignar'));
+        $this->blade('<x-ui.person />')->assertSee(__('Unassigned'));
     }
 
     public function test_stage_shows_phase_meter_without_hue(): void
     {
         $this->blade('<x-orders.stage :status="$status" />', ['status' => CoreStatus::ENVIADO_A_CAMILA])
-            ->assertSee(__('Fase :current de 5', ['current' => 3]))
+            ->assertSee(__('Phase :current of 5', ['current' => 3]))
             ->assertSee(CoreStatus::ENVIADO_A_CAMILA->label());
 
         $this->blade('<x-orders.stage status="en producción" />')
-            ->assertSee(__('Fase :current de 5', ['current' => 5]));
+            ->assertSee(__('Phase :current of 5', ['current' => 5]));
     }
 
     public function test_wo_badge_is_always_the_black_tag(): void
@@ -169,7 +169,7 @@ class DesignSystemComponentsTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         $response = $this->actingAs($admin)->get('/settings/profile')->assertOk();
-        $response->assertSee(__('Centro de Control'));
+        $response->assertSee(__('Control Center'));
         $response->assertSee('/settings/backups', false);
         $response->assertDontSee('Trello Workflow');
         $this->assertSame(2, substr_count($response->getContent(), 'href="/settings/backups"'), 'Settings pages list each settings link once in the sub-navigation rail and once in the ⌘K palette.');

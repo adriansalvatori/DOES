@@ -16,7 +16,7 @@ class Documentation extends Component
     {
         $user = Auth::user();
         if (! $user || ! $user->isAdmin()) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
     }
 
@@ -78,6 +78,6 @@ class Documentation extends Component
         return view('livewire.settings.documentation', [
             'categories' => $categories,
             'allCategories' => AppBehaviorsDocs::getCategories(),
-        ])->layout('components.layouts.app', ['title' => __('Guía de Comportamientos')]);
+        ])->layout('components.layouts.app', ['title' => __('Behavior guide')]);
     }
 }

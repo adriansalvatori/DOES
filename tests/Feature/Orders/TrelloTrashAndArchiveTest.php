@@ -72,7 +72,7 @@ class TrelloTrashAndArchiveTest extends TestCase
 
         Livewire::test(OrderDetailModal::class)
             ->call('openModal', $order->id)
-            ->assertSeeHtml(__('Enviar a la papelera (archivar)'))
+            ->assertSeeHtml(__('Send to trash (archive)'))
             ->call('deleteOrder')
             ->assertDispatched('order-updated');
 
@@ -134,7 +134,7 @@ class TrelloTrashAndArchiveTest extends TestCase
         $this->actingAs($admin);
 
         Livewire::test(TrashBin::class)
-            ->assertSeeHtml(__('Eliminar también de Trello'))
+            ->assertSeeHtml(__('Also delete from Trello'))
             ->call('forceDeleteOrder', $order->id);
 
         $this->assertDatabaseMissing('orders', ['id' => $order->id]);
@@ -175,7 +175,7 @@ class TrelloTrashAndArchiveTest extends TestCase
         $this->actingAs($admin);
 
         Livewire::test(TrashBin::class)
-            ->assertSeeHtml(__('Vaciar papelera / eliminar todo definitivamente'))
+            ->assertSeeHtml(__('Empty trash / delete everything permanently'))
             ->call('emptyTrash');
 
         $this->assertDatabaseMissing('orders', ['id' => $order1->id]);

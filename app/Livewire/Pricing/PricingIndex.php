@@ -259,7 +259,7 @@ class PricingIndex extends Component
      */
     public function quickUpdateTier(int $tierId, string $field, mixed $value): void
     {
-        abort_unless(Auth::user()?->canManagePricing(), 403, __('No tienes permiso para modificar precios.'));
+        abort_unless(Auth::user()?->canManagePricing(), 403, __('You do not have permission to modify prices.'));
 
         $tier = ProductPriceTier::findOrFail($tierId);
 
@@ -288,7 +288,7 @@ class PricingIndex extends Component
         $tier = ProductPriceTier::findOrFail($tierId);
         $tier->delete();
 
-        $this->feedbackMessage = __('Escala de precio eliminada.');
+        $this->feedbackMessage = __('Price tier deleted.');
     }
 
     /**
@@ -350,7 +350,7 @@ class PricingIndex extends Component
         );
 
         $this->calculatorOpen = false;
-        $this->feedbackMessage = __('Escala guardada exitosamente.');
+        $this->feedbackMessage = __('Tier saved successfully.');
     }
 
     /**
@@ -390,7 +390,7 @@ class PricingIndex extends Component
         ]);
 
         $this->addTierModalOpen = false;
-        $this->feedbackMessage = __('Nueva escala de cantidad agregada con éxito.');
+        $this->feedbackMessage = __('New volume tier added successfully.');
     }
 
     /**
@@ -461,7 +461,7 @@ class PricingIndex extends Component
         $this->newProductFile = null;
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->createProductModalOpen = false;
-        $this->feedbackMessage = __('Producto creado correctamente.');
+        $this->feedbackMessage = __('Product created successfully.');
     }
 
     public function openAddVariantModal(int $productId): void
@@ -527,7 +527,7 @@ class PricingIndex extends Component
         $this->newVariantFile = null;
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->addVariantModalOpen = false;
-        $this->feedbackMessage = __('Nueva variante agregada con éxito.');
+        $this->feedbackMessage = __('New variant added successfully.');
     }
 
     public function openEditVariantModal(int $variantId): void
@@ -710,7 +710,7 @@ class PricingIndex extends Component
         $this->newCategoryFile = null;
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->createCategoryModalOpen = false;
-        $this->feedbackMessage = __('Categoría creada correctamente.');
+        $this->feedbackMessage = __('Category created successfully.');
     }
 
     public function openEditCategoryModal(int $catId): void
@@ -757,7 +757,7 @@ class PricingIndex extends Component
         $this->editCategoryFile = null;
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editCategoryModalOpen = false;
-        $this->feedbackMessage = __('Categoría actualizada correctamente.');
+        $this->feedbackMessage = __('Category updated successfully.');
     }
 
     public function deleteCategory(int $catId): void
@@ -767,7 +767,7 @@ class PricingIndex extends Component
         $category = ProductCategory::withCount('products')->findOrFail($catId);
 
         if ($category->products_count > 0) {
-            $this->addError('deleteCategoryError', __('No se puede eliminar la categoría porque contiene productos. Elimina o mueve los productos primero.'));
+            $this->addError('deleteCategoryError', __('The category can\'t be deleted because it contains products. Delete or move the products first.'));
 
             return;
         }
@@ -776,7 +776,7 @@ class PricingIndex extends Component
 
         unset($this->categoriesWithProducts, $this->products, $this->categories);
         $this->editCategoryModalOpen = false;
-        $this->feedbackMessage = __('Categoría eliminada.');
+        $this->feedbackMessage = __('Category deleted.');
     }
 
     public function resetFilters(): void

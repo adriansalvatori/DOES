@@ -40,7 +40,7 @@ class NotificationSettings extends Component
         if (array_key_exists($key, $this->settings)) {
             $this->settings[$key] = ! $this->settings[$key];
             Setting::set('admin_notification_settings', json_encode($this->settings));
-            session()->flash('success', __('Configuración de notificaciones actualizada correctamente.'));
+            session()->flash('success', __('Notification settings updated.'));
         }
     }
 
@@ -50,12 +50,12 @@ class NotificationSettings extends Component
             $this->settings[$key] = true;
         }
         Setting::set('admin_notification_settings', json_encode($this->settings));
-        session()->flash('success', __('Todas las notificaciones activadas.'));
+        session()->flash('success', __('All notifications enabled.'));
     }
 
     public function render()
     {
         return view('livewire.settings.notification-settings')
-            ->layout('components.layouts.app', ['title' => __('Configuración de Notificaciones')]);
+            ->layout('components.layouts.app', ['title' => __('Notification settings')]);
     }
 }

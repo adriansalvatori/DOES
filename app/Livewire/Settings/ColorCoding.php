@@ -29,7 +29,7 @@ class ColorCoding extends Component
     {
         $user = Auth::user();
         if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
 
         $items = $service->getAll();
@@ -62,7 +62,7 @@ class ColorCoding extends Component
         $this->savedKey = $key;
         $this->colors[$key] = $service->getHex($key);
 
-        session()->flash('status_message', __('Color actualizado para :item y sincronizado en todo el sistema.', [
+        session()->flash('status_message', __('Color updated for :item and synced across the system.', [
             'item' => $service->getAll()[$key]['name'] ?? $key,
         ]));
     }
@@ -74,7 +74,7 @@ class ColorCoding extends Component
         $this->colors[$key] = $service->getHex($key);
         $this->savedKey = $key;
 
-        session()->flash('status_message', __('Color restablecido al valor predeterminado.'));
+        session()->flash('status_message', __('Color reset to default.'));
     }
 
     public function confirmResetAll(): void
@@ -95,7 +95,7 @@ class ColorCoding extends Component
         $this->showResetAllModal = false;
         $this->savedKey = null;
 
-        session()->flash('status_message', __('Toda la paleta ha sido restablecida a los valores originales de Kudos.'));
+        session()->flash('status_message', __('The whole palette was reset to the original Kudos values.'));
     }
 
     public function render(ColorCodingService $service)
@@ -118,23 +118,23 @@ class ColorCoding extends Component
 
         $categories = [
             'all' => [
-                'name' => __('Todos'),
+                'name' => __('All'),
                 'count' => count($allItems),
             ],
             'supervision' => [
-                'name' => __('Supervisión & QA'),
+                'name' => __('Supervision and QA'),
                 'count' => count(array_filter($allItems, fn ($i) => $i['category'] === 'supervision')),
             ],
             'production' => [
-                'name' => __('Producción & Talle'),
+                'name' => __('Production and workshop'),
                 'count' => count(array_filter($allItems, fn ($i) => $i['category'] === 'production')),
             ],
             'designers' => [
-                'name' => __('Diseñadores'),
+                'name' => __('Designers'),
                 'count' => count(array_filter($allItems, fn ($i) => $i['category'] === 'designers')),
             ],
             'workflow' => [
-                'name' => __('Flujo de Trabajo'),
+                'name' => __('Workflow'),
                 'count' => count(array_filter($allItems, fn ($i) => $i['category'] === 'workflow')),
             ],
         ];

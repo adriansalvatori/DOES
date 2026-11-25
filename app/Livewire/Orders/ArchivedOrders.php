@@ -55,11 +55,11 @@ class ArchivedOrders extends Component
             'actor' => auth()->user()?->name ?? 'Usuario',
             'previous_value' => $prevSubVal ?: null,
             'new_value' => $newSubVal ?: null,
-            'metadata' => ['description' => __('Subestatus actualizado a: :status', ['status' => $subLabel])],
+            'metadata' => ['description' => __('Substatus updated to: :status', ['status' => $subLabel])],
         ]);
 
         $this->dispatch('order-updated');
-        session()->flash('message', __('Subestatus de la orden \':company\' actualizado.', ['company' => $order->company_name]));
+        session()->flash('message', __('Substatus of order \':company\' updated.', ['company' => $order->company_name]));
     }
 
     public function archiveOrder(int $orderId): void
@@ -97,7 +97,7 @@ class ArchivedOrders extends Component
         $this->showArchiveModal = false;
         $this->pendingArchiveOrderId = null;
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden \':company\' archivada y cerrada exitosamente.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order \':company\' archived and closed.', ['company' => $order->company_name]));
     }
 
     public function restoreOrder(int $orderId): void
@@ -120,7 +120,7 @@ class ArchivedOrders extends Component
         ]);
 
         $this->dispatch('order-updated');
-        session()->flash('message', __('Orden \':company\' reabierta y devuelta a En Producción.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order \':company\' reopened and returned to In Production.', ['company' => $order->company_name]));
     }
 
     #[On('order-updated')]
@@ -275,6 +275,6 @@ class ArchivedOrders extends Component
             'globalAvgTurnaround' => $global['avg_days'],
             'archivedSubstatuses' => SubstatusModel::getArchivedSubstatuses(),
             'pendingArchiveOrder' => $this->pendingArchiveOrderId ? Order::find($this->pendingArchiveOrderId) : null,
-        ])->layout('components.layouts.app', ['title' => __('Órdenes archivadas').' - '.config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Archived orders').' - '.config('app.name')]);
     }
 }

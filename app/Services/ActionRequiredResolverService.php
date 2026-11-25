@@ -70,7 +70,7 @@ class ActionRequiredResolverService
         // Condition: Order was BLOQUEADA or FALTA_APROBACION_ESTIMADO, but its core_status was moved to an active designer list or TO_DO_TODAY
         if ($order->isBlocked() && (CoreStatus::isPendingDesign($order->core_status) || $order->core_status === CoreStatus::TO_DO_TODAY)) {
             if ($order->core_status !== CoreStatus::ENTRANTE) {
-                $order->unblock(__('Tarjeta movida fuera de lista de bloqueo en Trello'), $actor);
+                $order->unblock(__('Card moved out of a blocked list in Trello'), $actor);
                 $resolved = true;
             }
         }
@@ -143,7 +143,7 @@ class ActionRequiredResolverService
                 ->exists();
 
             if (! $otherOpenResolverTasks) {
-                $order->unblock(__('Tarea de resolución ":title" completada', ['title' => $task->title]), $actor);
+                $order->unblock(__('Resolution task ":title" completed', ['title' => $task->title]), $actor);
             }
         }
     }

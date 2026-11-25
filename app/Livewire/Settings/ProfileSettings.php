@@ -164,7 +164,7 @@ class ProfileSettings extends Component
 
         $this->dispatch('form-saved');
 
-        session()->flash('success_profile', __('Foto de perfil eliminada correctamente.'));
+        session()->flash('success_profile', __('Profile photo removed.'));
     }
 
     public function updateProfile(): void
@@ -208,7 +208,7 @@ class ProfileSettings extends Component
 
         $this->dispatch('form-saved');
 
-        session()->flash('success_profile', __('Perfil actualizado correctamente.'));
+        session()->flash('success_profile', __('Profile updated.'));
     }
 
     public function setLocale(string $locale): void
@@ -231,7 +231,7 @@ class ProfileSettings extends Component
         $this->dispatch('app-locale-changed', locale: $locale);
         $this->dispatch('form-saved');
 
-        session()->flash('success_preferences', __('Idioma actualizado correctamente.'));
+        session()->flash('success_preferences', __('Language updated.'));
         $this->redirectRoute('settings.profile', ['tab' => 'preferences']);
     }
 
@@ -256,7 +256,7 @@ class ProfileSettings extends Component
 
         $this->dispatch('form-saved');
 
-        session()->flash('success_preferences', __('Preferencias de entorno guardadas correctamente.'));
+        session()->flash('success_preferences', __('Preferences saved.'));
         $this->redirectRoute('settings.profile', ['tab' => 'preferences']);
     }
 
@@ -271,7 +271,7 @@ class ProfileSettings extends Component
 
         if (! Hash::check($this->current_password, $user->password)) {
             throw ValidationException::withMessages([
-                'current_password' => __('La contraseña actual no es correcta.'),
+                'current_password' => __('The current password is incorrect.'),
             ]);
         }
 
@@ -283,7 +283,7 @@ class ProfileSettings extends Component
 
         $this->dispatch('form-saved');
 
-        session()->flash('success_password', __('Contraseña actualizada con éxito.'));
+        session()->flash('success_password', __('Password updated.'));
     }
 
     public function openRecoveryModal(): void
@@ -313,7 +313,7 @@ class ProfileSettings extends Component
         $this->reset(['current_password', 'new_password', 'new_password_confirmation', 'recovery_new_password', 'recovery_new_password_confirmation']);
         $this->showRecoveryModal = false;
 
-        session()->flash('success_password', __('Tu contraseña ha sido restablecida exitosamente.'));
+        session()->flash('success_password', __('Your password has been reset.'));
     }
 
     public function sendPasswordResetEmail(): void
@@ -321,7 +321,7 @@ class ProfileSettings extends Component
         $user = Auth::user();
         Password::broker()->sendResetLink(['email' => $user->email]);
 
-        $msg = __('Se ha enviado un enlace de recuperación a: ').$user->email;
+        $msg = __('A recovery link was sent to: ').$user->email;
         session()->flash('recovery_email_sent', $msg);
         session(['recovery_email_sent' => $msg]);
     }
@@ -330,6 +330,6 @@ class ProfileSettings extends Component
     {
         return view('livewire.settings.profile-settings', [
             'user' => Auth::user(),
-        ])->layout('components.layouts.app', ['title' => __('Mi Perfil - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('My profile - ').config('app.name')]);
     }
 }

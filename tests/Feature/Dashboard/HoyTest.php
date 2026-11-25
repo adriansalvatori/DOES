@@ -50,26 +50,26 @@ class HoyTest extends TestCase
         $this->seedAttention();
 
         $component = Livewire::actingAs($user)->test(Index::class)
-            ->assertSee(__('Necesita atención'))
-            ->assertSee(__('Programado hoy'))
-            ->assertSee(__('en curso'))
-            ->assertSee(trans_choice('{1} atrasada|[2,*] atrasadas', 1))
-            ->assertSee(trans_choice('{1} bloqueada|[2,*] bloqueadas', 1))
-            ->assertSee(__('esperando al cliente'))
-            ->assertSee(__('Atrasada :count d', ['count' => 2]))
-            ->assertSee(__('Bloqueada').': Faltan medidas')
-            ->assertSee(__('Con Camila'))
-            ->assertSee(__('Cliente sin respuesta'))
+            ->assertSee(__('Needs attention'))
+            ->assertSee(__('Scheduled today'))
+            ->assertSee(__('in progress'))
+            ->assertSee(trans_choice('{1} overdue|[2,*] overdue', 1))
+            ->assertSee(trans_choice('{1} blocked|[2,*] blocked', 1))
+            ->assertSee(__('waiting on the client'))
+            ->assertSee(__('Overdue :count d', ['count' => 2]))
+            ->assertSee(__('Blocked').': Faltan medidas')
+            ->assertSee(__('With Camila'))
+            ->assertSee(__('Client not responding'))
             ->assertSee('16398')
             ->assertSee('Centro')
-            ->assertSee(__('Desbloquear'))
-            ->assertSee(__('Revisar'))
-            ->assertSee(__('Hecho'))
+            ->assertSee(__('Unblock'))
+            ->assertSee(__('Review now'))
+            ->assertSee(__('Done'))
             ->assertSee('id="tour-dashboard-stats"', false)
             ->assertSee('id="tour-designer-pills"', false)
-            ->assertSee(__('Atrasada :count d', ['count' => 2]))
+            ->assertSee(__('Overdue :count d', ['count' => 2]))
             ->assertSee('bg-wo', false)
-            ->assertDontSee('>'.__('Detalle').'<', false);
+            ->assertDontSee('>'.__('Detail').'<', false);
 
         $this->assertDoesNotMatchRegularExpression('/animate-(pulse|ping|bounce)/', $component->html());
     }
@@ -83,7 +83,7 @@ class HoyTest extends TestCase
             $html = Livewire::actingAs($user)->test(Index::class)
                 ->call('setActiveTab', $tab)
                 ->assertSet('activeTab', $tab)
-                ->assertDontSee('>'.__('Detalle').'<', false)
+                ->assertDontSee('>'.__('Detail').'<', false)
                 ->html();
             $this->assertDoesNotMatchRegularExpression('/animate-(pulse|ping|bounce)/', $html, $tab);
         }
@@ -95,7 +95,7 @@ class HoyTest extends TestCase
 
         $this->actingAs($user)->get('/')
             ->assertOk()
-            ->assertSee('<title>'.__('Hoy'), false)
+            ->assertSee('<title>'.__('Today'), false)
             ->assertSee(now()->locale(app()->getLocale())->translatedFormat(app()->getLocale() === 'es' ? 'l j \d\e F' : 'l, F j'));
     }
 

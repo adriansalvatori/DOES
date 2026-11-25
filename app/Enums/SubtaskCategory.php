@@ -15,33 +15,33 @@ enum SubtaskCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::NEW_DESIGN => __('Volver al estado anterior'),
-            self::CLIENT_ADJUSTMENTS => __('Enviado al Cliente'),
-            self::CAMILA_ADJUSTMENTS => __('Enviado a Camila'),
-            self::PRODUCTION_ADJUSTMENTS => __('En Producción'),
-            self::MANAGEMENT => __('No mover la orden'),
+            self::NEW_DESIGN => __('Return to previous status'),
+            self::CLIENT_ADJUSTMENTS => __('Sent to Client'),
+            self::CAMILA_ADJUSTMENTS => __('Sent to Camila'),
+            self::PRODUCTION_ADJUSTMENTS => __('In Production'),
+            self::MANAGEMENT => __('Do not move order'),
         };
     }
 
     public function returnActionLabel(): string
     {
         return match ($this) {
-            self::NEW_DESIGN => __('Volver al estado anterior'),
-            self::CLIENT_ADJUSTMENTS => __('Enviado al Cliente'),
-            self::CAMILA_ADJUSTMENTS => __('Enviado a Camila'),
-            self::PRODUCTION_ADJUSTMENTS => __('En Producción'),
-            self::MANAGEMENT => __('No mover la orden'),
+            self::NEW_DESIGN => __('Return to previous status'),
+            self::CLIENT_ADJUSTMENTS => __('Sent to Client'),
+            self::CAMILA_ADJUSTMENTS => __('Sent to Camila'),
+            self::PRODUCTION_ADJUSTMENTS => __('In Production'),
+            self::MANAGEMENT => __('Do not move order'),
         };
     }
 
     public function shortReturnLabel(): string
     {
         return match ($this) {
-            self::NEW_DESIGN => __('Estado previo'),
-            self::CLIENT_ADJUSTMENTS => __('Al Cliente'),
+            self::NEW_DESIGN => __('Previous status'),
+            self::CLIENT_ADJUSTMENTS => __('To client'),
             self::CAMILA_ADJUSTMENTS => __('A Camila'),
-            self::PRODUCTION_ADJUSTMENTS => __('A Producción'),
-            self::MANAGEMENT => __('Sin cambio'),
+            self::PRODUCTION_ADJUSTMENTS => __('To production'),
+            self::MANAGEMENT => __('No change'),
         };
     }
 

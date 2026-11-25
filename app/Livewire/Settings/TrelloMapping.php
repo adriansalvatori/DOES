@@ -27,7 +27,7 @@ class TrelloMapping extends Component
     {
         $user = Auth::user();
         if ($user && ! $user->isAdmin()) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
 
         $this->apiKey = (string) (Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f'))));
@@ -132,6 +132,6 @@ class TrelloMapping extends Component
     {
         return view('livewire.settings.trello-mapping', [
             'statuses' => CoreStatus::cases(),
-        ])->layout('components.layouts.app', ['title' => __('Mapeo de Listas Trello - ').config('app.name')]);
+        ])->layout('components.layouts.app', ['title' => __('Trello list mapping - ').config('app.name')]);
     }
 }

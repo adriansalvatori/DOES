@@ -1,6 +1,6 @@
 <div class="h-full w-full max-w-5xl flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-28">
 
-    <x-ui.page-header :title="__('Conciliación & Migración CSV')" :subtitle="__('Compara tu CSV de órdenes con la base de datos actual, revisa coincidencias en 3 niveles y aplica actualizaciones silenciosas.')">
+    <x-ui.page-header :title="__('Reconciliation & CSV migration')" :subtitle="__('Compare your orders CSV with the current database, review matches across 3 levels and apply silent updates.')">
         <x-slot:actions>
             @if($hasAnalysis)
                 <flux:button wire:click="clearCurrentAnalysis" variant="outline" size="sm" icon="arrow-up-tray">{{ __('Subir Otro CSV') }}</flux:button>
@@ -40,9 +40,9 @@
         <div class="bg-white border border-line rounded-card p-8 flex flex-col items-center text-center">
             <x-lucide-upload-cloud class="w-6 h-6 text-ink-3 mb-3" />
 
-            <h3 class="text-section font-semibold text-ink mb-1">{{ __('Cargar archivo CSV de órdenes') }}</h3>
+            <h3 class="text-section font-semibold text-ink mb-1">{{ __('Upload orders CSV file') }}</h3>
             <p class="text-xs text-zinc-500 max-w-md mb-6">
-                {{ __('Selecciona o arrastra el archivo CSV con las órdenes a reconciliar. Los encabezados se normalizarán y los nombres en base de datos nunca serán modificados.') }}
+                {{ __('Select or drag the CSV file with the orders to reconcile. Headers will be normalized and names in the database will never be modified.') }}
             </p>
 
             <div class="w-full max-w-md">
@@ -50,7 +50,7 @@
                     <div class="flex flex-col items-center justify-center pt-2 pb-3">
                         <x-lucide-file-text class="w-7 h-7 text-stone-400 group-hover:text-amber-500 transition mb-2" />
                         <p class="text-xs font-semibold text-zinc-700">
-                            {{ __('Haz clic para seleccionar o arrastra tu archivo CSV aquí') }}
+                            {{ __('Click to select or drag your CSV file here') }}
                         </p>
                         <p class="text-meta text-zinc-400 mt-1">Archivos .csv de hasta 30MB</p>
                     </div>
@@ -60,12 +60,12 @@
                 <!-- Loading State while file uploads -->
                 <div wire:loading wire:target="csvFile" class="mt-4 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-card p-3 flex items-center justify-center gap-2">
                     <x-lucide-loader-2 class="w-4 h-4 animate-spin text-amber-600" />
-                    <span>{{ __('Subiendo y analizando datos del CSV, por favor espera...') }}</span>
+                    <span>{{ __('Uploading and analyzing CSV data, please wait...') }}</span>
                 </div>
             </div>
 
             <div class="mt-8 border-t border-stone-100 pt-6 max-w-lg text-left w-full space-y-2">
-                <span class="text-meta font-semibold text-zinc-400 block mb-2">{{ __('Garantías del Proceso') }}</span>
+                <span class="text-meta font-semibold text-zinc-400 block mb-2">{{ __('Process guarantees') }}</span>
                 <div class="flex items-start gap-2 text-xs text-zinc-600">
                     <x-lucide-shield-check class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                     <span><strong>100% Silencioso (Zero-Automation):</strong> Sin alertas por email, sin notificaciones internas y sin disparar llamadas salientes a Trello.</span>
@@ -145,7 +145,7 @@
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-                        {{ __('3. Sin Coincidencia') }}
+                        {{ __('3. No match') }}
                     </span>
                     <span class="text-meta font-semibold px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded-control">Trello Link</span>
                 </div>
@@ -153,7 +153,7 @@
                     {{ $meta['unmatched_count'] ?? 0 }}
                 </div>
                 <div class="text-meta text-slate-500 mt-0.5">
-                    {{ __('Conectar tarjeta de Trello') }}
+                    {{ __('Connect Trello card') }}
                 </div>
             </div>
         </div>
@@ -186,7 +186,7 @@
                     wire:click="setTab('unmatched')" 
                     class="px-3 py-1.5 rounded-control text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $activeTab === 'unmatched' ? 'bg-white text-slate-800' : 'text-zinc-600 hover:text-zinc-900' }}">
                     <x-lucide-help-circle class="w-3.5 h-3.5 text-slate-500" />
-                    <span>{{ __('Sin Coincidencia (Trello)') }}</span>
+                    <span>{{ __('No match (Trello)') }}</span>
                     <span class="px-1.5 py-0.2 text-meta rounded-full {{ $activeTab === 'unmatched' ? 'bg-slate-200 text-slate-800' : 'bg-stone-200 text-zinc-600' }}">
                         {{ $meta['unmatched_count'] ?? 0 }}
                     </span>
@@ -200,7 +200,7 @@
                     <input 
                     wire:model.live.debounce.200ms="search" 
                         type="text" 
-                        placeholder="{{ __('Buscar por WO, empresa o tarea...') }}" 
+                        placeholder="{{ __('Search by WO, company or task...') }}" 
                         class="ui-input pl-8 pr-3" />
                 </div>
 
@@ -210,7 +210,7 @@
                         wire:click="openBatchConfirm('all_full')" 
                         class="px-4 py-1.5 bg-ink hover:bg-ink/90 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-zap class="w-3.5 h-3.5" />
-                        <span>{{ __('⚡ Aprobar Todas en Lote') }} ({{ $meta['full_match_count'] ?? 0 }})</span>
+                        <span>{{ __('⚡ Approve all in batch') }} ({{ $meta['full_match_count'] ?? 0 }})</span>
                     </button>
                 @endif
 
@@ -219,7 +219,7 @@
                         wire:click="openBatchConfirm('selected_partial')" 
                         class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-check-check class="w-3.5 h-3.5" />
-                        <span>{{ __('Aprobar Seleccionadas') }} ({{ count($selectedPartial) }})</span>
+                        <span>{{ __('Approve selected') }} ({{ count($selectedPartial) }})</span>
                     </button>
                 @endif
             </div>
@@ -239,20 +239,20 @@
                                 wire:click="toggleSelectAllFull" 
                                 {{ $selectAllFull ? 'checked' : '' }} 
                                 class="rounded border-stone-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer" />
-                            <span>{{ __('Seleccionar todo') }} ({{ $meta['full_match_count'] ?? 0 }})</span>
+                            <span>{{ __('Select all') }} ({{ $meta['full_match_count'] ?? 0 }})</span>
                         </label>
 
                         @if(count($selectedFull) > 0 && count($selectedFull) < ($meta['full_match_count'] ?? 0))
                             <button 
                                 wire:click="openBatchConfirm('selected_full')" 
                                 class="px-3 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-semibold rounded-control text-xs transition cursor-pointer">
-                                {{ __('Aprobar seleccionadas') }} ({{ count($selectedFull) }})
+                                {{ __('Approve selected') }} ({{ count($selectedFull) }})
                             </button>
                         @endif
                     </div>
 
                     <div class="text-meta text-zinc-500 font-medium">
-                        {{ __('Mostrando :count de :total en lista', ['count' => count($paginatedRows), 'total' => $totalCount]) }}
+                        {{ __('Showing :count of :total in list', ['count' => count($paginatedRows), 'total' => $totalCount]) }}
                     </div>
                 </div>
 
@@ -263,9 +263,9 @@
                                 <x-lucide-check-check class="w-6 h-6" />
                             </div>
                             <div>
-                                <h4 class="font-semibold text-zinc-900 text-sm">{{ __('¡Todas las órdenes Full Match ya fueron procesadas!') }}</h4>
+                                <h4 class="font-semibold text-zinc-900 text-sm">{{ __('All Full Match orders have been processed!') }}</h4>
                                 <p class="text-zinc-500 mt-1 max-w-md mx-auto text-xs">
-                                    {{ __('Ya no quedan órdenes pendientes con 100% de coincidencia en este lote. Tienes :partial coincidencias parciales y :unmatched órdenes listas para revisar en las otras pestañas.', [
+                                    {{ __('No pending orders with a 100% match remain in this batch. You have :partial partial matches and :unmatched orders ready to review in the other tabs.', [
                                         'partial' => $meta['partial_match_count'] ?? 0,
                                         'unmatched' => $meta['unmatched_count'] ?? 0,
                                     ]) }}
@@ -287,13 +287,13 @@
                                         wire:click="setTab('unmatched')" 
                                         class="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold rounded-card text-xs transition cursor-pointer inline-flex items-center gap-1.5">
                                         <x-lucide-help-circle class="w-3.5 h-3.5" />
-                                        <span>{{ __('Ir a Sin Coincidencia / Trello (:count)', ['count' => $meta['unmatched_count']]) }}</span>
+                                        <span>{{ __('Go to No match / Trello (:count)', ['count' => $meta['unmatched_count']]) }}</span>
                                     </button>
                                 @endif
                             </div>
                         @else
                             <x-lucide-check-check class="w-8 h-8 mx-auto text-emerald-500 mb-2 opacity-60" />
-                            <p>{{ __('No hay órdenes pendientes en este grupo o no coinciden con la búsqueda.') }}</p>
+                            <p>{{ __('There are no pending orders in this group or none match the search.') }}</p>
                         @endif
                     </div>
                 @else
@@ -303,9 +303,9 @@
                                 <tr class="text-meta font-semibold text-zinc-500  r">
                                     <th class="w-10 px-4 py-3 text-center"></th>
                                     <th class="px-4 py-3">{{ __('WO') }}</th>
-                                    <th class="px-4 py-3">{{ __('Empresa (BD)') }}</th>
-                                    <th class="px-4 py-3">{{ __('Tarea (BD)') }}</th>
-                                    <th class="px-4 py-3">{{ __('Cambios Propuestos del CSV') }}</th>
+                                    <th class="px-4 py-3">{{ __('Company (DB)') }}</th>
+                                    <th class="px-4 py-3">{{ __('Task (DB)') }}</th>
+                                    <th class="px-4 py-3">{{ __('Proposed changes from CSV') }}</th>
                                     <th class="px-4 py-3 text-right">{{ __('Similitud') }}</th>
                                 </tr>
                             </thead>
@@ -329,7 +329,7 @@
                                             <!-- Detected Entities & Client Mapping -->
                                             <div class="flex flex-wrap items-center gap-1 mt-1">
                                                 @if(!empty($row['resolved_client_name']))
-                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="{{ __('Cliente Oficial Mapeado') }}">
+                                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="{{ __('Mapped official client') }}">
                                                         <x-lucide-building-2 class="w-2.5 h-2.5 text-blue-500" />
                                                         <span>{{ $row['resolved_client_name'] }}</span>
                                                         @if(!empty($row['typo_detected']))
@@ -341,9 +341,9 @@
                                                         type="button" 
                                                         wire:click="quickCreateClient('{{ $row['row_id'] }}')" 
                                                         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-zinc-500 border border-stone-200 transition cursor-pointer" 
-                                                        title="{{ __('Registrar en Catálogo de Clientes') }}">
+                                                        title="{{ __('Register in client catalog') }}">
                                                         <x-lucide-user-plus class="w-2.5 h-2.5" />
-                                                        <span>{{ __('+ Catálogo') }}</span>
+                                                        <span>{{ __('+ Catalog') }}</span>
                                                     </button>
                                                 @endif
 
@@ -355,7 +355,7 @@
                                                 @endif
 
                                                 @if(!empty($row['extracted_location']))
-                                                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Locación / Sucursal') }}">
+                                                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Location / Branch') }}">
                                                         <x-lucide-map-pin class="w-2.5 h-2.5 text-zinc-400" />
                                                         <span>{{ $row['extracted_location'] }}</span>
                                                     </span>
@@ -374,7 +374,7 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             @if(empty($row['diffs']))
-                                                <span class="text-zinc-400 text-meta italic">{{ __('Sin cambios pendientes (idéntica a BD)') }}</span>
+                                                <span class="text-zinc-400 text-meta italic">{{ __('No pending changes (identical to DB)') }}</span>
                                             @else
                                                 <div class="flex flex-wrap gap-1.5 max-w-lg">
                                                     @foreach($row['diffs'] as $key => $diff)
@@ -417,9 +417,9 @@
                 <div class="bg-amber-50/60 border border-amber-200/80 rounded-card p-4 text-xs text-amber-900 flex items-start gap-3">
                     <x-lucide-info class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                     <div>
-                        <span class="font-semibold">{{ __('¿Por qué son coincidencias parciales?') }}</span>
+                        <span class="font-semibold">{{ __('Why are these partial matches?') }}</span>
                         <p class="mt-0.5 text-amber-800/90 text-meta">
-                            {{ __('Estas órdenes coinciden en el número de WO pero tienen diferencias en nombres de empresa o tarea, o bien no traían WO en el CSV pero coinciden cercanamente con órdenes existentes. Revisa lado a lado y aprueba sólo las que confirmes correctas.') }}
+                            {{ __('These orders match on WO number but differ in company or task names, or had no WO in the CSV but closely match existing orders. Review them side by side and approve only the ones you confirm are correct.') }}
                         </p>
                     </div>
                 </div>
@@ -431,9 +431,9 @@
                                 <x-lucide-check-check class="w-6 h-6" />
                             </div>
                             <div>
-                                <h4 class="font-semibold text-zinc-900 text-sm">{{ __('¡No hay coincidencias parciales pendientes!') }}</h4>
+                                <h4 class="font-semibold text-zinc-900 text-sm">{{ __('No pending partial matches!') }}</h4>
                                 <p class="text-zinc-500 mt-1 max-w-md mx-auto text-xs">
-                                    {{ __('Todas las coincidencias parciales han sido procesadas o descartadas.') }}
+                                    {{ __('All partial matches have been processed or dismissed.') }}
                                 </p>
                             </div>
                             @if(($meta['unmatched_count'] ?? 0) > 0)
@@ -443,13 +443,13 @@
                                         wire:click="setTab('unmatched')" 
                                         class="px-3.5 py-2 bg-slate-700 hover:bg-slate-800 text-white font-semibold rounded-card text-xs transition cursor-pointer inline-flex items-center gap-1.5">
                                         <x-lucide-help-circle class="w-3.5 h-3.5" />
-                                        <span>{{ __('Ir a Sin Coincidencia / Trello (:count)', ['count' => $meta['unmatched_count']]) }}</span>
+                                        <span>{{ __('Go to No match / Trello (:count)', ['count' => $meta['unmatched_count']]) }}</span>
                                     </button>
                                 </div>
                             @endif
                         @else
                             <x-lucide-check-circle-2 class="w-8 h-8 mx-auto text-amber-500 mb-2 opacity-60" />
-                            <p>{{ __('No hay coincidencias parciales pendientes de revisión.') }}</p>
+                            <p>{{ __('No partial matches pending review.') }}</p>
                         @endif
                     </div>
                 @else
@@ -486,7 +486,7 @@
                                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-stone-50/70 p-3 rounded-card border border-stone-200/60">
                                                 <!-- DB Current -->
                                                 <div class="space-y-1">
-                                                    <span class="text-meta font-semibold text-zinc-400 block">{{ __('Base de Datos Actual') }}</span>
+                                                    <span class="text-meta font-semibold text-zinc-400 block">{{ __('Current database') }}</span>
                                                     <p class="font-semibold text-zinc-900 truncate" title="{{ $row['db_company'] ?? '' }}">{{ $row['db_company'] ?? '' }}</p>
                                                     <p class="text-zinc-600 text-meta line-clamp-2" title="{{ $row['db_task'] ?? '' }}">{{ $row['db_task'] ?? '' }}</p>
                                                 </div>
@@ -505,7 +505,7 @@
                                                     <!-- Detected Entities & Client Mapping -->
                                                     <div class="flex flex-wrap items-center gap-1 pt-1">
                                                         @if(!empty($row['resolved_client_name']))
-                                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="{{ __('Cliente Oficial Mapeado') }}">
+                                                            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="{{ __('Mapped official client') }}">
                                                                 <x-lucide-building-2 class="w-2.5 h-2.5 text-blue-500" />
                                                                 <span>{{ $row['resolved_client_name'] }}</span>
                                                                 @if(!empty($row['typo_detected']))
@@ -517,9 +517,9 @@
                                                                 type="button" 
                                                                 wire:click="quickCreateClient('{{ $row['row_id'] }}')" 
                                                                 class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-zinc-500 border border-stone-200 transition cursor-pointer" 
-                                                                title="{{ __('Registrar en Catálogo de Clientes') }}">
+                                                                title="{{ __('Register in client catalog') }}">
                                                                 <x-lucide-user-plus class="w-2.5 h-2.5" />
-                                                                <span>{{ __('+ Catálogo') }}</span>
+                                                                <span>{{ __('+ Catalog') }}</span>
                                                             </button>
                                                         @endif
 
@@ -531,7 +531,7 @@
                                                         @endif
 
                                                         @if(!empty($row['extracted_location']))
-                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Locación / Sucursal') }}">
+                                                            <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Location / Branch') }}">
                                                                 <x-lucide-map-pin class="w-2.5 h-2.5 text-zinc-400" />
                                                                 <span>{{ $row['extracted_location'] }}</span>
                                                             </span>
@@ -570,11 +570,11 @@
                                             wire:click="approveSinglePartial('{{ $row['row_id'] }}')" 
                                             wire:loading.attr="disabled"
                                             wire:target="approveSinglePartial('{{ $row['row_id'] }}')"
-                                            title="{{ __('Son la misma orden: combina información del CSV con el registro en BD y mantiene el Trello ID') }}"
+                                            title="{{ __('They are the same order: merges CSV information with the DB record and keeps the Trello ID') }}"
                                             class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-card transition flex items-center justify-center gap-1.5 cursor-pointer">
                                             <x-lucide-git-merge class="w-3.5 h-3.5" wire:loading.remove wire:target="approveSinglePartial('{{ $row['row_id'] }}')" />
                                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="approveSinglePartial('{{ $row['row_id'] }}')" />
-                                            <span wire:loading.remove wire:target="approveSinglePartial('{{ $row['row_id'] }}')">{{ __('Mezclar (Misma orden)') }}</span>
+                                            <span wire:loading.remove wire:target="approveSinglePartial('{{ $row['row_id'] }}')">{{ __('Merge (same order)') }}</span>
                                             <span wire:loading wire:target="approveSinglePartial('{{ $row['row_id'] }}')">{{ __('Mezclando...') }}</span>
                                         </button>
 
@@ -583,10 +583,10 @@
                                             <button 
                                                 type="button"
                                                 wire:click="toggleReassignWo('{{ $row['row_id'] }}')" 
-                                                title="{{ __('No son la misma: el CSV tiene el WO correcto. Asigna el nuevo WO a la orden de BD para crear la del CSV y resolver el conflicto') }}"
+                                                title="{{ __('They are not the same: the CSV has the correct WO. Assign the new WO to the DB order to create the CSV one and resolve the conflict') }}"
                                                 class="px-3 py-1.5 {{ !empty($activeReassignRows[$row['row_id']]) ? 'bg-amber-600 text-white font-semibold' : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-semibold' }} text-xs rounded-card transition flex items-center justify-center gap-1.5 cursor-pointer">
                                                 <x-lucide-hash class="w-3.5 h-3.5 {{ !empty($activeReassignRows[$row['row_id']]) ? 'text-white' : 'text-amber-600' }}" />
-                                                <span>{{ !empty($activeReassignRows[$row['row_id']]) ? __('Cerrar Asignación') : __('Asignar WO a BD') }}</span>
+                                                <span>{{ !empty($activeReassignRows[$row['row_id']]) ? __('Close assignment') : __('Asignar WO a BD') }}</span>
                                             </button>
                                         @else
                                             <!-- Action for Secondary match: Descartar -->
@@ -594,11 +594,11 @@
                                                 wire:click="discardPartialMatch('{{ $row['row_id'] }}')" 
                                                 wire:loading.attr="disabled"
                                                 wire:target="discardPartialMatch('{{ $row['row_id'] }}')"
-                                                title="{{ __('Descartar coincidencia y mover a Sin Coincidencia para asociar vía Trello') }}"
+                                                title="{{ __('Dismiss match and move to No match to link via Trello') }}"
                                                 class="px-3 py-1 bg-stone-100 hover:bg-stone-200 text-zinc-600 text-meta font-medium rounded-control transition flex items-center justify-center gap-1 cursor-pointer">
                                                 <x-lucide-x class="w-3 h-3 text-zinc-400" wire:loading.remove wire:target="discardPartialMatch('{{ $row['row_id'] }}')" />
                                                 <x-lucide-loader-2 class="w-3 h-3 animate-spin" wire:loading wire:target="discardPartialMatch('{{ $row['row_id'] }}')" />
-                                                <span>{{ __('No es la misma') }}</span>
+                                                <span>{{ __('Not the same') }}</span>
                                             </button>
                                         @endif
                                     </div>
@@ -610,9 +610,9 @@
                                         <div class="flex items-start gap-2 text-xs text-amber-950">
                                             <x-lucide-alert-circle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                             <div>
-                                                <span class="font-semibold">{{ __('Resolver Conflicto de Número de Orden:') }}</span>
+                                                <span class="font-semibold">{{ __('Resolve order number conflict:') }}</span>
                                                 <p class="text-meta text-amber-900 mt-0.5">
-                                                    {{ __('El número :wo pertenece a :csv_company (según el CSV). Asigna el nuevo número de WO a la orden que está en la base de datos (:db_company), o déjalo vacío para dejarla Sin WO. Al guardar, se creará la orden del CSV con :wo y el conflicto quedará solucionado.', [
+                                                    {{ __('Number :wo belongs to :csv_company (per the CSV). Assign the new WO number to the order in the database (:db_company), or leave it empty to keep it without a WO. When you save, the CSV order will be created with :wo and the conflict will be resolved.', [
                                                         'wo' => $row['wo_number'],
                                                         'csv_company' => $row['csv_company'],
                                                         'db_company' => $row['db_company'],
@@ -626,7 +626,7 @@
                                                 <input 
                                                     type="text" 
                                                     wire:model="reassignWoInputs.{{ $row['row_id'] }}"
-                                                    placeholder="{{ __('Nuevo WO para :company (o vacío para Sin WO)', ['company' => $row['db_company']]) }}"
+                                                    placeholder="{{ __('New WO for :company (or empty for no WO)', ['company' => $row['db_company']]) }}"
                                                     class="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-control text-xs focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-zinc-900"
                                                 />
                                             </div>
@@ -638,14 +638,14 @@
                                                 class="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-semibold rounded-control text-xs transition flex items-center gap-1.5 cursor-pointer">
                                                 <x-lucide-check-circle-2 class="w-3.5 h-3.5" wire:loading.remove wire:target="executeReassignWo('{{ $row['row_id'] }}')" />
                                                 <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="executeReassignWo('{{ $row['row_id'] }}')" />
-                                                <span wire:loading.remove wire:target="executeReassignWo('{{ $row['row_id'] }}')">{{ __('Guardar y Solucionar') }}</span>
+                                                <span wire:loading.remove wire:target="executeReassignWo('{{ $row['row_id'] }}')">{{ __('Save and resolve') }}</span>
                                                 <span wire:loading wire:target="executeReassignWo('{{ $row['row_id'] }}')">{{ __('Guardando...') }}</span>
                                             </button>
                                             <button 
                                                 type="button" 
                                                 wire:click="toggleReassignWo('{{ $row['row_id'] }}')" 
                                                 class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-zinc-600 font-medium rounded-control text-xs transition cursor-pointer">
-                                                {{ __('Cancelar') }}
+                                                {{ __('Cancel') }}
                                             </button>
                                         </div>
                                     </div>
@@ -666,9 +666,9 @@
                     <div class="flex items-start gap-3">
                         <x-lucide-link class="w-4 h-4 text-slate-600 shrink-0 mt-0.5" />
                         <div>
-                            <span class="font-semibold">{{ __('Vincular órdenes huérfanas con tarjetas de Trello') }}</span>
+                            <span class="font-semibold">{{ __('Link orphan orders to Trello cards') }}</span>
                             <p class="mt-0.5 text-slate-600 text-meta">
-                                {{ __('Estas órdenes del CSV no existen en la base de datos local. Puedes auto-buscar sus tarjetas de Trello por número de WO o pegar el enlace manual. El sistema reutilizará órdenes existentes si ya existen para evitar duplicados.') }}
+                                {{ __('These CSV orders don\'t exist in the local database. You can auto-search for their Trello cards by WO number or paste the link manually. The system will reuse existing orders if they already exist to avoid duplicates.') }}
                             </p>
                         </div>
                     </div>
@@ -682,7 +682,7 @@
                             class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                             <x-lucide-search class="w-3.5 h-3.5" wire:loading.remove wire:target="autoSearchAllTrello" />
                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="autoSearchAllTrello" />
-                            <span>{{ __('Auto-buscar WOs en Trello') }}</span>
+                            <span>{{ __('Auto-search WOs in Trello') }}</span>
                         </button>
 
                         @if(!empty($trelloCardPreview))
@@ -693,7 +693,7 @@
                                 class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                                 <x-lucide-check-circle-2 class="w-3.5 h-3.5" wire:loading.remove wire:target="linkAllFoundTrello" />
                                 <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="linkAllFoundTrello" />
-                                <span>{{ __('Vincular Todas (:count)', ['count' => count($trelloCardPreview)]) }}</span>
+                                <span>{{ __('Link all (:count)', ['count' => count($trelloCardPreview)]) }}</span>
                             </button>
                         @endif
                     </div>
@@ -707,7 +707,7 @@
                             wire:click="setUnmatchedFilter('all')" 
                             class="px-3 py-1.5 rounded-control font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $unmatchedFilter === 'all' ? 'bg-white text-zinc-900' : 'text-zinc-600 hover:text-zinc-900' }}">
                             <x-lucide-list class="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{{ __('Todas') }}</span>
+                            <span>{{ __('All') }}</span>
                             <span class="px-1.5 py-0.2 text-meta rounded-full {{ $unmatchedFilter === 'all' ? 'bg-stone-200 text-zinc-800 font-semibold' : 'bg-stone-200/60 text-zinc-500' }}">
                                 {{ $unmatchedCounts['total'] ?? $meta['unmatched_count'] ?? 0 }}
                             </span>
@@ -718,7 +718,7 @@
                             wire:click="setUnmatchedFilter('with_match')" 
                             class="px-3 py-1.5 rounded-control font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $unmatchedFilter === 'with_match' ? 'bg-white text-emerald-800' : 'text-zinc-600 hover:text-zinc-900' }}">
                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span>{{ __('Con Tarjeta en Trello') }}</span>
+                            <span>{{ __('With Trello card') }}</span>
                             <span class="px-1.5 py-0.2 text-meta rounded-full {{ $unmatchedFilter === 'with_match' ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-emerald-50 text-emerald-700' }}">
                                 {{ $unmatchedCounts['with_match'] ?? 0 }}
                             </span>
@@ -729,7 +729,7 @@
                             wire:click="setUnmatchedFilter('without_match')" 
                             class="px-3 py-1.5 rounded-control font-semibold transition cursor-pointer flex items-center gap-1.5 {{ $unmatchedFilter === 'without_match' ? 'bg-white text-slate-800' : 'text-zinc-600 hover:text-zinc-900' }}">
                             <span class="w-2 h-2 rounded-full bg-slate-300"></span>
-                            <span>{{ __('Sin Tarjeta') }}</span>
+                            <span>{{ __('No card') }}</span>
                             <span class="px-1.5 py-0.2 text-meta rounded-full {{ $unmatchedFilter === 'without_match' ? 'bg-slate-200 text-slate-800 font-semibold' : 'bg-stone-200/60 text-zinc-500' }}">
                                 {{ $unmatchedCounts['without_match'] ?? 0 }}
                             </span>
@@ -737,7 +737,7 @@
                     </div>
 
                     <div class="text-meta text-zinc-500 font-medium px-2">
-                        {{ __('Mostrando :count de :total en esta vista', ['count' => count($paginatedRows), 'total' => $totalCount]) }}
+                        {{ __('Showing :count of :total in this view', ['count' => count($paginatedRows), 'total' => $totalCount]) }}
                     </div>
                 </div>
 
@@ -748,9 +748,9 @@
                                 <x-lucide-search class="w-6 h-6" />
                             </div>
                             <div>
-                                <h4 class="font-semibold text-zinc-900 text-sm">{{ __('No hay órdenes con tarjeta de Trello encontrada') }}</h4>
+                                <h4 class="font-semibold text-zinc-900 text-sm">{{ __('No orders with a Trello card found') }}</h4>
                                 <p class="text-zinc-500 mt-1 max-w-md mx-auto text-xs">
-                                    {{ __('Ejecuta "Auto-buscar WOs en Trello" arriba para localizar tarjetas automáticamente por número de WO, o pega los enlaces manualmente.') }}
+                                    {{ __('Run "Auto-search WOs in Trello" above to find cards automatically by WO number, or paste the links manually.') }}
                                 </p>
                             </div>
                             <div class="pt-2">
@@ -759,12 +759,12 @@
                                     wire:click="setUnmatchedFilter('all')" 
                                     class="px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-zinc-700 font-semibold rounded-card text-xs transition cursor-pointer inline-flex items-center gap-1.5">
                                     <x-lucide-list class="w-3.5 h-3.5" />
-                                    <span>{{ __('Ver todas las órdenes') }}</span>
+                                    <span>{{ __('View all orders') }}</span>
                                 </button>
                             </div>
                         @else
                             <x-lucide-check-circle-2 class="w-8 h-8 mx-auto text-emerald-500 mb-2 opacity-60" />
-                            <p>{{ __('No hay órdenes sin coincidencia pendientes en esta vista.') }}</p>
+                            <p>{{ __('No unmatched orders pending in this view.') }}</p>
                         @endif
                     </div>
                 @else
@@ -792,7 +792,7 @@
                                         <!-- Detected Entities & Client Mapping -->
                                         <div class="flex flex-wrap items-center gap-1 pt-1">
                                             @if(!empty($row['resolved_client_name']))
-                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="{{ __('Cliente Oficial Mapeado') }}">
+                                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-semibold bg-blue-50 text-blue-700 border border-blue-200" title="{{ __('Mapped official client') }}">
                                                     <x-lucide-building-2 class="w-2.5 h-2.5 text-blue-500" />
                                                     <span>{{ $row['resolved_client_name'] }}</span>
                                                     @if(!empty($row['typo_detected']))
@@ -804,9 +804,9 @@
                                                     type="button" 
                                                     wire:click="quickCreateClient('{{ $row['row_id'] }}')" 
                                                     class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 text-zinc-500 border border-stone-200 transition cursor-pointer" 
-                                                    title="{{ __('Registrar en Catálogo de Clientes') }}">
+                                                    title="{{ __('Register in client catalog') }}">
                                                     <x-lucide-user-plus class="w-2.5 h-2.5" />
-                                                    <span>{{ __('+ Registrar Cliente') }}</span>
+                                                    <span>{{ __('+ Register client') }}</span>
                                                 </button>
                                             @endif
 
@@ -818,7 +818,7 @@
                                             @endif
 
                                             @if(!empty($row['extracted_location']))
-                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Locación / Sucursal') }}">
+                                                <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-meta font-medium bg-stone-100 text-zinc-600 border border-stone-200/80" title="{{ __('Location / Branch') }}">
                                                     <x-lucide-map-pin class="w-2.5 h-2.5 text-zinc-400" />
                                                     <span>{{ $row['extracted_location'] }}</span>
                                                 </span>
@@ -867,10 +867,10 @@
                                         <button 
                                             wire:click="searchSingleTrelloCard('{{ $row['row_id'] }}')" 
                                             wire:loading.attr="disabled"
-                                            title="{{ __('Buscar en Trello por el WO :wo', ['wo' => $row['raw_wo']]) }}"
+                                            title="{{ __('Search Trello for WO :wo', ['wo' => $row['raw_wo']]) }}"
                                             class="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer shrink-0">
                                             <x-lucide-search class="w-3.5 h-3.5 text-blue-600" />
-                                            <span>{{ __('Buscar WO') }}</span>
+                                            <span>{{ __('Search WO') }}</span>
                                         </button>
                                     @endif
 
@@ -902,18 +902,18 @@
                                                 </span>
 
                                                 @if(!empty($trelloCardPreview[$row['row_id']]['is_closed']))
-                                                    <span class="px-1.5 py-0.5 rounded text-meta font-semibold bg-amber-100 text-amber-800 border border-amber-200" title="{{ __('Esta tarjeta está archivada en Trello') }}">
+                                                    <span class="px-1.5 py-0.5 rounded text-meta font-semibold bg-amber-100 text-amber-800 border border-amber-200" title="{{ __('This card is archived in Trello') }}">
                                                         📦 {{ __('Archivada en Trello') }}
                                                     </span>
                                                 @endif
 
                                                 @if(($trelloCardPreview[$row['row_id']]['dedup_action'] ?? '') === 'reuse_existing')
                                                     <span class="px-2 py-0.5 rounded text-meta font-semibold bg-blue-100 text-blue-800 border border-blue-300" title="{{ $trelloCardPreview[$row['row_id']]['dedup_reason'] ?? '' }}">
-                                                        🔵 {{ __('Actualizará Orden Existente (#:id)', ['id' => $trelloCardPreview[$row['row_id']]['existing_order_id']]) }}
+                                                        🔵 {{ __('Will update existing order (#:id)', ['id' => $trelloCardPreview[$row['row_id']]['existing_order_id']]) }}
                                                     </span>
                                                 @else
                                                     <span class="px-2 py-0.5 rounded text-meta font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300" title="{{ $trelloCardPreview[$row['row_id']]['dedup_reason'] ?? '' }}">
-                                                        🟢 {{ __('Creará Orden Nueva en Backlog') }}
+                                                        🟢 {{ __('Will create new order in Backlog') }}
                                                     </span>
                                                 @endif
                                             </div>
@@ -934,7 +934,7 @@
                                                 @if(($trelloCardPreview[$row['row_id']]['dedup_action'] ?? '') === 'reuse_existing')
                                                     {{ __('Actualizar & Fusionar en BD') }}
                                                 @else
-                                                    {{ __('Crear en Backlog') }}
+                                                    {{ __('Create in Backlog') }}
                                                 @endif
                                             </span>
                                         </button>
@@ -955,12 +955,12 @@
                     @if($hasMore)
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold text-meta bg-stone-100 text-zinc-700 border border-stone-200">
                             <x-lucide-list class="w-3.5 h-3.5 text-zinc-500" />
-                            <span>{{ __('Mostrando :displayed de :total registros en lista', ['displayed' => $displayedCount, 'total' => $totalCount]) }}</span>
+                            <span>{{ __('Showing :displayed of :total records in list', ['displayed' => $displayedCount, 'total' => $totalCount]) }}</span>
                         </span>
                     @else
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold text-meta bg-emerald-50 text-emerald-800 border border-emerald-200">
                             <x-lucide-check-circle-2 class="w-3.5 h-3.5 text-emerald-600" />
-                            <span>{{ __('Todos los :total registros visibles en lista', ['total' => $totalCount]) }}</span>
+                            <span>{{ __('All :total records visible in list', ['total' => $totalCount]) }}</span>
                         </span>
                     @endif
                 </div>
@@ -975,7 +975,7 @@
                             class="px-4 py-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                             <x-lucide-arrow-down class="w-3.5 h-3.5" wire:loading.class="hidden" wire:target="loadMore" />
                             <x-lucide-loader-2 class="w-3.5 h-3.5 animate-spin" wire:loading wire:target="loadMore" />
-                            <span>{{ __('Cargar más (+50)') }}</span>
+                            <span>{{ __('Load more (+50)') }}</span>
                         </button>
 
                         <!-- Invisible Sentinel for Smooth Infinite Scroll -->
@@ -985,7 +985,7 @@
 
                 <!-- Display Size Selector -->
                 <div class="flex items-center gap-1.5 bg-stone-100/90 p-1 rounded-card text-meta">
-                    <span class="text-zinc-400 px-1 font-medium text-meta">{{ __('Ver:') }}</span>
+                    <span class="text-zinc-400 px-1 font-medium text-meta">{{ __('Show:') }}</span>
                     <button 
                         type="button"
                         wire:click="setPerPage(50)" 
@@ -1008,7 +1008,7 @@
                         type="button"
                         wire:click="setPerPage('all')" 
                         class="px-2.5 py-1 rounded-control font-semibold transition cursor-pointer {{ $perPage === 'all' ? 'bg-white text-emerald-800' : 'text-zinc-600 hover:text-zinc-900' }}">
-                        {{ __('Todas') }} ({{ $totalCount }})
+                        {{ __('All') }} ({{ $totalCount }})
                     </button>
                 </div>
             </div>
@@ -1022,8 +1022,8 @@
         <div class="bg-white border border-line rounded-card p-6 space-y-6">
             <div class="flex flex-wrap items-center justify-between gap-4 border-b border-stone-100 pb-4">
                 <div>
-                    <h3 class="text-base font-semibold text-zinc-900">{{ __('Historial de Conciliaciones & Migraciones') }}</h3>
-                    <p class="text-xs text-zinc-500 mt-0.5">{{ __('Registro de todas las ejecuciones silenciosas. Puedes restaurar el respaldo de la última migración en cualquier momento.') }}</p>
+                    <h3 class="text-base font-semibold text-zinc-900">{{ __('Reconciliation & migration history') }}</h3>
+                    <p class="text-xs text-zinc-500 mt-0.5">{{ __('Log of all silent runs. You can restore the backup of the latest migration at any time.') }}</p>
                 </div>
 
                 @if(!empty($migrationHistory))
@@ -1031,7 +1031,7 @@
                         wire:click="$set('showRollbackModal', true)" 
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-undo-2 class="w-4 h-4" />
-                        <span>{{ __('↩ Deshacer Última Migración') }}</span>
+                        <span>{{ __('↩ Undo last migration') }}</span>
                     </button>
                 @endif
             </div>
@@ -1039,19 +1039,19 @@
             @if(empty($migrationHistory))
                 <div class="py-12 text-center text-zinc-400 text-xs">
                     <x-lucide-history class="w-8 h-8 mx-auto text-zinc-300 mb-2" />
-                    {{ __('No hay registros históricos de migraciones aún.') }}
+                    {{ __('No historical migration records yet.') }}
                 </div>
             @else
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead>
                             <tr class="bg-stone-50/70 border-b border-stone-200 text-meta font-semibold text-zinc-500  r">
-                                <th class="px-4 py-3">{{ __('ID / Fecha') }}</th>
-                                <th class="px-4 py-3">{{ __('Tipo') }}</th>
-                                <th class="px-4 py-3">{{ __('Ejecutado Por') }}</th>
-                                <th class="px-4 py-3">{{ __('Órdenes Aprobadas') }}</th>
+                                <th class="px-4 py-3">{{ __('ID / Date') }}</th>
+                                <th class="px-4 py-3">{{ __('Type') }}</th>
+                                <th class="px-4 py-3">{{ __('Run by') }}</th>
+                                <th class="px-4 py-3">{{ __('Approved orders') }}</th>
                                 <th class="px-4 py-3">{{ __('Respaldo Snapshot') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('Estado') }}</th>
+                                <th class="px-4 py-3 text-right">{{ __('Status') }}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-stone-100">
@@ -1102,9 +1102,9 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40">
             <div class="bg-surface rounded-panel max-w-md w-full p-5 shadow-panel border border-line space-y-4">
                 <div>
-                    <h3 class="text-section font-semibold text-ink">{{ __('Confirmar Aprobación Silenciosa') }}</h3>
+                    <h3 class="text-section font-semibold text-ink">{{ __('Confirm silent approval') }}</h3>
                     <p class="text-xs text-zinc-500 mt-1">
-                        {{ __('Se actualizarán las órdenes seleccionadas en la base de datos de manera 100% silenciosa. Se creará automáticamente un respaldo snapshot de seguridad.') }}
+                        {{ __('The selected orders will be updated in the database 100% silently. A safety snapshot backup will be created automatically.') }}
                     </p>
                 </div>
 
@@ -1117,13 +1117,13 @@
                     <button 
                         wire:click="closeBatchConfirm" 
                         class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-semibold rounded-card transition cursor-pointer">
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         wire:click="executeBatchApproval" 
                         class="px-4 py-2 bg-ink hover:bg-ink/90 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-check class="w-4 h-4" />
-                        <span>{{ __('Sí, Aplicar Actualización') }}</span>
+                        <span>{{ __('Yes, apply update') }}</span>
                     </button>
                 </div>
             </div>
@@ -1135,27 +1135,27 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40">
             <div class="bg-surface rounded-panel max-w-md w-full p-5 shadow-panel border border-line space-y-4">
                 <div>
-                    <h3 class="text-section font-semibold text-ink">{{ __('¿Deshacer la última migración?') }}</h3>
+                    <h3 class="text-section font-semibold text-ink">{{ __('Undo the last migration?') }}</h3>
                     <p class="text-xs text-zinc-500 mt-1">
-                        {{ __('Esta acción restaurará la base de datos completa al snapshot creado inmediatamente antes de ejecutar el último lote de migración.') }}
+                        {{ __('This action will restore the entire database to the snapshot created right before the last migration batch was run.') }}
                     </p>
                 </div>
 
                 <div class="bg-red-50 text-red-800 rounded-card p-3 text-xs border border-red-200">
-                    {{ __('Cualquier cambio posterior a esa migración también volverá a ese estado. Se creará un respaldo de seguridad del estado actual antes de restaurar.') }}
+                    {{ __('Any changes made after that migration will also revert to that state. A safety backup of the current state will be created before restoring.') }}
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-2">
                     <button 
                         wire:click="$set('showRollbackModal', false)" 
                         class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-zinc-700 text-xs font-semibold rounded-card transition cursor-pointer">
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         wire:click="triggerRollback" 
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-card transition flex items-center gap-1.5 cursor-pointer">
                         <x-lucide-undo-2 class="w-4 h-4" />
-                        <span>{{ __('Sí, Restaurar Respaldo') }}</span>
+                        <span>{{ __('Yes, restore backup') }}</span>
                     </button>
                 </div>
             </div>

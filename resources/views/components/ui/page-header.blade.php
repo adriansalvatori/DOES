@@ -3,7 +3,7 @@
     an actions slot on the right and an optional toolbar row (search, filters, tabs) underneath.
     No card around it, no centered floating box.
     Usage:
-    <x-ui.page-header :title="__('Clientes')" :count="$total" :subtitle="__('…')">
+    <x-ui.page-header :title="__('Clients')" :count="$total" :subtitle="__('…')">
         <x-slot:actions>…one primary button, others secondary…</x-slot:actions>
         <x-slot:toolbar>…search input, .ui-select filters, tabs…</x-slot:toolbar>
     </x-ui.page-header>

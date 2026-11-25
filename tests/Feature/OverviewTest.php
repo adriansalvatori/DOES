@@ -349,11 +349,11 @@ class OverviewTest extends TestCase
             ->test(OverviewIndex::class)
             ->assertDontSee('🚩')
             ->assertSeeHtmlInOrder([
-                __('Banderas / Flags Globales'),
-                mb_strtoupper(__('Urgente')),
+                __('Global flags'),
+                mb_strtoupper(__('Urgent')),
                 mb_strtoupper(__('Ticket')),
-                __('Clasificación de Proceso (1 Selección)'),
-                __('Sin Subestatus'),
+                __('Process classification (pick one)'),
+                __('No Substatus'),
             ]);
     }
 

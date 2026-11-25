@@ -71,7 +71,7 @@ class NavigationShellTest extends TestCase
         $this->actingAs(User::factory()->admin()->create())
             ->get('/settings')
             ->assertOk()
-            ->assertSee(__('Flujo de trabajo'))
+            ->assertSee(__('Workflow'))
             ->assertSee('href="/settings/backups"', false)
             ->assertSee('text-title', false);
 
@@ -80,7 +80,7 @@ class NavigationShellTest extends TestCase
             ->assertOk()
             ->assertSee('href="/settings/profile"', false)
             ->assertDontSee('href="/settings/backups"', false)
-            ->assertDontSee(__('Flujo de trabajo'));
+            ->assertDontSee(__('Workflow'));
     }
 
     public function test_sidebar_has_a_single_settings_link_instead_of_an_accordion(): void
@@ -105,8 +105,8 @@ class NavigationShellTest extends TestCase
         ]));
 
         Livewire::test(HeaderSearch::class)
-            ->assertSee(__('Buscar o ir a…'))
-            ->assertSee(__('Nueva Orden'))
+            ->assertSee(__('Search or jump to…'))
+            ->assertSee(__('New Order'))
             ->assertSee('href="/settings"', false)
             ->assertSee('href="/kanban"', false)
             ->assertDontSee(__('Traer Nuevas'))

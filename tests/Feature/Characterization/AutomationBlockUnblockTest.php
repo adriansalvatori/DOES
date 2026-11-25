@@ -192,10 +192,10 @@ class AutomationBlockUnblockTest extends AutomationCharacterizationTestCase
     public static function blockedDurations(): array
     {
         return [
-            'under an hour' => ['-30 minutes', 1, 'menos de 1 hora', 1],
+            'under an hour' => ['-30 minutes', 1, 'less than 1 hour', 1],
             'a few hours' => ['-5 hours', 5, '5 horas', 1],
-            'one day' => ['-1 day', 24, '1 día', 1],
-            'several days' => ['-3 days', 72, '3 días', 3],
+            'one day' => ['-1 day', 24, '1 day', 1],
+            'several days' => ['-3 days', 72, '3 days', 3],
         ];
     }
 

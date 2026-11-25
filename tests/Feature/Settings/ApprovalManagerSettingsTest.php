@@ -41,7 +41,7 @@ class ApprovalManagerSettingsTest extends TestCase
             ->set('manager_name', 'Sofia Manager')
             ->call('saveManagerSettings')
             ->assertHasNoErrors()
-            ->assertSee(__('Configuración del Manager de Aprobaciones actualizada exitosamente.'));
+            ->assertSee(__('Approvals Manager configuration updated successfully.'));
 
         $this->assertEquals($otherUser->id, (int) Setting::get('manager_id'));
         $this->assertEquals('Sofia Manager', Setting::get('manager_name'));

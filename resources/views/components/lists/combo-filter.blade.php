@@ -27,7 +27,7 @@
     <div x-show="open" x-cloak x-transition.opacity.duration.100ms style="display: none;"
          class="absolute left-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-card border border-line bg-surface shadow-menu">
         <div class="border-b border-line p-1.5">
-            <input type="text" x-model="q" x-ref="q" x-effect="open && $nextTick(() => $refs.q.focus())" placeholder="{{ $searchPlaceholder ?? __('Buscar…') }}" class="ui-input">
+            <input type="text" x-model="q" x-ref="q" x-effect="open && $nextTick(() => $refs.q.focus())" placeholder="{{ $searchPlaceholder ?? __('Search…') }}" class="ui-input">
         </div>
         <div class="max-h-60 overflow-y-auto p-1" role="listbox">
             <button type="button" @click="pick('all')" class="flex w-full items-center justify-between rounded-control px-2 py-1.5 text-left text-body text-ink hover:bg-sunken">

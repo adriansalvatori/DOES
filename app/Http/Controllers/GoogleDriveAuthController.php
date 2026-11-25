@@ -24,7 +24,7 @@ class GoogleDriveAuthController extends Controller
 
         if (! $drive->hasOAuthClient()) {
             return to_route('settings.google-drive')
-                ->with('error', __('Faltan GOOGLE_DRIVE_CLIENT_ID y GOOGLE_DRIVE_CLIENT_SECRET en el archivo .env.'));
+                ->with('error', __('GOOGLE_DRIVE_CLIENT_ID and GOOGLE_DRIVE_CLIENT_SECRET are missing from the .env file.'));
         }
 
         $state = Str::random(40);
@@ -43,12 +43,12 @@ class GoogleDriveAuthController extends Controller
         $expectedState = (string) $request->session()->pull(self::STATE_SESSION_KEY, '');
         if ($expectedState === '' || ! hash_equals($expectedState, (string) $request->query('state', ''))) {
             return to_route('settings.google-drive')
-                ->with('error', __('La respuesta de Google no coincide con esta sesión. Vuelve a intentarlo.'));
+                ->with('error', __('Google\'s response does not match this session. Please try again.'));
         }
 
         if ($request->filled('error') || ! $request->filled('code')) {
             return to_route('settings.google-drive')
-                ->with('error', __('Se canceló la conexión con Google Drive.'));
+                ->with('error', __('The Google Drive connection was cancelled.'));
         }
 
         try {
@@ -60,11 +60,11 @@ class GoogleDriveAuthController extends Controller
         }
 
         return to_route('settings.google-drive')
-            ->with('success', __('Google Drive conectado con :email.', ['email' => $account['email']]));
+            ->with('success', __('Google Drive connected as :email.', ['email' => $account['email']]));
     }
 
     protected function authorizeAdmin(Request $request): void
     {
-        abort_unless((bool) $request->user()?->isAdmin(), 403, __('No tiene permisos para acceder a esta sección.'));
+        abort_unless((bool) $request->user()?->isAdmin(), 403, __('You don\'t have permission to access this section.'));
     }
 }

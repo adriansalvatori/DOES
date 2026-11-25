@@ -29,7 +29,7 @@ class Backups extends Component
     {
         $user = Auth::user();
         if ($user && ! $user->isAdmin()) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
     }
 
@@ -63,13 +63,13 @@ class Backups extends Component
             $exitCode = Artisan::call('db:backup');
 
             if ($exitCode === 0) {
-                $this->successMessage = __('Respaldo generado exitosamente.');
+                $this->successMessage = __('Backup created.');
                 $this->dispatch('backup-created');
-                $this->dispatch('toast', message: __('Respaldo generado exitosamente.'));
+                $this->dispatch('toast', message: __('Backup created.'));
                 $this->resetPage();
             } else {
                 $output = trim(Artisan::output());
-                $this->errorMessage = __('Ocurrió un error al generar el respaldo.').($output ? " ({$output})" : '');
+                $this->errorMessage = __('Something went wrong creating the backup.').($output ? " ({$output})" : '');
             }
         } catch (\Throwable $e) {
             $this->errorMessage = __('Error: ').$e->getMessage();
@@ -83,7 +83,7 @@ class Backups extends Component
         $filePath = $this->getBackupDirectory().'/'.$safeFilename;
 
         if (! File::exists($filePath)) {
-            $this->errorMessage = __('El archivo de respaldo no existe.');
+            $this->errorMessage = __('The backup file doesn\'t exist.');
 
             return null;
         }
@@ -99,9 +99,9 @@ class Backups extends Component
 
         if (File::exists($filePath)) {
             File::delete($filePath);
-            $this->successMessage = __('Respaldo eliminado correctamente.');
+            $this->successMessage = __('Backup deleted.');
         } else {
-            $this->errorMessage = __('El archivo de respaldo ya no existe.');
+            $this->errorMessage = __('The backup file no longer exists.');
         }
     }
 
@@ -211,6 +211,6 @@ class Backups extends Component
             'nextBackupTime' => $this->nextBackupTime,
             'totalStorageSize' => array_sum(array_column($all, 'size_bytes')),
             'latestBackup' => $all[0] ?? null,
-        ])->layout('components.layouts.app', ['title' => __('Respaldos de Base de Datos')]);
+        ])->layout('components.layouts.app', ['title' => __('Database backups')]);
     }
 }

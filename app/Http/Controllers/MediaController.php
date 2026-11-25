@@ -29,7 +29,7 @@ class MediaController extends Controller
             $download = $this->drive->downloadStream($media->drive_file_id);
         } catch (\Throwable $e) {
             report($e);
-            abort(502, __('No se pudo obtener el archivo desde Google Drive.'));
+            abort(502, __('The file could not be retrieved from Google Drive.'));
         }
 
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';

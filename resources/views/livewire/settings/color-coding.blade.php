@@ -1,8 +1,8 @@
 <div class="h-full w-full max-w-4xl flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 pb-10">
 
-    <x-ui.page-header :title="__('Personalización del Color Coding')" :subtitle="$totalItemsCount . ' ' . __('entidades') . ' · ' . __('Los colores se guardan al instante.')">
+    <x-ui.page-header :title="__('Color coding customization')" :subtitle="$totalItemsCount . ' ' . __('entities') . ' · ' . __('Colors are saved instantly.')">
         <x-slot:actions>
-            <flux:button wire:click="confirmResetAll" type="button" variant="outline" size="sm" icon="arrow-uturn-left">{{ __('Restablecer Predeterminados') }}</flux:button>
+            <flux:button wire:click="confirmResetAll" type="button" variant="outline" size="sm" icon="arrow-uturn-left">{{ __('Reset to defaults') }}</flux:button>
         </x-slot:actions>
     </x-ui.page-header>
 
@@ -48,7 +48,7 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             <h2 class="text-row font-semibold text-ink">{{ $item['name'] }}</h2>
                             @if($item['is_custom'])
-                                <x-ui.tag tone="neutral">{{ __('Personalizado') }}</x-ui.tag>
+                                <x-ui.tag tone="neutral">{{ __('Custom') }}</x-ui.tag>
                             @endif
                         </div>
                         <span class="text-meta text-ink-3 block">{{ $item['category_name'] }}</span>
@@ -58,28 +58,28 @@
                     @if($item['is_custom'])
                         <button
                             wire:click="resetKey('{{ $key }}')"
-                            title="{{ __('Restablecer al color original') }}"
+                            title="{{ __('Reset to original color') }}"
                             class="text-meta text-ink-3 hover:text-ink font-medium flex items-center gap-1 cursor-pointer transition py-1 px-2 rounded-control hover:bg-sunken shrink-0">
                             <x-lucide-rotate-ccw class="w-3 h-3" />
-                            <span>{{ __('Restablecer') }}</span>
+                            <span>{{ __('Reset') }}</span>
                         </button>
                     @endif
                 </div>
 
                 <p class="text-meta text-ink-3">
-                    <span class="text-ink-2">{{ __('Elementos Vinculados en el Sistema:') }}</span>
+                    <span class="text-ink-2">{{ __('Linked items in the system:') }}</span>
                     {{ implode(' · ', $item['affects']) }}
                 </p>
 
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-sunken p-3 rounded-control">
                     <div class="flex items-center gap-3">
-                        <label class="relative cursor-pointer shrink-0" title="{{ __('Clic para abrir selector de color') }}">
+                        <label class="relative cursor-pointer shrink-0" title="{{ __('Click to open the color picker') }}">
                             <input type="color" wire:model.live="colors.{{ $key }}" class="sr-only" />
                             <div class="w-9 h-9 rounded-control border border-line-strong" style="background-color: {{ $item['hex'] }};"></div>
                         </label>
 
                         <div>
-                            <span class="text-meta text-ink-3 block">{{ __('Código Hex') }}</span>
+                            <span class="text-meta text-ink-3 block">{{ __('Hex code') }}</span>
                             <input
                                 type="text"
                                 wire:model.live.debounce.400ms="colors.{{ $key }}"
@@ -89,7 +89,7 @@
                     </div>
 
                     <div>
-                        <span class="text-meta text-ink-3 block sm:text-right">{{ __('Paletas Recomendadas') }}</span>
+                        <span class="text-meta text-ink-3 block sm:text-right">{{ __('Suggested palettes') }}</span>
                         <div class="flex items-center gap-1.5 flex-wrap">
                             @foreach($item['presets'] as $hexOption)
                                 <button
@@ -105,17 +105,17 @@
                 </div>
 
                 <div class="space-y-2">
-                    <span class="text-meta text-ink-3 block">{{ __('Previsualización en Componentes') }}</span>
+                    <span class="text-meta text-ink-3 block">{{ __('Preview in components') }}</span>
                     <div class="border border-line rounded-control p-3 space-y-3">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="px-2.5 py-1 rounded-control text-meta font-medium border flex items-center gap-1.5" style="{{ $p['badge_style'] }}">
                                 <span class="w-1.5 h-1.5 rounded-full" style="{{ $p['dot_style'] }}"></span>
                                 <span>{{ $item['name'] }}</span>
                             </span>
-                            <span class="px-2 py-0.5 rounded-control text-meta font-medium border" style="{{ $p['solid_badge_style'] }}">{{ __('Tag Sólido') }}</span>
+                            <span class="px-2 py-0.5 rounded-control text-meta font-medium border" style="{{ $p['solid_badge_style'] }}">{{ __('Solid tag') }}</span>
                             <span class="flex items-center gap-1.5 text-meta text-ink-2">
                                 <span class="inline-flex rounded-full h-2 w-2" style="{{ $p['dot_style'] }}"></span>
-                                <span>{{ __('Dot Activo') }}</span>
+                                <span>{{ __('Active dot') }}</span>
                             </span>
                         </div>
 
@@ -126,8 +126,8 @@
                             </div>
                             <p class="text-body text-ink truncate">Supermercados Talpa — Rediseño de Etiquetas Promocionales</p>
                             <div class="flex items-center justify-between pt-1 border-t border-black/5 text-meta text-ink-3">
-                                <span>{{ __('Hoy a las 4:00 PM') }}</span>
-                                <button type="button" class="px-2 py-0.5 rounded-control font-medium text-meta" style="{{ $p['button_style'] }}">{{ __('Acción') }}</button>
+                                <span>{{ __('Today at 4:00 PM') }}</span>
+                                <button type="button" class="px-2 py-0.5 rounded-control font-medium text-meta" style="{{ $p['button_style'] }}">{{ __('Action') }}</button>
                             </div>
                         </div>
                     </div>
@@ -140,15 +140,15 @@
         <div class="fixed inset-0 z-50 overflow-y-auto bg-ink/40 flex items-center justify-center p-4">
             <div @click.outside="$wire.set('showResetAllModal', false)" class="bg-surface border border-line rounded-panel max-w-md w-full p-5 shadow-panel space-y-4">
                 <div class="space-y-1">
-                    <h2 class="text-section font-semibold text-ink">{{ __('¿Restablecer todos los colores?') }}</h2>
+                    <h2 class="text-section font-semibold text-ink">{{ __('Reset all colors?') }}</h2>
                     <p class="text-body text-ink-2">
-                        {{ __('Esta acción volverá a configurar todos los colores del sistema a la paleta estándar original de Kudos (Camila púrpura, Producción rosa brillante, etc.) y actualizará la base de datos.') }}
+                        {{ __('This resets every color in the system to the original Kudos palette and updates the database.') }}
                     </p>
                 </div>
 
                 <div class="flex items-center justify-end gap-2 pt-3 border-t border-line">
-                    <flux:button wire:click="$set('showResetAllModal', false)" type="button" variant="ghost" size="sm">{{ __('Cancelar') }}</flux:button>
-                    <flux:button wire:click="resetAll" type="button" variant="danger" size="sm" icon="arrow-uturn-left">{{ __('Sí, restablecer todo') }}</flux:button>
+                    <flux:button wire:click="$set('showResetAllModal', false)" type="button" variant="ghost" size="sm">{{ __('Cancel') }}</flux:button>
+                    <flux:button wire:click="resetAll" type="button" variant="danger" size="sm" icon="arrow-uturn-left">{{ __('Yes, reset everything') }}</flux:button>
                 </div>
             </div>
         </div>

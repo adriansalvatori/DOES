@@ -116,13 +116,13 @@ class Index extends Component
 
         $order->update($updateData);
 
-        session()->flash('message', __('Orden :company añadida al Workspace activo.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company added to active Workspace.', ['company' => $order->company_name]));
     }
 
     public function addSelectedToWorkspace()
     {
         if (empty($this->selectedOrders)) {
-            session()->flash('warning', __('Selecciona al menos una orden para añadir al Workspace.'));
+            session()->flash('warning', __('Select at least one order to add to the workspace.'));
 
             return;
         }
@@ -152,7 +152,7 @@ class Index extends Component
         $this->selectedOrders = [];
         $this->selectAll = false;
 
-        session()->flash('message', trans_choice('{1} Se añadió :count orden al Workspace activo.|[2,*] Se añadieron :count órdenes al Workspace activo.', $count));
+        session()->flash('message', trans_choice('{1} :count order added to the active workspace.|[2,*] :count orders added to the active workspace.', $count));
     }
 
     public function addAllFilteredToWorkspace()
@@ -182,7 +182,7 @@ class Index extends Component
         $this->selectedOrders = [];
         $this->selectAll = false;
 
-        session()->flash('message', trans_choice('{1} Se añadió :count orden filtrada al Workspace activo.|[2,*] Se añadieron las :count órdenes filtradas al Workspace activo.', $count));
+        session()->flash('message', trans_choice('{1} :count filtered order added to the active workspace.|[2,*] :count filtered orders added to the active workspace.', $count));
     }
 
     public function removeFromWorkspace($orderId)
@@ -190,7 +190,7 @@ class Index extends Component
         $order = Order::findOrFail($orderId);
         $order->update(['in_workspace' => false]);
 
-        session()->flash('message', __('Orden :company movida de regreso al Backlog.', ['company' => $order->company_name]));
+        session()->flash('message', __('Order :company moved back to Backlog.', ['company' => $order->company_name]));
     }
 
     public function setFilter(string $filter): void
@@ -211,7 +211,7 @@ class Index extends Component
         $boardId = Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '')));
 
         if (empty(trim($boardId))) {
-            session()->flash('warning', __('No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.'));
+            session()->flash('warning', __('No Trello board is configured. Set one up in Trello sync.'));
 
             return;
         }
@@ -222,7 +222,7 @@ class Index extends Component
         // Fetch lists
         $listsRes = $syncService->getBoardLists($extractedBoardId, $apiKey, $userToken);
         if (! $listsRes['success']) {
-            session()->flash('warning', __('Error al conectar con la API de Trello: :error', ['error' => $listsRes['error'] ?? __('Error de autenticación o tablero no encontrado')]));
+            session()->flash('warning', __('Could not connect to the Trello API: :error', ['error' => $listsRes['error'] ?? __('Authentication error or board not found')]));
 
             return;
         }
@@ -236,7 +236,7 @@ class Index extends Component
         // Fetch cards
         $cardsRes = $syncService->getBoardCards($extractedBoardId, $apiKey, $userToken);
         if (! $cardsRes['success']) {
-            session()->flash('warning', __('Error al obtener tarjetas desde Trello.'));
+            session()->flash('warning', __('Could not fetch cards from Trello.'));
 
             return;
         }
@@ -303,7 +303,7 @@ class Index extends Component
             'changes' => $changesList,
         ];
 
-        session()->flash('message', __('Sincronización con Trello completada exitosamente (:count tarjetas procesadas).', ['count' => $totalSynced]));
+        session()->flash('message', __('Trello sync complete (:count cards processed).', ['count' => $totalSynced]));
     }
 
     public function runTrelloSyncOnlyNew(): void
@@ -313,7 +313,7 @@ class Index extends Component
         $boardId = Setting::get('trello_board_id', config('services.trello.board_id', env('TRELLO_BOARD_ID', '')));
 
         if (empty(trim($boardId))) {
-            session()->flash('warning', __('No hay un Tablero Trello configurado. Por favor configúralo en Sincronización Trello.'));
+            session()->flash('warning', __('No Trello board is configured. Set one up in Trello sync.'));
 
             return;
         }
@@ -324,7 +324,7 @@ class Index extends Component
         // Fetch lists
         $listsRes = $syncService->getBoardLists($extractedBoardId, $apiKey, $userToken);
         if (! $listsRes['success']) {
-            session()->flash('warning', __('Error al conectar con la API de Trello: :error', ['error' => $listsRes['error'] ?? __('Error de autenticación o tablero no encontrado')]));
+            session()->flash('warning', __('Could not connect to the Trello API: :error', ['error' => $listsRes['error'] ?? __('Authentication error or board not found')]));
 
             return;
         }
@@ -338,7 +338,7 @@ class Index extends Component
         // Fetch cards
         $cardsRes = $syncService->getBoardCards($extractedBoardId, $apiKey, $userToken);
         if (! $cardsRes['success']) {
-            session()->flash('warning', __('Error al obtener tarjetas desde Trello.'));
+            session()->flash('warning', __('Could not fetch cards from Trello.'));
 
             return;
         }
@@ -453,9 +453,9 @@ class Index extends Component
         $this->activeFilter = $addedCount > 0 ? 'created' : 'all';
 
         if ($addedCount > 0) {
-            session()->flash('message', __('Sincronización completada: se importaron :count tarjetas nuevas de Trello.', ['count' => $addedCount]));
+            session()->flash('message', __('Sync complete: :count new cards imported from Trello.', ['count' => $addedCount]));
         } else {
-            session()->flash('message', __('No hay tarjetas nuevas en Trello (:count existentes omitidas).', ['count' => $skippedCount]));
+            session()->flash('message', __('No new cards in Trello (:count existing skipped).', ['count' => $skippedCount]));
         }
     }
 

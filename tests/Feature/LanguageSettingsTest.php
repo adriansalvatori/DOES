@@ -51,16 +51,16 @@ class LanguageSettingsTest extends TestCase
     public function test_json_translations_resolve_correctly(): void
     {
         app()->setLocale('en');
-        $this->assertEquals('Weekly Planner', __('Planificador Semanal'));
-        $this->assertEquals('Order Backlog', __('Backlog de Órdenes'));
-        $this->assertEquals('Operational Control Center', __('Centro de Control Operativo'));
-        $this->assertEquals('Substatus Configuration', __('Configuración de Subestatus'));
+        $this->assertEquals('Weekly Planner', __('Weekly Planner'));
+        $this->assertEquals('Order Backlog', __('Order Backlog'));
+        $this->assertEquals('Operational Control Center', __('Operational Control Center'));
+        $this->assertEquals('Substatus Configuration', __('Substatus Configuration'));
 
         app()->setLocale('es');
-        $this->assertEquals('Planificador Semanal', __('Planificador Semanal'));
-        $this->assertEquals('Backlog de Órdenes', __('Backlog de Órdenes'));
-        $this->assertEquals('Centro de Control Operativo', __('Centro de Control Operativo'));
-        $this->assertEquals('Configuración de Subestatus', __('Configuración de Subestatus'));
+        $this->assertEquals('Planificador semanal', __('Weekly Planner'));
+        $this->assertEquals('Backlog de Órdenes', __('Order Backlog'));
+        $this->assertEquals('Centro de Control Operativo', __('Operational Control Center'));
+        $this->assertEquals('Configuración de Subestatus', __('Substatus Configuration'));
     }
 
     public function test_pages_render_in_english_when_locale_is_set(): void
@@ -73,12 +73,12 @@ class LanguageSettingsTest extends TestCase
         $response = $this->actingAs($user)->get('/kanban');
         $response->assertStatus(200);
         $response->assertSee('Kanban Board');
-        $response->assertSee(__('Nueva Orden'));
+        $response->assertSee(__('New Order'));
 
         $responseTrash = $this->get('/trash');
         $responseTrash->assertStatus(200);
         $responseTrash->assertSee('Trash');
-        $responseTrash->assertSee(__('Buscar en la papelera...'));
+        $responseTrash->assertSee(__('Search in trash...'));
 
         $responsePlanner = $this->get('/planner');
         $responsePlanner->assertStatus(200);

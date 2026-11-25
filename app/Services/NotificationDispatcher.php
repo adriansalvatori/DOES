@@ -80,7 +80,7 @@ class NotificationDispatcher
         $recipients = $query->get();
 
         $companyName = $order?->company_name ?? __('General');
-        $taskName = $order?->task_name ?? __('Orden');
+        $taskName = $order?->task_name ?? __('Order');
         $designerId = $order?->designer_id;
         $designerName = $order?->designer?->name;
 

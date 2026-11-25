@@ -538,7 +538,7 @@ class TrelloCardCommentsTest extends TestCase
         // Includes click handler to open media preview modal
         $this->assertStringContainsString('openMediaPreview', $rendered);
         $this->assertStringContainsString('arte_final.png', $rendered);
-        $this->assertStringContainsString(__('Ampliar foto'), $rendered);
+        $this->assertStringContainsString(__('Enlarge photo'), $rendered);
     }
 
     public function test_comment_photo_removal_and_clearing(): void
@@ -720,14 +720,14 @@ class TrelloCardCommentsTest extends TestCase
             'event_type' => 'TRELLO_COMMENT_ADDED',
             'actor' => 'Euraliz Bravo',
         ]);
-        $this->assertEquals('Comentario de Euraliz Bravo', $eventWithActor->getFormattedTitle());
+        $this->assertEquals('Comment from Euraliz Bravo', $eventWithActor->getFormattedTitle());
 
         $eventWithMeta = new OrderEvent([
             'event_type' => 'COMMENT_ADDED',
             'actor' => null,
             'metadata' => ['author_name' => 'Adrian Salvatori'],
         ]);
-        $this->assertEquals('Comentario de Adrian Salvatori', $eventWithMeta->getFormattedTitle());
+        $this->assertEquals('Comment from Adrian Salvatori', $eventWithMeta->getFormattedTitle());
 
         $eventAnonymous = new OrderEvent([
             'event_type' => 'COMMENT_ADDED',

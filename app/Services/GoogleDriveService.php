@@ -118,7 +118,7 @@ class GoogleDriveService
         ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException(__('Google rechazó la conexión: :reason', ['reason' => $response->json('error_description') ?? $response->json('error') ?? $response->body()]));
+            throw new RuntimeException(__('Google rejected the connection: :reason', ['reason' => $response->json('error_description') ?? $response->json('error') ?? $response->body()]));
         }
 
         $refreshToken = $response->json('refresh_token');
@@ -126,15 +126,15 @@ class GoogleDriveService
         $scopes = explode(' ', (string) $response->json('scope'));
 
         if (! is_string($refreshToken) || $refreshToken === '' || ! is_string($accessToken) || $accessToken === '') {
-            throw new RuntimeException(__('Google no devolvió un token de acceso permanente. Vuelve a intentarlo.'));
+            throw new RuntimeException(__('Google did not return a long-lived access token. Please try again.'));
         }
         if (! in_array(self::SCOPE, $scopes, true)) {
-            throw new RuntimeException(__('Falta el permiso de Google Drive. Vuelve a conectar y marca la casilla de acceso a Drive.'));
+            throw new RuntimeException(__('Google Drive permission is missing. Reconnect and tick the Drive access box.'));
         }
 
         $about = Http::withToken($accessToken)->acceptJson()->timeout(30)
             ->get("{$this->apiBase}/about", ['fields' => 'user(displayName,emailAddress)']);
-        $this->ensureSuccessful($about, __('leer la cuenta conectada'));
+        $this->ensureSuccessful($about, __('read the connected account'));
 
         $account = [
             'email' => (string) $about->json('user.emailAddress'),
@@ -205,7 +205,7 @@ class GoogleDriveService
             'corpora' => 'allDrives',
         ]);
 
-        $this->ensureSuccessful($response, __("buscar la carpeta ':name'", ['name' => $name]));
+        $this->ensureSuccessful($response, __("find the folder ':name'", ['name' => $name]));
 
         return $response->json('files.0.id');
     }
@@ -218,7 +218,7 @@ class GoogleDriveService
             'parents' => [$parentId],
         ]);
 
-        $this->ensureSuccessful($response, __("crear la carpeta ':name'", ['name' => $name]));
+        $this->ensureSuccessful($response, __("create the folder ':name'", ['name' => $name]));
 
         return (string) $response->json('id');
     }
@@ -261,7 +261,7 @@ class GoogleDriveService
             ->withBody($body, "multipart/related; boundary={$boundary}")
             ->post("{$this->uploadBase}/files?uploadType=multipart&supportsAllDrives=true&fields=id,name,mimeType,size");
 
-        $this->ensureSuccessful($response, __("subir ':name'", ['name' => $name]));
+        $this->ensureSuccessful($response, __("upload ':name'", ['name' => $name]));
 
         return [
             'id' => (string) $response->json('id'),
@@ -291,11 +291,11 @@ class GoogleDriveService
                 'mimeType' => $mimeType,
             ]);
 
-        $this->ensureSuccessful($response, __("iniciar la subida de ':name'", ['name' => $name]));
+        $this->ensureSuccessful($response, __("start uploading ':name'", ['name' => $name]));
 
         $location = $response->header('Location');
         if ($location === '') {
-            throw new RuntimeException(__('Google Drive no devolvió una URL de sesión de subida.'));
+            throw new RuntimeException(__('Google Drive did not return an upload session URL.'));
         }
 
         return $location;
@@ -311,7 +311,7 @@ class GoogleDriveService
             'supportsAllDrives' => 'true',
         ]);
 
-        $this->ensureSuccessful($response, __('obtener el archivo'));
+        $this->ensureSuccessful($response, __('get the file'));
 
         return $response->json() ?? [];
     }
@@ -329,7 +329,7 @@ class GoogleDriveService
                 'supportsAllDrives' => 'true',
             ]);
 
-        $this->ensureSuccessful($response, __('descargar el archivo'));
+        $this->ensureSuccessful($response, __('download the file'));
 
         return $response;
     }
@@ -367,7 +367,7 @@ class GoogleDriveService
             'name' => $this->sanitizeName($name),
         ]);
 
-        $this->ensureSuccessful($response, __('renombrar el archivo'));
+        $this->ensureSuccessful($response, __('rename the file'));
     }
 
     /**
@@ -383,7 +383,7 @@ class GoogleDriveService
             return;
         }
 
-        $this->ensureSuccessful($response, __('enviar el archivo a la papelera'));
+        $this->ensureSuccessful($response, __('move the file to the trash'));
     }
 
     protected function client(): PendingRequest
@@ -408,7 +408,7 @@ class GoogleDriveService
     {
         $refreshToken = $this->refreshToken();
         if (! $this->hasOAuthClient() || $refreshToken === null) {
-            throw new RuntimeException(__('Google Drive no está conectado. Conéctalo en Ajustes → Google Drive.'));
+            throw new RuntimeException(__('Google Drive is not connected. Connect it in Settings → Google Drive.'));
         }
 
         $response = Http::asForm()->timeout(30)->post(self::TOKEN_URI, [
@@ -420,10 +420,10 @@ class GoogleDriveService
 
         $token = $response->json('access_token');
         if ($response->json('error') === 'invalid_grant') {
-            throw new RuntimeException(__('La conexión con Google Drive se revocó o expiró. Vuelve a conectarla en Ajustes → Google Drive.'));
+            throw new RuntimeException(__('The Google Drive connection was revoked or expired. Reconnect it in Settings → Google Drive.'));
         }
         if (! $response->successful() || ! is_string($token) || $token === '') {
-            throw new RuntimeException(__('Google rechazó la autenticación de Google Drive: :reason', ['reason' => $response->body()]));
+            throw new RuntimeException(__('Google rejected the Google Drive authentication: :reason', ['reason' => $response->body()]));
         }
 
         return [$token, (int) $response->json('expires_in', 3600)];
@@ -466,7 +466,7 @@ class GoogleDriveService
 
         $message = $response->json('error.message') ?? $response->body();
 
-        throw new RuntimeException(__('Google Drive: no se pudo :action (HTTP :status): :message', ['action' => $action, 'status' => $response->status(), 'message' => $message]));
+        throw new RuntimeException(__('Google Drive: could not :action (HTTP :status): :message', ['action' => $action, 'status' => $response->status(), 'message' => $message]));
     }
 
     protected function escapeQueryValue(string $value): string

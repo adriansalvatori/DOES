@@ -284,10 +284,10 @@ class AuthenticationAndProfileTest extends TestCase
 
         $response = $this->get(route('settings.profile'));
         $response->assertStatus(200);
-        $response->assertSee(__('Cerrar Sesión'));
-        $response->assertSee(__('Mi Perfil y Configuración'));
-        $response->assertSee(__('General & Perfil'));
-        $response->assertDontSee(__('Ficha Operativa de Diseñador'));
+        $response->assertSee(__('Log out'));
+        $response->assertSee(__('My profile and settings'));
+        $response->assertSee(__('General and profile'));
+        $response->assertDontSee(__('Designer operations sheet'));
     }
 
     public function test_user_can_upload_profile_picture(): void

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? (__('Iniciar Sesión - ') . config('app.name')) }}</title>
+    <title>{{ $title ?? (__('Sign in - ') . config('app.name')) }}</title>
     
     <!-- PWA & Favicon -->
     <link rel="manifest" href="{{ asset('site.webmanifest') }}?v=4">

@@ -129,7 +129,7 @@ class EntryHoyTest extends EntryTestCase
         $this->assertSame('done', $followUp->fresh()->status);
         $this->assertDatabaseHas('related_tasks', [
             'order_id' => $order->id,
-            'title' => __('Ajustes Camila: :comment', ['comment' => 'Cambiar logo']),
+            'title' => __('Camila\'s changes: :comment', ['comment' => 'Cambiar logo']),
             'status' => 'todo',
             'priority' => 'high',
         ]);

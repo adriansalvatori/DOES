@@ -19,7 +19,7 @@
     data-category="{{ $task->category?->value }}"
     data-work="{{ $task->is_work_task === false ? '0' : '1' }}"
     class="shrink-0 opacity-60 group-hover:opacity-100 focus-within:opacity-100 transition">
-    <button type="button" @click.stop="openTaskMenu($event)" class="flex h-6 w-6 items-center justify-center rounded-control text-ink-3 hover:bg-sunken hover:text-ink cursor-pointer" title="{{ __('Acciones') }}" aria-label="{{ __('Acciones') }}" aria-haspopup="menu">
+    <button type="button" @click.stop="openTaskMenu($event)" class="flex h-6 w-6 items-center justify-center rounded-control text-ink-3 hover:bg-sunken hover:text-ink cursor-pointer" title="{{ __('Actions') }}" aria-label="{{ __('Actions') }}" aria-haspopup="menu">
         <x-lucide-ellipsis class="w-4 h-4" />
     </button>
 </div>

@@ -1,18 +1,18 @@
 <div class="h-full flex flex-col gap-4 min-h-0 overflow-y-auto custom-vertical-scrollbar">
-    <x-ui.page-header :title="__('Papelera')" :count="$trashedOrders->count()">
+    <x-ui.page-header :title="__('Trash')" :count="$trashedOrders->count()">
         <x-slot:actions>
             @if($trashedOrders->isNotEmpty())
                 <button type="button" wire:click="emptyTrash"
-                        wire:confirm="{{ __('¿Estás seguro de vaciar toda la papelera y eliminar todas las órdenes y sus tarjetas en Trello definitivamente? Esta acción es irreversible.') }}"
-                        class="ui-btn ui-btn-danger" title="{{ __('Vaciar papelera / eliminar todo definitivamente') }}">
-                    <x-lucide-trash-2 />{{ __('Vaciar papelera') }}
+                        wire:confirm="{{ __('Empty the whole trash and permanently delete all orders and their Trello cards? This can\'t be undone.') }}"
+                        class="ui-btn ui-btn-danger" title="{{ __('Empty trash / delete everything permanently') }}">
+                    <x-lucide-trash-2 />{{ __('Empty trash') }}
                 </button>
             @endif
         </x-slot:actions>
         <x-slot:toolbar>
             <div class="relative w-72">
                 <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
-                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Buscar en la papelera...') }}" class="ui-input pl-8">
+                <input type="text" wire:model.live.debounce.300ms="search" placeholder="{{ __('Search in trash...') }}" class="ui-input pl-8">
             </div>
         </x-slot:toolbar>
     </x-ui.page-header>
@@ -25,25 +25,25 @@
 
     <div class="ui-card overflow-hidden">
         @if($trashedOrders->isEmpty())
-            <x-ui.empty icon="trash-2" :title="__('La papelera está vacía')" :description="__('Las órdenes eliminadas aparecerán aquí antes de ser borradas permanentemente.')" />
+            <x-ui.empty icon="trash-2" :title="__('Trash is empty')" :description="__('Deleted orders will appear here before being permanently removed.')" />
         @else
             <div class="overflow-x-auto">
                 <table class="ui-table">
                     <thead>
                         <tr>
                             <th>{{ __('WO') }}</th>
-                            <th>{{ __('Empresa') }}</th>
-                            <th>{{ __('Tarea') }}</th>
-                            <th>{{ __('Lista') }}</th>
-                            <th class="hidden 2xl:table-cell">{{ __('Responsable') }}</th>
-                            <th>{{ __('Eliminada') }}</th>
+                            <th>{{ __('Company') }}</th>
+                            <th>{{ __('Task') }}</th>
+                            <th>{{ __('List') }}</th>
+                            <th class="hidden 2xl:table-cell">{{ __('Account Rep') }}</th>
+                            <th>{{ __('Deleted') }}</th>
                             <th class="sticky right-0 w-px bg-canvas"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($trashedOrders as $order)
                             <tr wire:key="trash-{{ $order->id }}">
-                                <td class="whitespace-nowrap">@if($order->wo_number)<x-wo-badge :number="$order->wo_number" />@else<span class="text-ink-3">{{ __('Sin WO') }}</span>@endif</td>
+                                <td class="whitespace-nowrap">@if($order->wo_number)<x-wo-badge :number="$order->wo_number" />@else<span class="text-ink-3">{{ __('No WO') }}</span>@endif</td>
                                 <td class="min-w-0">
                                     <div class="flex items-center gap-2">
                                         <span class="block max-w-[14rem] truncate font-medium" title="{{ $order->company_name }}">{{ $order->company_name }}</span>
@@ -56,14 +56,14 @@
                                 <td class="whitespace-nowrap text-ink-3">{{ $order->deleted_at->diffForHumans() }}</td>
                                 <td class="sticky right-0 whitespace-nowrap bg-surface text-right">
                                     <div class="flex items-center justify-end gap-1">
-                                        <button type="button" wire:click="restoreOrder({{ $order->id }})" class="ui-btn ui-btn-secondary ui-btn-sm" title="{{ __('Restaurar orden') }}">
-                                            <x-lucide-undo-2 />{{ __('Restaurar') }}
+                                        <button type="button" wire:click="restoreOrder({{ $order->id }})" class="ui-btn ui-btn-secondary ui-btn-sm" title="{{ __('Restore order') }}">
+                                            <x-lucide-undo-2 />{{ __('Restore') }}
                                         </button>
                                         <flux:dropdown position="bottom" align="end">
-                                            <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Acciones') }}" />
+                                            <flux:button size="xs" variant="ghost" icon="ellipsis-horizontal" aria-label="{{ __('Actions') }}" />
                                             <flux:menu>
                                                 <flux:menu.item variant="danger" icon="trash" wire:click="forceDeleteOrder({{ $order->id }})"
-                                                    wire:confirm="{{ __('¿Eliminar permanentemente de la app y de Trello? Esta acción no se puede deshacer.') }}">{{ __('Eliminar también de Trello') }}</flux:menu.item>
+                                                    wire:confirm="{{ __('Permanently delete from the app and Trello? This can\'t be undone.') }}">{{ __('Also delete from Trello') }}</flux:menu.item>
                                             </flux:menu>
                                         </flux:dropdown>
                                     </div>

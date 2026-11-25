@@ -25,23 +25,23 @@ class NavigationService
 
         return $this->filterGroups([
             [
-                $this->item(__('Hoy'), __('Centro de Control Operativo'), '/', '/', 'sun', true),
+                $this->item(__('Today'), __('Operational Control Center'), '/', '/', 'sun', true),
                 $this->item(__('Analytics'), __('Analytics Dashboard'), '/analytics', 'analytics*', 'bar-chart-3', ! $isDesigner),
             ],
             [
                 $this->item(__('Kanban Board'), __('Kanban Board'), '/kanban', 'kanban*', 'kanban', true),
-                $this->item(__('Planificador Semanal'), __('Planificador Semanal'), '/planner', 'planner*', 'calendar-days', true),
-                $this->item(__('Overview'), __('Overview Operativo'), '/overview', 'overview*', 'table-properties', ! $isDesigner),
+                $this->item(__('Weekly Planner'), __('Weekly Planner'), '/planner', 'planner*', 'calendar-days', true),
+                $this->item(__('Overview'), __('Operations overview'), '/overview', 'overview*', 'table-properties', ! $isDesigner),
             ],
             [
-                $this->item(__('Directorio de Clientes'), __('Directorio de Clientes'), '/contacts', 'contacts*', 'users', true),
-                $this->item(__('Compañías'), __('Compañías'), '/clients', 'clients*', 'building-2', true),
-                $this->item(__('Archivadas'), __('Órdenes Archivadas'), '/archived', 'archived*', 'archive', true),
-                $this->item(__('Papelera'), __('Papelera de Reciclaje'), '/trash', 'trash*', 'trash-2', ! $isDesigner && ! $isSales),
+                $this->item(__('Client directory'), __('Client directory'), '/contacts', 'contacts*', 'users', true),
+                $this->item(__('Companies'), __('Companies'), '/clients', 'clients*', 'building-2', true),
+                $this->item(__('Archived'), __('Archived Orders'), '/archived', 'archived*', 'archive', true),
+                $this->item(__('Trash'), __('Recycling Bin'), '/trash', 'trash*', 'trash-2', ! $isDesigner && ! $isSales),
             ],
             [
-                $this->item(__('Precios & Calculadora'), __('Precios & Calculadora'), '/pricing', 'pricing*', 'badge-percent', true),
-                $this->item(__('Recursos de Diseño'), __('Recursos de Diseño'), '/design-resources', 'design-resources*', 'folder-down', true),
+                $this->item(__('Pricing & Calculator'), __('Pricing & Calculator'), '/pricing', 'pricing*', 'badge-percent', true),
+                $this->item(__('Design Resources'), __('Design Resources'), '/design-resources', 'design-resources*', 'folder-down', true),
             ],
         ]);
     }
@@ -56,8 +56,8 @@ class NavigationService
         $canSync = (bool) ($user?->isAdmin() || $user?->isCoordinator());
 
         return $this->filterItems([
-            $this->item(__('Backlog'), __('Backlog de Órdenes'), '/backlog', 'backlog*', 'box', true),
-            $this->item(__('Sincronización'), __('Sincronización Trello'), '/trello-sync', 'trello-sync*', 'refresh-cw', $canSync),
+            $this->item(__('Backlog'), __('Order Backlog'), '/backlog', 'backlog*', 'box', true),
+            $this->item(__('Sync'), __('Trello Sync'), '/trello-sync', 'trello-sync*', 'refresh-cw', $canSync),
         ]);
     }
 
@@ -74,52 +74,52 @@ class NavigationService
         $groups = [
             [
                 'key' => 'account',
-                'label' => __('Cuenta'),
+                'label' => __('Account'),
                 'items' => [
-                    $this->item(__('Mi Perfil'), __('Mi Perfil'), '/settings/profile', 'settings/profile*', 'user-cog', true, __('Nombre, foto, contraseña y preferencias.')),
-                    $this->item(__('Idioma'), __('Idioma / Language'), '/settings/language', 'settings/language*', 'languages', true, __('Español o inglés para la interfaz.')),
+                    $this->item(__('My profile'), __('My profile'), '/settings/profile', 'settings/profile*', 'user-cog', true, __('Name, photo, password and preferences.')),
+                    $this->item(__('Language'), __('Idioma / Language'), '/settings/language', 'settings/language*', 'languages', true, __('Spanish or English for the interface.')),
                 ],
             ],
             [
                 'key' => 'team',
-                'label' => __('Equipo'),
+                'label' => __('Team'),
                 'items' => [
-                    $this->item(__('Usuarios y Roles'), __('Gestión de Usuarios'), '/settings/users', 'settings/users*', 'users', $isAdmin, __('Quién entra y qué puede hacer.')),
-                    $this->item(__('Notificaciones'), __('Configuración de Notificaciones'), '/settings/notifications', 'settings/notifications*', 'bell-ring', $isAdmin, __('Qué eventos avisan al equipo.')),
+                    $this->item(__('Users and roles'), __('User management'), '/settings/users', 'settings/users*', 'users', $isAdmin, __('Who can sign in and what they can do.')),
+                    $this->item(__('Notifications'), __('Notification settings'), '/settings/notifications', 'settings/notifications*', 'bell-ring', $isAdmin, __('Which events notify the team.')),
                 ],
             ],
             [
                 'key' => 'workflow',
-                'label' => __('Flujo de trabajo'),
+                'label' => __('Workflow'),
                 'items' => [
-                    $this->item(__('Subestatus'), __('Configuración de Subestatus'), '/settings/substatuses', 'settings/substatuses*', 'tags', $canConfigureWorkflow, __('Motivos y estados secundarios de una orden.')),
-                    $this->item(__('Instalación'), __('Configuración de Tipos de Instalación'), '/settings/installation-types', 'settings/installation-types*', 'truck', $canConfigureWorkflow, __('Tipos de instalación disponibles.')),
-                    $this->item(__('Plantillas Subtareas'), __('Plantillas de Subtareas'), '/settings/subtasks', 'settings/subtasks*', 'list-checks', $canConfigureWorkflow, __('Subtareas que se crean con cada orden.')),
-                    $this->item(__('Color Coding'), __('Personalización de Colores'), '/settings/color-coding', 'settings/color-coding*', 'palette', $canConfigureWorkflow, __('Colores de las personas del equipo.')),
+                    $this->item(__('Substatuses'), __('Substatus Configuration'), '/settings/substatuses', 'settings/substatuses*', 'tags', $canConfigureWorkflow, __('Reasons and secondary states for an order.')),
+                    $this->item(__('Installation'), __('Installation type settings'), '/settings/installation-types', 'settings/installation-types*', 'truck', $canConfigureWorkflow, __('Available installation types.')),
+                    $this->item(__('Subtask Templates'), __('Subtask Templates'), '/settings/subtasks', 'settings/subtasks*', 'list-checks', $canConfigureWorkflow, __('Subtasks created with every order.')),
+                    $this->item(__('Color coding'), __('Color customization'), '/settings/color-coding', 'settings/color-coding*', 'palette', $canConfigureWorkflow, __('Colors for the people on the team.')),
                 ],
             ],
             [
                 'key' => 'integrations',
-                'label' => __('Integraciones'),
+                'label' => __('Integrations'),
                 'items' => [
-                    $this->item(__('Google Drive'), __('Google Drive'), '/settings/google-drive', 'settings/google-drive*', 'hard-drive', $isAdmin, __('Cuenta de Google donde se guardan los archivos.')),
-                    $this->item(__('Mapeo Listas Trello'), __('Mapeo de Listas Trello'), '/settings/trello-mapping', 'settings/trello-mapping*', 'sliders', $isAdmin, __('Qué lista de Trello corresponde a cada estado.')),
-                    $this->item(__('Sincronización'), __('Sincronización Trello'), '/trello-sync', 'trello-sync*', 'refresh-cw', $canConfigureWorkflow, __('Credenciales y sincronización con Trello.')),
+                    $this->item(__('Google Drive'), __('Google Drive'), '/settings/google-drive', 'settings/google-drive*', 'hard-drive', $isAdmin, __('Google account where files are stored.')),
+                    $this->item(__('Trello List Mapping'), __('Trello List Mapping'), '/settings/trello-mapping', 'settings/trello-mapping*', 'sliders', $isAdmin, __('Which Trello list matches each status.')),
+                    $this->item(__('Sync'), __('Trello Sync'), '/trello-sync', 'trello-sync*', 'refresh-cw', $canConfigureWorkflow, __('Trello credentials and sync.')),
                 ],
             ],
             [
                 'key' => 'data',
-                'label' => __('Datos'),
+                'label' => __('Data'),
                 'items' => [
-                    $this->item(__('Respaldos'), __('Respaldos de Base de Datos'), '/settings/backups', 'settings/backups*', 'database', $isAdmin, __('Copias de seguridad de la base de datos.')),
-                    $this->item(__('Conciliación CSV'), __('Conciliación CSV'), '/settings/csv-reconciliation', 'settings/csv-reconciliation*', 'file-spreadsheet', $isAdmin, __('Cruce de órdenes con un archivo CSV.')),
+                    $this->item(__('Backups'), __('Database backups'), '/settings/backups', 'settings/backups*', 'database', $isAdmin, __('Database backups.')),
+                    $this->item(__('CSV reconciliation'), __('CSV reconciliation'), '/settings/csv-reconciliation', 'settings/csv-reconciliation*', 'file-spreadsheet', $isAdmin, __('Match orders against a CSV file.')),
                 ],
             ],
             [
                 'key' => 'help',
-                'label' => __('Ayuda'),
+                'label' => __('Help'),
                 'items' => [
-                    $this->item(__('Guía de Comportamientos'), __('Guía de Comportamientos'), '/settings/documentation', 'settings/documentation*', 'book-open', $isAdmin, __('Cómo se comporta el sistema y por qué.')),
+                    $this->item(__('Behavior guide'), __('Behavior guide'), '/settings/documentation', 'settings/documentation*', 'book-open', $isAdmin, __('How the system behaves and why.')),
                 ],
             ],
         ];
@@ -155,16 +155,16 @@ class NavigationService
 
         foreach ($this->primaryGroups($user) as $group) {
             foreach ($group as $item) {
-                $add($item, __('Ir a'));
+                $add($item, __('Go to'));
             }
         }
         foreach ($this->bottomItems($user) as $item) {
-            $add($item, __('Ir a'));
+            $add($item, __('Go to'));
         }
-        $add($this->item(__('Ajustes'), __('Ajustes'), '/settings', 'settings', 'settings', true), __('Ajustes'));
+        $add($this->item(__('Settings'), __('Settings'), '/settings', 'settings', 'settings', true), __('Settings'));
         foreach ($this->settingsGroups($user) as $group) {
             foreach ($group['items'] as $item) {
-                $add($item, __('Ajustes'));
+                $add($item, __('Settings'));
             }
         }
 
@@ -178,7 +178,7 @@ class NavigationService
      */
     public function breadcrumb(?User $user): array
     {
-        $settings = ['label' => __('Ajustes'), 'href' => '/settings'];
+        $settings = ['label' => __('Settings'), 'href' => '/settings'];
 
         foreach ($this->settingsGroups($user) as $group) {
             foreach ($group['items'] as $item) {

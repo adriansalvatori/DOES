@@ -25,8 +25,8 @@
         @click.stop="$wire.toggleSubtaskComplete({{ $task->id }})"
         type="button"
         class="w-4 h-4 mt-0.5 rounded-control border transition flex items-center justify-center shrink-0 cursor-pointer {{ $done ? 'bg-ok border-ok text-white' : 'border-line-strong hover:border-ink bg-surface text-transparent' }}"
-        title="{{ $done ? __('Subtarea completada') : __('Marcar subtarea como completada') }}"
-        aria-label="{{ $done ? __('Subtarea completada') : __('Marcar subtarea como completada') }}">
+        title="{{ $done ? __('Subtask completed') : __('Mark subtask as completed') }}"
+        aria-label="{{ $done ? __('Subtask completed') : __('Mark subtask as completed') }}">
         <x-lucide-check class="w-3 h-3 stroke-[3]" />
     </button>
 
@@ -35,8 +35,8 @@
         @click.stop="toggleTaskSelection({{ $task->id }})"
         :class="selectedTaskIds.includes({{ $task->id }}) ? 'opacity-100 text-white bg-ink border-ink' : 'opacity-0 group-hover:opacity-60 text-ink-3 border-line-strong hover:opacity-100 hover:border-ink'"
         class="w-4 h-4 mt-0.5 rounded-control border transition flex items-center justify-center shrink-0 cursor-pointer"
-        title="{{ __('Seleccionar subtarea para mover en lote') }}"
-        aria-label="{{ __('Seleccionar subtarea para mover en lote') }}">
+        title="{{ __('Select subtask to move in bulk') }}"
+        aria-label="{{ __('Select subtask to move in bulk') }}">
         <x-lucide-check x-show="selectedTaskIds.includes({{ $task->id }})" class="w-3 h-3 stroke-[3]" />
     </button>
 
@@ -53,23 +53,23 @@
                     <span class="text-meta text-ink-3 truncate max-w-full" title="{{ $order->task_name }}">{{ $order->task_name }}</span>
                 @endif
                 @if($showMeta)
-                    <span class="text-meta text-ink-3">{{ $task->category->shortReturnLabel() }}@if($task->is_work_task === false) · {{ __('Gestión') }}@endif</span>
+                    <span class="text-meta text-ink-3">{{ $task->category->shortReturnLabel() }}@if($task->is_work_task === false) · {{ __('Admin') }}@endif</span>
                 @endif
                 @if($order->isArchived())
-                    <x-ui.tag>{{ __('Archivada') }}</x-ui.tag>
+                    <x-ui.tag>{{ __('Archived') }}</x-ui.tag>
                 @endif
                 @if($urgent && ! $done)
-                    <x-ui.tag tone="danger" icon="zap">{{ __('Urgente') }}</x-ui.tag>
+                    <x-ui.tag tone="danger" icon="zap">{{ __('Urgent') }}</x-ui.tag>
                 @endif
                 @if($blocked && ! $done)
-                    <x-ui.tag tone="warn" icon="octagon-alert">{{ __('Bloqueada') }}</x-ui.tag>
+                    <x-ui.tag tone="warn" icon="octagon-alert">{{ __('Blocked') }}</x-ui.tag>
                 @endif
                 @if($order->current_due_date)
                     @php
                         $overSla = ! $done && ! $task->isFollowUp() && ! $order->isSlaExempt() && $task->scheduled_date && $task->scheduled_date->gt($order->current_due_date);
                     @endphp
                     @if($overSla && ! $order->isOverdue())
-                        <x-ui.tag tone="danger" icon="triangle-alert">{{ __('SLA Excedido') }}</x-ui.tag>
+                        <x-ui.tag tone="danger" icon="triangle-alert">{{ __('SLA exceeded') }}</x-ui.tag>
                     @endif
                     <x-orders.due :date="$order->current_due_date" :done="$done" />
                 @endif
@@ -79,11 +79,11 @@
                 <x-lucide-sticky-note class="w-3.5 h-3.5 text-ink-3 shrink-0" />
                 <span class="text-body font-medium text-ink truncate {{ $strike }}" title="{{ $task->title }}">{{ $task->title }}</span>
                 @if($urgent && ! $done)
-                    <x-ui.tag tone="danger" icon="zap">{{ __('Urgente') }}</x-ui.tag>
+                    <x-ui.tag tone="danger" icon="zap">{{ __('Urgent') }}</x-ui.tag>
                 @endif
             </div>
             <div class="pt-0.5">
-                <flux:button size="xs" variant="subtle" icon="plus" @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $task->id }}, noteTitle: {{ \Illuminate\Support\Js::from($task->title) }} })">{{ __('Agregar a orden') }}</flux:button>
+                <flux:button size="xs" variant="subtle" icon="plus" @click.stop="$dispatch('open-link-note-modal', { taskId: {{ $task->id }}, noteTitle: {{ \Illuminate\Support\Js::from($task->title) }} })">{{ __('Add to order') }}</flux:button>
             </div>
         @endif
     </div>

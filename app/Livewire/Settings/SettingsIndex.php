@@ -12,6 +12,6 @@ class SettingsIndex extends Component
     {
         return view('livewire.settings.settings-index', [
             'groups' => $navigation->settingsGroups(auth()->user()),
-        ])->layout('components.layouts.app', ['title' => __('Ajustes')]);
+        ])->layout('components.layouts.app', ['title' => __('Settings')]);
     }
 }

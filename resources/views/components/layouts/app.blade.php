@@ -112,7 +112,7 @@
         <!-- Brand -->
         <div class="p-3 pb-0 shrink-0">
             <div :class="sidebarOpen ? 'justify-start' : 'justify-center'" class="flex items-center pb-3 border-b border-line">
-                <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2.5 min-w-0" title="{{ __('Ir al Dashboard') }}">
+                <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2.5 min-w-0" title="{{ __('Go to Dashboard') }}">
                     <div class="w-7 h-7 rounded-lg bg-gold flex items-center justify-center shrink-0">
                         <img src="{{ asset('images/kudos-hand-white.svg') }}" alt="{{ config('app.name') }}" class="w-4.5 h-4.5 object-contain">
                     </div>
@@ -123,7 +123,7 @@
 
         <!-- Primary Navigation -->
         <div class="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden p-3 pt-2 custom-vertical-scrollbar">
-            <nav aria-label="{{ __('Navegación principal') }}">
+            <nav aria-label="{{ __('Main navigation') }}">
                 @foreach($navGroups as $group)
                     @if(! $loop->first)
                         <div class="my-2 border-t border-line"></div>
@@ -143,9 +143,9 @@
 
         <!-- Bottom Navigation: Settings hub, Backlog, Sync -->
         <div class="shrink-0 p-3 pt-2 pb-2 space-y-0.5 border-t border-line">
-            <a href="{{ route('settings.index') }}" wire:navigate title="{{ __('Ajustes') }}" class="{{ $navLinkClass($settingsActive) }}" @if($settingsActive) aria-current="page" @endif>
+            <a href="{{ route('settings.index') }}" wire:navigate title="{{ __('Settings') }}" class="{{ $navLinkClass($settingsActive) }}" @if($settingsActive) aria-current="page" @endif>
                 <x-lucide-settings class="{{ $navIconClass($settingsActive) }}" />
-                <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Ajustes') }}</span>
+                <span x-show="sidebarOpen" x-transition.opacity class="truncate">{{ __('Settings') }}</span>
             </a>
 
             @foreach($bottomItems as $item)
@@ -183,7 +183,7 @@
                     @endif
                     <div class="min-w-0">
                         <p class="text-xs font-semibold text-zinc-900 truncate leading-tight">{{ $authUser->name }}</p>
-                        <span class="text-meta text-zinc-500 block truncate leading-tight">{{ $authUser->role?->label() ?? __('Diseñador') }}</span>
+                        <span class="text-meta text-zinc-500 block truncate leading-tight">{{ $authUser->role?->label() ?? __('Designer') }}</span>
                     </div>
                 </a>
 
@@ -217,22 +217,22 @@
                     style="display: none;">
                     <div class="px-2 py-1.5 border-b border-stone-100">
                         <p class="font-semibold text-zinc-900 truncate">{{ $authUser->name }}</p>
-                        <span class="text-meta text-zinc-500 block truncate">{{ $authUser->role?->label() ?? __('Diseñador') }}</span>
+                        <span class="text-meta text-zinc-500 block truncate">{{ $authUser->role?->label() ?? __('Designer') }}</span>
                     </div>
                     <a href="{{ route('settings.profile') }}" wire:navigate class="w-full px-2 py-1.5 rounded-md font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
                         <x-lucide-user class="w-3.5 h-3.5 text-zinc-500" />
-                        <span>{{ __('Mi Perfil') }}</span>
+                        <span>{{ __('My profile') }}</span>
                     </a>
                     <a href="/settings/language" wire:navigate class="w-full px-2 py-1.5 rounded-md font-medium flex items-center gap-2 text-zinc-700 hover:bg-stone-50 transition">
                         <x-lucide-languages class="w-3.5 h-3.5 text-zinc-500" />
-                        <span>{{ __('Idioma') }}</span>
+                        <span>{{ __('Language') }}</span>
                     </a>
                     <div class="border-t border-stone-100 my-1"></div>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="w-full px-2 py-1.5 rounded-md font-medium flex items-center gap-2 text-red-600 hover:bg-red-50 transition cursor-pointer text-left">
                             <x-lucide-log-out class="w-3.5 h-3.5" />
-                            <span>{{ __('Cerrar Sesión') }}</span>
+                            <span>{{ __('Log out') }}</span>
                         </button>
                     </form>
                 </div>
@@ -240,7 +240,7 @@
                 <!-- Sign out (open sidebar) -->
                 <form method="POST" action="{{ route('logout') }}" x-show="sidebarOpen">
                     @csrf
-                    <button type="submit" class="p-1 rounded text-zinc-400 hover:text-red-600 hover:bg-stone-200/60 transition cursor-pointer" title="{{ __('Cerrar Sesión') }}" aria-label="{{ __('Cerrar Sesión') }}">
+                    <button type="submit" class="p-1 rounded text-zinc-400 hover:text-red-600 hover:bg-stone-200/60 transition cursor-pointer" title="{{ __('Log out') }}" aria-label="{{ __('Log out') }}">
                         <x-lucide-log-out class="w-4 h-4" />
                     </button>
                 </form>
@@ -261,16 +261,16 @@
                 <div class="flex items-center gap-2">
                     <span class="inline-flex items-center gap-1.5 font-semibold bg-amber-500/20 text-amber-900 px-2 py-0.5 rounded text-meta">
                         <x-lucide-database class="w-3 h-3 text-amber-700" />
-                        {{ __('Modo Demostración') }}
+                        {{ __('Demo mode') }}
                     </span>
                     <span class="text-xs text-amber-800">
-                        {{ __('Base de datos aislada (demo.database.sqlite) — Desconectado de Trello') }}
+                        {{ __('Isolated database (demo.database.sqlite) — Disconnected from Trello') }}
                     </span>
                 </div>
                 <form method="POST" action="{{ route('logout') }}" class="inline">
                     @csrf
                     <button type="submit" class="text-xs font-medium text-amber-900 hover:text-amber-950 underline cursor-pointer">
-                        {{ __('Salir de Demo') }}
+                        {{ __('Exit demo') }}
                     </button>
                 </form>
             </div>
@@ -282,11 +282,11 @@
             $fallbackTitle = trim(preg_replace('/\s*[-–|·]\s*' . preg_quote(config('app.name'), '/') . '\s*$/u', '', __($title ?? '')));
         @endphp
         <header class="h-12 border-b border-line bg-canvas px-4 flex items-center gap-3 sticky top-0 z-50 shrink-0">
-            <button type="button" @click="sidebarOpen = !sidebarOpen" class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="{{ __('Mostrar u ocultar menú') }}" aria-label="{{ __('Mostrar u ocultar menú') }}">
+            <button type="button" @click="sidebarOpen = !sidebarOpen" class="ui-btn ui-btn-ghost ui-btn-sm ui-btn-icon" title="{{ __('Show or hide menu') }}" aria-label="{{ __('Show or hide menu') }}">
                 <x-lucide-panel-left />
             </button>
             <span class="h-4 w-px bg-line" aria-hidden="true"></span>
-            <nav class="flex items-center gap-1.5 min-w-0 text-body" aria-label="{{ __('Ubicación') }}">
+            <nav class="flex items-center gap-1.5 min-w-0 text-body" aria-label="{{ __('Location') }}">
                 @forelse($breadcrumb as $crumb)
                     @if(! $loop->last)
                         <a href="{{ $crumb['href'] }}" wire:navigate class="text-ink-3 hover:text-ink transition truncate">{{ $crumb['label'] }}</a>
@@ -309,7 +309,7 @@
         @if($onSettingsPage)
             <!-- Settings pages: sub-navigation rail + page -->
             <main class="app-main-content flex-1 w-full flex min-h-0 overflow-hidden">
-                <nav class="hidden md:flex w-52 shrink-0 flex-col gap-4 border-r border-line px-3 py-4 overflow-y-auto custom-vertical-scrollbar" aria-label="{{ __('Ajustes') }}">
+                <nav class="hidden md:flex w-52 shrink-0 flex-col gap-4 border-r border-line px-3 py-4 overflow-y-auto custom-vertical-scrollbar" aria-label="{{ __('Settings') }}">
                     @foreach($settingsGroups as $group)
                         <div class="space-y-0.5">
                             <p class="px-2 pb-1 text-meta text-ink-3">{{ $group['label'] }}</p>

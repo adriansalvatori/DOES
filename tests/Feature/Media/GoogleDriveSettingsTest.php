@@ -45,9 +45,9 @@ class GoogleDriveSettingsTest extends TestCase
         $this->actingAs($this->admin)
             ->get(route('settings.google-drive'))
             ->assertOk()
-            ->assertSee(__('Falta en .env'))
+            ->assertSee(__('Missing in .env'))
             ->assertSee(route('google-drive.callback'))
-            ->assertDontSee(__('Conectar Google Drive'));
+            ->assertDontSee(__('Connect Google Drive'));
     }
 
     public function test_page_shows_the_connected_account(): void
@@ -58,8 +58,8 @@ class GoogleDriveSettingsTest extends TestCase
             ->get(route('settings.google-drive'))
             ->assertOk()
             ->assertSee('drive@kudos.com')
-            ->assertSee(__('Reconectar'))
-            ->assertSee(__('Probar conexión'));
+            ->assertSee(__('Reconnect'))
+            ->assertSee(__('Test connection'));
     }
 
     public function test_connect_sends_the_admin_to_google_with_a_session_state(): void
@@ -101,7 +101,7 @@ class GoogleDriveSettingsTest extends TestCase
             ->withSession([GoogleDriveAuthController::STATE_SESSION_KEY => 'expected-state'])
             ->get(route('google-drive.callback', ['state' => 'expected-state', 'error' => 'access_denied']))
             ->assertRedirect(route('settings.google-drive'))
-            ->assertSessionHas('error', __('Se canceló la conexión con Google Drive.'));
+            ->assertSessionHas('error', __('The Google Drive connection was cancelled.'));
 
         Http::assertNothingSent();
     }
@@ -149,7 +149,7 @@ class GoogleDriveSettingsTest extends TestCase
             ->test(GoogleDriveSettings::class)
             ->call('testConnection')
             ->assertSet('testPassed', true)
-            ->assertSee(__('Conexión correcta con la carpeta «:name».', ['name' => 'DOES']));
+            ->assertSee(__('Connected to the folder “:name”.', ['name' => 'DOES']));
     }
 
     public function test_connection_test_warns_when_the_root_folder_is_outside_a_shared_drive(): void
@@ -164,7 +164,7 @@ class GoogleDriveSettingsTest extends TestCase
             ->test(GoogleDriveSettings::class)
             ->call('testConnection')
             ->assertSet('testPassed', true)
-            ->assertSee(__('Conexión correcta con la carpeta «:name», pero no está en una unidad compartida.', ['name' => 'Mi carpeta']));
+            ->assertSee(__('Connected to the folder “:name”, but it is not in a shared drive.', ['name' => 'Mi carpeta']));
     }
 
     public function test_connection_test_shows_drives_error(): void
@@ -187,7 +187,7 @@ class GoogleDriveSettingsTest extends TestCase
         Livewire::actingAs($this->admin)
             ->test(GoogleDriveSettings::class)
             ->call('disconnect')
-            ->assertSee(__('Sin conectar'));
+            ->assertSee(__('Not connected'));
 
         $this->assertFalse(app(GoogleDriveService::class)->isConnected());
         $this->assertSame(0, Setting::where('key', GoogleDriveService::REFRESH_TOKEN_SETTING)->count());

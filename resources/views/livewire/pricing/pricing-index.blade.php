@@ -19,38 +19,38 @@
     }"
     class="space-y-4"
 >
-    <x-ui.page-header :title="__('Lista de precios')" :subtitle="__('Catálogo por categorías y productos, costos de proveedor y calculadora de precios.')">
+    <x-ui.page-header :title="__('Price list')" :subtitle="__('Catalog by category and product, supplier costs and a price calculator.')">
         <x-slot:actions>
-            <button type="button" wire:click="openCalculator()" class="ui-btn ui-btn-secondary"><x-lucide-calculator />{{ __('Calculadora') }}</button>
-            <a href="{{ route('design-resources') }}" wire:navigate class="ui-btn ui-btn-secondary"><x-lucide-folder-down />{{ __('Recursos de Diseño') }}</a>
+            <button type="button" wire:click="openCalculator()" class="ui-btn ui-btn-secondary"><x-lucide-calculator />{{ __('Calculator') }}</button>
+            <a href="{{ route('design-resources') }}" wire:navigate class="ui-btn ui-btn-secondary"><x-lucide-folder-down />{{ __('Design Resources') }}</a>
             @if(auth()->user()?->canManagePricing())
-                <button type="button" wire:click="openCreateCategoryModal()" class="ui-btn ui-btn-secondary"><x-lucide-folder-plus />{{ __('Nueva Categoría') }}</button>
-                <button type="button" wire:click="openCreateProductModal()" class="ui-btn ui-btn-primary"><x-lucide-plus />{{ __('Nuevo Producto') }}</button>
+                <button type="button" wire:click="openCreateCategoryModal()" class="ui-btn ui-btn-secondary"><x-lucide-folder-plus />{{ __('New category') }}</button>
+                <button type="button" wire:click="openCreateProductModal()" class="ui-btn ui-btn-primary"><x-lucide-plus />{{ __('New Product') }}</button>
             @endif
         </x-slot:actions>
         <x-slot:toolbar>
             <div class="relative w-72">
                 <x-lucide-search class="pointer-events-none absolute left-2.5 top-2 h-4 w-4 text-ink-3" />
-                <input type="text" wire:model.live.debounce.250ms="search" placeholder="{{ __('Buscar producto, variante, proveedor...') }}" class="ui-input pl-8">
+                <input type="text" wire:model.live.debounce.250ms="search" placeholder="{{ __('Search product, variant, supplier...') }}" class="ui-input pl-8">
             </div>
-            <select wire:model.live="filterCategory" class="ui-select w-48" aria-label="{{ __('Categoría') }}">
-                <option value="all">{{ __('Todas las categorías') }}</option>
+            <select wire:model.live="filterCategory" class="ui-select w-48" aria-label="{{ __('Category') }}">
+                <option value="all">{{ __('All categories') }}</option>
                 @foreach($this->categories as $cat)
                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                 @endforeach
             </select>
-            <select wire:model.live="filterSupplier" class="ui-select w-48" aria-label="{{ __('Proveedor') }}">
-                <option value="all">{{ __('Todos los proveedores') }}</option>
+            <select wire:model.live="filterSupplier" class="ui-select w-48" aria-label="{{ __('Supplier') }}">
+                <option value="all">{{ __('All suppliers') }}</option>
                 @foreach($this->suppliers as $sup)
                     <option value="{{ $sup->id }}">{{ $sup->name }}</option>
                 @endforeach
             </select>
             @if($search !== '' || $filterCategory !== 'all' || $filterSupplier !== 'all')
-                <button type="button" wire:click="resetFilters" class="ui-btn ui-btn-ghost"><x-lucide-rotate-ccw />{{ __('Limpiar') }}</button>
+                <button type="button" wire:click="resetFilters" class="ui-btn ui-btn-ghost"><x-lucide-rotate-ccw />{{ __('Clear') }}</button>
             @endif
             <div class="ml-auto flex items-center gap-1">
-                <button type="button" @click="toggleAll(true)" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Expandir todas las categorías') }}"><x-lucide-chevrons-down-up class="rotate-180" />{{ __('Expandir Todas') }}</button>
-                <button type="button" @click="toggleAll(false)" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Colapsar todas las categorías') }}"><x-lucide-chevrons-down-up />{{ __('Colapsar Todas') }}</button>
+                <button type="button" @click="toggleAll(true)" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Expand all categories') }}"><x-lucide-chevrons-down-up class="rotate-180" />{{ __('Expand all') }}</button>
+                <button type="button" @click="toggleAll(false)" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Collapse all categories') }}"><x-lucide-chevrons-down-up />{{ __('Collapse all') }}</button>
             </div>
         </x-slot:toolbar>
     </x-ui.page-header>
@@ -59,7 +59,7 @@
         <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)"
              class="flex items-center justify-between gap-2 rounded-card border border-line bg-surface px-3 py-2 text-body text-ink">
             <span class="flex items-center gap-2"><x-lucide-check-circle-2 class="h-4 w-4 shrink-0 text-ok" />{{ $feedbackMessage }}</span>
-            <button type="button" @click="show = false" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+            <button type="button" @click="show = false" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
         </div>
     @endif
 
@@ -86,15 +86,15 @@
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-2">
                             <h2 class="ui-section-title truncate">{{ $category->name }}</h2>
-                            <span class="rounded-full bg-sunken px-2 py-0.5 text-meta tabular-nums text-ink-2">{{ trans_choice('{1} :count producto|[0,*] :count productos', $catProducts->count()) }}</span>
+                            <span class="rounded-full bg-sunken px-2 py-0.5 text-meta tabular-nums text-ink-2">{{ trans_choice('{1} :count product|[0,*] :count products', $catProducts->count()) }}</span>
                         </div>
                         @if($category->description)
                             <p class="line-clamp-1 text-body text-ink-3">{{ $category->description }}</p>
                         @endif
                     </div>
                     @if($canManage)
-                        <button type="button" x-on:click.stop="" wire:click="openEditCategoryModal({{ $category->id }})" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Editar nombre, portada y descripción de esta categoría') }}">
-                            <x-lucide-pencil />{{ __('Editar Categoría') }}
+                        <button type="button" x-on:click.stop="" wire:click="openEditCategoryModal({{ $category->id }})" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Edit this category\'s name, cover and description') }}">
+                            <x-lucide-pencil />{{ __('Edit category') }}
                         </button>
                     @endif
                 </div>
@@ -106,12 +106,12 @@
                                 <div class="flex min-w-0 items-center gap-2">
                                     <x-lucide-chevron-down class="h-4 w-4 shrink-0 text-ink-3 transition-transform" ::class="openProduct ? '' : '-rotate-90'" />
                                     <h3 class="truncate text-row font-medium text-ink">{{ $product->name }}</h3>
-                                    <span class="text-meta text-ink-3">{{ trans_choice('{1} :count variante|[0,*] :count variantes', $product->variants->count()) }}</span>
+                                    <span class="text-meta text-ink-3">{{ trans_choice('{1} :count variant|[0,*] :count variants', $product->variants->count()) }}</span>
                                 </div>
                                 @if($canManage)
                                     <div class="flex shrink-0 items-center gap-1.5" x-on:click.stop="">
-                                        <button type="button" wire:click="openEditProductModal({{ $product->id }})" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Editar detalles del producto') }}"><x-lucide-pencil />{{ __('Editar') }}</button>
-                                        <button type="button" wire:click="openAddVariantModal({{ $product->id }})" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-plus />{{ __('Nueva Variante') }}</button>
+                                        <button type="button" wire:click="openEditProductModal({{ $product->id }})" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Edit product details') }}"><x-lucide-pencil />{{ __('Edit') }}</button>
+                                        <button type="button" wire:click="openAddVariantModal({{ $product->id }})" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-plus />{{ __('New variant') }}</button>
                                     </div>
                                 @endif
                             </div>
@@ -129,7 +129,7 @@
                                             @if($product->description)<p class="text-body text-ink-2">{{ $product->description }}</p>@endif
                                             @if(!empty($sizes))
                                                 <div class="flex flex-wrap items-center gap-1">
-                                                    <span class="mr-1 text-meta text-ink-3">{{ __('Medidas:') }}</span>
+                                                    <span class="mr-1 text-meta text-ink-3">{{ __('Dimensions:') }}</span>
                                                     @foreach($sizes as $sz)<span class="rounded-control border border-line bg-surface px-1.5 py-0.5 text-meta tabular-nums text-ink-2">{{ $sz }}</span>@endforeach
                                                 </div>
                                             @endif
@@ -151,7 +151,7 @@
                                                 <button type="button" wire:key="variant-thumb-{{ $variant->id }}-{{ md5($variant->image_url ?? 'none') }}" x-data="{ imgError: false }" x-effect="imgError = false"
                                                         @if($canManage) wire:click="openEditVariantModal({{ $variant->id }})" @endif
                                                         class="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-control border border-line bg-surface hover:border-line-strong"
-                                                        title="{{ __('Subir o cambiar imagen de este subproducto') }}">
+                                                        title="{{ __('Upload or change this subproduct\'s image') }}">
                                                     @if($variant->image_url)
                                                         <img src="{{ $variant->image_url }}" alt="{{ $variant->name }}" x-show="!imgError" x-on:error="imgError = true" class="h-full w-full object-cover">
                                                         <x-lucide-image x-show="imgError" x-cloak class="h-4 w-4 text-ink-3" />
@@ -160,16 +160,16 @@
                                                     @endif
                                                 </button>
                                                 <h4 class="text-row font-medium text-ink">{{ $variant->name }}</h4>
-                                                @if($variantSupplier)<x-ui.tag tone="neutral" title="{{ __('Proveedor de este subproducto') }}">{{ $variantSupplier->name }}</x-ui.tag>@endif
+                                                @if($variantSupplier)<x-ui.tag tone="neutral" title="{{ __('Supplier for this subproduct') }}">{{ $variantSupplier->name }}</x-ui.tag>@endif
                                                 @if($variant->turnaround_time)<x-ui.tag tone="neutral" icon="clock">{{ $variant->turnaround_time }}</x-ui.tag>@endif
                                                 @if($variant->specs)<span class="text-body text-ink-3">{{ $variant->specs }}</span>@endif
                                             </div>
                                             <div class="flex flex-wrap items-center gap-1.5">
-                                                @if($vWeb)<a href="{{ $vWeb }}" target="_blank" rel="noopener noreferrer" title="{{ __('Web del proveedor para este subproducto') }}" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-globe />{{ __('Web') }}</a>@endif
-                                                @if($vMockup)<a href="{{ $vMockup }}" target="_blank" rel="noopener noreferrer" title="{{ __('Mockup para este subproducto') }}" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-image />{{ __('Mockup') }}</a>@endif
-                                                @if($vTemplate)<a href="{{ $vTemplate }}" target="_blank" rel="noopener noreferrer" title="{{ __('Template para este subproducto') }}" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-box />{{ __('Template') }}</a>@endif
+                                                @if($vWeb)<a href="{{ $vWeb }}" target="_blank" rel="noopener noreferrer" title="{{ __('Supplier website for this subproduct') }}" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-globe />{{ __('Web') }}</a>@endif
+                                                @if($vMockup)<a href="{{ $vMockup }}" target="_blank" rel="noopener noreferrer" title="{{ __('Mockup for this subproduct') }}" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-image />{{ __('Mockup') }}</a>@endif
+                                                @if($vTemplate)<a href="{{ $vTemplate }}" target="_blank" rel="noopener noreferrer" title="{{ __('Template for this subproduct') }}" class="ui-btn ui-btn-secondary ui-btn-sm"><x-lucide-box />{{ __('Template') }}</a>@endif
                                                 @if($canManage)
-                                                    <button type="button" wire:click="openEditVariantModal({{ $variant->id }})" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Editar proveedor y recursos de este subproducto') }}"><x-lucide-pencil />{{ __('Editar') }}</button>
+                                                    <button type="button" wire:click="openEditVariantModal({{ $variant->id }})" class="ui-btn ui-btn-ghost ui-btn-sm" title="{{ __('Edit this subproduct\'s supplier and resources') }}"><x-lucide-pencil />{{ __('Edit') }}</button>
                                                 @endif
                                             </div>
                                         </div>
@@ -178,12 +178,12 @@
                                             <table class="ui-table">
                                                 <thead>
                                                     <tr>
-                                                        <th class="is-num w-28">{{ __('Cantidad') }}</th>
-                                                        <th class="is-num w-32">{{ __('Costo Material') }}</th>
-                                                        <th class="is-num w-24">{{ __('% Margen') }}</th>
-                                                        <th class="is-num w-32">{{ __('Precio Final') }}</th>
-                                                        <th class="is-num w-28">{{ __('Por Unidad') }}</th>
-                                                        <th class="w-20 text-right"><span class="sr-only">{{ __('Acciones') }}</span></th>
+                                                        <th class="is-num w-28">{{ __('Quantity') }}</th>
+                                                        <th class="is-num w-32">{{ __('Material cost') }}</th>
+                                                        <th class="is-num w-24">{{ __('Markup %') }}</th>
+                                                        <th class="is-num w-32">{{ __('Final Price') }}</th>
+                                                        <th class="is-num w-28">{{ __('Per unit') }}</th>
+                                                        <th class="w-20 text-right"><span class="sr-only">{{ __('Actions') }}</span></th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -191,8 +191,8 @@
                                                         <tr wire:key="vt-row-{{ $tier->id }}" :class="savedTierId === {{ $tier->id }} ? '[&>td]:bg-ok-soft' : ''">
                                                             <td class="is-num font-medium">
                                                                 @if($canManage)
-                                                                    <input type="number" value="{{ $tier->quantity }}" data-from="{{ $tier->quantity }}" aria-label="{{ __('Cantidad') }}"
-                                                                           @change.stop="confirmTierChange($el, {{ $tier->id }}, 'quantity', @js(__('Cantidad')))"
+                                                                    <input type="number" value="{{ $tier->quantity }}" data-from="{{ $tier->quantity }}" aria-label="{{ __('Quantity') }}"
+                                                                           @change.stop="confirmTierChange($el, {{ $tier->id }}, 'quantity', @js(__('Quantity')))"
                                                                            @keydown.enter.prevent="$el.blur()" class="ui-input h-7 w-24 text-right tabular-nums">
                                                                 @else
                                                                     {{ number_format($tier->quantity) }}
@@ -200,8 +200,8 @@
                                                             </td>
                                                             <td class="is-num">
                                                                 @if($canManage)
-                                                                    <input type="number" step="0.01" value="{{ $tier->production_cost }}" data-from="{{ $tier->production_cost }}" aria-label="{{ __('Costo Material') }}"
-                                                                           @change.stop="confirmTierChange($el, {{ $tier->id }}, 'production_cost', @js(__('Costo Material')), '$')"
+                                                                    <input type="number" step="0.01" value="{{ $tier->production_cost }}" data-from="{{ $tier->production_cost }}" aria-label="{{ __('Material cost') }}"
+                                                                           @change.stop="confirmTierChange($el, {{ $tier->id }}, 'production_cost', @js(__('Material cost')), '$')"
                                                                            @keydown.enter.prevent="$el.blur()" class="ui-input h-7 w-28 text-right tabular-nums">
                                                                 @else
                                                                     ${{ number_format($tier->production_cost, 2) }}
@@ -209,8 +209,8 @@
                                                             </td>
                                                             <td class="is-num">
                                                                 @if($canManage)
-                                                                    <input type="number" step="1" value="{{ $tier->markup_percent }}" data-from="{{ $tier->markup_percent }}" aria-label="{{ __('% Margen') }}"
-                                                                           @change.stop="confirmTierChange($el, {{ $tier->id }}, 'markup_percent', @js(__('% Margen')), '', '%')"
+                                                                    <input type="number" step="1" value="{{ $tier->markup_percent }}" data-from="{{ $tier->markup_percent }}" aria-label="{{ __('Markup %') }}"
+                                                                           @change.stop="confirmTierChange($el, {{ $tier->id }}, 'markup_percent', @js(__('Markup %')), '', '%')"
                                                                            @keydown.enter.prevent="$el.blur()" class="ui-input h-7 w-20 text-right tabular-nums">
                                                                 @else
                                                                     +{{ number_format($tier->markup_percent, 0) }}%
@@ -219,36 +219,36 @@
                                                             <td class="is-num font-semibold">${{ number_format($tier->final_price, 2) }}</td>
                                                             <td class="is-num text-ink-3">${{ number_format($tier->unit_price, 3) }}/u</td>
                                                             <td class="whitespace-nowrap text-right">
-                                                                <button type="button" wire:click="openCalculator({{ $product->id }}, {{ $variant->id }})" title="{{ __('Abrir en Calculadora') }}" aria-label="{{ __('Abrir en Calculadora') }}" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"><x-lucide-calculator /></button>
+                                                                <button type="button" wire:click="openCalculator({{ $product->id }}, {{ $variant->id }})" title="{{ __('Open in calculator') }}" aria-label="{{ __('Open in calculator') }}" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"><x-lucide-calculator /></button>
                                                                 @if($canManage)
-                                                                    <button type="button" wire:click="deleteTier({{ $tier->id }})" wire:confirm="{{ __('¿Seguro que deseas eliminar esta escala de precio?') }}" title="{{ __('Eliminar escala') }}" aria-label="{{ __('Eliminar escala') }}" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"><x-lucide-trash-2 /></button>
+                                                                    <button type="button" wire:click="deleteTier({{ $tier->id }})" wire:confirm="{{ __('Delete this price tier?') }}" title="{{ __('Delete tier') }}" aria-label="{{ __('Delete tier') }}" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm"><x-lucide-trash-2 /></button>
                                                                 @endif
                                                             </td>
                                                         </tr>
                                                     @empty
-                                                        <tr><td colspan="6" class="py-4 text-center text-ink-3">{{ __('Sin escalas de cantidad configuradas para este subproducto.') }}</td></tr>
+                                                        <tr><td colspan="6" class="py-4 text-center text-ink-3">{{ __('No quantity tiers set for this subproduct.') }}</td></tr>
                                                     @endforelse
                                                 </tbody>
                                             </table>
                                         </div>
                                         @if($canManage)
                                             <button type="button" wire:click="openAddTierModal({{ $variant->id }})" class="flex w-full items-center gap-1.5 border-t border-line px-3 py-2 text-body text-ink-2 transition-colors hover:bg-sunken/50 hover:text-ink">
-                                                <x-lucide-plus class="h-4 w-4" />{{ __('Agrega nueva opción de precio') }}
+                                                <x-lucide-plus class="h-4 w-4" />{{ __('Add new price option') }}
                                             </button>
                                         @endif
                                     </div>
                                 @empty
-                                    <p class="rounded-card border border-line bg-surface p-6 text-center text-body text-ink-3">{{ __('No hay variantes o subproductos creados para este producto.') }}</p>
+                                    <p class="rounded-card border border-line bg-surface p-6 text-center text-body text-ink-3">{{ __('No variants or subproducts exist for this product.') }}</p>
                                 @endforelse
                             </div>
                         </div>
                     @empty
-                        <p class="p-8 text-center text-body text-ink-3">{{ __('No hay productos en esta categoría con el filtro seleccionado.') }}</p>
+                        <p class="p-8 text-center text-body text-ink-3">{{ __('No products in this category match the selected filter.') }}</p>
                     @endforelse
                 </div>
             </section>
         @empty
-            <div class="ui-card"><x-ui.empty icon="package-open" :title="__('No se encontraron categorías ni productos.')" :description="__('Prueba ajustando los filtros de búsqueda o categoría.')" /></div>
+            <div class="ui-card"><x-ui.empty icon="package-open" :title="__('No categories or products found.')" :description="__('Try adjusting the search or category filters.')" /></div>
         @endforelse
     </div>
 
@@ -262,11 +262,11 @@
                             <x-lucide-calculator class="w-4 h-4" />
                         </div>
                         <div>
-                            <h3 class="text-base font-semibold text-ink">{{ __('Calculadora de Precios & Margen') }}</h3>
-                            <p class="text-xs text-ink-3">{{ __('Simula costos, porcentajes de utilidad y precios por volumen.') }}</p>
+                            <h3 class="text-base font-semibold text-ink">{{ __('Pricing & Margin Calculator') }}</h3>
+                            <p class="text-xs text-ink-3">{{ __('Simulate costs, markups and volume pricing.') }}</p>
                         </div>
                     </div>
-                    <button wire:click="closeCalculator" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <button wire:click="closeCalculator" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 @php
@@ -282,7 +282,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="ui-label">
-                            {{ __('Cantidad (unidades)') }}
+                            {{ __('Quantity (units)') }}
                         </label>
                         <input 
                             type="number" 
@@ -308,7 +308,7 @@
                 <!-- Markup Presets -->
                 <div class="space-y-1.5">
                     <div class="flex items-center justify-between text-xs">
-                        <label class="text-meta font-semibold   text-ink-3">{{ __('% Margen sobre Costo') }}</label>
+                        <label class="text-meta font-semibold   text-ink-3">{{ __('Markup on cost') }}</label>
                         <span class="font-mono font-semibold text-ink-3">+{{ $calcMarkup }}%</span>
                     </div>
                     <div class="flex items-center gap-1.5">
@@ -327,15 +327,15 @@
                 <!-- Live Results Cards -->
                 <div class="grid grid-cols-3 gap-2 bg-sunken p-3.5 rounded-card border border-line">
                     <div class="text-center">
-                        <span class="text-meta font-semibold  text-ink-3 block">{{ __('Ganancia Neta') }}</span>
+                        <span class="text-meta font-semibold  text-ink-3 block">{{ __('Net profit') }}</span>
                         <span class="text-sm font-semibold font-mono text-ink-3">${{ number_format($simNetProfit, 2) }}</span>
                     </div>
                     <div class="text-center border-x border-line">
-                        <span class="text-meta font-semibold  text-ink-3 block">{{ __('Precio Final') }}</span>
+                        <span class="text-meta font-semibold  text-ink-3 block">{{ __('Final Price') }}</span>
                         <span class="text-base font-semibold font-mono text-ink">${{ number_format($simFinalPrice, 2) }}</span>
                     </div>
                     <div class="text-center">
-                        <span class="text-meta font-semibold  text-ink-3 block">{{ __('Por Unidad') }}</span>
+                        <span class="text-meta font-semibold  text-ink-3 block">{{ __('Per unit') }}</span>
                         <span class="text-sm font-semibold font-mono text-ink-2">${{ number_format($simUnitPrice, 4) }}/u</span>
                     </div>
                 </div>
@@ -346,7 +346,7 @@
                         wire:click="closeCalculator" 
                         class="ui-btn ui-btn-secondary"
                     >
-                        {{ __('Cerrar') }}
+                        {{ __('Close') }}
                     </button>
 
                     @if($calcVariantId && auth()->user()?->canManagePricing())
@@ -355,7 +355,7 @@
                             class="ui-btn ui-btn-primary"
                         >
                             <x-lucide-save class="w-3.5 h-3.5" />
-                            <span>{{ __('Aplicar a la Lista') }}</span>
+                            <span>{{ __('Apply to price list') }}</span>
                         </button>
                     @endif
                 </div>
@@ -368,17 +368,17 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-md w-full p-6 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-base font-semibold text-ink">{{ __('Nuevo Producto') }}</h3>
-                    <button wire:click="$set('createProductModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-base font-semibold text-ink">{{ __('New Product') }}</h3>
+                    <button wire:click="$set('createProductModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Nombre del Producto') }} *</label>
+                        <label class="ui-label">{{ __('Product Name') }} *</label>
                         <input 
                             type="text" 
                             wire:model="newProductName"
-                            placeholder="{{ __('ej. Business Card, Roll-Up Banner') }}"
+                            placeholder="{{ __('e.g. Business card, roll-up banner') }}"
                             class="ui-input"
                         >
                         @error('newProductName') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -386,7 +386,7 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="ui-label">{{ __('Categoría') }} *</label>
+                            <label class="ui-label">{{ __('Category') }} *</label>
                             <select 
                                 wire:model="newCategoryId"
                                 class="ui-select"
@@ -397,12 +397,12 @@
                             </select>
                         </div>
                         <div>
-                            <label class="ui-label">{{ __('Proveedor Principal') }}</label>
+                            <label class="ui-label">{{ __('Main supplier') }}</label>
                             <select 
                                 wire:model="newSupplierId"
                                 class="ui-select"
                             >
-                                <option value="">{{ __('Sin proveedor') }}</option>
+                                <option value="">{{ __('No supplier') }}</option>
                                 @foreach($this->suppliers as $s)
                                     <option value="{{ $s->id }}">{{ $s->name }}</option>
                                 @endforeach
@@ -411,21 +411,21 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Subproducto / Variante Inicial') }} *</label>
+                        <label class="ui-label">{{ __('Initial subproduct / variant') }} *</label>
                         <input 
                             type="text" 
                             wire:model="newInitialVariant"
-                            placeholder="{{ __('ej. Regular, Rush, Foil') }}"
+                            placeholder="{{ __('e.g. Regular, rush, foil') }}"
                             class="ui-input"
                         >
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Tamaños Posibles') }} (separados por coma)</label>
+                        <label class="ui-label">{{ __('Possible sizes') }} (separados por coma)</label>
                         <input 
                             type="text" 
                             wire:model="newSizes"
-                            placeholder="{{ __('ej. 33\'\' x 81\'\', 38\'\' x 81\'\', 60\'\' x 81\'\'') }}"
+                            placeholder="{{ __('e.g. 33\'\' x 81\'\', 38\'\' x 81\'\', 60\'\' x 81\'\'') }}"
                             class="ui-input"
                         >
                     </div>
@@ -435,9 +435,9 @@
                         <label class="ui-label">
                             <span class="flex items-center gap-1.5">
                                 <x-lucide-image class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Imagen de Miniatura') }}</span>
+                                <span>{{ __('Thumbnail image') }}</span>
                             </span>
-                            <span class="text-meta text-ink-3 font-normal">{{ __('Subir archivo o URL') }}</span>
+                            <span class="text-meta text-ink-3 font-normal">{{ __('Upload a file or URL') }}</span>
                         </label>
 
                         <div class="p-3 bg-sunken rounded-card border border-line space-y-2.5">
@@ -476,9 +476,9 @@
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-sunken text-ink-2 text-xs font-semibold rounded-lg border border-line  transition cursor-pointer select-none"
                                     >
                                         <x-lucide-upload class="w-3.5 h-3.5 text-ink-2" />
-                                        <span>{{ __('Subir Imagen...') }}</span>
+                                        <span>{{ __('Upload image...') }}</span>
                                     </label>
-                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (máx 5MB)') }}</span>
+                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (max 5MB)') }}</span>
                                 </div>
                             </div>
                         </div>
@@ -486,11 +486,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Descripción / Notas') }}</label>
+                        <label class="ui-label">{{ __('Description / notes') }}</label>
                         <textarea 
                             wire:model="newDescription"
                             rows="2"
-                            placeholder="{{ __('Detalles sobre materiales, uso y aplicaciones...') }}"
+                            placeholder="{{ __('Details about materials, use and applications...') }}"
                             class="ui-input"
                         ></textarea>
                     </div>
@@ -501,13 +501,13 @@
                         wire:click="$set('createProductModalOpen', false)"
                         class="ui-btn ui-btn-secondary"
                     >
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         wire:click="createProduct"
                         class="ui-btn ui-btn-primary"
                     >
-                        {{ __('Crear Producto') }}
+                        {{ __('Create product') }}
                     </button>
                 </div>
             </div>
@@ -519,17 +519,17 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-lg w-full p-6 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-base font-semibold text-ink">{{ __('Nuevo Subproducto / Variante') }}</h3>
-                    <button wire:click="$set('addVariantModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-base font-semibold text-ink">{{ __('New subproduct / variant') }}</h3>
+                    <button wire:click="$set('addVariantModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Nombre del Subproducto') }} *</label>
+                        <label class="ui-label">{{ __('Subproduct name') }} *</label>
                         <input 
                             type="text" 
                             wire:model="newVariantName"
-                            placeholder="{{ __('ej. Foil Front & Back, Rush 24h, Plastic 20pt') }}"
+                            placeholder="{{ __('e.g. Foil front & back, rush 24h, plastic 20pt') }}"
                             class="ui-input"
                         >
                         @error('newVariantName') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -537,33 +537,33 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="ui-label">{{ __('Proveedor de este Subproducto') }}</label>
+                            <label class="ui-label">{{ __('Supplier for this subproduct') }}</label>
                             <select 
                                 wire:model="newVariantSupplierId"
                                 class="ui-select"
                             >
-                                <option value="">{{ __('Sin proveedor específico') }}</option>
+                                <option value="">{{ __('No specific supplier') }}</option>
                                 @foreach($this->suppliers as $s)
                                     <option value="{{ $s->id }}">{{ $s->name }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div>
-                            <label class="ui-label">{{ __('Tiempo de Entrega (Turnaround)') }}</label>
+                            <label class="ui-label">{{ __('Turnaround time') }}</label>
                             <input 
                                 type="text" 
                                 wire:model="newVariantTurnaround"
-                                placeholder="{{ __('ej. 24h, 2-3 días hábiles') }}"
+                                placeholder="{{ __('e.g. 24h, 2-3 business days') }}"
                                 class="ui-input"
                             >
                         </div>
                     </div>
 
                     <div class="space-y-2 pt-1 border-t border-line">
-                        <span class="text-meta font-semibold   text-ink-3 block">{{ __('Recursos de Diseño & Enlaces:') }}</span>
+                        <span class="text-meta font-semibold   text-ink-3 block">{{ __('Design resources and links:') }}</span>
                         
                         <div>
-                            <label class="ui-label">{{ __('URL Web del Proveedor') }}</label>
+                            <label class="ui-label">{{ __('Supplier website URL') }}</label>
                             <input 
                                 type="text" 
                                 wire:model="newVariantWebsiteUrl"
@@ -575,7 +575,7 @@
 
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="ui-label">{{ __('URL de Mockup') }}</label>
+                                <label class="ui-label">{{ __('Mockup URL') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model="newVariantMockupUrl"
@@ -584,7 +584,7 @@
                                 >
                             </div>
                             <div>
-                                <label class="ui-label">{{ __('URL de Template') }}</label>
+                                <label class="ui-label">{{ __('Template URL') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model="newVariantTemplateUrl"
@@ -600,9 +600,9 @@
                         <label class="ui-label">
                             <span class="flex items-center gap-1.5">
                                 <x-lucide-image class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Imagen del Subproducto') }}</span>
+                                <span>{{ __('Subproduct image') }}</span>
                             </span>
-                            <span class="text-meta text-ink-3 font-normal">{{ __('Subir archivo o pegar URL') }}</span>
+                            <span class="text-meta text-ink-3 font-normal">{{ __('Upload a file or paste a URL') }}</span>
                         </label>
 
                         <div class="p-3 bg-sunken rounded-card border border-line space-y-2.5">
@@ -644,14 +644,14 @@
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-sunken text-ink-2 text-xs font-semibold rounded-lg border border-line  transition cursor-pointer select-none"
                                     >
                                         <x-lucide-upload class="w-3.5 h-3.5 text-ink-2" />
-                                        <span>{{ __('Subir Imagen...') }}</span>
+                                        <span>{{ __('Upload image...') }}</span>
                                     </label>
-                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (máx 5MB)') }}</span>
+                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (max 5MB)') }}</span>
                                 </div>
                             </div>
 
                             <div class="pt-2 border-t border-line">
-                                <label class="ui-label">{{ __('O pegar URL directa de imagen:') }}</label>
+                                <label class="ui-label">{{ __('Or paste a direct image URL:') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model.live="newVariantImageUrl"
@@ -665,11 +665,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Especificaciones de Material / Acabado') }}</label>
+                        <label class="ui-label">{{ __('Material / finish specs') }}</label>
                         <textarea 
                             wire:model="newVariantSpecs"
                             rows="2"
-                            placeholder="{{ __('ej. 16pt Premium Cardstock con laminado brillante...') }}"
+                            placeholder="{{ __('e.g. 16pt premium cardstock with gloss lamination...') }}"
                             class="ui-input"
                         ></textarea>
                     </div>
@@ -680,13 +680,13 @@
                         wire:click="$set('addVariantModalOpen', false)"
                         class="ui-btn ui-btn-secondary"
                     >
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         wire:click="createVariant"
                         class="ui-btn ui-btn-primary"
                     >
-                        {{ __('Crear Subproducto') }}
+                        {{ __('Create subproduct') }}
                     </button>
                 </div>
             </div>
@@ -698,17 +698,17 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-lg w-full p-6 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-base font-semibold text-ink">{{ __('Editar Subproducto') }}</h3>
-                    <button wire:click="$set('editVariantModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-base font-semibold text-ink">{{ __('Edit subproduct') }}</h3>
+                    <button wire:click="$set('editVariantModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Nombre del Subproducto') }} *</label>
+                        <label class="ui-label">{{ __('Subproduct name') }} *</label>
                         <input 
                             type="text" 
                             wire:model="editVariantName"
-                            placeholder="{{ __('ej. Foil Front & Back, Rush 24h, Plastic 20pt') }}"
+                            placeholder="{{ __('e.g. Foil front & back, rush 24h, plastic 20pt') }}"
                             class="ui-input"
                         >
                         @error('editVariantName') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -716,33 +716,33 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="ui-label">{{ __('Proveedor de este Subproducto') }}</label>
+                            <label class="ui-label">{{ __('Supplier for this subproduct') }}</label>
                             <select 
                                 wire:model="editVariantSupplierId"
                                 class="ui-select"
                             >
-                                <option value="">{{ __('Sin proveedor específico') }}</option>
+                                <option value="">{{ __('No specific supplier') }}</option>
                                 @foreach($this->suppliers as $s)
                                     <option value="{{ $s->id }}">{{ $s->name }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div>
-                            <label class="ui-label">{{ __('Tiempo de Entrega (Turnaround)') }}</label>
+                            <label class="ui-label">{{ __('Turnaround time') }}</label>
                             <input 
                                 type="text" 
                                 wire:model="editVariantTurnaround"
-                                placeholder="{{ __('ej. 24h, 2-3 días hábiles') }}"
+                                placeholder="{{ __('e.g. 24h, 2-3 business days') }}"
                                 class="ui-input"
                             >
                         </div>
                     </div>
 
                     <div class="space-y-2 pt-1 border-t border-line">
-                        <span class="text-meta font-semibold   text-ink-3 block">{{ __('Recursos de Diseño & Enlaces:') }}</span>
+                        <span class="text-meta font-semibold   text-ink-3 block">{{ __('Design resources and links:') }}</span>
                         
                         <div>
-                            <label class="ui-label">{{ __('URL Web del Proveedor') }}</label>
+                            <label class="ui-label">{{ __('Supplier website URL') }}</label>
                             <input 
                                 type="text" 
                                 wire:model="editVariantWebsiteUrl"
@@ -754,7 +754,7 @@
 
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <label class="ui-label">{{ __('URL de Mockup') }}</label>
+                                <label class="ui-label">{{ __('Mockup URL') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model="editVariantMockupUrl"
@@ -763,7 +763,7 @@
                                 >
                             </div>
                             <div>
-                                <label class="ui-label">{{ __('URL de Template') }}</label>
+                                <label class="ui-label">{{ __('Template URL') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model="editVariantTemplateUrl"
@@ -779,9 +779,9 @@
                         <label class="ui-label">
                             <span class="flex items-center gap-1.5">
                                 <x-lucide-image class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Imagen del Subproducto') }}</span>
+                                <span>{{ __('Subproduct image') }}</span>
                             </span>
-                            <span class="text-meta text-ink-3 font-normal">{{ __('Subir archivo o pegar URL') }}</span>
+                            <span class="text-meta text-ink-3 font-normal">{{ __('Upload a file or paste a URL') }}</span>
                         </label>
 
                         <div class="p-3 bg-sunken rounded-card border border-line space-y-2.5">
@@ -823,14 +823,14 @@
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-sunken text-ink-2 text-xs font-semibold rounded-lg border border-line  transition cursor-pointer select-none"
                                     >
                                         <x-lucide-upload class="w-3.5 h-3.5 text-ink-2" />
-                                        <span>{{ __('Subir Nueva Imagen...') }}</span>
+                                        <span>{{ __('Upload new image...') }}</span>
                                     </label>
-                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (máx 5MB)') }}</span>
+                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (max 5MB)') }}</span>
                                 </div>
                             </div>
 
                             <div class="pt-2 border-t border-line">
-                                <label class="ui-label">{{ __('O editar URL directa:') }}</label>
+                                <label class="ui-label">{{ __('Or edit the direct URL:') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model.live="editVariantImageUrl"
@@ -844,11 +844,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Especificaciones de Material / Acabado') }}</label>
+                        <label class="ui-label">{{ __('Material / finish specs') }}</label>
                         <textarea 
                             wire:model="editVariantSpecs"
                             rows="2"
-                            placeholder="{{ __('ej. 16pt Premium Cardstock con laminado brillante...') }}"
+                            placeholder="{{ __('e.g. 16pt premium cardstock with gloss lamination...') }}"
                             class="ui-input"
                         ></textarea>
                     </div>
@@ -857,10 +857,10 @@
                 <div class="flex items-center justify-between gap-2 pt-2 border-t border-line">
                     <button 
                         wire:click="deleteVariant({{ $editingVariantId }})"
-                        wire:confirm="{{ __('¿Estás seguro de eliminar este subproducto y todas sus escalas?') }}"
+                        wire:confirm="{{ __('Delete this subproduct and all its tiers?') }}"
                         class="ui-btn ui-btn-danger"
                     >
-                        {{ __('Eliminar Subproducto') }}
+                        {{ __('Delete subproduct') }}
                     </button>
 
                     <div class="flex items-center gap-2">
@@ -868,13 +868,13 @@
                             wire:click="$set('editVariantModalOpen', false)"
                             class="ui-btn ui-btn-secondary"
                         >
-                            {{ __('Cancelar') }}
+                            {{ __('Cancel') }}
                         </button>
                         <button 
                             wire:click="saveVariant"
                             class="ui-btn ui-btn-primary"
                         >
-                            {{ __('Guardar Cambios') }}
+                            {{ __('Save Changes') }}
                         </button>
                     </div>
                 </div>
@@ -887,13 +887,13 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-sm w-full p-5 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-sm font-semibold text-ink">{{ __('Nueva Escala de Cantidad') }}</h3>
-                    <button wire:click="$set('addTierModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-sm font-semibold text-ink">{{ __('New quantity tier') }}</h3>
+                    <button wire:click="$set('addTierModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Cantidad (unidades)') }} *</label>
+                        <label class="ui-label">{{ __('Quantity (units)') }} *</label>
                         <input 
                             type="number" 
                             wire:model="newTierQty"
@@ -912,7 +912,7 @@
                             >
                         </div>
                         <div>
-                            <label class="ui-label">{{ __('% Margen') }} *</label>
+                            <label class="ui-label">{{ __('Markup %') }} *</label>
                             <input 
                                 type="number" 
                                 step="1"
@@ -928,13 +928,13 @@
                         wire:click="$set('addTierModalOpen', false)"
                         class="ui-btn ui-btn-secondary"
                     >
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         wire:click="createTier"
                         class="ui-btn ui-btn-primary"
                     >
-                        {{ __('Agregar Escala') }}
+                        {{ __('Add tier') }}
                     </button>
                 </div>
             </div>
@@ -946,17 +946,17 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-md w-full p-6 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-base font-semibold text-ink">{{ __('Nueva Categoría') }}</h3>
-                    <button wire:click="$set('createCategoryModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-base font-semibold text-ink">{{ __('New category') }}</h3>
+                    <button wire:click="$set('createCategoryModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Nombre de la Categoría') }} *</label>
+                        <label class="ui-label">{{ __('Category name') }} *</label>
                         <input 
                             type="text" 
                             wire:model="newCategoryName"
-                            placeholder="{{ __('ej. Stationary, Signs & Banners, Packaging') }}"
+                            placeholder="{{ __('e.g. Stationery, signs & banners, packaging') }}"
                             class="ui-input"
                         >
                         @error('newCategoryName') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -967,9 +967,9 @@
                         <label class="ui-label">
                             <span class="flex items-center gap-1.5">
                                 <x-lucide-image class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Imagen de Portada') }}</span>
+                                <span>{{ __('Cover image') }}</span>
                             </span>
-                            <span class="text-meta text-ink-3 font-normal">{{ __('Subir archivo o pegar URL') }}</span>
+                            <span class="text-meta text-ink-3 font-normal">{{ __('Upload a file or paste a URL') }}</span>
                         </label>
 
                         <div class="p-3 bg-sunken rounded-card border border-line space-y-2.5">
@@ -1011,14 +1011,14 @@
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-sunken text-ink-2 text-xs font-semibold rounded-lg border border-line  transition cursor-pointer select-none"
                                     >
                                         <x-lucide-upload class="w-3.5 h-3.5 text-ink-2" />
-                                        <span>{{ __('Subir Imagen...') }}</span>
+                                        <span>{{ __('Upload image...') }}</span>
                                     </label>
-                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (máx 5MB)') }}</span>
+                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (max 5MB)') }}</span>
                                 </div>
                             </div>
 
                             <div class="pt-2 border-t border-line">
-                                <label class="ui-label">{{ __('O pegar URL directa de imagen:') }}</label>
+                                <label class="ui-label">{{ __('Or paste a direct image URL:') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model.live="newCategoryImageUrl"
@@ -1032,11 +1032,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Descripción') }}</label>
+                        <label class="ui-label">{{ __('Description') }}</label>
                         <textarea 
                             wire:model="newCategoryDescription"
                             rows="2"
-                            placeholder="{{ __('Descripción general de la categoría...') }}"
+                            placeholder="{{ __('General description of the category...') }}"
                             class="ui-input"
                         ></textarea>
                     </div>
@@ -1047,13 +1047,13 @@
                         wire:click="$set('createCategoryModalOpen', false)"
                         class="ui-btn ui-btn-secondary"
                     >
-                        {{ __('Cancelar') }}
+                        {{ __('Cancel') }}
                     </button>
                     <button 
                         wire:click="createCategory"
                         class="ui-btn ui-btn-primary"
                     >
-                        {{ __('Crear Categoría') }}
+                        {{ __('Create category') }}
                     </button>
                 </div>
             </div>
@@ -1065,8 +1065,8 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-md w-full p-6 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-base font-semibold text-ink">{{ __('Editar Categoría') }}</h3>
-                    <button wire:click="$set('editCategoryModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-base font-semibold text-ink">{{ __('Edit category') }}</h3>
+                    <button wire:click="$set('editCategoryModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 @error('deleteCategoryError')
@@ -1077,11 +1077,11 @@
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Nombre de la Categoría') }} *</label>
+                        <label class="ui-label">{{ __('Category name') }} *</label>
                         <input 
                             type="text" 
                             wire:model="editCategoryName"
-                            placeholder="{{ __('ej. Stationary, Apparel') }}"
+                            placeholder="{{ __('e.g. Stationery, apparel') }}"
                             class="ui-input"
                         >
                         @error('editCategoryName') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -1092,9 +1092,9 @@
                         <label class="ui-label">
                             <span class="flex items-center gap-1.5">
                                 <x-lucide-image class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Imagen de Portada') }}</span>
+                                <span>{{ __('Cover image') }}</span>
                             </span>
-                            <span class="text-meta text-ink-3 font-normal">{{ __('Subir archivo o pegar URL') }}</span>
+                            <span class="text-meta text-ink-3 font-normal">{{ __('Upload a file or paste a URL') }}</span>
                         </label>
 
                         <div class="p-3 bg-sunken rounded-card border border-line space-y-2.5">
@@ -1136,14 +1136,14 @@
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-sunken text-ink-2 text-xs font-semibold rounded-lg border border-line  transition cursor-pointer select-none"
                                     >
                                         <x-lucide-upload class="w-3.5 h-3.5 text-ink-2" />
-                                        <span>{{ __('Subir Nueva Imagen...') }}</span>
+                                        <span>{{ __('Upload new image...') }}</span>
                                     </label>
-                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (máx 5MB)') }}</span>
+                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (max 5MB)') }}</span>
                                 </div>
                             </div>
 
                             <div class="pt-2 border-t border-line">
-                                <label class="ui-label">{{ __('O editar URL directa:') }}</label>
+                                <label class="ui-label">{{ __('Or edit the direct URL:') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model.live="editCategoryImageUrl"
@@ -1157,11 +1157,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Descripción de la Categoría') }}</label>
+                        <label class="ui-label">{{ __('Category description') }}</label>
                         <textarea 
                             wire:model="editCategoryDescription"
                             rows="2"
-                            placeholder="{{ __('Descripción de los productos pertenecientes a esta categoría...') }}"
+                            placeholder="{{ __('Description of the products in this category...') }}"
                             class="ui-input"
                         ></textarea>
                     </div>
@@ -1170,10 +1170,10 @@
                 <div class="flex items-center justify-between gap-2 pt-2 border-t border-line">
                     <button 
                         wire:click="deleteCategory({{ $editingCategoryId }})"
-                        wire:confirm="{{ __('¿Estás seguro de eliminar esta categoría?') }}"
+                        wire:confirm="{{ __('Delete this category?') }}"
                         class="ui-btn ui-btn-danger"
                     >
-                        {{ __('Eliminar Categoría') }}
+                        {{ __('Delete category') }}
                     </button>
 
                     <div class="flex items-center gap-2">
@@ -1181,13 +1181,13 @@
                             wire:click="$set('editCategoryModalOpen', false)"
                             class="ui-btn ui-btn-secondary"
                         >
-                            {{ __('Cancelar') }}
+                            {{ __('Cancel') }}
                         </button>
                         <button 
                             wire:click="saveCategory"
                             class="ui-btn ui-btn-primary"
                         >
-                            {{ __('Guardar Cambios') }}
+                            {{ __('Save Changes') }}
                         </button>
                     </div>
                 </div>
@@ -1200,17 +1200,17 @@
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
             <div class="bg-surface rounded-panel border border-line shadow-panel max-w-md w-full p-6 space-y-4">
                 <div class="flex items-center justify-between pb-2 border-b border-line">
-                    <h3 class="text-base font-semibold text-ink">{{ __('Editar Producto') }}</h3>
-                    <button wire:click="$set('editProductModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Cerrar') }}"><x-lucide-x /></button>
+                    <h3 class="text-base font-semibold text-ink">{{ __('Edit product') }}</h3>
+                    <button wire:click="$set('editProductModalOpen', false)" class="ui-btn ui-btn-ghost ui-btn-icon ui-btn-sm" aria-label="{{ __('Close') }}"><x-lucide-x /></button>
                 </div>
 
                 <div class="space-y-3 text-xs">
                     <div>
-                        <label class="ui-label">{{ __('Nombre del Producto') }} *</label>
+                        <label class="ui-label">{{ __('Product Name') }} *</label>
                         <input 
                             type="text" 
                             wire:model="editProductName"
-                            placeholder="{{ __('ej. Business Card, Roll-Up Banner') }}"
+                            placeholder="{{ __('e.g. Business card, roll-up banner') }}"
                             class="ui-input"
                         >
                         @error('editProductName') <span class="text-danger text-meta">{{ $message }}</span> @enderror
@@ -1218,7 +1218,7 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="ui-label">{{ __('Categoría') }} *</label>
+                            <label class="ui-label">{{ __('Category') }} *</label>
                             <select 
                                 wire:model="editProductCategoryId"
                                 class="ui-select"
@@ -1229,12 +1229,12 @@
                             </select>
                         </div>
                         <div>
-                            <label class="ui-label">{{ __('Proveedor Principal') }}</label>
+                            <label class="ui-label">{{ __('Main supplier') }}</label>
                             <select 
                                 wire:model="editProductSupplierId"
                                 class="ui-select"
                             >
-                                <option value="">{{ __('Sin proveedor principal') }}</option>
+                                <option value="">{{ __('No main supplier') }}</option>
                                 @foreach($this->suppliers as $s)
                                     <option value="{{ $s->id }}">{{ $s->name }}</option>
                                 @endforeach
@@ -1243,11 +1243,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Tamaños Posibles') }} (separados por coma)</label>
+                        <label class="ui-label">{{ __('Possible sizes') }} (separados por coma)</label>
                         <input 
                             type="text" 
                             wire:model="editProductSizes"
-                            placeholder="{{ __('ej. 33\'\' x 81\'\', 38\'\' x 81\'\'') }}"
+                            placeholder="{{ __('e.g. 33\'\' x 81\'\', 38\'\' x 81\'\'') }}"
                             class="ui-input"
                         >
                     </div>
@@ -1257,9 +1257,9 @@
                         <label class="ui-label">
                             <span class="flex items-center gap-1.5">
                                 <x-lucide-image class="w-3.5 h-3.5 text-ink-3" />
-                                <span>{{ __('Imagen de Miniatura') }}</span>
+                                <span>{{ __('Thumbnail image') }}</span>
                             </span>
-                            <span class="text-meta text-ink-3 font-normal">{{ __('Subir archivo o pegar URL') }}</span>
+                            <span class="text-meta text-ink-3 font-normal">{{ __('Upload a file or paste a URL') }}</span>
                         </label>
 
                         <div class="p-3 bg-sunken rounded-card border border-line space-y-2.5">
@@ -1301,14 +1301,14 @@
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-sunken text-ink-2 text-xs font-semibold rounded-lg border border-line  transition cursor-pointer select-none"
                                     >
                                         <x-lucide-upload class="w-3.5 h-3.5 text-ink-2" />
-                                        <span>{{ __('Subir Nueva Imagen...') }}</span>
+                                        <span>{{ __('Upload new image...') }}</span>
                                     </label>
-                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (máx 5MB)') }}</span>
+                                    <span class="block text-meta text-ink-3 mt-1">{{ __('PNG, JPG, WEBP (max 5MB)') }}</span>
                                 </div>
                             </div>
 
                             <div class="pt-2 border-t border-line">
-                                <label class="ui-label">{{ __('O editar URL directa:') }}</label>
+                                <label class="ui-label">{{ __('Or edit the direct URL:') }}</label>
                                 <input 
                                     type="text" 
                                     wire:model.live="editProductImageUrl"
@@ -1322,11 +1322,11 @@
                     </div>
 
                     <div>
-                        <label class="ui-label">{{ __('Descripción / Notas') }}</label>
+                        <label class="ui-label">{{ __('Description / notes') }}</label>
                         <textarea 
                             wire:model="editProductDescription"
                             rows="2"
-                            placeholder="{{ __('Detalles sobre el producto...') }}"
+                            placeholder="{{ __('Details about the product...') }}"
                             class="ui-input"
                         ></textarea>
                     </div>
@@ -1335,10 +1335,10 @@
                 <div class="flex items-center justify-between gap-2 pt-2 border-t border-line">
                     <button 
                         wire:click="deleteProduct({{ $editingProductId }})"
-                        wire:confirm="{{ __('¿Estás seguro de eliminar este producto y todas sus variantes?') }}"
+                        wire:confirm="{{ __('Delete this product and all its variants?') }}"
                         class="ui-btn ui-btn-danger"
                     >
-                        {{ __('Eliminar Producto') }}
+                        {{ __('Delete product') }}
                     </button>
 
                     <div class="flex items-center gap-2">
@@ -1346,13 +1346,13 @@
                             wire:click="$set('editProductModalOpen', false)"
                             class="ui-btn ui-btn-secondary"
                         >
-                            {{ __('Cancelar') }}
+                            {{ __('Cancel') }}
                         </button>
                         <button 
                             wire:click="saveProduct"
                             class="ui-btn ui-btn-primary"
                         >
-                            {{ __('Guardar Cambios') }}
+                            {{ __('Save Changes') }}
                         </button>
                     </div>
                 </div>

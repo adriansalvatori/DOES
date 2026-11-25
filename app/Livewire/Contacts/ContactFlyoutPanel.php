@@ -142,13 +142,13 @@ class ContactFlyoutPanel extends Component
 
         $newName = mb_strtoupper(trim($this->name), 'UTF-8');
         if ($newName !== '' && $newName !== (string) $contact->name) {
-            $changes[] = ['field' => __('Nombre'), 'from' => (string) $contact->name, 'to' => $newName];
+            $changes[] = ['field' => __('Name'), 'from' => (string) $contact->name, 'to' => $newName];
         }
 
         $oldPhone = ClientLocation::formatPhoneNumber($contact->phone ?? '');
         $newPhone = ClientLocation::formatPhoneNumber(trim($this->phone));
         if ($oldPhone !== $newPhone) {
-            $changes[] = ['field' => __('Teléfono'), 'from' => $oldPhone, 'to' => $newPhone];
+            $changes[] = ['field' => __('Phone'), 'from' => $oldPhone, 'to' => $newPhone];
         }
 
         if (trim((string) $contact->email) !== trim($this->email)) {
@@ -159,7 +159,7 @@ class ContactFlyoutPanel extends Component
         $newIds = collect($this->linkedClientIds)->map(fn ($id) => (int) $id)->sort()->values()->all();
         if ($oldIds !== $newIds) {
             $changes[] = [
-                'field' => __('Compañías vinculadas'),
+                'field' => __('Linked companies'),
                 'from' => $contact->clients->pluck('name')->sort()->join(', '),
                 'to' => Client::whereIn('id', $newIds)->orderBy('name')->pluck('name')->join(', '),
             ];
@@ -180,14 +180,14 @@ class ContactFlyoutPanel extends Component
             ],
             'email' => 'nullable|email',
         ], [
-            'name.required' => __('El nombre del cliente/contacto es obligatorio.'),
-            'name.min' => __('El nombre debe tener al menos 2 caracteres.'),
-            'email.email' => __('El correo electrónico debe ser una dirección válida.'),
+            'name.required' => __('The name is required.'),
+            'name.min' => __('The name must be at least 2 characters.'),
+            'email.email' => __('Enter a valid email address.'),
         ]);
 
         $phone = trim($this->phone);
         if (! empty($phone) && ! ClientLocation::isValidPhoneNumber($phone)) {
-            $this->addError('phone', __('El teléfono debe tener 10 dígitos (ej. (770) 864-9359).'));
+            $this->addError('phone', __('The phone number must have 10 digits (e.g. (770) 864-9359).'));
 
             return;
         }
@@ -276,7 +276,7 @@ class ContactFlyoutPanel extends Component
         }
 
         $this->dispatch('contact-updated');
-        $this->dispatch('toast', message: __('Contacto ":name" guardado.', ['name' => $contact->name]));
+        $this->dispatch('toast', message: __('Contact ":name" saved.', ['name' => $contact->name]));
     }
 
     public function setAsPrimaryClient(int $clientId): void
@@ -311,7 +311,7 @@ class ContactFlyoutPanel extends Component
             ]);
 
         $this->dispatch('contact-updated');
-        $this->dispatch('toast', message: __(':name es ahora el contacto principal de la compañía.', ['name' => $contact->name]));
+        $this->dispatch('toast', message: __(':name is now the company\'s primary contact.', ['name' => $contact->name]));
     }
 
     public function executeMerge(int $targetContactId): void
@@ -328,7 +328,7 @@ class ContactFlyoutPanel extends Component
             app(ClientMatchingService::class)->mergeContacts($source, $target);
 
             $this->dispatch('contact-updated');
-            $this->dispatch('toast', message: __('Contacto fusionado en ":name".', ['name' => $targetName]));
+            $this->dispatch('toast', message: __('Contact merged into ":name".', ['name' => $targetName]));
             $this->open($target->id);
         }
     }

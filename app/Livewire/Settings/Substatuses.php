@@ -43,7 +43,7 @@ class Substatuses extends Component
     {
         $user = Auth::user();
         if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
     }
 
@@ -196,7 +196,7 @@ class Substatuses extends Component
             Substatus::where('id', $id)->update(['sort_order' => $index + 1]);
         }
 
-        session()->flash('message', __('Orden de subestatus actualizado correctamente.'));
+        session()->flash('message', __('Substatus order updated.'));
     }
 
     public function moveUp(int $id): void

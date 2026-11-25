@@ -2,7 +2,7 @@
     Status tag. Color carries health only:
     neutral (default) · danger (overdue, urgent) · warn (due today, blocked, missing info)
     info (waiting on Camila or the client) · ok (done, approved).
-    Usage: <x-ui.tag tone="danger" icon="alert-circle">{{ __('Atrasada') }}</x-ui.tag>
+    Usage: <x-ui.tag tone="danger" icon="alert-circle">{{ __('Overdue') }}</x-ui.tag>
 --}}
 @props([
     'tone' => 'neutral',

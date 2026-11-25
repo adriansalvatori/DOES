@@ -18,7 +18,7 @@ class GoogleDriveSettings extends Component
     {
         $user = Auth::user();
         if ($user && ! $user->isAdmin()) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
     }
 
@@ -31,8 +31,8 @@ class GoogleDriveSettings extends Component
             $folder = $drive->getFile($drive->rootFolderId(), 'id,name,driveId');
             $this->testPassed = true;
             $this->testMessage = empty($folder['driveId'])
-                ? __('Conexión correcta con la carpeta «:name», pero no está en una unidad compartida.', ['name' => $folder['name'] ?? ''])
-                : __('Conexión correcta con la carpeta «:name».', ['name' => $folder['name'] ?? '']);
+                ? __('Connected to the folder “:name”, but it is not in a shared drive.', ['name' => $folder['name'] ?? ''])
+                : __('Connected to the folder “:name”.', ['name' => $folder['name'] ?? '']);
         } catch (RuntimeException $e) {
             $this->testPassed = false;
             $this->testMessage = $e->getMessage();
@@ -44,7 +44,7 @@ class GoogleDriveSettings extends Component
         $drive->disconnect();
         $this->reset('testMessage', 'testPassed');
 
-        session()->flash('success', __('Google Drive desconectado.'));
+        session()->flash('success', __('Google Drive disconnected.'));
     }
 
     public function render(GoogleDriveService $drive): View

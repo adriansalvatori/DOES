@@ -1,12 +1,12 @@
 <div class="h-full flex flex-col gap-5 min-h-0 overflow-y-auto custom-vertical-scrollbar pr-1 w-full max-w-4xl pb-10">
-    <x-ui.page-header :title="__('Guía de Comportamientos')" :subtitle="__('Trello & Kudos Docs')">
+    <x-ui.page-header :title="__('Behavior guide')" :subtitle="__('Kudos docs')">
         <x-slot:actions>
             <div class="relative w-full sm:w-72">
                 <x-lucide-search class="w-4 h-4 text-ink-3 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                     wire:model.live.debounce.200ms="search"
                     type="text"
-                    placeholder="{{ __('Buscar regla o comportamiento...') }}"
+                    placeholder="{{ __('Search rules or behaviors…') }}"
                     class="ui-input pl-9 pr-3" />
             </div>
         </x-slot:actions>
@@ -16,7 +16,7 @@
         <button
             wire:click="selectCategory('all')"
             class="px-3 py-2 border-b-2 cursor-pointer shrink-0 transition {{ $activeCategory === 'all' ? 'border-ink text-ink font-semibold' : 'border-transparent hover:text-ink' }}">
-            {{ __('Todas las Guías') }}
+            {{ __('All guides') }}
         </button>
 
         @foreach($allCategories as $catKey => $cat)
@@ -30,8 +30,8 @@
 
     <div class="bg-surface border border-line rounded-card p-5 md:p-7">
         @if(empty($categories))
-            <x-ui.empty icon="search-x" :title="__('No encontramos explicaciones que coincidan con tu búsqueda.')">
-                <flux:button wire:click="$set('search', '')" variant="subtle" size="sm">{{ __('Restablecer filtro de búsqueda') }}</flux:button>
+            <x-ui.empty icon="search-x" :title="__('No explanations match your search.')">
+                <flux:button wire:click="$set('search', '')" variant="subtle" size="sm">{{ __('Clear search') }}</flux:button>
             </x-ui.empty>
         @else
             <div class="space-y-10 divide-y divide-line">
@@ -94,7 +94,7 @@
                                             <div class="p-3 rounded-control bg-sunken text-body text-ink-2 flex items-start gap-2.5">
                                                 <x-lucide-info class="w-4 h-4 text-ink-3 shrink-0 mt-0.5" />
                                                 <div>
-                                                    <strong class="font-semibold text-ink">{{ __('Nota Operativa') }}:</strong>
+                                                    <strong class="font-semibold text-ink">{{ __('Operational note') }}:</strong>
                                                     <span class="ml-1">{{ $article['tip'] }}</span>
                                                 </div>
                                             </div>

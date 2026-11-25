@@ -114,7 +114,7 @@ class Login extends Component
         } else {
             if (! Auth::attempt(['email' => $this->email, 'password' => 'password'], $this->remember)) {
                 throw ValidationException::withMessages([
-                    'email' => __('No se pudo autenticar la cuenta de demostración.'),
+                    'email' => __('Couldn\'t sign in to the demo account.'),
                 ]);
             }
         }
@@ -169,7 +169,7 @@ class Login extends Component
 
         if (! $authenticated) {
             throw ValidationException::withMessages([
-                'email' => __('Las credenciales proporcionadas no son válidas.'),
+                'email' => __('These credentials don\'t match our records.'),
             ]);
         }
 
@@ -178,7 +178,7 @@ class Login extends Component
         if (! $user->active) {
             Auth::logout();
             throw ValidationException::withMessages([
-                'email' => __('Su cuenta ha sido desactivada. Póngase en contacto con el administrador.'),
+                'email' => __('Your account has been deactivated. Contact your administrator.'),
             ]);
         }
 
@@ -201,6 +201,6 @@ class Login extends Component
     public function render()
     {
         return view('livewire.auth.login')
-            ->layout('components.layouts.guest', ['title' => __('Iniciar Sesión - ').config('app.name')]);
+            ->layout('components.layouts.guest', ['title' => __('Sign in - ').config('app.name')]);
     }
 }

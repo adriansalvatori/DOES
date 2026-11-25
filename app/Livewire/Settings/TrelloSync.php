@@ -29,7 +29,7 @@ class TrelloSync extends Component
     {
         $user = Auth::user();
         if ($user && (! $user->isAdmin() && ! $user->isCoordinator())) {
-            abort(403, __('No tiene permisos para acceder a esta sección.'));
+            abort(403, __('You don\'t have permission to access this section.'));
         }
 
         $this->apiKey = Setting::get('trello_api_key', config('services.trello.api_key', env('TRELLO_API_KEY', '0771bd12b868f2ee8e1a72f424085b5f')));
@@ -42,7 +42,7 @@ class TrelloSync extends Component
         Setting::set('trello_board_id', trim($this->boardId));
         Setting::set('trello_user_token', trim($this->userToken));
 
-        session()->flash('message', __('Configuración de Trello guardada correctamente.'));
+        session()->flash('message', __('Trello settings saved successfully.'));
         $this->dispatch('trello-settings-saved');
     }
 
@@ -576,6 +576,6 @@ class TrelloSync extends Component
     public function render()
     {
         return view('livewire.settings.trello-sync')
-            ->layout('components.layouts.app', ['title' => __('Configuración de Trello Sync - ').config('app.name')]);
+            ->layout('components.layouts.app', ['title' => __('Trello sync settings - ').config('app.name')]);
     }
 }

@@ -60,7 +60,7 @@ class DatabaseBackupShortcutTest extends TestCase
 
         Livewire::test(DatabaseBackupShortcut::class)
             ->call('createBackup')
-            ->assertDispatched('toast', message: __('Respaldo de base de datos generado exitosamente.'))
+            ->assertDispatched('toast', message: __('Database backup created.'))
             ->assertDispatched('backup-created');
 
         $newFiles = array_map(fn ($f) => $f->getPathname(), File::files($this->backupDir));
@@ -79,7 +79,7 @@ class DatabaseBackupShortcutTest extends TestCase
 
         Livewire::test(DatabaseBackupShortcut::class)
             ->call('createBackup')
-            ->assertDispatched('toast', message: __('Solo los administradores pueden generar respaldos de base de datos.'))
+            ->assertDispatched('toast', message: __('Only administrators can create database backups.'))
             ->assertNotDispatched('backup-created');
 
         $files = File::files($this->backupDir);

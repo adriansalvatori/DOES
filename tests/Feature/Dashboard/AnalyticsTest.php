@@ -31,10 +31,10 @@ class AnalyticsTest extends TestCase
             ->assertSee(__('Analytics'));
 
         Livewire::test(Analytics::class)
-            ->assertSee(__('Mapa de Órdenes en Curso'))
-            ->assertSee(__('Carga de Trabajo por Diseñador'))
-            ->assertSee(__('Órdenes Activas'))
-            ->assertSee(__('Cumplimiento del SLA'));
+            ->assertSee(__('Current Orders Map'))
+            ->assertSee(__('Workload by Designer'))
+            ->assertSee(__('Active Orders'))
+            ->assertSee(__('SLA Compliance'));
     }
 
     public function test_analytics_dashboard_excludes_backlog_orders(): void
@@ -180,7 +180,7 @@ class AnalyticsTest extends TestCase
 
         $test = Livewire::test(Analytics::class);
 
-        $test->assertSee(__('Disponibilidad Actual por Diseñador'));
+        $test->assertSee(__('Current Availability by Designer'));
         $test->assertSee('Diseñador A');
         $test->assertSee('Diseñador B');
 
