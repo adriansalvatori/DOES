@@ -2,9 +2,13 @@
 
 namespace App\Livewire\Deliverables;
 
+use App\Application\Delivery\Actions\AddComment;
 use App\Application\Delivery\Actions\AddTask;
 use App\Application\Delivery\Actions\ApproveByReviewer;
+use App\Application\Delivery\Actions\AttachUploadedFile;
 use App\Application\Delivery\Actions\BlockDeliverable;
+use App\Application\Delivery\Actions\ChangeDueTarget;
+use App\Application\Delivery\Actions\ChangeReviewer;
 use App\Application\Delivery\Actions\CloseDeliverable;
 use App\Application\Delivery\Actions\CompleteTask;
 use App\Application\Delivery\Actions\DuplicateDeliverable;
@@ -22,6 +26,7 @@ use App\Application\Delivery\Actions\RequestChangesByReviewer;
 use App\Application\Delivery\Actions\ResolveBlock;
 use App\Application\Delivery\Actions\Resume;
 use App\Application\Delivery\Actions\SendBatchToClient;
+use App\Application\Delivery\Actions\StartFileUpload;
 use App\Application\Delivery\Actions\StartProduction;
 use App\Application\Delivery\Actions\TrashDeliverable;
 use App\Application\Delivery\Actions\UpdateDeliverableDetails;
@@ -109,6 +114,8 @@ class DeliverablePanel extends Component
     public string $approvalNote = '';
 
     public string $approvalEvidence = '';
+
+    public string $newComment = '';
 
     #[On('open-deliverable')]
     public function open(int $deliverableId): void
@@ -231,8 +238,25 @@ class DeliverablePanel extends Component
     public function assignableUsers(): Collection
     {
         return User::query()
+            ->designTeam()
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+
+    /**
+     * Active reviewers and managers, for the reviewer field.
+     *
+     * @return Collection<int, User>
+     */
+    #[Computed]
+    public function reviewerOptions(): Collection
+    {
+        return User::query()
             ->where('active', true)
-            ->where(fn ($query) => $query->where('role', UserRole::DESIGNER->value)->orWhere('is_lead', true))
+            ->where(fn ($query) => $query
+                ->where('is_reviewer', true)
+                ->orWhere('is_lead', true)
+                ->orWhereIn('role', [UserRole::ADMIN->value, UserRole::COORDINATOR->value]))
             ->orderBy('name')
             ->get(['id', 'name']);
     }
@@ -300,6 +324,84 @@ class DeliverablePanel extends Component
         if ($saved) {
             $this->editing = false;
         }
+    }
+
+    /**
+     * Hands the review to another reviewer (empty clears it). The field asks for confirmation before calling this.
+     */
+    public function changeReviewer(?int $reviewerId): void
+    {
+        $deliverable = $this->deliverable;
+        $reviewer = $reviewerId !== null ? User::query()->find($reviewerId) : null;
+
+        if ($reviewerId !== null && $reviewer === null) {
+            return;
+        }
+
+        $this->attempt(fn () => app(ChangeReviewer::class)($deliverable, $reviewer, auth()->user()), __('Reviewer changed.'));
+    }
+
+    /**
+     * Moves the due target (an empty reason is fine). The field asks for confirmation before calling this.
+     */
+    public function changeDueTarget(string $date, string $reason = ''): void
+    {
+        $validator = validator(['date' => $date, 'reason' => $reason], ['date' => ['required', 'date_format:Y-m-d'], 'reason' => ['nullable', 'string', 'max:255']], [
+            'date.required' => __('Choose the new due date.'),
+            'date.date_format' => __('Choose the new due date.'),
+        ]);
+
+        if ($validator->fails()) {
+            $this->notify($validator->errors()->first(), 'danger');
+
+            return;
+        }
+
+        $deliverable = $this->deliverable;
+        $day = CarbonImmutable::parse($date);
+        $note = $this->blankToNull($reason);
+
+        $this->attempt(fn () => app(ChangeDueTarget::class)($deliverable, $day, $note, auth()->user()), __('Due date changed.'));
+    }
+
+    public function addComment(): void
+    {
+        $deliverable = $this->deliverable;
+        $body = $this->newComment;
+
+        $added = $this->attempt(fn () => app(AddComment::class)($deliverable, $body, auth()->user()), __('Comment posted.'), announce: false);
+
+        if ($added) {
+            $this->reset('newComment');
+        }
+    }
+
+    /**
+     * Opens a Google Drive upload session for the browser. Null (and a notice) when it cannot start.
+     *
+     * @return array{url: string}|null
+     */
+    public function prepareUpload(string $name, string $mimeType, int $size): ?array
+    {
+        $deliverable = $this->deliverable;
+        $url = null;
+        $origin = request()->headers->get('Origin') ?? request()->getSchemeAndHttpHost();
+
+        $this->attempt(function () use ($deliverable, $name, $mimeType, $size, $origin, &$url): void {
+            $url = app(StartFileUpload::class)($deliverable, $name, $mimeType, $size, auth()->user(), $origin);
+        }, null, announce: false);
+
+        return $url === null ? null : ['url' => $url];
+    }
+
+    /**
+     * Records a file the browser finished uploading to Drive.
+     */
+    public function finishUpload(string $driveFileId): void
+    {
+        $deliverable = $this->deliverable;
+
+        $this->attempt(fn () => app(AttachUploadedFile::class)($deliverable, $driveFileId, auth()->user()), __('File attached.'), announce: false);
     }
 
     public function runPrimary(): void
@@ -570,7 +672,7 @@ class DeliverablePanel extends Component
             return view('livewire.deliverables.deliverable-panel', ['deliverable' => null]);
         }
 
-        $abilities = collect(['updateDetails', 'move', 'block', 'resolveBlock', 'putOnHold', 'resume', 'close', 'reopen', 'duplicate', 'trash', 'plan', 'approveByReviewer', 'requestChangesByReviewer', 'recordClientApproval', 'recordClientChanges', 'manageTasks', 'logReceipt'])
+        $abilities = collect(['updateDetails', 'move', 'block', 'resolveBlock', 'putOnHold', 'resume', 'close', 'reopen', 'duplicate', 'trash', 'plan', 'approveByReviewer', 'requestChangesByReviewer', 'recordClientApproval', 'recordClientChanges', 'manageTasks', 'logReceipt', 'changeReviewer', 'changeDueTarget', 'addComment', 'attachFile'])
             ->mapWithKeys(fn (string $ability): array => [$ability => $this->allows($ability)]);
 
         $workOrder = $deliverable->workOrder;
@@ -733,7 +835,7 @@ class DeliverablePanel extends Component
     /**
      * Runs an action, shows its outcome as a notice and tells the rest of the page when something changed.
      */
-    private function attempt(Closure $work, ?string $success): bool
+    private function attempt(Closure $work, ?string $success, bool $announce = true): bool
     {
         try {
             $work();
@@ -747,13 +849,15 @@ class DeliverablePanel extends Component
             return false;
         }
 
-        unset($this->deliverable, $this->tasks, $this->standingApprovals, $this->events);
+        unset($this->deliverable, $this->tasks, $this->standingApprovals, $this->events, $this->comments, $this->files);
 
         if ($success !== null) {
             $this->notify($success, 'ok');
         }
 
-        $this->dispatch('deliverable-changed', deliverableId: $this->deliverableId);
+        if ($announce) {
+            $this->dispatch('deliverable-changed', deliverableId: $this->deliverableId);
+        }
 
         return true;
     }
@@ -785,7 +889,7 @@ class DeliverablePanel extends Component
         $this->reset([
             'tab', 'sheet', 'sheetReason', 'sheetNote', 'planAssigneeId', 'planDay', 'planOverride', 'receiptMethod',
             'noticeText', 'noticeTone', 'editing', 'details', 'edit', 'newTaskTitle', 'newTaskIsGate', 'approvalSource',
-            'measurementsConfirmed', 'estimateApproved', 'approvalNote', 'approvalEvidence',
+            'measurementsConfirmed', 'estimateApproved', 'approvalNote', 'approvalEvidence', 'newComment',
         ]);
         $this->resetValidation();
         unset($this->deliverable, $this->tasks, $this->standingApprovals, $this->events, $this->comments, $this->files);

@@ -5,7 +5,6 @@ namespace App\Application\Delivery\Queries;
 use App\Application\Delivery\Data\PlanWeek;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Models\Deliverable;
-use App\Enums\UserRole;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -13,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class PlanWeekQuery
 {
+    public const BLOCKED_BACKLOG_CAP = 30;
+
     private const CARD = ['workOrder.client', 'assignee', 'openBlock'];
 
     /**
@@ -37,6 +38,15 @@ class PlanWeekQuery
             ->with(self::CARD)
             ->get();
 
+        $blockedBacklog = Deliverable::query()
+            ->inStatus(DeliverableStatus::READY)
+            ->whereNull('planned_for')
+            ->blocked()
+            ->with(['workOrder.client', 'openBlock'])
+            ->orderBy('id')
+            ->limit(self::BLOCKED_BACKLOG_CAP)
+            ->get();
+
         $planned = Deliverable::query()
             ->inStatus([DeliverableStatus::READY, DeliverableStatus::IN_DESIGN])
             ->whereNotNull('assignee_id')
@@ -46,8 +56,7 @@ class PlanWeekQuery
             ->get();
 
         $designers = User::query()
-            ->where('role', UserRole::DESIGNER->value)
-            ->where('active', true)
+            ->designTeam()
             ->orderBy('name')
             ->get();
 
@@ -69,6 +78,6 @@ class PlanWeekQuery
             $rows[] = ['assignee' => $designer, 'limit' => (int) $designer->wip_limit, 'cells' => $cells];
         }
 
-        return new PlanWeek($monday, $days, $backlog, $rows);
+        return new PlanWeek($monday, $days, $backlog, $rows, $blockedBacklog);
     }
 }

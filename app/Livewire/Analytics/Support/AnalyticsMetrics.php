@@ -6,7 +6,6 @@ use App\Domain\Delivery\Enums\CloseReason;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Scheduling\WipPolicy;
-use App\Enums\UserRole;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -15,7 +14,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Aggregate reads for the Analytics screen. Everything is one grouped query; nothing loads deliverables one by one.
- * Cycle times come from the `deliverable_moved` rows of the audit trail (SQLite date functions, like the rest of the app).
+ * Cycle times come from the `deliverable_moved` rows of the audit trail, and before a deliverable's first native move from the
+ * legacy CORE_STATUS_CHANGED rows mapped to the new columns (legacy substatus is not in those rows, so history is by main column only)
+ * (SQLite date functions, like the rest of the app).
  */
 class AnalyticsMetrics
 {
@@ -115,8 +116,7 @@ class AnalyticsMetrics
             ->pluck('total', 'assignee_id');
 
         return User::query()
-            ->where('active', true)
-            ->where('role', UserRole::DESIGNER->value)
+            ->designTeam()
             ->orderBy('name')
             ->get()
             ->map(fn (User $user): array => [
@@ -166,9 +166,32 @@ class AnalyticsMetrics
     {
         $since = $this->now->subDays(self::WINDOW_DAYS)->toDateTimeString();
 
-        $moves = DB::table('order_events')
-            ->where('event_type', 'deliverable_moved')
-            ->selectRaw('new_value, created_at, LEAD(created_at) OVER (PARTITION BY order_id ORDER BY id) as left_at');
+        $legacyStatus = "CASE
+            WHEN e.new_value = 'ENTRANTE' THEN 'intake'
+            WHEN e.new_value LIKE '%ORDERS RECEIVED' THEN 'ready'
+            WHEN e.new_value = 'TO DO TODAY' THEN 'in_design'
+            WHEN e.new_value = 'ENVIADO A CAMILA' THEN 'internal_review'
+            WHEN e.new_value = 'ENVIADO AL CLIENTE' THEN 'client_review'
+            WHEN e.new_value LIKE 'EN PRODUCC%' THEN 'in_production'
+            WHEN e.new_value = 'ARCHIVED' THEN 'done'
+        END";
+
+        $events = DB::query()->fromSub(
+            DB::table('order_events')
+                ->where('event_type', 'deliverable_moved')
+                ->select('id', 'order_id', 'created_at')
+                ->selectRaw('new_value as moved_to')
+                ->unionAll(
+                    DB::table('order_events as e')
+                        ->where('e.event_type', 'CORE_STATUS_CHANGED')
+                        ->whereRaw("e.created_at < COALESCE((SELECT MIN(m.created_at) FROM order_events m WHERE m.order_id = e.order_id AND m.event_type = 'deliverable_moved'), '9999-12-31')")
+                        ->select('e.id', 'e.order_id', 'e.created_at')
+                        ->selectRaw($legacyStatus.' as moved_to'),
+                ),
+            'events',
+        )->selectRaw('moved_to as new_value, created_at, LEAD(created_at) OVER (PARTITION BY order_id ORDER BY created_at, id) as left_at');
+
+        $moves = DB::query()->fromSub($events, 'ordered')->whereNotNull('new_value')->select('new_value', 'created_at', 'left_at');
 
         return DB::query()->fromSub($moves, 'moves')
             ->whereNotNull('left_at')

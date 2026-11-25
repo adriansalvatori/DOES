@@ -11,7 +11,6 @@ use App\Domain\Delivery\Enums\FulfillmentMethod;
 use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\WorkOrder;
-use App\Enums\UserRole;
 use App\Models\Client;
 use App\Models\ClientLocation;
 use App\Models\Contact;
@@ -273,7 +272,7 @@ class CreateWorkOrderModal extends Component
             'work-order-created',
             workOrderId: $workOrder->getKey(),
             number: $workOrder->number,
-            url: Route::has('v2.work-orders.show') ? route('v2.work-orders.show', $workOrder) : null,
+            url: Route::has('work-orders.show') ? route('work-orders.show', $workOrder) : null,
         );
         $this->closeModal();
     }
@@ -347,8 +346,7 @@ class CreateWorkOrderModal extends Component
     public function designers(): Collection
     {
         $users = User::query()
-            ->where('active', true)
-            ->where(fn ($query) => $query->where('role', UserRole::DESIGNER->value)->orWhere('is_lead', true))
+            ->designTeam()
             ->orderBy('name')
             ->get(['id', 'name', 'wip_limit']);
 

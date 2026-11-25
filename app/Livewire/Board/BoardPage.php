@@ -23,7 +23,6 @@ use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\WorkOrder;
 use App\Domain\Delivery\Support\Roles;
-use App\Enums\UserRole;
 use App\Models\Client;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -33,6 +32,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Renderless;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -120,8 +120,7 @@ class BoardPage extends Component
     public function designers(): Collection
     {
         return User::query()
-            ->where('active', true)
-            ->where('role', UserRole::DESIGNER->value)
+            ->designTeam()
             ->orderBy('name')
             ->get(['id', 'name']);
     }
@@ -283,6 +282,16 @@ class BoardPage extends Component
 
         $this->refreshColumns([DeliverableStatus::PRODUCED, DeliverableStatus::FULFILLMENT, DeliverableStatus::DONE]);
         $this->dispatch('toast', message: trans_choice('{1} Receipt logged for :count deliverable.|[2,*] Receipt logged for :count deliverables.', $receipts->count()));
+    }
+
+    /**
+     * The panel changed something: refresh only the columns whose count or last change moved.
+     */
+    #[On('deliverable-changed')]
+    #[Renderless]
+    public function refreshAfterPanelChange(): void
+    {
+        $this->checkForChanges();
     }
 
     /**

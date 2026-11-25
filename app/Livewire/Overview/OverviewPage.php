@@ -106,7 +106,7 @@ class OverviewPage extends Component
     #[Computed]
     public function designerOptions(): array
     {
-        return User::query()->where('active', true)->where('role', UserRole::DESIGNER->value)->orderBy('name')->pluck('name', 'id')->all();
+        return User::query()->designTeam()->orderBy('name')->pluck('name', 'id')->all();
     }
 
     /**

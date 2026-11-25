@@ -3,7 +3,6 @@
 namespace App\Livewire\Today;
 
 use App\Domain\Delivery\Support\Roles;
-use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
@@ -42,7 +41,7 @@ class TodayPage extends Component
     #[Computed]
     public function designers(): Collection
     {
-        return User::query()->where('role', UserRole::DESIGNER->value)->orderBy('name')->get();
+        return User::query()->designTeam()->orderBy('name')->get();
     }
 
     /**

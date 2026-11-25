@@ -6,6 +6,7 @@ namespace App\Models;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -66,6 +67,19 @@ class User extends Authenticatable
     public function assignedDeliverables(): HasMany
     {
         return $this->hasMany(Deliverable::class, 'assignee_id');
+    }
+
+    /**
+     * Active people who design: users with the designer role plus the design lead (Euralíz is an admin and the lead).
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeDesignTeam(Builder $query): Builder
+    {
+        return $query
+            ->where('active', true)
+            ->where(fn (Builder $team) => $team->where('role', UserRole::DESIGNER->value)->orWhere('is_lead', true));
     }
 
     public function isCustomerService(): bool
