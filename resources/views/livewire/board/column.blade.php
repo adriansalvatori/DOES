@@ -1,7 +1,8 @@
 @php
     $status = $this->statusEnum;
     $column = $this->column;
-    $groupedByWorkOrder = $status === \App\Domain\Delivery\Enums\DeliverableStatus::FULFILLMENT;
+    $confirmsReceipts = $status === \App\Domain\Delivery\Enums\DeliverableStatus::FULFILLMENT;
+    $groupedByWorkOrder = $confirmsReceipts || $groupBy === 'work_order';
 @endphp
 <div
     x-data="{ isTarget: false }"
@@ -26,18 +27,26 @@
             </div>
         @elseif($groupedByWorkOrder)
             @foreach($this->workOrderGroups as $workOrderId => $group)
+                @if($group->count() === 1)
+                    <x-board.card :card="$group->first()" :colors="$designerColors" wire:key="card-{{ $group->first()->id }}" />
+                    @continue
+                @endif
                 @php($workOrder = $group->first()->workOrder)
                 <section class="space-y-2" wire:key="wo-{{ $workOrderId }}">
                     <div class="flex items-center gap-1.5 min-w-0 px-0.5">
                         <x-wo-badge :number="$workOrder?->number" />
                         <span class="text-meta font-medium text-ink truncate">{{ \App\Support\TitleCase::from($workOrder?->displayName() ?: $group->first()->company_name) }}</span>
-                        <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm ml-auto"
-                                @click="$dispatch('board-receive', { scope: 'work_order', id: {{ (int) $workOrderId }}, count: {{ $group->count() }} })">
-                            {{ __('Confirm all received') }}
-                        </button>
+                        @if($confirmsReceipts)
+                            <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm ml-auto"
+                                    @click="$dispatch('board-receive', { scope: 'work_order', id: {{ (int) $workOrderId }}, count: {{ $group->count() }} })">
+                                {{ __('Confirm all received') }}
+                            </button>
+                        @else
+                            <span class="ml-auto text-meta text-ink-3 tabular-nums">{{ $group->count() }}</span>
+                        @endif
                     </div>
                     @foreach($group as $card)
-                        <x-board.card :card="$card" :colors="$designerColors" wire:key="card-{{ $card->id }}" />
+                        <x-board.card :card="$card" :colors="$designerColors" :show-work-order="false" wire:key="card-{{ $card->id }}" />
                     @endforeach
                 </section>
             @endforeach

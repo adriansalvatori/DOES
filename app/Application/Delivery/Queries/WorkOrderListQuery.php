@@ -82,7 +82,7 @@ class WorkOrderListQuery
     private function base(?string $search, ?int $clientId): Builder
     {
         return WorkOrder::query()
-            ->where('in_backlog', false)
+            ->inWorkspace()
             ->when($clientId !== null, fn (Builder $query) => $query->where('client_id', $clientId))
             ->when(filled($search), function (Builder $query) use ($search): void {
                 $term = '%'.trim((string) $search).'%';

@@ -29,12 +29,12 @@ class ResolverQuery
             ->when($ownerId !== null, fn (Builder $query) => $query->where(
                 fn (Builder $inner) => $inner->where('owner_id', $ownerId)->orWhereNull('owner_id'),
             ))
-            ->whereHas('deliverable')
+            ->whereHas('deliverable', fn (Builder $deliverables) => $deliverables->inWorkspace())
             ->with(['owner', 'deliverable.workOrder' => fn ($relation) => $relation->with(self::WORK_ORDER_RELATIONS), 'deliverable.assignee'])
             ->get();
 
         $holds = Hold::query()->open()
-            ->whereHas('deliverable')
+            ->whereHas('deliverable', fn (Builder $deliverables) => $deliverables->inWorkspace())
             ->with(['deliverable.workOrder' => fn ($relation) => $relation->with(self::WORK_ORDER_RELATIONS), 'deliverable.assignee'])
             ->get();
 

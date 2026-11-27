@@ -23,9 +23,11 @@ use App\Application\Delivery\Actions\RecordClientChanges;
 use App\Application\Delivery\Actions\ReopenDeliverable;
 use App\Application\Delivery\Actions\ReopenTask;
 use App\Application\Delivery\Actions\RequestChangesByReviewer;
+use App\Application\Delivery\Actions\RequestProductionSample;
 use App\Application\Delivery\Actions\ResolveBlock;
 use App\Application\Delivery\Actions\Resume;
 use App\Application\Delivery\Actions\SendBatchToClient;
+use App\Application\Delivery\Actions\SetTaskPoints;
 use App\Application\Delivery\Actions\StartFileUpload;
 use App\Application\Delivery\Actions\StartProduction;
 use App\Application\Delivery\Actions\TrashDeliverable;
@@ -38,6 +40,7 @@ use App\Domain\Delivery\Enums\DeliverableFlag;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Enums\FulfillmentMethod;
 use App\Domain\Delivery\Enums\HoldReason;
+use App\Domain\Delivery\Enums\Priority;
 use App\Domain\Delivery\Enums\TaskKind;
 use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Approval;
@@ -45,6 +48,7 @@ use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\DeliverableEvent;
 use App\Domain\Delivery\Models\Phase;
 use App\Domain\Delivery\Models\Task;
+use App\Domain\Delivery\Support\PointsEstimator;
 use App\Domain\Delivery\Support\Roles;
 use App\Enums\UserRole;
 use App\Models\Media;
@@ -67,7 +71,7 @@ class DeliverablePanel extends Component
 {
     public const TABS = ['tasks', 'approval', 'comments', 'timeline'];
 
-    public const SHEETS = ['block', 'hold', 'close', 'resolve', 'reopen', 'trash', 'plan', 'receipt', 'reviewerChanges', 'clientChanges'];
+    public const SHEETS = ['block', 'hold', 'close', 'resolve', 'reopen', 'trash', 'plan', 'receipt', 'reviewerChanges', 'clientChanges', 'sample'];
 
     public bool $isOpen = false;
 
@@ -344,6 +348,37 @@ class DeliverablePanel extends Component
     /**
      * Moves the due target (an empty reason is fine). The field asks for confirmation before calling this.
      */
+    /**
+     * Sets the priority. The field asks for confirmation before calling this.
+     */
+    public function changePriority(?string $priority): void
+    {
+        $deliverable = $this->deliverable;
+        $value = Priority::tryFrom((string) $priority);
+
+        if ($deliverable === null || $value === null) {
+            return;
+        }
+
+        $this->attempt(fn () => app(UpdateDeliverableDetails::class)($deliverable, ['priority' => $value], auth()->user()), __('Priority changed.'));
+    }
+
+    /**
+     * Sets a task's Fibonacci points (empty clears them); the deliverable's points follow as the sum. The field asks
+     * for confirmation before calling this.
+     */
+    public function changeTaskPoints(int $taskId, ?string $points): void
+    {
+        $task = Task::query()->where('order_id', $this->deliverableId)->find($taskId);
+        $value = $points === null || $points === '' ? null : (int) $points;
+
+        if ($task === null || ($value !== null && ! in_array($value, PointsEstimator::TASK_SCALE, true))) {
+            return;
+        }
+
+        $this->attempt(fn () => app(SetTaskPoints::class)($task, $value, auth()->user()), __('Points changed.'));
+    }
+
     public function changeDueTarget(string $date, string $reason = ''): void
     {
         $validator = validator(['date' => $date, 'reason' => $reason], ['date' => ['required', 'date_format:Y-m-d'], 'reason' => ['nullable', 'string', 'max:255']], [
@@ -541,6 +576,32 @@ class DeliverablePanel extends Component
         $this->finishSheet($this->attempt(fn () => app(BlockDeliverable::class)($deliverable, $reason, $note, auth()->user()), __('Blocked.')));
     }
 
+    public function submitSample(): void
+    {
+        $this->validate(['sheetNote' => ['nullable', 'string', 'max:1000']]);
+
+        $deliverable = $this->deliverable;
+        $note = $this->blankToNull($this->sheetNote);
+
+        $this->finishSheet($this->attempt(fn () => app(RequestProductionSample::class)($deliverable, $note, auth()->user()), __('Production sample requested. It starts in Production files.')));
+    }
+
+    /**
+     * Sets the points of a deliverable that has no tasks (empty clears them). With tasks, its points are their sum.
+     * The field asks for confirmation before calling this.
+     */
+    public function changePoints(?string $points): void
+    {
+        $deliverable = $this->deliverable;
+        $value = $points === null || $points === '' ? null : (int) $points;
+
+        if ($deliverable === null || ($value !== null && ! in_array($value, PointsEstimator::SCALE, true))) {
+            return;
+        }
+
+        $this->attempt(fn () => app(UpdateDeliverableDetails::class)($deliverable, ['points' => $value], auth()->user()), __('Points changed.'));
+    }
+
     public function submitHold(): void
     {
         $this->validate(['sheetReason' => ['required', Rule::enum(HoldReason::class)], 'sheetNote' => ['nullable', 'string', 'max:1000']], [
@@ -577,7 +638,7 @@ class DeliverablePanel extends Component
 
     public function submitClose(): void
     {
-        $this->validate(['sheetReason' => ['required', Rule::enum(CloseReason::class)], 'sheetNote' => ['nullable', 'string', 'max:1000']], [
+        $this->validate(['sheetReason' => ['required', Rule::enum(CloseReason::class)->only(CloseReason::selectable())], 'sheetNote' => ['nullable', 'string', 'max:1000']], [
             'sheetReason.required' => __('Choose a reason.'),
         ]);
 
@@ -672,7 +733,7 @@ class DeliverablePanel extends Component
             return view('livewire.deliverables.deliverable-panel', ['deliverable' => null]);
         }
 
-        $abilities = collect(['updateDetails', 'move', 'block', 'resolveBlock', 'putOnHold', 'resume', 'close', 'reopen', 'duplicate', 'trash', 'plan', 'approveByReviewer', 'requestChangesByReviewer', 'recordClientApproval', 'recordClientChanges', 'manageTasks', 'logReceipt', 'changeReviewer', 'changeDueTarget', 'addComment', 'attachFile'])
+        $abilities = collect(['updateDetails', 'move', 'block', 'resolveBlock', 'putOnHold', 'resume', 'close', 'reopen', 'duplicate', 'trash', 'plan', 'approveByReviewer', 'requestChangesByReviewer', 'recordClientApproval', 'recordClientChanges', 'manageTasks', 'logReceipt', 'changeReviewer', 'changeDueTarget', 'addComment', 'attachFile', 'requestProductionSample'])
             ->mapWithKeys(fn (string $ability): array => [$ability => $this->allows($ability)]);
 
         $workOrder = $deliverable->workOrder;
@@ -686,7 +747,7 @@ class DeliverablePanel extends Component
             'phases' => $this->editing && $workOrder !== null ? Phase::query()->where('work_order_id', $workOrder->getKey())->orderBy('position')->get(['id', 'name']) : collect(),
             'blockReasons' => BlockReason::cases(),
             'holdReasons' => HoldReason::cases(),
-            'closeReasons' => CloseReason::cases(),
+            'closeReasons' => CloseReason::selectable(),
             'fulfillmentMethods' => FulfillmentMethod::cases(),
             'flags' => DeliverableFlag::cases(),
             'fieldLabels' => $this->fieldLabels(),

@@ -38,6 +38,10 @@ class ChangeDueTarget
                 throw WorkflowException::closed();
             }
 
+            if ($deliverable->isOnHold()) {
+                throw WorkflowException::refused('Work on hold has no due date. Resume it to set one.');
+            }
+
             $previous = $deliverable->due_target;
             $new = $dueTarget->copy()->startOfDay();
 

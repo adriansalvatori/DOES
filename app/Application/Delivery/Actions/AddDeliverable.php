@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Creates a deliverable in intake with its creation rules: 3 business day due target, audit entry, legacy mirror.
+ * A work order whose open work all waits in the backlog keeps the new deliverable there too. Its points are the sum of
+ * its tasks' points.
  */
 class AddDeliverable
 {
@@ -47,8 +49,12 @@ class AddDeliverable
         return DB::transaction(function () use ($workOrder, $name, $size, $material, $quantity, $phase, $flags, $assigneeId, $trelloLink, $actor): Deliverable {
             $workOrder->loadMissing('client');
 
+            $staysInBacklog = $workOrder->deliverables()->inBacklog()->exists()
+                && ! $workOrder->deliverables()->inWorkspace()->active()->exists();
+
             $deliverable = Deliverable::create([
                 'work_order_id' => $workOrder->getKey(),
+                'in_backlog' => $staysInBacklog,
                 'phase_id' => $phase?->getKey(),
                 'status' => DeliverableStatus::INTAKE,
                 'company_name' => $workOrder->displayName(),

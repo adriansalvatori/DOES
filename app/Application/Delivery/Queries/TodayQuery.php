@@ -61,7 +61,7 @@ class TodayQuery
         $now ??= now();
         $today = $now->toDateString();
 
-        $mine = fn (): Builder => Deliverable::query()->assignedTo($designer)->notBlocked()->with(self::CARD)
+        $mine = fn (): Builder => Deliverable::query()->inWorkspace()->assignedTo($designer)->notBlocked()->with(self::CARD)
             ->orderByRaw('due_target IS NULL')->orderBy('due_target')->orderBy('id');
 
         $plannedToday = $mine()->inStatus(DeliverableStatus::IN_DESIGN)->plannedFor($today)->get();
@@ -77,7 +77,7 @@ class TodayQuery
         $alerts = Alert::query()->open()
             ->where('user_id', $designer->getKey())
             ->whereDate('due_on', '<=', $today)
-            ->whereHas('deliverable', fn (Builder $deliverables) => $deliverables->notBlocked())
+            ->whereHas('deliverable', fn (Builder $deliverables) => $deliverables->inWorkspace()->notBlocked())
             ->with(['deliverable.workOrder.client'])
             ->orderBy('due_on')
             ->get();
@@ -88,7 +88,7 @@ class TodayQuery
             'overdue' => $overdue,
             'alerts' => $alerts,
             'wip' => [
-                'used' => Deliverable::query()->assignedTo($designer)->inStatus(DeliverableStatus::IN_DESIGN)->notBlocked()->count(),
+                'used' => Deliverable::query()->inWorkspace()->assignedTo($designer)->inStatus(DeliverableStatus::IN_DESIGN)->notBlocked()->count(),
                 'limit' => (int) $designer->wip_limit,
             ],
         ];
@@ -103,6 +103,7 @@ class TodayQuery
     public function forReviewer(User $reviewer): array
     {
         $workOrderIds = Deliverable::query()
+            ->inWorkspace()
             ->inStatus(DeliverableStatus::INTERNAL_REVIEW)
             ->where(fn (Builder $query) => $query->whereNull('reviewer_id')->orWhere('reviewer_id', $reviewer->getKey()))
             ->distinct()
@@ -141,7 +142,7 @@ class TodayQuery
     {
         $now ??= now();
         $today = $now->toDateString();
-        $open = fn (): Builder => Deliverable::query()->active()->whereHas('workOrder', fn (Builder $workOrders) => $workOrders->where('in_backlog', false));
+        $open = fn (): Builder => Deliverable::query()->active()->inWorkspace();
         $list = fn (Builder $query): Collection => $query->with([...self::CARD, 'openBlock'])
             ->orderByRaw('due_target IS NULL')->orderBy('due_target')->orderBy('id')->limit(self::LIST_CAP)->get();
 
@@ -154,6 +155,7 @@ class TodayQuery
         $onHold = $list($open()->onHold());
 
         $alerts = Alert::query()->open()->whereDate('due_on', '<=', $today)
+            ->whereHas('deliverable', fn (Builder $deliverables) => $deliverables->inWorkspace())
             ->with(['deliverable.workOrder.client', 'recipient'])->orderBy('due_on')->limit(self::LIST_CAP)->get();
 
         return [

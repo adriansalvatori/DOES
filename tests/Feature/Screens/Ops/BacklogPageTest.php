@@ -3,6 +3,7 @@
 namespace Tests\Feature\Screens\Ops;
 
 use App\Application\Delivery\Actions\MoveWorkOrderOutOfBacklog;
+use App\Application\Delivery\Queries\BacklogQuery;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\WorkOrder;
@@ -17,8 +18,8 @@ class BacklogPageTest extends DeliveryTestCase
     private function backlogWorkOrder(string $number, string $company = 'ACME SIGNS', string $piece = 'Banner'): WorkOrder
     {
         $client = Client::firstOrCreate(['name' => $company]);
-        $workOrder = WorkOrder::factory()->inBacklog()->create(['number' => $number, 'client_id' => $client->id]);
-        $this->deliverable(DeliverableStatus::INTAKE, ['task_name' => $piece, 'company_name' => $company], $workOrder);
+        $workOrder = WorkOrder::factory()->create(['number' => $number, 'client_id' => $client->id]);
+        $this->deliverable(DeliverableStatus::INTAKE, ['task_name' => $piece, 'company_name' => $company, 'in_backlog' => true], $workOrder);
 
         return $workOrder;
     }
@@ -67,7 +68,7 @@ class BacklogPageTest extends DeliveryTestCase
 
         Livewire::actingAs($manager)->test(BacklogPage::class)->call('moveToIntake', $workOrder->id)->assertDispatched('toast');
 
-        $this->assertFalse($workOrder->fresh()->in_backlog);
+        $this->assertFalse($piece->fresh()->in_backlog);
         $this->assertSame(DeliverableStatus::INTAKE, $piece->fresh()->status);
         $this->assertSame(1, $this->eventCount($piece, 'moved_out_of_backlog'));
         $this->assertSame(1, (int) $this->legacyRow($piece)->in_workspace);
@@ -84,9 +85,10 @@ class BacklogPageTest extends DeliveryTestCase
             ->call('moveSelectedToIntake')
             ->assertSet('selected', []);
 
-        $this->assertFalse($first->fresh()->in_backlog);
-        $this->assertFalse($second->fresh()->in_backlog);
-        $this->assertTrue($third->fresh()->in_backlog);
+        $stillWaiting = fn (WorkOrder $workOrder): bool => WorkOrder::query()->inBacklog()->whereKey($workOrder->id)->exists();
+        $this->assertFalse($stillWaiting($first));
+        $this->assertFalse($stillWaiting($second));
+        $this->assertTrue($stillWaiting($third));
     }
 
     public function test_select_page_selects_the_visible_cards(): void
@@ -133,5 +135,23 @@ class BacklogPageTest extends DeliveryTestCase
         }
 
         $this->assertSame($small, $count());
+    }
+
+    public function test_a_later_phase_waits_in_the_backlog_while_the_current_one_is_worked_on(): void
+    {
+        $workOrder = WorkOrder::factory()->create(['number' => 'WO 1']);
+        $current = $this->deliverable(DeliverableStatus::IN_DESIGN, ['task_name' => 'Phase 2 sign'], $workOrder);
+        $later = $this->deliverable(DeliverableStatus::READY, ['task_name' => 'Phase 3 wrap', 'in_backlog' => true], $workOrder);
+
+        $listed = app(BacklogQuery::class)->run()->workOrders->items();
+        $this->assertCount(1, $listed);
+        $this->assertSame([$later->id], $listed[0]->deliverables->modelKeys());
+
+        Livewire::actingAs($this->manager())->test(BacklogPage::class)->call('moveToIntake', $workOrder->id)->assertDispatched('toast');
+
+        $this->assertFalse($later->fresh()->in_backlog);
+        $this->assertSame(1, $this->eventCount($later, 'moved_out_of_backlog'));
+        $this->assertSame(0, $this->eventCount($current, 'moved_out_of_backlog'));
+        $this->assertSame(DeliverableStatus::IN_DESIGN, $current->fresh()->status);
     }
 }

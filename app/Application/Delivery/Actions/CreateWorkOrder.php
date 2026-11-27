@@ -51,7 +51,6 @@ class CreateWorkOrder
                 'fulfillment_method' => $data->fulfillmentMethod,
                 'installation_types' => $data->installationTypes ?: null,
                 'notes' => $data->notes,
-                'in_backlog' => false,
             ]);
 
             $phase = $data->phaseName !== null && trim($data->phaseName) !== ''

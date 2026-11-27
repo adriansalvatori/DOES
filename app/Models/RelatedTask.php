@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Domain\Delivery\Models\Concerns\CountsTowardStoryPoints;
 use App\Enums\CoreStatus;
 use App\Enums\RelatedTaskType;
 use App\Enums\SubtaskCategory;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RelatedTask extends Model
 {
-    use HasFactory, SoftDeletes;
+    use CountsTowardStoryPoints, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'order_id',
@@ -34,6 +35,7 @@ class RelatedTask extends Model
         'priority',
         'is_work_task',
         'sort_order',
+        'points',
     ];
 
     protected $casts = [
@@ -44,6 +46,7 @@ class RelatedTask extends Model
         'completed_at' => 'datetime',
         'is_work_task' => 'boolean',
         'sort_order' => 'integer',
+        'points' => 'integer',
     ];
 
     public function setCategoryAttribute($value): void

@@ -91,6 +91,18 @@
             @php($submitLabel = __('Reopen'))
             @break
 
+        @case('sample')
+            <p class="ui-section-title">{{ __('Request a production sample') }}</p>
+            <p class="mt-0.5 text-meta text-ink-3">{{ __('A sample card starts in Production files and goes through production and delivery on its own. This deliverable stays in Client review, and its client follow-ups pause until every sample is delivered or cancelled.') }}</p>
+            <div class="mt-3">
+                <label class="ui-label" for="dp-note">{{ __('Note') }}</label>
+                <textarea id="dp-note" rows="2" wire:model="sheetNote" class="ui-input" placeholder="{{ __('Size, material or anything the sample needs') }}"></textarea>
+                @error('sheetNote') <span class="mt-1 block text-meta text-danger">{{ $message }}</span> @enderror
+            </div>
+            @php($submit = 'submitSample')
+            @php($submitLabel = __('Request sample'))
+            @break
+
         @case('trash')
             <p class="ui-section-title">{{ __('Move this deliverable to the trash?') }}</p>
             <p class="mt-0.5 text-meta text-ink-3">{{ __('Its tasks and alerts go with it. A manager can restore it from the trash.') }}</p>

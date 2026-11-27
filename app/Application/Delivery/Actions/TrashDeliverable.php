@@ -6,17 +6,19 @@ use App\Application\Delivery\Actions\Concerns\AuthorizesActor;
 use App\Domain\Delivery\Models\Alert;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Support\DeliveryLog;
+use App\Domain\Delivery\Support\ProductionSamples;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Soft deletes a deliverable. Its tasks go to the trash with it and its alerts are removed.
+ * Soft deletes a deliverable. Its tasks go to the trash with it and its alerts are removed. Trashing the last open
+ * production sample of a deliverable in client review restarts its client follow-ups.
  */
 class TrashDeliverable
 {
     use AuthorizesActor;
 
-    public function __construct(private DeliveryLog $log) {}
+    public function __construct(private DeliveryLog $log, private ProductionSamples $samples) {}
 
     public function __invoke(Deliverable $deliverable, ?User $actor = null): void
     {
@@ -28,6 +30,7 @@ class TrashDeliverable
 
             $this->log->record($deliverable, 'deliverable_trashed', $actor, $deliverable->status->value);
             $deliverable->delete();
+            $this->samples->ended($deliverable, ProductionSamples::TRASHED, $actor);
         });
     }
 }

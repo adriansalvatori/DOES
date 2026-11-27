@@ -39,7 +39,7 @@ class ManagerSection extends Component
     #[Computed]
     public function wip(): Collection
     {
-        $used = Deliverable::query()->inStatus(DeliverableStatus::IN_DESIGN)->notBlocked()
+        $used = Deliverable::query()->inWorkspace()->inStatus(DeliverableStatus::IN_DESIGN)->notBlocked()
             ->whereNotNull('assignee_id')->selectRaw('assignee_id, count(*) as used')->groupBy('assignee_id')->pluck('used', 'assignee_id');
 
         return User::query()->designTeam()->orderBy('name')->get()

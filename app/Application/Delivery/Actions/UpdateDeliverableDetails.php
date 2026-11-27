@@ -4,9 +4,12 @@ namespace App\Application\Delivery\Actions;
 
 use App\Application\Delivery\Actions\Concerns\AuthorizesActor;
 use App\Domain\Delivery\Enums\DeliverableFlag;
+use App\Domain\Delivery\Enums\Priority;
 use App\Domain\Delivery\Events\DeliverableUrgent;
+use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Support\DeliveryLog;
+use App\Domain\Delivery\Support\PointsEstimator;
 use App\Infrastructure\Legacy\LegacyProjection;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -18,12 +21,12 @@ class UpdateDeliverableDetails
 {
     use AuthorizesActor;
 
-    public const FIELDS = ['name', 'size', 'material', 'quantity', 'files_url', 'trello_card_url', 'phase_id', 'flags'];
+    public const FIELDS = ['name', 'size', 'material', 'quantity', 'files_url', 'trello_card_url', 'phase_id', 'flags', 'priority', 'points'];
 
     public function __construct(private DeliveryLog $log, private LegacyProjection $projection) {}
 
     /**
-     * @param  array{name?: string, size?: string|null, material?: string|null, quantity?: int|null, files_url?: string|null, trello_card_url?: string|null, phase_id?: int|null, flags?: list<DeliverableFlag>}  $changes
+     * @param  array{name?: string, size?: string|null, material?: string|null, quantity?: int|null, files_url?: string|null, trello_card_url?: string|null, phase_id?: int|null, flags?: list<DeliverableFlag>, priority?: Priority, points?: int|null}  $changes
      * @return array<string, array{old: mixed, new: mixed}> The fields that actually changed.
      */
     public function __invoke(Deliverable $deliverable, array $changes, ?User $actor = null): array
@@ -47,6 +50,25 @@ class UpdateDeliverableDetails
                     }
 
                     continue;
+                }
+
+                if ($field === 'priority') {
+                    $old = $deliverable->priority?->value;
+                    if ($old !== $value->value) {
+                        $diff['priority'] = ['old' => $old, 'new' => $value->value];
+                        $deliverable->priority = $value;
+                    }
+
+                    continue;
+                }
+
+                if ($field === 'points') {
+                    if ($deliverable->tasks()->exists()) {
+                        throw WorkflowException::refused('Its points are the sum of its tasks. Change the points of a task instead.');
+                    }
+                    if ($value !== null && ! in_array($value, PointsEstimator::SCALE, true)) {
+                        throw WorkflowException::refused('Points must be a Fibonacci number: 1, 2, 3, 5, 8 or 13.');
+                    }
                 }
 
                 $attribute = $field === 'name' ? 'task_name' : $field;

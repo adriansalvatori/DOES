@@ -11,6 +11,8 @@
 |
 */
 
+use App\Application\Reporting\ReportPeriod;
+use App\Http\Controllers\TeamReportController;
 use App\Livewire\Analytics\AnalyticsPage;
 use App\Livewire\Backlog\BacklogPage;
 use App\Livewire\Board\BoardPage;
@@ -34,6 +36,7 @@ Route::get('/resolver', ResolverPage::class)->name('resolver');
 Route::get('/overview', OverviewPage::class)->name('overview');
 Route::get('/backlog', BacklogPage::class)->name('backlog');
 Route::get('/analytics', AnalyticsPage::class)->name('analytics');
+Route::get('/analytics/reports/{kind}', TeamReportController::class)->whereIn('kind', ReportPeriod::KINDS)->name('reports.team');
 Route::get('/settings/reasons', ReasonsAndFlags::class)->name('settings.reasons');
 Route::get('/settings/task-templates', TaskTemplates::class)->name('settings.task-templates');
 Route::get('/settings/board', BoardSettings::class)->name('settings.board');

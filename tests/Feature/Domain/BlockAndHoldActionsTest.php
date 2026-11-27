@@ -3,6 +3,7 @@
 namespace Tests\Feature\Domain;
 
 use App\Application\Delivery\Actions\BlockDeliverable;
+use App\Application\Delivery\Actions\ChangeDueTarget;
 use App\Application\Delivery\Actions\PutOnHold;
 use App\Application\Delivery\Actions\ResolveBlock;
 use App\Application\Delivery\Actions\Resume;
@@ -20,6 +21,7 @@ use App\Domain\Delivery\Models\Approval;
 use App\Domain\Delivery\Models\Block;
 use App\Domain\Delivery\Models\Hold;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Event;
 
@@ -224,5 +226,29 @@ class BlockAndHoldActionsTest extends DeliveryTestCase
         $this->expectException(WorkflowException::class);
 
         app(Resume::class)($this->deliverable(), $this->manager());
+    }
+
+    public function test_work_on_hold_has_no_due_date_until_it_resumes(): void
+    {
+        $this->freezeAt('2026-11-26 09:00:00');
+        $deliverable = $this->deliverable(DeliverableStatus::READY, ['due_target' => '2026-07-10']);
+        $manager = $this->manager();
+
+        app(PutOnHold::class)($deliverable, HoldReason::PAUSED, null, $manager);
+
+        $this->assertNull($deliverable->fresh()->due_target);
+        $this->assertNull($this->legacyRow($deliverable)->current_due_date);
+
+        try {
+            app(ChangeDueTarget::class)($deliverable, CarbonImmutable::parse('2026-12-01'), null, $manager);
+            $this->fail('A held deliverable must not get a due date.');
+        } catch (WorkflowException) {
+            $this->assertNull($deliverable->fresh()->due_target);
+        }
+
+        app(Resume::class)($deliverable, $manager);
+
+        $this->assertNotNull($deliverable->fresh()->due_target);
+        $this->assertTrue($deliverable->fresh()->due_target->greaterThan(now()));
     }
 }

@@ -47,6 +47,28 @@
                 select.value = select.dataset.current || '';
             }
         },
+        async confirmChoice(select, field, from, method) {
+            const to = select.options[select.selectedIndex].text;
+            if (to === from) {
+                return;
+            }
+            if (await window.KudosConfirmChange({ field, from, to })) {
+                $wire[method](select.value === '' ? null : select.value);
+            } else {
+                select.value = select.dataset.current || '';
+            }
+        },
+        async confirmTaskPoints(select, taskId, field, from) {
+            const to = select.options[select.selectedIndex].text;
+            if (to === from) {
+                return;
+            }
+            if (await window.KudosConfirmChange({ field, from, to })) {
+                $wire.changeTaskPoints(taskId, select.value === '' ? null : select.value);
+            } else {
+                select.value = select.dataset.current || '';
+            }
+        },
         async confirmDueTarget(input, field, from, none) {
             if (input.value === '' || input.value === input.dataset.current) {
                 input.value = input.dataset.current || '';
@@ -179,6 +201,9 @@
                             @if($can['requestChangesByReviewer'] && $deliverable->status === \App\Domain\Delivery\Enums\DeliverableStatus::INTERNAL_REVIEW)
                                 <button type="button" wire:click="openSheet('reviewerChanges')" class="block w-full px-3 py-1.5 text-left text-ink hover:bg-sunken">{{ __('Send back to design') }}</button>
                             @endif
+                            @if($can['requestProductionSample'] && $deliverable->status === \App\Domain\Delivery\Enums\DeliverableStatus::CLIENT_REVIEW)
+                                <button type="button" wire:click="openSheet('sample')" class="block w-full px-3 py-1.5 text-left text-ink hover:bg-sunken">{{ __('Request production sample') }}</button>
+                            @endif
                             @if($can['close'] && ! $isClosed)
                                 <button type="button" wire:click="openSheet('close')" class="block w-full px-3 py-1.5 text-left text-ink hover:bg-sunken">{{ __('Close') }}</button>
                             @endif
@@ -273,6 +298,28 @@
                         <p class="mt-0.5 text-meta">{{ __('Since :date', ['date' => $hold->started_at?->diffForHumans()]) }}</p>
                     </div>
                 @endif
+
+                @if($deliverable->isSample() && $deliverable->sampleOf)
+                    <div class="mx-5 mt-4 flex items-center justify-between gap-3 rounded-card border border-line px-3 py-2 text-body" data-banner="sample-of">
+                        <span class="min-w-0 truncate">
+                            <x-lucide-package class="mr-1 inline h-4 w-4 text-ink-3" aria-hidden="true" />
+                            {{ __('Production sample of :name', ['name' => $deliverable->sampleOf->task_name]) }}
+                            <span class="text-meta text-ink-3">· {{ $deliverable->sampleOf->status->label() }}</span>
+                        </span>
+                        <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm shrink-0" @click="$dispatch('open-deliverable', { deliverableId: {{ $deliverable->sampleOf->id }} })">{{ __('Open') }}</button>
+                    </div>
+                @endif
+
+                @foreach($deliverable->samples()->latest('id')->get() as $sample)
+                    <div class="mx-5 mt-4 flex items-center justify-between gap-3 rounded-card border border-line px-3 py-2 text-body" data-banner="sample" wire:key="sample-{{ $sample->id }}">
+                        <span class="min-w-0 truncate">
+                            <x-lucide-package class="mr-1 inline h-4 w-4 text-ink-3" aria-hidden="true" />
+                            {{ __('Production sample') }}
+                            <span class="text-meta text-ink-3">· {{ $sample->status->label() }}</span>
+                        </span>
+                        <button type="button" class="ui-btn ui-btn-secondary ui-btn-sm shrink-0" @click="$dispatch('open-deliverable', { deliverableId: {{ $sample->id }} })">{{ __('Open') }}</button>
+                    </div>
+                @endforeach
 
                 @if($sheet)
                     @include('livewire.deliverables.partials.sheet')

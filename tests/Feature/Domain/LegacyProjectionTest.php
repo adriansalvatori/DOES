@@ -241,8 +241,8 @@ class LegacyProjectionTest extends DeliveryTestCase
     public function test_work_order_fields_flags_dates_and_backlog_follow_the_domain_model(): void
     {
         $client = Client::create(['name' => 'Acme']);
-        $workOrder = WorkOrder::factory()->create(['number' => 'WO 777', 'client_id' => $client->id, 'estimate_invoice_number' => 'E-9', 'in_backlog' => true]);
-        $deliverable = $this->deliverable(DeliverableStatus::READY, ['flag_codes' => ['urgent', 'permit_sign'], 'due_target' => '2026-10-05'], $workOrder);
+        $workOrder = WorkOrder::factory()->create(['number' => 'WO 777', 'client_id' => $client->id, 'estimate_invoice_number' => 'E-9']);
+        $deliverable = $this->deliverable(DeliverableStatus::READY, ['flag_codes' => ['urgent', 'permit_sign'], 'due_target' => '2026-10-05', 'in_backlog' => true], $workOrder);
 
         $this->projection->project($deliverable);
 
@@ -254,7 +254,7 @@ class LegacyProjectionTest extends DeliveryTestCase
         $this->assertSame('2026-10-05', $row->current_due_date);
         $this->assertSame(['URGENTE', 'MAKE PERMIT SIGN'], json_decode($row->flags, true));
 
-        $workOrder->update(['in_backlog' => false]);
+        $deliverable->update(['in_backlog' => false]);
         $this->projection->project($deliverable);
         $this->assertSame(1, (int) $this->legacyRow($deliverable)->in_workspace);
     }

@@ -7,6 +7,7 @@ use App\Application\Delivery\Data\WorkOrderTab;
 use App\Application\Delivery\Queries\WorkOrderListQuery;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Models\Approval;
+use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\Receipt;
 use App\Domain\Delivery\Models\WorkOrder;
 use Illuminate\Support\Carbon;
@@ -39,7 +40,7 @@ class WorkOrderListQueryTest extends QueryTestCase
         $production = $this->workOrderWith([DeliverableStatus::IN_PRODUCTION, DeliverableStatus::FULFILLMENT, DeliverableStatus::DONE], 'WO 3');
         $fulfillment = $this->workOrderWith([DeliverableStatus::FULFILLMENT, DeliverableStatus::DONE], 'WO 4');
         $done = $this->workOrderWith([DeliverableStatus::DONE], 'WO 5');
-        WorkOrder::factory()->inBacklog()->create();
+        Deliverable::factory()->inBacklog()->create();
 
         $ids = fn (WorkOrderTab $tab) => collect(app(WorkOrderListQuery::class)->run($tab)->items())->map(fn ($row) => $row->workOrder->id)->all();
 

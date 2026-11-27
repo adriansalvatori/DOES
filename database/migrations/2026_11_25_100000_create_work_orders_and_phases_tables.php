@@ -24,7 +24,6 @@ return new class extends Migration
             $table->json('installation_types')->nullable();
             $table->text('notes')->nullable();
             $table->string('drive_folder_id')->nullable();
-            $table->boolean('in_backlog')->default(false)->index();
             $table->timestamps();
             $table->softDeletes();
         });

@@ -6,6 +6,7 @@ use App\Domain\Delivery\Enums\Area;
 use App\Domain\Delivery\Enums\CloseReason;
 use App\Domain\Delivery\Enums\DeliverableFlag;
 use App\Domain\Delivery\Enums\DeliverableStatus;
+use App\Domain\Delivery\Enums\Priority;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Database\Factories\Domain\Delivery\Models\DeliverableFactory;
@@ -28,6 +29,16 @@ class Deliverable extends Model
 
     protected $table = 'orders';
 
+    /**
+     * Defaults the database also applies, so a new model has them before it is reloaded.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'priority' => 'medium',
+        'in_backlog' => false,
+    ];
+
     protected $fillable = [
         'work_order_id',
         'phase_id',
@@ -45,6 +56,10 @@ class Deliverable extends Model
         'close_reason',
         'closed_at',
         'carry_over_count',
+        'in_backlog',
+        'sample_of_id',
+        'priority',
+        'points',
         'client_revision_count',
         'internal_revision_count',
         'last_sent_to_client_at',
@@ -66,6 +81,9 @@ class Deliverable extends Model
             'closed_at' => 'datetime',
             'quantity' => 'integer',
             'carry_over_count' => 'integer',
+            'in_backlog' => 'boolean',
+            'priority' => Priority::class,
+            'points' => 'integer',
             'client_revision_count' => 'integer',
             'internal_revision_count' => 'integer',
             'last_sent_to_client_at' => 'datetime',
@@ -90,6 +108,27 @@ class Deliverable extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewer_id');
+    }
+
+    /**
+     * The deliverable this one is a production sample of.
+     */
+    public function sampleOf(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'sample_of_id');
+    }
+
+    /**
+     * Production samples requested while the client reviewed this deliverable.
+     */
+    public function samples(): HasMany
+    {
+        return $this->hasMany(self::class, 'sample_of_id');
+    }
+
+    public function isSample(): bool
+    {
+        return $this->sample_of_id !== null;
     }
 
     public function tasks(): HasMany
@@ -180,6 +219,23 @@ class Deliverable extends Model
     public function scopeAssignedTo(Builder $query, User|int $user): Builder
     {
         return $query->where($query->qualifyColumn('assignee_id'), $user instanceof User ? $user->getKey() : $user);
+    }
+
+    /**
+     * Deliverables out of the backlog: the only ones the working screens, counts and daily automation see.
+     */
+    public function scopeInWorkspace(Builder $query): Builder
+    {
+        return $query->where($query->qualifyColumn('in_backlog'), false);
+    }
+
+    /**
+     * Open deliverables still waiting in the backlog. Each deliverable carries its own flag, so a later phase can wait
+     * there while an earlier one is worked on.
+     */
+    public function scopeInBacklog(Builder $query): Builder
+    {
+        return $query->where($query->qualifyColumn('in_backlog'), true)->active();
     }
 
     public function scopeActive(Builder $query): Builder

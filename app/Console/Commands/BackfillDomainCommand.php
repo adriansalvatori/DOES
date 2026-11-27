@@ -37,6 +37,8 @@ class BackfillDomainCommand extends Command
         $this->components->twoColumnDetail('Blocks / holds', ($report['deliverables']['blocks_created'] ?? 0).' / '.($report['deliverables']['holds_created'] ?? 0));
         $this->components->twoColumnDetail('Approvals', (string) ($report['approvals']['created'] ?? 0));
         $this->components->twoColumnDetail('Alerts', (string) ($report['tasks']['alerts_created'] ?? 0));
+        $this->components->twoColumnDetail('Due dates moved after last activity', (string) ($report['due_dates_rebased'] ?? 0));
+        $this->components->twoColumnDetail('Promised dates moved after last activity', (string) ($report['promised_dates_rebased'] ?? 0));
         $this->components->twoColumnDetail('Unmapped rows', (string) count($report['unmapped']));
 
         if ($this->option('dry-run')) {

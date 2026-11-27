@@ -14,7 +14,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Pauses a deliverable. It keeps its status but cannot move forward and drops out of the daily lists.
+ * Pauses a deliverable. It keeps its status but cannot move forward, drops out of the daily lists and loses its due
+ * date, so it never counts as overdue. Resuming sets a new one.
  */
 class PutOnHold
 {
@@ -44,7 +45,14 @@ class PutOnHold
                 'started_at' => now(),
             ]);
 
-            $this->log->record($deliverable, 'deliverable_on_hold', $actor, null, $reason->value, ['hold_id' => $hold->getKey(), 'note' => $note]);
+            $previousDueTarget = $deliverable->due_target?->toDateString();
+            $deliverable->forceFill(['due_target' => null])->save();
+
+            $this->log->record($deliverable, 'deliverable_on_hold', $actor, null, $reason->value, [
+                'hold_id' => $hold->getKey(),
+                'note' => $note,
+                'due_target' => $previousDueTarget,
+            ]);
             $this->projection->project($deliverable);
 
             DB::afterCommit(fn () => DeliverablePutOnHold::dispatch($deliverable, $hold, $actor));

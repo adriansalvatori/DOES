@@ -5,6 +5,7 @@ namespace Tests\Feature\Domain;
 use App\Application\Delivery\Actions\RunDailyCycle;
 use App\Domain\Delivery\Enums\AlertKind;
 use App\Domain\Delivery\Enums\BlockReason;
+use App\Domain\Delivery\Enums\CloseReason;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Enums\HoldReason;
 use App\Domain\Delivery\Events\DeliverableDueToday;
@@ -12,6 +13,7 @@ use App\Domain\Delivery\Events\DeliverableOverdue;
 use App\Domain\Delivery\Models\Alert;
 use App\Domain\Delivery\Models\Block;
 use App\Domain\Delivery\Models\Hold;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 
 class DailyCycleTest extends DeliveryTestCase
@@ -286,10 +288,37 @@ class DailyCycleTest extends DeliveryTestCase
                 ['skipped by wip', 0],
                 ['follow ups opened', 0],
                 ['put on hold', 0],
+                ['archived on hold', 0],
                 ['delay notices', 0],
                 ['due today', 0],
                 ['overdue', 0],
             ])
             ->assertSuccessful();
+    }
+
+    public function test_work_on_hold_with_no_activity_for_more_than_30_days_is_archived(): void
+    {
+        $this->freezeAt('2026-11-26 07:00:00');
+        $idle = $this->deliverable(DeliverableStatus::READY, ['created_at' => '2026-09-01 10:00:00']);
+        Hold::factory()->create(['deliverable_id' => $idle->id, 'started_at' => '2026-09-02 10:00:00']);
+        $this->event($idle->id, 'AutomationEngine', '2026-11-20 10:00:00');
+        $touched = $this->deliverable(DeliverableStatus::READY, ['created_at' => '2026-09-01 10:00:00']);
+        Hold::factory()->create(['deliverable_id' => $touched->id, 'started_at' => '2026-09-02 10:00:00']);
+        $this->event($touched->id, 'Euralíz Bravo', '2026-11-10 10:00:00');
+
+        $summary = $this->cycle();
+
+        $this->assertSame(1, $summary['archived_on_hold']);
+        $this->assertSame(DeliverableStatus::DONE, $idle->fresh()->status);
+        $this->assertSame(CloseReason::INACTIVE_ON_HOLD, $idle->fresh()->close_reason);
+        $this->assertFalse($idle->fresh()->isOnHold(), 'Automation entries are not activity, so the idle card is archived.');
+        $this->assertTrue($touched->fresh()->isOnHold());
+        $this->assertSame(DeliverableStatus::READY, $touched->fresh()->status);
+        $this->assertSame(0, $this->cycle()['archived_on_hold']);
+    }
+
+    private function event(int $deliverableId, string $actor, string $at): void
+    {
+        DB::table('order_events')->insert(['order_id' => $deliverableId, 'event_type' => 'NOTE', 'actor' => $actor, 'created_at' => $at, 'updated_at' => $at]);
     }
 }

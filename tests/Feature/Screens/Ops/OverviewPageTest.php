@@ -55,8 +55,8 @@ class OverviewPageTest extends DeliveryTestCase
         $this->workOrderWithPieces('WO 500');
         $done = WorkOrder::factory()->create(['number' => 'WO 600']);
         $this->deliverable(DeliverableStatus::DONE, ['task_name' => 'Finished'], $done);
-        $backlog = WorkOrder::factory()->inBacklog()->create(['number' => 'WO 700']);
-        $this->deliverable(DeliverableStatus::INTAKE, [], $backlog);
+        $backlog = WorkOrder::factory()->create(['number' => 'WO 700']);
+        $this->deliverable(DeliverableStatus::INTAKE, ['in_backlog' => true], $backlog);
 
         $page = Livewire::actingAs($this->manager())->test(OverviewPage::class);
         $numbers = fn () => collect($page->instance()->rows()->items())->map(fn ($row) => $row->workOrder->number)->sort()->values()->all();

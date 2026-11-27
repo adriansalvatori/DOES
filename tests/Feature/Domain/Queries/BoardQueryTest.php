@@ -109,4 +109,19 @@ class BoardQueryTest extends QueryTestCase
 
         $this->assertConstantQueries(fn () => $seed(8), fn () => app(BoardQuery::class)->run($viewer, Area::DESIGN)->lanes());
     }
+
+    public function test_deliverables_still_in_the_backlog_stay_off_the_board(): void
+    {
+        $this->makeDeliverable(DeliverableStatus::INTAKE, null, ['in_backlog' => true]);
+        $this->makeDeliverable(DeliverableStatus::IN_PRODUCTION, null, ['in_backlog' => true]);
+        $shown = $this->makeDeliverable(DeliverableStatus::INTAKE);
+        $viewer = User::factory()->coordinator()->create();
+
+        $intake = $this->column(app(BoardQuery::class)->run($viewer, Area::DESIGN), DeliverableStatus::INTAKE);
+        $production = $this->column(app(BoardQuery::class)->run($viewer, Area::PRODUCTION), DeliverableStatus::IN_PRODUCTION);
+
+        $this->assertSame([$shown->id], $intake->cards->modelKeys());
+        $this->assertSame(1, $intake->total);
+        $this->assertSame(0, $production->total);
+    }
 }

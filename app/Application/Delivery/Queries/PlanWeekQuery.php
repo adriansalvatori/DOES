@@ -8,7 +8,6 @@ use App\Domain\Delivery\Models\Deliverable;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
-use Illuminate\Database\Eloquent\Builder;
 
 class PlanWeekQuery
 {
@@ -29,7 +28,7 @@ class PlanWeekQuery
             ->inStatus(DeliverableStatus::READY)
             ->whereNull('planned_for')
             ->notBlocked()
-            ->whereHas('workOrder', fn (Builder $workOrders) => $workOrders->where('in_backlog', false))
+            ->inWorkspace()
             ->leftJoin('work_orders', 'work_orders.id', '=', 'orders.work_order_id')
             ->select('orders.*')
             ->orderByRaw('work_orders.promised_date IS NULL')
@@ -39,6 +38,7 @@ class PlanWeekQuery
             ->get();
 
         $blockedBacklog = Deliverable::query()
+            ->inWorkspace()
             ->inStatus(DeliverableStatus::READY)
             ->whereNull('planned_for')
             ->blocked()
@@ -48,6 +48,7 @@ class PlanWeekQuery
             ->get();
 
         $planned = Deliverable::query()
+            ->inWorkspace()
             ->inStatus([DeliverableStatus::READY, DeliverableStatus::IN_DESIGN])
             ->whereNotNull('assignee_id')
             ->whereBetween('planned_for', [$days[0]->toDateString(), $days[4]->toDateString()])

@@ -31,7 +31,7 @@ class Column extends Component
 
     public string $search = '';
 
-    public string $groupBy = 'designer';
+    public string $groupBy = 'work_order';
 
     public int $pagesShown = 1;
 
@@ -126,7 +126,8 @@ class Column extends Component
     }
 
     /**
-     * Fulfillment cards grouped by work order, so a whole order can be confirmed received at once.
+     * Cards grouped by work order, in due order. Only orders with two or more cards get a group header.
+     * Fulfillment always groups this way, so a whole order can be confirmed received at once.
      *
      * @return Collection<int, Collection<int, Deliverable>>
      */

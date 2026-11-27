@@ -46,7 +46,8 @@ class HeaderSearchTest extends TestCase
     {
         $match = $this->workOrder('WO 9988', 'Cyberdyne Systems', 'T-800 Blueprint Design');
         $this->workOrder('WO 1122', 'Wayne Enterprises', 'Batmobile Graphics');
-        $backlog = WorkOrder::factory()->inBacklog()->create(['number' => 'WO 9989', 'client_id' => $match->client_id]);
+        $backlog = WorkOrder::factory()->create(['number' => 'WO 9989', 'client_id' => $match->client_id]);
+        Deliverable::factory()->inBacklog()->for($backlog, 'workOrder')->create();
 
         Livewire::test(HeaderSearch::class)
             ->set('search', 'Cyberdyne')

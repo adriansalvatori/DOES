@@ -8,7 +8,10 @@
 @else
     <ul class="divide-y divide-line rounded-card border border-line" data-task-list>
         @foreach($tasks as $task)
-            @php($done = $task->isDone())
+            @php
+                $done = $task->isDone();
+                $taskTitle = $task->title_key ? __($task->title_key, $task->title_params ?? []) : $task->title;
+            @endphp
             <li wire:key="task-{{ $task->id }}" class="flex items-center gap-3 px-3 py-2 {{ $done ? 'ui-done' : '' }}">
                 <button type="button" wire:click="toggleTask({{ $task->id }})" @disabled(! $can['manageTasks']) role="checkbox" aria-checked="{{ $done ? 'true' : 'false' }}" aria-label="{{ $done ? __('Reopen task') : __('Complete task') }}" @class([
                     'grid h-4.5 w-4.5 shrink-0 place-items-center rounded border',
@@ -17,12 +20,23 @@
                 ])>
                     @if($done)<x-lucide-check class="h-3 w-3" stroke-width="3" />@endif
                 </button>
-                <span class="min-w-0 flex-1 truncate text-body text-ink">{{ $task->title_key ? __($task->title_key, $task->title_params ?? []) : $task->title }}</span>
+                <span class="min-w-0 flex-1 truncate text-body text-ink">{{ $taskTitle }}</span>
                 @if($task->isGate() && $task->advances_to)
                     <span class="shrink-0 text-meta text-ink-3">{{ __('→ :status', ['status' => $task->advances_to->label()]) }}</span>
                 @endif
                 @if($task->due_date)
                     <span class="shrink-0 text-meta text-ink-3">{{ $task->due_date->translatedFormat('j M') }}</span>
+                @endif
+                @if($can['manageTasks'] && ! $isClosed)
+                    <select class="ui-select w-16 shrink-0 tabular-nums" aria-label="{{ __('Points') }}" data-task-points="{{ $task->id }}" data-current="{{ $task->points }}"
+                        @change="confirmTaskPoints($event.target, {{ $task->id }}, @js(__('Points').' · '.$taskTitle), @js($task->points !== null ? (string) $task->points : __('(empty)')))">
+                        <option value="" @selected($task->points === null)>{{ __('(empty)') }}</option>
+                        @foreach(\App\Domain\Delivery\Support\PointsEstimator::TASK_SCALE as $option)
+                            <option value="{{ $option }}" @selected($task->points === $option)>{{ $option }}</option>
+                        @endforeach
+                    </select>
+                @else
+                    <x-board.points :points="$task->points" show-zero />
                 @endif
             </li>
         @endforeach

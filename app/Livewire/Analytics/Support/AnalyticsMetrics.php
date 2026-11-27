@@ -57,7 +57,7 @@ class AnalyticsMetrics
     public function clientWait(): array
     {
         $row = $this->stays()->where('status', DeliverableStatus::CLIENT_REVIEW->value)->first();
-        $waiting = Deliverable::query()->inStatus(DeliverableStatus::CLIENT_REVIEW);
+        $waiting = Deliverable::query()->inWorkspace()->inStatus(DeliverableStatus::CLIENT_REVIEW);
         $oldest = (clone $waiting)->whereNotNull('last_sent_to_client_at')->min('last_sent_to_client_at');
 
         return [
@@ -108,6 +108,7 @@ class AnalyticsMetrics
     public function wipPerDesigner(): array
     {
         $counts = Deliverable::query()
+            ->inWorkspace()
             ->inStatus(DeliverableStatus::IN_DESIGN)
             ->notBlocked()
             ->whereNotNull('assignee_id')

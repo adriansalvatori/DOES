@@ -28,6 +28,14 @@ return [
         'cancelled_by_reviewer' => 'Cancelada por el revisor',
         'transferred' => 'No realizada / transferida',
         'client_unresponsive' => 'Cliente no responde',
+        'inactive_on_hold' => 'Archivada: más de 30 días en pausa',
+    ],
+    'priority' => [
+        'lowest' => 'Mínima',
+        'low' => 'Baja',
+        'medium' => 'Media',
+        'high' => 'Alta',
+        'highest' => 'Máxima',
     ],
     'deliverable_flag' => [
         'urgent' => 'Urgente',

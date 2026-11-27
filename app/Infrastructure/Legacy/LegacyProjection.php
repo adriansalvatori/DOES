@@ -94,7 +94,7 @@ class LegacyProjection
         ];
 
         if ($fresh->status !== DeliverableStatus::DONE) {
-            $update['in_workspace'] = ! ($workOrder?->in_backlog ?? false);
+            $update['in_workspace'] = ! $fresh->in_backlog;
         }
 
         if ($workOrder !== null) {
@@ -230,6 +230,7 @@ class LegacyProjection
             CloseReason::CANCELLED_BY_REVIEWER => Substatus::CANCELADA_POR_CAMILA,
             CloseReason::TRANSFERRED => Substatus::NO_REALIZADA_TRANSFERIDA,
             CloseReason::CLIENT_UNRESPONSIVE => Substatus::CLIENTE_NO_RESPONSIVE,
+            CloseReason::INACTIVE_ON_HOLD => Substatus::CANCELADA,
             default => Substatus::FINALIZADA,
         };
     }

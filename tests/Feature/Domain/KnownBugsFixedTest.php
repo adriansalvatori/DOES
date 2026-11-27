@@ -25,6 +25,7 @@ use App\Domain\Delivery\Enums\HoldReason;
 use App\Domain\Delivery\Enums\TaskKind;
 use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Block;
+use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\Task;
 use App\Domain\Delivery\Models\WorkOrder;
 use App\Domain\Delivery\Support\AlertScheduler;
@@ -295,7 +296,8 @@ class KnownBugsFixedTest extends DeliveryTestCase
     public function test_work_in_the_backlog_stays_there_when_it_gets_a_welcome_alert(): void
     {
         // was: SupportKnownBugsTest::test_new_trello_cards_stay_in_the_backlog_even_when_a_welcome_task_is_created
-        $workOrder = WorkOrder::factory()->inBacklog()->create();
+        $workOrder = WorkOrder::factory()->create();
+        Deliverable::factory()->inBacklog()->for($workOrder, 'workOrder')->create();
 
         $deliverable = app(AddDeliverable::class)($workOrder, 'Imported card', actor: $this->manager());
         app(AlertScheduler::class)->scheduleWelcomeEmail($workOrder, null);
@@ -313,5 +315,16 @@ class KnownBugsFixedTest extends DeliveryTestCase
         app(RunDailyCycle::class)(false);
 
         $this->assertSame(DeliverableStatus::READY, $deliverable->fresh()->status);
+    }
+
+    public function test_duplicating_a_deliverable_whose_work_order_is_in_the_trash_is_refused_with_a_message(): void
+    {
+        $deliverable = $this->deliverable(DeliverableStatus::READY);
+        $deliverable->workOrder->delete();
+
+        $this->expectException(WorkflowException::class);
+        $this->expectExceptionMessage('Its work order is in the trash.');
+
+        app(DuplicateDeliverable::class)($deliverable->fresh(), $this->manager());
     }
 }

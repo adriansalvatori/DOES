@@ -32,6 +32,41 @@
         </div>
     </section>
 
+    {{-- Weekly and biweekly PDF reports --}}
+    <section class="ui-card space-y-4 p-5" aria-labelledby="reports-title">
+        <div>
+            <h2 id="reports-title" class="ui-section-title">{{ __('Reports') }}</h2>
+            <p class="mt-0.5 text-body text-ink-3">{{ __('Points approved, proofs, rework and open work per designer, as a PDF. Emailed every Monday (weekly) and every other Monday (biweekly).') }}</p>
+        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+            @foreach(['weekly' => [__('Weekly report'), 'weeklyStart'], 'biweekly' => [__('Biweekly report'), 'biweeklyStart']] as $kind => [$kindLabel, $property])
+                <div class="space-y-1.5" wire:key="report-{{ $kind }}">
+                    <label class="ui-label" for="report-{{ $kind }}">{{ $kindLabel }}</label>
+                    <div class="flex gap-2">
+                        <select id="report-{{ $kind }}" wire:model.live="{{ $property }}" class="ui-select min-w-0 flex-1">
+                            @foreach($reportPeriods[$kind] as $period)
+                                <option value="{{ $period->start->toDateString() }}">{{ $period->label() }}</option>
+                            @endforeach
+                        </select>
+                        <a href="{{ route('reports.team', ['kind' => $kind, 'start' => $this->{$property}]) }}" class="ui-btn ui-btn-secondary shrink-0" data-report-download="{{ $kind }}">
+                            <x-lucide-download class="h-4 w-4" aria-hidden="true" />
+                            <span>{{ __('PDF') }}</span>
+                        </a>
+                    </div>
+                </div>
+            @endforeach
+            <form wire:submit="saveRecipients" class="space-y-1.5">
+                <label class="ui-label" for="report-recipients">{{ __('Email reports to') }}</label>
+                <div class="flex gap-2">
+                    <input id="report-recipients" type="text" wire:model="recipients" class="ui-input min-w-0 flex-1" placeholder="{{ __('Every admin') }}">
+                    <button type="submit" class="ui-btn ui-btn-secondary shrink-0" wire:loading.attr="disabled" wire:target="saveRecipients">{{ __('Save') }}</button>
+                </div>
+                @error('recipients') <span class="block text-meta text-danger">{{ $message }}</span> @enderror
+                <p class="text-meta text-ink-3">{{ __('Separate addresses with commas. Empty sends to every admin.') }}</p>
+            </form>
+        </div>
+    </section>
+
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {{-- Cycle time per column --}}
         <section class="ui-card space-y-3 p-5">

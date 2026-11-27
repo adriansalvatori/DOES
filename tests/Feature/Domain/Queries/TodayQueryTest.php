@@ -114,8 +114,7 @@ class TodayQueryTest extends QueryTestCase
         $held = $this->makeDeliverable(DeliverableStatus::CLIENT_REVIEW, null, ['due_target' => '2026-12-10']);
         Hold::factory()->create(['deliverable_id' => $held->id]);
         $this->makeDeliverable(DeliverableStatus::DONE, null, ['due_target' => '2026-11-01']);
-        $backlogOrder = WorkOrder::factory()->inBacklog()->create();
-        $this->makeDeliverable(DeliverableStatus::READY, $backlogOrder, ['due_target' => '2026-11-01']);
+        $this->makeDeliverable(DeliverableStatus::READY, null, ['due_target' => '2026-11-01', 'in_backlog' => true]);
 
         $view = app(TodayQuery::class)->forManager();
 
@@ -163,5 +162,19 @@ class TodayQueryTest extends QueryTestCase
             app(TodayQuery::class)->forManager();
             app(TodayQuery::class)->forCustomerService(User::factory()->make(['id' => 1]));
         });
+    }
+
+    public function test_designer_today_and_wip_leave_out_backlog_work_orders(): void
+    {
+        $designer = User::factory()->designer()->create(['wip_limit' => 3]);
+        $this->makeDeliverable(DeliverableStatus::IN_DESIGN, null, ['assignee_id' => $designer->id, 'planned_for' => '2026-11-25', 'in_backlog' => true]);
+        $this->makeDeliverable(DeliverableStatus::READY, null, ['assignee_id' => $designer->id, 'due_target' => '2026-11-20', 'in_backlog' => true]);
+        $shown = $this->makeDeliverable(DeliverableStatus::IN_DESIGN, null, ['assignee_id' => $designer->id, 'planned_for' => '2026-11-25']);
+
+        $view = app(TodayQuery::class)->forDesigner($designer);
+
+        $this->assertSame([$shown->id], $view['plannedToday']->modelKeys());
+        $this->assertCount(0, $view['overdue']);
+        $this->assertSame(['used' => 1, 'limit' => 3], $view['wip']);
     }
 }

@@ -13,8 +13,8 @@ class BacklogQueryTest extends QueryTestCase
 {
     private function backlogOrder(string $number, string $company, array $attributes = [], ?DeliverableStatus $status = DeliverableStatus::INTAKE, array $deliverable = []): WorkOrder
     {
-        $workOrder = WorkOrder::factory()->inBacklog()->create(['number' => $number, ...$attributes]);
-        $this->makeDeliverable($status, $workOrder, ['company_name' => $company, ...$deliverable]);
+        $workOrder = WorkOrder::factory()->create(['number' => $number, ...$attributes]);
+        $this->makeDeliverable($status, $workOrder, ['company_name' => $company, 'in_backlog' => true, ...$deliverable]);
 
         return $workOrder;
     }

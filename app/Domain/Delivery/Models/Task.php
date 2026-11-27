@@ -4,6 +4,7 @@ namespace App\Domain\Delivery\Models;
 
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Enums\TaskKind;
+use App\Domain\Delivery\Models\Concerns\CountsTowardStoryPoints;
 use Database\Factories\Domain\Delivery\Models\TaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Task extends Model
 {
     /** @use HasFactory<TaskFactory> */
-    use HasFactory, SoftDeletes;
+    use CountsTowardStoryPoints, HasFactory, SoftDeletes;
 
     protected $table = 'related_tasks';
 
@@ -32,6 +33,7 @@ class Task extends Model
         'required',
         'title_key',
         'title_params',
+        'points',
     ];
 
     /**
@@ -47,6 +49,7 @@ class Task extends Model
             'due_date' => 'date',
             'scheduled_date' => 'date',
             'completed_at' => 'datetime',
+            'points' => 'integer',
         ];
     }
 

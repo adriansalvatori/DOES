@@ -52,7 +52,7 @@ class HeaderSearch extends Component
             $workOrders = WorkOrder::query()
                 ->with(['client:id,name', 'clientLocation:id,name'])
                 ->withCount('deliverables')
-                ->where('in_backlog', false)
+                ->inWorkspace()
                 ->where(function (Builder $query) use ($terms): void {
                     foreach ($terms as $term) {
                         $query->where(fn (Builder $inner) => $inner
@@ -67,6 +67,7 @@ class HeaderSearch extends Component
                 ->get();
 
             $deliverables = Deliverable::query()
+                ->inWorkspace()
                 ->with(['workOrder:id,number,client_id,company_name', 'workOrder.client:id,name'])
                 ->where(function (Builder $query) use ($terms): void {
                     foreach ($terms as $term) {

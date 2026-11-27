@@ -62,7 +62,7 @@ class BoardPage extends Component
     public string $search = '';
 
     #[Url(as: 'group')]
-    public string $groupBy = 'designer';
+    public string $groupBy = 'work_order';
 
     /** @var array<string, string> */
     public array $fingerprints = [];
@@ -72,7 +72,7 @@ class BoardPage extends Component
         abort_unless(auth()->user()?->active, 403);
 
         $this->area = Area::tryFrom($this->area)?->value ?? Area::DESIGN->value;
-        $this->groupBy = $this->groupBy === 'none' ? 'none' : 'designer';
+        $this->groupBy = in_array($this->groupBy, ['work_order', 'designer', 'none'], true) ? $this->groupBy : 'work_order';
         $this->fingerprints = $this->currentFingerprints();
     }
 
@@ -87,9 +87,31 @@ class BoardPage extends Component
                 'clientId' => $this->clientId,
                 'flags' => array_values($this->flags),
                 'search' => $this->search,
-                'groupBy' => $this->area === 'design' && $this->groupBy !== 'none' ? 'designer' : 'none',
+                'groupBy' => $this->effectiveGroupBy(),
             ]);
         }
+    }
+
+    /**
+     * Groupings offered in the active tab. Grouping by designer exists on the design tab only.
+     *
+     * @return array<string, string>
+     */
+    public function groupingOptions(): array
+    {
+        return array_filter([
+            'work_order' => __('Group by: work order'),
+            'designer' => $this->area === Area::DESIGN->value ? __('Group by: designer') : null,
+            'none' => __('No grouping'),
+        ]);
+    }
+
+    /**
+     * The grouping the columns use: a choice the active tab does not offer falls back to work order.
+     */
+    public function effectiveGroupBy(): string
+    {
+        return array_key_exists($this->groupBy, $this->groupingOptions()) ? $this->groupBy : 'work_order';
     }
 
     public function updatedArea(): void
@@ -317,6 +339,7 @@ class BoardPage extends Component
     private function currentFingerprints(): array
     {
         $rows = Deliverable::query()
+            ->inWorkspace()
             ->inStatus($this->columnStatuses)
             ->toBase()
             ->selectRaw('status, COUNT(*) as total, MAX(updated_at) as changed_at')

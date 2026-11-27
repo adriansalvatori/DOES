@@ -25,6 +25,7 @@ class WipPolicy
     public function inDesignCount(User $user): int
     {
         return Deliverable::query()
+            ->inWorkspace()
             ->assignedTo($user)
             ->inStatus(DeliverableStatus::IN_DESIGN)
             ->notBlocked()
@@ -37,6 +38,7 @@ class WipPolicy
     public function plannedCount(User $user, CarbonInterface $day, ?Deliverable $except = null): int
     {
         return Deliverable::query()
+            ->inWorkspace()
             ->assignedTo($user)
             ->inStatus([DeliverableStatus::READY, DeliverableStatus::IN_DESIGN])
             ->plannedFor($day)

@@ -352,23 +352,28 @@ class DeliverableWorkflowTest extends DeliveryTestCase
         $this->assertNotNull($alert->fresh()->resolved_at);
     }
 
-    public function test_back_moves_in_production_files_and_the_queue_are_allowed(): void
+    public function test_every_production_status_can_go_one_step_back(): void
     {
-        $queued = $this->deliverable(DeliverableStatus::PRODUCTION_QUEUE);
-        $ready = $this->deliverable(DeliverableStatus::READY_FOR_PRODUCTION);
+        $moves = [
+            [DeliverableStatus::READY_FOR_PRODUCTION, DeliverableStatus::PRODUCTION_FILES],
+            [DeliverableStatus::PRODUCTION_QUEUE, DeliverableStatus::READY_FOR_PRODUCTION],
+            [DeliverableStatus::IN_PRODUCTION, DeliverableStatus::PRODUCTION_QUEUE],
+            [DeliverableStatus::PRODUCED, DeliverableStatus::IN_PRODUCTION],
+            [DeliverableStatus::FULFILLMENT, DeliverableStatus::PRODUCED],
+        ];
 
-        $this->workflow->transition($queued, DeliverableStatus::READY_FOR_PRODUCTION, TransitionReason::MANUAL);
-        $this->workflow->transition($ready, DeliverableStatus::PRODUCTION_FILES, TransitionReason::MANUAL);
-
-        $this->assertSame(DeliverableStatus::READY_FOR_PRODUCTION, $queued->fresh()->status);
-        $this->assertSame(DeliverableStatus::PRODUCTION_FILES, $ready->fresh()->status);
+        foreach ($moves as [$from, $to]) {
+            $deliverable = $this->deliverable($from);
+            $this->workflow->transition($deliverable, $to, TransitionReason::MANUAL, $this->designer());
+            $this->assertSame($to, $deliverable->fresh()->status, "{$from->value} back to {$to->value}");
+        }
     }
 
     public function test_other_backward_moves_are_refused(): void
     {
         $this->expectException(WorkflowException::class);
 
-        $this->workflow->transition($this->deliverable(DeliverableStatus::IN_PRODUCTION), DeliverableStatus::PRODUCTION_QUEUE, TransitionReason::MANUAL, $this->manager());
+        $this->workflow->transition($this->deliverable(DeliverableStatus::FULFILLMENT), DeliverableStatus::IN_PRODUCTION, TransitionReason::MANUAL, $this->manager());
     }
 
     public function test_the_domain_event_is_dispatched_after_the_transaction_commits(): void

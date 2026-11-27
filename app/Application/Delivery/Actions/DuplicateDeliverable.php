@@ -3,6 +3,7 @@
 namespace App\Application\Delivery\Actions;
 
 use App\Application\Delivery\Actions\Concerns\AuthorizesActor;
+use App\Domain\Delivery\Exceptions\WorkflowException;
 use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Support\DeliveryLog;
 use App\Models\User;
@@ -20,6 +21,10 @@ class DuplicateDeliverable
     public function __invoke(Deliverable $source, ?User $actor = null): Deliverable
     {
         $this->authorizeActor($actor, 'duplicate', $source);
+
+        if ($source->workOrder === null) {
+            throw WorkflowException::refused('Its work order is in the trash. Restore the work order before duplicating.');
+        }
 
         $copy = ($this->addDeliverable)(
             workOrder: $source->workOrder,

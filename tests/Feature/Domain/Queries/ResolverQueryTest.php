@@ -79,4 +79,17 @@ class ResolverQueryTest extends QueryTestCase
 
         $this->assertConstantQueries(fn () => $seed(6), fn () => app(ResolverQuery::class)->run());
     }
+
+    public function test_blocks_and_holds_of_backlog_deliverables_are_left_out(): void
+    {
+        Block::factory()->create(['deliverable_id' => $this->makeDeliverable(DeliverableStatus::INTAKE, null, ['in_backlog' => true])->id]);
+        Hold::factory()->create(['deliverable_id' => $this->makeDeliverable(DeliverableStatus::READY, null, ['in_backlog' => true])->id]);
+        $shown = $this->makeDeliverable(DeliverableStatus::INTAKE);
+        Block::factory()->create(['deliverable_id' => $shown->id]);
+
+        $groups = app(ResolverQuery::class)->run();
+
+        $this->assertCount(1, $groups);
+        $this->assertSame($shown->work_order_id, $groups[0]->workOrder->id);
+    }
 }

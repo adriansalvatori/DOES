@@ -318,7 +318,8 @@ class LegacyBackfillTest extends TestCase
             $this->assertSame('client_review', $this->row('related_tasks', $taskId)->advances_to);
         }
 
-        $this->assertSame('tasks.welcome_email', $this->row('related_tasks', $welcome)->title_key);
+        $this->assertSame('enums.alert_kind.welcome_email', $this->row('related_tasks', $welcome)->title_key);
+        $this->assertSame('Send welcome email', __($this->row('related_tasks', $welcome)->title_key));
         $this->assertSame('Bienvenida', $this->row('related_tasks', $welcome)->title);
     }
 
@@ -377,6 +378,17 @@ class LegacyBackfillTest extends TestCase
         $this->assertSame(0, DB::table('approvals')->where('deliverable_id', $folded($draft)->id)->count());
         $this->assertSame(3, DB::table('orders')->whereNotNull('legacy_element_id')->count());
         $this->assertSame(1, DB::table('work_orders')->count());
+    }
+
+    public function test_pieces_of_a_card_in_the_trash_go_to_the_trash_with_it(): void
+    {
+        $order = $this->legacyOrder(['wo_number' => 'WO 101', 'core_status' => 'EURALIZ ORDERS RECEIVED', 'deleted_at' => '2026-10-23 14:21:16']);
+        $piece = DB::table('order_elements')->insertGetId(['order_id' => $order, 'name' => 'Tent', 'status' => 'draft', 'is_approved' => false, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->runBackfill();
+
+        $this->assertSame('2026-10-23 14:21:16', DB::table('orders')->where('legacy_element_id', $piece)->value('deleted_at'));
+        $this->assertNotNull(DB::table('work_orders')->where('number', 'WO 101')->value('deleted_at'));
     }
 
     public function test_draft_elements_of_a_ready_card_are_ready_and_of_a_done_card_are_done(): void

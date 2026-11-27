@@ -102,6 +102,11 @@ class DeliverablePolicy
         return $this->isStaff($user);
     }
 
+    public function requestProductionSample(User $user, Deliverable $deliverable): bool
+    {
+        return $this->isStaff($user);
+    }
+
     public function manageTasks(User $user, Deliverable $deliverable): bool
     {
         return $this->isStaff($user);

@@ -56,16 +56,15 @@
                 </div>
             </div>
 
-            @if($area === 'design')
-                <div class="inline-flex items-center gap-0.5 p-0.5 rounded-control bg-sunken shrink-0" role="group" aria-label="{{ __('Group by') }}">
-                    @foreach(['designer' => __('Group by: designer'), 'none' => __('No grouping')] as $groupValue => $groupLabel)
-                        <button type="button" wire:click="$set('groupBy', '{{ $groupValue }}')" aria-pressed="{{ $groupBy === $groupValue ? 'true' : 'false' }}"
-                                class="px-2.5 h-7 rounded-control text-meta font-medium transition shrink-0 {{ $groupBy === $groupValue ? 'bg-surface text-ink border border-line' : 'text-ink-3 hover:text-ink border border-transparent' }}">
-                            {{ $groupLabel }}
-                        </button>
-                    @endforeach
-                </div>
-            @endif
+            @php($activeGrouping = $this->effectiveGroupBy())
+            <div class="inline-flex items-center gap-0.5 p-0.5 rounded-control bg-sunken shrink-0" role="group" aria-label="{{ __('Group by') }}">
+                @foreach($this->groupingOptions() as $groupValue => $groupLabel)
+                    <button type="button" wire:click="$set('groupBy', '{{ $groupValue }}')" aria-pressed="{{ $activeGrouping === $groupValue ? 'true' : 'false' }}"
+                            class="px-2.5 h-7 rounded-control text-meta font-medium transition shrink-0 {{ $activeGrouping === $groupValue ? 'bg-surface text-ink border border-line' : 'text-ink-3 hover:text-ink border border-transparent' }}">
+                        {{ $groupLabel }}
+                    </button>
+                @endforeach
+            </div>
         </x-slot:toolbar>
     </x-ui.page-header>
 
@@ -94,7 +93,7 @@
                 :client-id="$this->clientId"
                 :flags="$flags"
                 :search="$search"
-                :group-by="$area === 'design' ? $groupBy : 'none'" />
+                :group-by="$this->effectiveGroupBy()" />
         @endforeach
     </div>
 

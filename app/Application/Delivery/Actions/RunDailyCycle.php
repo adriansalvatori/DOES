@@ -26,7 +26,9 @@ use Illuminate\Support\Facades\DB;
  *
  * 1. carries unfinished work of earlier days to today;
  * 2. starts ready work planned for today or earlier, respecting each person's WIP limit and skipping blocked work;
- * 3. keeps the client follow-up alerts at 3/6/9 business days and puts silent clients on hold after the ninth;
+ * 3. keeps the client follow-up alerts at 3/6/9 business days and puts silent clients on hold after the ninth
+ *    (paused while a production sample is on its way to the client);
+ * 3b. archives work that has been on hold with no activity for more than 30 days;
  * 4. opens delay notices for work that is late or due today from 14:30;
  * 5. announces what is due today or overdue (overdue is computed, never stored).
  */
@@ -39,13 +41,14 @@ class RunDailyCycle
         private SlaPolicy $sla,
         private AlertScheduler $alerts,
         private PutOnHold $putOnHold,
+        private ArchiveStaleHolds $archiveStaleHolds,
         private BlockDeliverable $blockDeliverable,
         private DeliveryLog $log,
         private LegacyProjection $projection,
     ) {}
 
     /**
-     * @return array{carried_over: int, started: int, skipped_by_wip: int, follow_ups_opened: int, put_on_hold: int, delay_notices: int, due_today: int, overdue: int}
+     * @return array{carried_over: int, started: int, skipped_by_wip: int, follow_ups_opened: int, put_on_hold: int, archived_on_hold: int, delay_notices: int, due_today: int, overdue: int}
      */
     public function __invoke(bool $notify = true): array
     {
@@ -57,6 +60,7 @@ class RunDailyCycle
             'skipped_by_wip' => 0,
             'follow_ups_opened' => 0,
             'put_on_hold' => 0,
+            'archived_on_hold' => 0,
             'delay_notices' => 0,
             'due_today' => 0,
             'overdue' => 0,
@@ -64,6 +68,7 @@ class RunDailyCycle
 
         [$summary['started'], $summary['skipped_by_wip']] = $this->startPlannedWork($today);
         [$summary['follow_ups_opened'], $summary['put_on_hold']] = $this->followUpClients();
+        $summary['archived_on_hold'] = ($this->archiveStaleHolds)($today);
         $summary['delay_notices'] = $this->openDelayNotices();
 
         if ($notify) {
@@ -78,6 +83,7 @@ class RunDailyCycle
         $carried = 0;
 
         Deliverable::query()
+            ->inWorkspace()
             ->inStatus(DeliverableStatus::IN_DESIGN)
             ->whereNotNull('planned_for')
             ->whereDate('planned_for', '<', $today->toDateString())
@@ -111,6 +117,7 @@ class RunDailyCycle
         $startedByUser = [];
 
         $due = Deliverable::query()
+            ->inWorkspace()
             ->inStatus(DeliverableStatus::READY)
             ->whereNotNull('assignee_id')
             ->whereNotNull('planned_for')
@@ -151,8 +158,10 @@ class RunDailyCycle
         $held = 0;
 
         Deliverable::query()
+            ->inWorkspace()
             ->inStatus(DeliverableStatus::CLIENT_REVIEW)
             ->whereNotNull('last_sent_to_client_at')
+            ->whereDoesntHave('samples', fn ($samples) => $samples->active())
             ->get()
             ->reject(fn (Deliverable $each): bool => $each->isOnHold())
             ->each(function (Deliverable $deliverable) use (&$opened, &$held): void {
@@ -185,6 +194,7 @@ class RunDailyCycle
         $opened = 0;
 
         Deliverable::query()
+            ->inWorkspace()
             ->inStatus($this->sla->delayNoticeStatuses())
             ->whereNotNull('due_target')
             ->get()
@@ -206,6 +216,7 @@ class RunDailyCycle
         $overdue = 0;
 
         Deliverable::query()
+            ->inWorkspace()
             ->inStatus($this->sla->trackedStatuses())
             ->whereNotNull('due_target')
             ->whereDate('due_target', '<=', $today->toDateString())

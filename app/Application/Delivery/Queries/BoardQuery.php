@@ -36,8 +36,8 @@ class BoardQuery
                 ? collect()
                 : $this->scoped($viewer, $filters)
                     ->inStatus($status)
-                    ->with(['workOrder.client', 'workOrder.clientLocation', 'assignee', 'reviewer', 'openBlock', 'openHold'])
-                    ->withCount(['tasks', 'tasks as tasks_done_count' => fn (Builder $tasks) => $tasks->where('status', 'done')])
+                    ->with(['workOrder.client', 'workOrder.clientLocation', 'assignee', 'reviewer', 'openBlock', 'openHold', 'tasks' => fn ($tasks) => $tasks->orderBy('id')])
+                    ->withCount(['tasks', 'tasks as tasks_done_count' => fn (Builder $tasks) => $tasks->where('status', 'done'), 'samples as active_samples_count' => fn (Builder $samples) => $samples->active()])
                     ->when(
                         $status === DeliverableStatus::DONE,
                         fn (Builder $query) => $query->orderByDesc('closed_at'),
@@ -59,6 +59,7 @@ class BoardQuery
     private function scoped(User $viewer, BoardFilters $filters): Builder
     {
         return Deliverable::query()
+            ->inWorkspace()
             ->when($viewer->isDesigner(), fn (Builder $query) => $query->notBlocked())
             ->when($filters->assigneeId !== null, fn (Builder $query) => $query->assignedTo($filters->assigneeId))
             ->when($filters->clientId !== null, fn (Builder $query) => $query->whereHas(

@@ -78,7 +78,7 @@ class WorkOrderIndex extends Component
     public function clients(): array
     {
         return Client::query()
-            ->whereIn('id', WorkOrder::query()->where('in_backlog', false)->whereNotNull('client_id')->select('client_id'))
+            ->whereIn('id', WorkOrder::query()->inWorkspace()->whereNotNull('client_id')->select('client_id'))
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn (Client $client): array => ['id' => $client->id, 'name' => $client->name])

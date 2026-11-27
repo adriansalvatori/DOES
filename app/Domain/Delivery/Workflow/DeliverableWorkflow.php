@@ -19,6 +19,7 @@ use App\Domain\Delivery\Models\Task;
 use App\Domain\Delivery\Support\AlertScheduler;
 use App\Domain\Delivery\Support\BlockOwnerResolver;
 use App\Domain\Delivery\Support\DeliveryLog;
+use App\Domain\Delivery\Support\ProductionSamples;
 use App\Domain\Delivery\Support\Roles;
 use App\Domain\Scheduling\SlaPolicy;
 use App\Infrastructure\Legacy\LegacyProjection;
@@ -53,10 +54,12 @@ class DeliverableWorkflow
         private LegacyProjection $projection,
         private DeliveryLog $log,
         private BlockOwnerResolver $owners,
+        private ProductionSamples $samples,
     ) {}
 
     /**
-     * Backward moves anybody may make.
+     * Backward moves anybody may make. Along production every status can go one step back, so a card moved too far
+     * by mistake can be put back.
      *
      * @return array<string, list<DeliverableStatus>>
      */
@@ -67,6 +70,9 @@ class DeliverableWorkflow
             DeliverableStatus::CLIENT_REVIEW->value => [DeliverableStatus::IN_DESIGN],
             DeliverableStatus::READY_FOR_PRODUCTION->value => [DeliverableStatus::PRODUCTION_FILES],
             DeliverableStatus::PRODUCTION_QUEUE->value => [DeliverableStatus::READY_FOR_PRODUCTION],
+            DeliverableStatus::IN_PRODUCTION->value => [DeliverableStatus::PRODUCTION_QUEUE],
+            DeliverableStatus::PRODUCED->value => [DeliverableStatus::IN_PRODUCTION],
+            DeliverableStatus::FULFILLMENT->value => [DeliverableStatus::PRODUCED],
         ];
     }
 
@@ -160,6 +166,7 @@ class DeliverableWorkflow
 
             if ($to === DeliverableStatus::DONE) {
                 $this->closeOpenRecords($deliverable, $now);
+                $this->samples->ended($deliverable, $closeReason === CloseReason::COMPLETED ? ProductionSamples::DELIVERED : ProductionSamples::CANCELLED, $actor);
             }
 
             $this->log->record(
@@ -437,7 +444,7 @@ class DeliverableWorkflow
     /**
      * Entering production files always carries exactly one required "prepare production files" gate.
      */
-    private function ensureProductionFilesGate(Deliverable $deliverable): void
+    public function ensureProductionFilesGate(Deliverable $deliverable): void
     {
         $exists = $deliverable->tasks()
             ->where('kind', TaskKind::GATE_PREPARE_PRODUCTION_FILES->value)

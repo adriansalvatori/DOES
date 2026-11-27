@@ -27,9 +27,12 @@ class OverviewQuery
     {
         $now ??= now();
 
+        $backlogTab = $filters->tab === 'backlog';
+
         return WorkOrder::query()
             ->tap(fn (Builder $query) => $this->applyFilters($query, $filters))
             ->with(['client', 'clientLocation', 'contact', 'deliverables' => fn ($deliverables) => $deliverables
+                ->when($backlogTab, fn (Builder $inner) => $inner->inBacklog(), fn (Builder $inner) => $inner->inWorkspace())
                 ->with(['assignee', 'openBlock', 'openHold'])
                 ->orderBy('id')])
             ->orderByRaw('promised_date IS NULL')
@@ -82,9 +85,9 @@ class OverviewQuery
     private function applyFilters(Builder $query, OverviewFilters $filters): void
     {
         if ($filters->tab === 'backlog') {
-            $query->where('in_backlog', true);
+            $query->inBacklog();
         } else {
-            $query->where('in_backlog', false);
+            $query->inWorkspace();
         }
 
         match ($filters->tab) {

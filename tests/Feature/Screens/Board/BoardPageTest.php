@@ -139,7 +139,7 @@ class BoardPageTest extends DeliveryTestCase
 
         $manager = $this->manager();
 
-        $this->board($manager)->assertSee('Adrián')->assertSeeHtml('>1/4<');
+        $this->board($manager, ['group' => 'designer'])->assertSee('Adrián')->assertSeeHtml('>1/4<');
         $this->board($manager, ['group' => 'none'])->assertDontSeeHtml('>1/4<')->assertSee('One');
     }
 
@@ -362,5 +362,31 @@ class BoardPageTest extends DeliveryTestCase
 
         $this->assertSame($withThirtyCards, count(DB::getQueryLog()));
         $this->assertLessThan(60, $withThirtyCards);
+    }
+
+    public function test_cards_group_by_work_order_by_default_with_one_wo_tag_per_order(): void
+    {
+        $workOrder = $this->workOrderFor('TALPA', null, 'WO 16125');
+        $this->deliverable(DeliverableStatus::READY, ['task_name' => 'Columna'], $workOrder);
+        $this->deliverable(DeliverableStatus::READY, ['task_name' => 'Poster'], $workOrder);
+        $this->deliverable(DeliverableStatus::READY, ['task_name' => 'Solo sign'], $this->workOrderFor('LA RUANA', null, 'WO 16126'));
+        $manager = $this->manager();
+
+        $grouped = $this->board($manager)->assertSee('Columna')->assertSee('Poster')->html();
+        $ungrouped = $this->board($manager, ['group' => 'none'])->html();
+
+        $this->assertSame(1, substr_count($grouped, '<span>WO 16125</span>'));
+        $this->assertSame(2, substr_count($ungrouped, '<span>WO 16125</span>'));
+        $this->assertSame(1, substr_count($grouped, 'wire:key="wo-'), 'A work order with one card is not grouped.');
+        $this->assertSame(1, substr_count($grouped, '<span>WO 16126</span>'));
+        $this->assertStringNotContainsString(__('Group by: designer'), $this->board($manager, ['area' => 'production'])->html());
+    }
+
+    public function test_the_kanban_hides_cards_still_in_the_backlog(): void
+    {
+        $this->deliverable(DeliverableStatus::INTAKE, ['task_name' => 'Backlog card', 'in_backlog' => true]);
+        $this->deliverable(DeliverableStatus::INTAKE, ['task_name' => 'Working card']);
+
+        $this->board($this->manager())->assertSee('Working card')->assertDontSee('Backlog card');
     }
 }

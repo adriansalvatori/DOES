@@ -90,8 +90,8 @@ class ClientPortal extends Component
 
         $workOrders = WorkOrder::query()
             ->where('client_id', $client->id)
-            ->where('in_backlog', false)
             ->whereHas('deliverables', fn ($deliverables) => $deliverables
+                ->inWorkspace()
                 ->where(fn ($open) => $open
                     ->where('status', '!=', DeliverableStatus::DONE->value)
                     ->orWhere('closed_at', '>=', $recentSince)))
@@ -99,6 +99,7 @@ class ClientPortal extends Component
                 'clientLocation',
                 'phases' => fn ($phases) => $phases->orderBy('position'),
                 'deliverables' => fn ($deliverables) => $deliverables
+                    ->inWorkspace()
                     ->with(['receipts', 'openHold'])
                     ->orderByRaw('due_target IS NULL')
                     ->orderBy('due_target')

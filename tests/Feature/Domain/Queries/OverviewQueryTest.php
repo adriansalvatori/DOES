@@ -49,8 +49,8 @@ class OverviewQueryTest extends QueryTestCase
         $this->makeDeliverable(DeliverableStatus::IN_PRODUCTION, $production);
         $done = WorkOrder::factory()->create(['number' => 'WO 3']);
         $this->makeDeliverable(DeliverableStatus::DONE, $done);
-        $backlog = WorkOrder::factory()->inBacklog()->create(['number' => 'WO 4']);
-        $this->makeDeliverable(DeliverableStatus::INTAKE, $backlog);
+        $backlog = WorkOrder::factory()->create(['number' => 'WO 4']);
+        $this->makeDeliverable(DeliverableStatus::INTAKE, $backlog, ['in_backlog' => true]);
 
         $numbers = fn (OverviewFilters $filters) => collect(app(OverviewQuery::class)->run($filters)->items())->map(fn ($row) => $row->workOrder->number)->sort()->values()->all();
 

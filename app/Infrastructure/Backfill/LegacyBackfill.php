@@ -11,6 +11,7 @@ use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Enums\FulfillmentMethod;
 use App\Domain\Delivery\Enums\HoldReason;
 use App\Domain\Delivery\Enums\TaskKind;
+use App\Domain\Delivery\Support\LastActivity;
 use App\Enums\UserRole;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,11 @@ use Illuminate\Support\Str;
 class LegacyBackfill
 {
     private const PLACEHOLDER_WO_NUMBERS = ['', 'WO 00000'];
+
+    /**
+     * Open work is due, and its work order promised, at least this many days after its last activity.
+     */
+    public const DAYS_AFTER_LAST_ACTIVITY = 3;
 
     /** @var array<string, mixed> */
     private array $report = [];
@@ -57,6 +63,8 @@ class LegacyBackfill
             'approvals' => [],
             'tasks' => [],
             'elements' => [],
+            'due_dates_rebased' => 0,
+            'promised_dates_rebased' => 0,
             'unmapped' => [],
         ];
 
@@ -71,6 +79,7 @@ class LegacyBackfill
             $this->foldElements();
             $this->correctClosedAt();
             $this->fillWorkOrderCompanyNames();
+            $this->rebaseDueDates();
         } catch (\Throwable $exception) {
             DB::rollBack();
 
@@ -311,7 +320,8 @@ class LegacyBackfill
                     'assignee_id' => $assigneeId,
                     'reviewer_id' => $this->reviewerUserId,
                     'planned_for' => $plannedFor,
-                    'due_target' => $order->current_due_date,
+                    'due_target' => $hold === null ? $order->current_due_date : null,
+                    'in_backlog' => ! $isDone && ! $order->in_workspace,
                     'trello_card_url' => $order->trello_card_id ? 'https://trello.com/c/'.$order->trello_card_id : null,
                     'flag_codes' => json_encode(array_map(fn (DeliverableFlag $flag): string => $flag->value, $flags)),
                     'close_reason' => $closeReason?->value,
@@ -419,8 +429,9 @@ class LegacyBackfill
                     $kind = TaskKind::GATE_SEND_PROOF;
                     $advancesTo = DeliverableStatus::CLIENT_REVIEW;
                     $required = true;
-                } elseif ($alertKind !== null) {
-                    $titleKey = 'tasks.'.$alertKind->value;
+                } elseif ($alertKind !== null && $alertKind !== AlertKind::REQUEST_INFO) {
+                    // A system reminder gets its label in the reader's language; a request for information keeps its own text.
+                    $titleKey = 'enums.alert_kind.'.$alertKind->value;
                 }
 
                 DB::table('related_tasks')->where('id', $task->id)->update([
@@ -594,7 +605,8 @@ class LegacyBackfill
     }
 
     /**
-     * Step f: every order element becomes an additional deliverable under the work order of its card.
+     * Step f: every order element becomes an additional deliverable under the work order of its card. Pieces of a
+     * card in the trash go to the trash with it.
      */
     public function foldElements(): void
     {
@@ -645,6 +657,7 @@ class LegacyBackfill
                     'reviewer_id' => $parent->reviewer_id,
                     'planned_for' => $status === DeliverableStatus::IN_DESIGN ? $parent->planned_for : null,
                     'due_target' => $parent->due_target,
+                    'in_backlog' => ! $isDone && $parent->in_backlog,
                     'size' => $element->dimensions,
                     'material' => $element->material,
                     'quantity' => $element->quantity,
@@ -654,6 +667,7 @@ class LegacyBackfill
                     'closed_at' => $isDone ? $parent->closed_at : null,
                     'carry_over_count' => 0,
                     'legacy_element_id' => $element->id,
+                    'deleted_at' => $parent->deleted_at,
                 ]);
 
                 if ($element->is_approved) {
@@ -681,6 +695,59 @@ class LegacyBackfill
                 'approvals_created' => $approvals,
                 'by_status' => $byStatus,
             ];
+        });
+    }
+
+    /**
+     * Step h: open work in the workspace is due at least 3 days after its last activity, and its work order is promised
+     * at least 3 days after the last activity of its open work. Dates that are already later are kept, and work on
+     * hold keeps having no due date.
+     *
+     * @return array{due: int, promised: int} How many due dates and promised dates moved.
+     */
+    public function rebaseDueDates(): array
+    {
+        return DB::transaction(function (): array {
+            $open = DB::table('orders')
+                ->whereNull('deleted_at')
+                ->whereNotNull('status')
+                ->where('status', '!=', DeliverableStatus::DONE->value)
+                ->where('in_backlog', false)
+                ->selectRaw('id, work_order_id, due_target, EXISTS (SELECT 1 FROM holds WHERE holds.deliverable_id = orders.id AND holds.ended_at IS NULL) as held')
+                ->orderBy('id')
+                ->get();
+
+            $activity = app(LastActivity::class)->forDeliverables($open->pluck('id')->map(fn ($id): int => (int) $id)->all());
+            $floorOf = fn (int $id): ?Carbon => isset($activity[$id]) ? Carbon::instance($activity[$id])->startOfDay()->addDays(self::DAYS_AFTER_LAST_ACTIVITY) : null;
+            $due = 0;
+            $promised = 0;
+
+            foreach ($open as $row) {
+                $floor = $floorOf((int) $row->id);
+                if ($row->held || $row->due_target === null || $floor === null || Carbon::parse($row->due_target)->startOfDay()->gte($floor)) {
+                    continue;
+                }
+
+                DB::table('orders')->where('id', $row->id)->update(['due_target' => $floor->toDateString()]);
+                $due++;
+            }
+
+            foreach ($open->whereNotNull('work_order_id')->groupBy('work_order_id') as $workOrderId => $rows) {
+                $floor = $rows->map(fn (object $row): ?Carbon => $floorOf((int) $row->id))->filter()->max();
+                $promisedDate = DB::table('work_orders')->where('id', $workOrderId)->value('promised_date');
+
+                if ($floor === null || $promisedDate === null || Carbon::parse($promisedDate)->startOfDay()->gte($floor)) {
+                    continue;
+                }
+
+                DB::table('work_orders')->where('id', $workOrderId)->update(['promised_date' => $floor->toDateString()]);
+                $promised++;
+            }
+
+            $this->report['due_dates_rebased'] = $due;
+            $this->report['promised_dates_rebased'] = $promised;
+
+            return ['due' => $due, 'promised' => $promised];
         });
     }
 
@@ -874,8 +941,6 @@ class LegacyBackfill
         };
 
         $installationTypes = $this->installationTypesFor($pick('installation_types'), $pick('installation_type'));
-        $nonArchived = array_filter($cards, fn (object $card): bool => $this->normalizeKey($card->core_status) !== 'ARCHIVED');
-        $inBacklog = $nonArchived !== [] && collect($nonArchived)->every(fn (object $card): bool => ! $card->in_workspace);
         $allTrashed = collect($cards)->every(fn (object $card): bool => $card->deleted_at !== null);
 
         return DB::table('work_orders')->insertGetId([
@@ -890,7 +955,6 @@ class LegacyBackfill
             'installation_types' => $installationTypes === [] ? null : json_encode($installationTypes),
             'notes' => $pick('delivery_note'),
             'drive_folder_id' => $pick('drive_folder_id'),
-            'in_backlog' => $inBacklog,
             'created_at' => collect($cards)->min('created_at') ?? now(),
             'updated_at' => collect($cards)->max('updated_at') ?? now(),
             'deleted_at' => $allTrashed ? collect($cards)->max('deleted_at') : null,
@@ -1022,7 +1086,9 @@ class LegacyBackfill
         $this->reviewerUserId = DB::table('users')->where('is_reviewer', true)->orderBy('id')->value('id');
         $this->customerServiceUserId = DB::table('users')
             ->where('active', true)
-            ->where(fn ($holders) => $holders->where('role', UserRole::CUSTOMER_SERVICE->value)->orWhereJsonContains('roles', UserRole::CUSTOMER_SERVICE->value))
+            ->where(fn ($holders) => $holders->where('role', UserRole::CUSTOMER_SERVICE->value)
+                // The roles column arrives in a later migration than the one that runs this backfill.
+                ->when(Schema::hasColumn('users', 'roles'), fn ($multiRole) => $multiRole->orWhereJsonContains('roles', UserRole::CUSTOMER_SERVICE->value)))
             ->orderBy('id')->value('id');
 
         $managerId = $this->setting('manager_id');

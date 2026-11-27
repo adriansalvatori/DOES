@@ -3,6 +3,7 @@
     $plannedText = $planned === null ? null : ($planned->isToday() ? __('Today') : ($planned->isTomorrow() ? __('Tomorrow') : $planned->translatedFormat('j M Y')));
     $due = $deliverable->due_target;
     $dueTone = $due === null || $isClosed ? 'neutral' : ($due->isPast() && ! $due->isToday() ? 'danger' : ($due->isToday() ? 'warn' : 'neutral'));
+    $priority = $deliverable->priority ?? \App\Domain\Delivery\Enums\Priority::MEDIUM;
     $specs = collect([$deliverable->size, $deliverable->material, $deliverable->quantity])->filter(fn ($part) => filled($part))->implode(' · ');
 @endphp
 
@@ -43,6 +44,40 @@
                         <x-ui.tag :tone="$dueTone">{{ $due->translatedFormat('j M Y') }}</x-ui.tag>
                     @else
                         —
+                    @endif
+                </dd>
+            </div>
+            <div>
+                <dt class="text-meta text-ink-3">{{ __('Priority') }}</dt>
+                <dd class="mt-0.5">
+                    @if($can['updateDetails'] && ! $isClosed)
+                        <select class="ui-select" aria-label="{{ __('Priority') }}" data-field="priority" data-current="{{ $priority->value }}"
+                            @change="confirmChoice($event.target, @js(__('Priority')), @js($priority->label()), 'changePriority')">
+                            @foreach(\App\Domain\Delivery\Enums\Priority::descending() as $option)
+                                <option value="{{ $option->value }}" @selected($priority === $option)>{{ $option->label() }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <x-board.priority :priority="$priority" show-label />
+                    @endif
+                </dd>
+            </div>
+            <div>
+                <dt class="text-meta text-ink-3">{{ __('Points') }}</dt>
+                <dd class="mt-0.5 text-body text-ink" data-field="points">
+                    @if($this->tasks->isEmpty() && $can['updateDetails'] && ! $isClosed)
+                        <select class="ui-select" aria-label="{{ __('Points') }}" data-current="{{ $deliverable->points }}"
+                            @change="confirmChoice($event.target, @js(__('Points')), @js($deliverable->points !== null ? (string) $deliverable->points : __('(empty)')), 'changePoints')">
+                            <option value="" @selected($deliverable->points === null)>{{ __('(empty)') }}</option>
+                            @foreach(\App\Domain\Delivery\Support\PointsEstimator::SCALE as $option)
+                                <option value="{{ $option }}" @selected($deliverable->points === $option)>{{ $option }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <span class="font-semibold tabular-nums">{{ $deliverable->points ?? '—' }}</span>
+                        @if($this->tasks->isNotEmpty())
+                            <span class="text-meta text-ink-3">{{ __('sum of its tasks') }}</span>
+                        @endif
                     @endif
                 </dd>
             </div>

@@ -28,6 +28,14 @@ return [
         'cancelled_by_reviewer' => 'Cancelled by reviewer',
         'transferred' => 'Not done / transferred',
         'client_unresponsive' => 'Client unresponsive',
+        'inactive_on_hold' => 'Archived: 30+ days on hold',
+    ],
+    'priority' => [
+        'lowest' => 'Lowest',
+        'low' => 'Low',
+        'medium' => 'Medium',
+        'high' => 'High',
+        'highest' => 'Highest',
     ],
     'deliverable_flag' => [
         'urgent' => 'Urgent',

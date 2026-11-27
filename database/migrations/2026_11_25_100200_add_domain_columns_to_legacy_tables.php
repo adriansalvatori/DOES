@@ -32,8 +32,10 @@ return new class extends Migration
             $table->dateTime('closed_at')->nullable();
             $table->unsignedInteger('carry_over_count')->default(0);
             $table->unsignedBigInteger('legacy_element_id')->nullable()->unique();
+            $table->boolean('in_backlog')->default(false);
 
             $table->index('work_order_id');
+            $table->index('in_backlog');
             $table->index('status');
             $table->index(['assignee_id', 'status']);
         });
@@ -79,11 +81,12 @@ return new class extends Migration
             $table->dropIndex(['work_order_id']);
             $table->dropIndex(['status']);
             $table->dropIndex(['assignee_id', 'status']);
+            $table->dropIndex(['in_backlog']);
             $table->dropUnique(['legacy_element_id']);
             $table->dropColumn([
                 'work_order_id', 'phase_id', 'status', 'assignee_id', 'reviewer_id', 'planned_for', 'due_target',
                 'size', 'material', 'quantity', 'files_url', 'trello_card_url', 'flag_codes', 'close_reason',
-                'closed_at', 'carry_over_count', 'legacy_element_id',
+                'closed_at', 'carry_over_count', 'legacy_element_id', 'in_backlog',
             ]);
         });
     }

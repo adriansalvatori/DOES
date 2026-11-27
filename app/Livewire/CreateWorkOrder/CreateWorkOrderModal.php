@@ -352,6 +352,7 @@ class CreateWorkOrderModal extends Component
             ->get(['id', 'name', 'wip_limit']);
 
         $loads = Deliverable::query()
+            ->inWorkspace()
             ->whereIn('assignee_id', $users->pluck('id'))
             ->inStatus([DeliverableStatus::READY, DeliverableStatus::IN_DESIGN])
             ->notBlocked()

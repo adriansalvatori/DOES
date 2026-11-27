@@ -28,6 +28,8 @@ class DeliverableFactory extends Factory
             'task_name' => fake()->sentence(3),
             'due_target' => now()->addDays(3)->toDateString(),
             'carry_over_count' => 0,
+            'in_backlog' => false,
+            'priority' => 'medium',
         ];
     }
 
@@ -53,5 +55,13 @@ class DeliverableFactory extends Factory
             'close_reason' => $reason,
             'closed_at' => now(),
         ]);
+    }
+
+    /**
+     * Still waiting in the backlog, out of every working screen.
+     */
+    public function inBacklog(): static
+    {
+        return $this->state(fn () => ['in_backlog' => true]);
     }
 }

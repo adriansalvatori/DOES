@@ -3,6 +3,7 @@
 namespace Tests\Feature\Backfill;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -78,24 +79,26 @@ class LegacyBackfillWorkOrdersTest extends TestCase
         $this->assertSame(1, DB::table('order_events')->where('event_type', 'IMPORT_NOTE')->count());
     }
 
-    public function test_work_order_is_in_backlog_only_when_every_open_card_is_outside_the_workspace(): void
+    public function test_every_open_card_keeps_its_own_backlog_flag(): void
     {
-        $this->legacyOrder(['wo_number' => 'WO 10', 'in_workspace' => false]);
-        $this->legacyOrder(['wo_number' => 'WO 11', 'in_workspace' => false, 'core_status' => 'ARCHIVED']);
-        $this->legacyOrder(['wo_number' => 'WO 12', 'in_workspace' => true]);
-        $this->legacyOrder(['wo_number' => 'WO 13', 'in_workspace' => false]);
-        $this->legacyOrder(['wo_number' => 'WO 13', 'in_workspace' => true]);
-        $this->legacyOrder(['wo_number' => 'WO 14', 'in_workspace' => false]);
-        $this->legacyOrder(['wo_number' => 'WO 14', 'in_workspace' => true, 'core_status' => 'ARCHIVED']);
+        $alone = $this->legacyOrder(['wo_number' => 'WO 10', 'in_workspace' => false]);
+        $archived = $this->legacyOrder(['wo_number' => 'WO 11', 'in_workspace' => false, 'core_status' => 'ARCHIVED']);
+        $live = $this->legacyOrder(['wo_number' => 'WO 12', 'in_workspace' => true]);
+        $laterPhase = $this->legacyOrder(['wo_number' => 'WO 13', 'in_workspace' => false]);
+        $currentPhase = $this->legacyOrder(['wo_number' => 'WO 13', 'in_workspace' => true]);
 
         $this->runBackfill();
 
-        $backlog = fn (string $number) => (bool) DB::table('work_orders')->where('number', $number)->value('in_backlog');
-        $this->assertTrue($backlog('WO 10'));
-        $this->assertFalse($backlog('WO 11'));
-        $this->assertFalse($backlog('WO 12'));
-        $this->assertFalse($backlog('WO 13'));
-        $this->assertTrue($backlog('WO 14'));
+        $inBacklog = fn (int $id): bool => (bool) DB::table('orders')->where('id', $id)->value('in_backlog');
+        $this->assertTrue($inBacklog($alone));
+        $this->assertFalse($inBacklog($archived));
+        $this->assertFalse($inBacklog($live));
+        $this->assertTrue($inBacklog($laterPhase), 'A later phase stays in the backlog while an earlier one is worked on.');
+        $this->assertFalse($inBacklog($currentPhase));
+        $this->assertSame(
+            DB::table('orders')->where('id', $laterPhase)->value('work_order_id'),
+            DB::table('orders')->where('id', $currentPhase)->value('work_order_id'),
+        );
     }
 
     public function test_work_order_is_soft_deleted_only_when_every_card_is_trashed(): void
@@ -108,5 +111,47 @@ class LegacyBackfillWorkOrdersTest extends TestCase
 
         $this->assertNotNull(DB::table('work_orders')->where('number', 'WO 20')->value('deleted_at'));
         $this->assertNull(DB::table('work_orders')->where('number', 'WO 21')->value('deleted_at'));
+    }
+
+    public function test_held_cards_lose_their_due_date(): void
+    {
+        $held = $this->legacyOrder(['core_status' => 'ON HOLD', 'substatus' => 'PAUSADO', 'current_due_date' => '2026-07-10']);
+
+        $this->runBackfill();
+
+        $this->assertNull(DB::table('orders')->where('id', $held)->value('due_target'));
+    }
+
+    public function test_open_work_is_due_and_promised_at_least_3_days_after_its_last_activity(): void
+    {
+        Carbon::setTestNow('2026-11-26 09:00:00');
+        $event = fn (int $id, string $actor, string $at) => DB::table('order_events')->insert(['order_id' => $id, 'event_type' => 'NOTE', 'actor' => $actor, 'created_at' => $at, 'updated_at' => $at]);
+
+        $stale = $this->legacyOrder(['wo_number' => 'WO 500', 'core_status' => 'EURALIZ ORDERS RECEIVED', 'current_due_date' => '2026-07-10', 'delivery_due_date' => '2026-07-15', 'created_at' => '2026-07-01 10:00:00']);
+        $event($stale, 'Euralíz Bravo', '2026-10-20 15:00:00');
+        $event($stale, 'SlaEngine', '2026-11-25 15:00:00');
+        $recent = $this->legacyOrder(['wo_number' => 'WO 500', 'core_status' => 'EURALIZ ORDERS RECEIVED', 'current_due_date' => '2026-11-10']);
+        $event($recent, 'César Guzmán', '2026-11-20 09:00:00');
+        $ahead = $this->legacyOrder(['wo_number' => 'WO 501', 'core_status' => 'EURALIZ ORDERS RECEIVED', 'current_due_date' => '2026-12-15', 'delivery_due_date' => '2026-12-31']);
+        $event($ahead, 'César Guzmán', '2026-11-20 09:00:00');
+        $untouched = $this->legacyOrder(['wo_number' => 'WO 502', 'core_status' => 'ENTRANTE', 'current_due_date' => '2026-07-10', 'created_at' => '2026-08-21 04:54:00']);
+        $inBacklog = $this->legacyOrder(['wo_number' => 'WO 503', 'core_status' => 'EURALIZ ORDERS RECEIVED', 'current_due_date' => '2026-07-10', 'in_workspace' => false]);
+        $done = $this->legacyOrder(['wo_number' => 'WO 504', 'core_status' => 'ARCHIVED', 'current_due_date' => '2026-07-10']);
+
+        $report = $this->runBackfill();
+
+        $due = fn (int $id): ?string => ($value = DB::table('orders')->where('id', $id)->value('due_target')) === null ? null : substr($value, 0, 10);
+        $promised = fn (string $number): ?string => substr((string) DB::table('work_orders')->where('number', $number)->value('promised_date'), 0, 10);
+        $this->assertSame('2026-10-23', $due($stale), 'A person acted on Oct 20; the later SLA entry does not count.');
+        $this->assertSame('2026-11-23', $due($recent));
+        $this->assertSame('2026-12-15', $due($ahead), 'A due date already later than that is kept.');
+        $this->assertSame('2026-08-24', $due($untouched), 'With no activity the creation is the last activity.');
+        $this->assertSame('2026-07-10', $due($inBacklog));
+        $this->assertSame('2026-07-10', $due($done));
+        $this->assertSame('2026-11-23', $promised('WO 500'), 'The work order follows the latest activity of its open work.');
+        $this->assertSame('2026-12-31', $promised('WO 501'));
+        $this->assertSame('2026-08-24', $promised('WO 502'));
+        $this->assertSame(3, $report['due_dates_rebased']);
+        $this->assertSame(2, $report['promised_dates_rebased']);
     }
 }
