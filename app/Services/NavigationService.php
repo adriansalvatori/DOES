@@ -30,7 +30,7 @@ class NavigationService
             [
                 $this->item(__('Today'), __('Today'), '/', '/', 'sun', true),
                 $this->item(__('Board'), __('Board'), '/board', 'board*', 'kanban', true),
-                $this->item(__('Plan week'), __('Plan week'), '/plan-week', 'plan-week*', 'calendar-days', $isManager),
+                $this->item(__('Plan week'), __('Plan week'), '/plan-week', 'plan-week*', 'calendar-days', $isManager || (bool) $user?->designs()),
                 $this->item(__('Work orders'), __('Work orders'), '/work-orders', 'work-orders*', 'clipboard-list', true),
                 $this->item(__('Resolver'), __('Resolver'), '/resolver', 'resolver*', 'life-buoy', $canResolve),
                 $this->item(__('Overview'), __('Operations overview'), '/overview', 'overview*', 'table-properties', $isAdminOrCoordinator),

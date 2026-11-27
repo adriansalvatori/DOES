@@ -1,4 +1,5 @@
 import './qr-card.js';
+import './plan-week.js';
 
 /**
  * Translate a UI string using the dictionary rendered by the layout (window.KudosI18n).

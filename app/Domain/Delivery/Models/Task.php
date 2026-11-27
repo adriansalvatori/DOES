@@ -5,6 +5,7 @@ namespace App\Domain\Delivery\Models;
 use App\Domain\Delivery\Enums\DeliverableStatus;
 use App\Domain\Delivery\Enums\TaskKind;
 use App\Domain\Delivery\Models\Concerns\CountsTowardStoryPoints;
+use App\Models\User;
 use Database\Factories\Domain\Delivery\Models\TaskFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -27,6 +28,8 @@ class Task extends Model
         'status',
         'due_date',
         'scheduled_date',
+        'assignee_user_id',
+        'sort_order',
         'completed_at',
         'kind',
         'advances_to',
@@ -50,12 +53,29 @@ class Task extends Model
             'scheduled_date' => 'date',
             'completed_at' => 'datetime',
             'points' => 'integer',
+            'sort_order' => 'integer',
         ];
     }
 
     public function deliverable(): BelongsTo
     {
         return $this->belongsTo(Deliverable::class, 'order_id');
+    }
+
+    /**
+     * The person the task is planned for (Plan week). Empty means it follows the deliverable's designer.
+     */
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assignee_user_id');
+    }
+
+    /**
+     * Who does this task: its own person, else the deliverable's designer.
+     */
+    public function effectiveAssigneeId(): ?int
+    {
+        return $this->assignee_user_id ?? $this->deliverable?->assignee_id;
     }
 
     public function isGate(): bool
