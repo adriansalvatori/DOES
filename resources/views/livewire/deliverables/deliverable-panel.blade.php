@@ -204,6 +204,9 @@
                             @if($can['requestProductionSample'] && $deliverable->status === \App\Domain\Delivery\Enums\DeliverableStatus::CLIENT_REVIEW)
                                 <button type="button" wire:click="openSheet('sample')" class="block w-full px-3 py-1.5 text-left text-ink hover:bg-sunken">{{ __('Request production sample') }}</button>
                             @endif
+                            @if($can['merge'])
+                                <button type="button" @click="$dispatch('open-merge', { kind: 'deliverable', ids: [{{ $deliverable->id }}] })" class="block w-full px-3 py-1.5 text-left text-ink hover:bg-sunken">{{ __('Merge with other cards') }}</button>
+                            @endif
                             @if($can['close'] && ! $isClosed)
                                 <button type="button" wire:click="openSheet('close')" class="block w-full px-3 py-1.5 text-left text-ink hover:bg-sunken">{{ __('Close') }}</button>
                             @endif

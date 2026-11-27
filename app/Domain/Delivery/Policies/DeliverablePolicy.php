@@ -102,6 +102,14 @@ class DeliverablePolicy
         return $this->isStaff($user);
     }
 
+    /**
+     * Merging work orders or deliverables moves and trashes records, so it is for managers.
+     */
+    public function merge(User $user): bool
+    {
+        return Roles::isManager($user);
+    }
+
     public function requestProductionSample(User $user, Deliverable $deliverable): bool
     {
         return $this->isStaff($user);

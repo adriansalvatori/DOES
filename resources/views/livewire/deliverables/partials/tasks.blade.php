@@ -6,6 +6,21 @@
 @if($tasks->isEmpty())
     <p class="text-body text-ink-3">{{ __('No tasks yet.') }}</p>
 @else
+    <div x-data="{ picking: false, picked: [] }">
+    @if($can['manageTasks'] && $tasks->count() >= 2)
+        <div class="mb-2 flex items-center justify-end gap-2">
+            <button type="button" x-show="! picking" @click="picking = true; picked = []" class="ui-btn ui-btn-ghost ui-btn-sm" data-merge-tasks>
+                <x-lucide-merge class="h-3.5 w-3.5" aria-hidden="true" /> {{ __('Merge tasks') }}
+            </button>
+            <template x-if="picking">
+                <div class="flex items-center gap-2">
+                    <span class="text-meta text-ink-3">{{ __('Pick two or more tasks') }}</span>
+                    <button type="button" class="ui-btn ui-btn-ghost ui-btn-sm" @click="picking = false; picked = []">{{ __('Cancel') }}</button>
+                    <button type="button" class="ui-btn ui-btn-primary ui-btn-sm" :disabled="picked.length < 2" @click="$dispatch('open-merge', { kind: 'task', ids: picked }); picking = false; picked = []">{{ __('Merge selected') }}</button>
+                </div>
+            </template>
+        </div>
+    @endif
     <ul class="divide-y divide-line rounded-card border border-line" data-task-list>
         @foreach($tasks as $task)
             @php
@@ -13,6 +28,7 @@
                 $taskTitle = $task->title_key ? __($task->title_key, $task->title_params ?? []) : $task->title;
             @endphp
             <li wire:key="task-{{ $task->id }}" class="flex items-center gap-3 px-3 py-2 {{ $done ? 'ui-done' : '' }}">
+                <input type="checkbox" x-show="picking" x-model.number="picked" value="{{ $task->id }}" class="rounded border-line-strong" aria-label="{{ __('Pick for merge') }}">
                 <button type="button" wire:click="toggleTask({{ $task->id }})" @disabled(! $can['manageTasks']) role="checkbox" aria-checked="{{ $done ? 'true' : 'false' }}" aria-label="{{ $done ? __('Reopen task') : __('Complete task') }}" @class([
                     'grid h-4.5 w-4.5 shrink-0 place-items-center rounded border',
                     'border-ink bg-ink text-white' => $done,
@@ -41,6 +57,7 @@
             </li>
         @endforeach
     </ul>
+    </div>
 @endif
 
 @if($can['manageTasks'])

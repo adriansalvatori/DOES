@@ -357,6 +357,9 @@
     <!-- Global create work order modal (opened with open-create-work-order) -->
     <livewire:create-work-order.create-work-order-modal />
 
+    <!-- Global merge modal for work orders, cards and tasks (opened with open-merge) -->
+    <livewire:merge.merge-modal />
+
     <!-- Global Unsaved Changes Warning Modal -->
     <x-dirty-confirm-modal />
 

@@ -23,6 +23,9 @@ class WorkflowMatrixTest extends TestCase
             'client_review>in_design',
             'ready_for_production>production_files',
             'production_queue>ready_for_production',
+            'in_production>production_queue',
+            'produced>in_production',
+            'fulfillment>produced',
         ];
 
         $cases = [];
@@ -68,8 +71,8 @@ class WorkflowMatrixTest extends TestCase
 
     public function test_a_task_reversal_may_step_back_one_status(): void
     {
-        $this->assertNull(DeliverableWorkflow::ruleFor(DeliverableStatus::PRODUCED, DeliverableStatus::IN_PRODUCTION));
-        $this->assertSame('back', DeliverableWorkflow::ruleFor(DeliverableStatus::PRODUCED, DeliverableStatus::IN_PRODUCTION, TransitionReason::TASK_COMPLETED, ['reversal' => true]));
+        $this->assertNull(DeliverableWorkflow::ruleFor(DeliverableStatus::CLIENT_REVIEW, DeliverableStatus::INTERNAL_REVIEW));
+        $this->assertSame('back', DeliverableWorkflow::ruleFor(DeliverableStatus::CLIENT_REVIEW, DeliverableStatus::INTERNAL_REVIEW, TransitionReason::TASK_COMPLETED, ['reversal' => true]));
     }
 
     public function test_status_neighbours(): void

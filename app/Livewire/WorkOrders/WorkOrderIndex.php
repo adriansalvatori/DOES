@@ -5,9 +5,11 @@ namespace App\Livewire\WorkOrders;
 use App\Application\Delivery\Data\WorkOrderListRow;
 use App\Application\Delivery\Data\WorkOrderTab;
 use App\Application\Delivery\Queries\WorkOrderListQuery;
+use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\WorkOrder;
 use App\Models\Client;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -28,6 +30,28 @@ class WorkOrderIndex extends Component
 
     #[Url(as: 'client')]
     public ?int $clientId = null;
+
+    /** @var list<string> Work orders picked for a merge. */
+    public array $selected = [];
+
+    #[Computed]
+    public function canMerge(): bool
+    {
+        return Gate::allows('merge', Deliverable::class);
+    }
+
+    /**
+     * Opens the merge modal with the picked work orders.
+     */
+    public function mergeSelected(): void
+    {
+        if (! $this->canMerge || count($this->selected) < 2) {
+            return;
+        }
+
+        $this->dispatch('open-merge', kind: 'work_order', ids: array_map('intval', $this->selected));
+        $this->selected = [];
+    }
 
     public function selectedTab(): WorkOrderTab
     {

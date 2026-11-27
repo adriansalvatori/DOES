@@ -733,7 +733,7 @@ class DeliverablePanel extends Component
             return view('livewire.deliverables.deliverable-panel', ['deliverable' => null]);
         }
 
-        $abilities = collect(['updateDetails', 'move', 'block', 'resolveBlock', 'putOnHold', 'resume', 'close', 'reopen', 'duplicate', 'trash', 'plan', 'approveByReviewer', 'requestChangesByReviewer', 'recordClientApproval', 'recordClientChanges', 'manageTasks', 'logReceipt', 'changeReviewer', 'changeDueTarget', 'addComment', 'attachFile', 'requestProductionSample'])
+        $abilities = collect(['updateDetails', 'move', 'block', 'resolveBlock', 'putOnHold', 'resume', 'close', 'reopen', 'duplicate', 'trash', 'plan', 'approveByReviewer', 'requestChangesByReviewer', 'recordClientApproval', 'recordClientChanges', 'manageTasks', 'logReceipt', 'changeReviewer', 'changeDueTarget', 'addComment', 'attachFile', 'requestProductionSample', 'merge'])
             ->mapWithKeys(fn (string $ability): array => [$ability => $this->allows($ability)]);
 
         $workOrder = $deliverable->workOrder;

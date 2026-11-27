@@ -1,6 +1,11 @@
 <div class="h-full flex flex-col gap-4 min-h-0 overflow-y-auto custom-vertical-scrollbar pb-6">
     <x-ui.page-header :title="__('Work orders')" :subtitle="__('One row per work order, with its approvals and receipts.')">
         <x-slot:actions>
+            @if($this->canMerge && count($selected) >= 2)
+                <button type="button" class="ui-btn ui-btn-secondary" wire:click="mergeSelected" data-merge-selected>
+                    <x-lucide-merge class="w-4 h-4" aria-hidden="true" /> {{ __('Merge :count work orders', ['count' => count($selected)]) }}
+                </button>
+            @endif
             <button type="button" class="ui-btn ui-btn-primary" x-on:click="$dispatch('open-create-work-order', {})">
                 <x-lucide-plus class="w-4 h-4" aria-hidden="true" /> {{ __('New work order') }}
             </button>
@@ -34,6 +39,9 @@
             <table class="ui-table w-full">
                 <thead>
                     <tr>
+                        @if($this->canMerge)
+                            <th class="w-8"><span class="sr-only">{{ __('Select for merge') }}</span></th>
+                        @endif
                         <th class="text-left">{{ __('WO') }}</th>
                         <th class="text-left">{{ __('Client') }}</th>
                         <th class="text-right">{{ __('Phases') }}</th>
@@ -49,6 +57,11 @@
                         @endphp
                         <tr wire:key="wo-{{ $workOrder->id }}" class="cursor-pointer hover:bg-sunken"
                             x-on:click="Livewire.navigate('{{ route('work-orders.show', $workOrder) }}')">
+                            @if($this->canMerge)
+                                <td x-on:click.stop>
+                                    <input type="checkbox" wire:model.live="selected" value="{{ $workOrder->id }}" class="rounded border-line" aria-label="{{ __('Select for merge') }}">
+                                </td>
+                            @endif
                             <td><x-wo-badge :number="$workOrder->number" /></td>
                             <td>
                                 <a href="{{ route('work-orders.show', $workOrder) }}" wire:navigate x-on:click.stop class="text-row font-medium text-ink hover:underline">{{ \App\Support\TitleCase::from($workOrder->displayName()) ?: __('No client') }}</a>
