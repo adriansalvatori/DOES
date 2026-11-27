@@ -59,14 +59,68 @@ class OverviewQueryTest extends QueryTestCase
         $this->assertSame(['WO 2'], $numbers(new OverviewFilters(tab: 'production')));
         $this->assertSame(['WO 3'], $numbers(new OverviewFilters(tab: 'done')));
         $this->assertSame(['WO 4'], $numbers(new OverviewFilters(tab: 'backlog')));
-        $this->assertSame(['WO 1'], $numbers(new OverviewFilters(tab: 'urgent')));
-        $this->assertSame(['WO 1', 'WO 3'], $numbers(new OverviewFilters(tab: 'with_due_date')));
+        $this->assertSame(['WO 1'], $numbers(new OverviewFilters(urgent: true)));
+        $this->assertSame(['WO 1', 'WO 3'], $numbers(new OverviewFilters(withDueDate: true)));
+        $this->assertSame(['WO 3'], $numbers(new OverviewFilters(tab: 'done', withDueDate: true)), 'Toggles combine with the tab.');
+        $this->assertSame([], $numbers(new OverviewFilters(tab: 'done', urgent: true)));
         $this->assertSame(['WO 2'], $numbers(new OverviewFilters(workOrderNumber: '2')));
         $this->assertSame(['WO 1'], $numbers(new OverviewFilters(clientId: $client->id)));
         $this->assertSame(['WO 1'], $numbers(new OverviewFilters(assigneeId: $ana->id)));
         $this->assertSame(['WO 1'], $numbers(new OverviewFilters(installation: 'CLIENTE')));
         $this->assertSame(['WO 2', 'WO 3'], $numbers(new OverviewFilters(installation: 'NONE')));
         $this->assertSame(['WO 1'], $numbers(new OverviewFilters(search: 'Hooli')));
+        $this->assertSame(
+            ['all' => 3, 'active' => 1, 'production' => 1, 'done' => 1, 'backlog' => 1],
+            app(OverviewQuery::class)->tabCounts(new OverviewFilters(tab: 'done')),
+        );
+        $this->assertSame(['all' => 1, 'active' => 1, 'production' => 0, 'done' => 0, 'backlog' => 0], app(OverviewQuery::class)->tabCounts(new OverviewFilters(urgent: true)));
+    }
+
+    public function test_newest_work_order_number_comes_first_and_lines_without_one_last(): void
+    {
+        foreach (['WO 9999', null, 'WO 13531', 'WO 10020'] as $number) {
+            $this->makeDeliverable(DeliverableStatus::IN_DESIGN, WorkOrder::factory()->create(['number' => $number]));
+        }
+
+        $numbers = collect(app(OverviewQuery::class)->run()->items())->map(fn ($row) => $row->workOrder->number)->all();
+
+        $this->assertSame(['WO 13531', 'WO 10020', 'WO 9999', null], $numbers);
+    }
+
+    public function test_review_filter_and_values_that_vary_between_deliverables(): void
+    {
+        $reviewed = WorkOrder::factory()->create(['number' => 'WO 10']);
+        $this->makeDeliverable(DeliverableStatus::IN_DESIGN, $reviewed, ['review_status' => 'CS', 'production_note' => 'Rush', 'overview_checked' => true]);
+        $this->makeDeliverable(DeliverableStatus::IN_DESIGN, $reviewed, ['production_note' => 'Slow', 'overview_checked' => true]);
+        $plain = WorkOrder::factory()->create(['number' => 'WO 11']);
+        $this->makeDeliverable(DeliverableStatus::IN_DESIGN, $plain, ['production_note' => 'Same']);
+        $this->makeDeliverable(DeliverableStatus::IN_DESIGN, $plain, ['production_note' => 'Same']);
+
+        $rows = collect(app(OverviewQuery::class)->run()->items())->keyBy(fn ($row) => $row->workOrder->number);
+        $numbers = fn (OverviewFilters $filters) => collect(app(OverviewQuery::class)->run($filters)->items())->map(fn ($row) => $row->workOrder->number)->sort()->values()->all();
+
+        $this->assertSame('CS', $rows['WO 10']->reviewStatus);
+        $this->assertSame(['production_note', 'review_status'], $rows['WO 10']->varies);
+        $this->assertTrue($rows['WO 10']->checked);
+        $this->assertSame([], $rows['WO 11']->varies);
+        $this->assertSame(['WO 10'], $numbers(new OverviewFilters(review: 'CS')));
+        $this->assertSame([], $numbers(new OverviewFilters(review: 'CAMILA')));
+        $this->assertSame(['WO 11'], $numbers(new OverviewFilters(review: 'NONE')));
+    }
+
+    public function test_versions_change_when_a_deliverable_of_the_work_order_is_saved(): void
+    {
+        $workOrder = WorkOrder::factory()->create(['number' => 'WO 20']);
+        $deliverable = $this->makeDeliverable(DeliverableStatus::IN_DESIGN, $workOrder);
+        $before = app(OverviewQuery::class)->versions([$workOrder->id]);
+
+        $this->travel(5)->seconds();
+        $deliverable->forceFill(['production_note' => 'Changed'])->save();
+
+        $after = app(OverviewQuery::class)->versions([$workOrder->id]);
+        $this->assertArrayHasKey($workOrder->id, $after);
+        $this->assertNotSame($before[$workOrder->id], $after[$workOrder->id]);
+        $this->assertSame([], app(OverviewQuery::class)->versions([]));
     }
 
     public function test_paginates_by_work_order(): void

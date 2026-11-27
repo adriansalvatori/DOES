@@ -70,16 +70,40 @@ class OverviewPageTest extends DeliveryTestCase
         $this->assertSame(['WO 500'], $numbers());
     }
 
-    public function test_pages_hold_fifty_work_orders(): void
+    public function test_loads_a_hundred_lines_at_a_time_as_you_scroll(): void
     {
-        foreach (range(1, 52) as $index) {
+        foreach (range(1, 102) as $index) {
             $this->deliverable(DeliverableStatus::READY, [], WorkOrder::factory()->create(['number' => 'WO '.(1000 + $index)]));
         }
 
         $page = Livewire::actingAs($this->manager())->test(OverviewPage::class);
 
-        $this->assertSame(50, count($page->instance()->rows()->items()));
-        $this->assertSame(52, $page->instance()->rows()->total());
+        $this->assertSame(100, count($page->instance()->rows()->items()));
+        $this->assertSame(102, $page->instance()->rows()->total());
+        $page->assertSee(__('Showing :shown of :total', ['shown' => '100', 'total' => '102']));
+
+        $page->call('loadMore');
+        $this->assertSame(102, count($page->instance()->rows()->items()));
+        $page->call('loadMore')->assertSet('limit', 200);
+
+        $page->set('search', 'WO 1001');
+        $this->assertSame(100, $page->get('limit'), 'Changing a filter starts again from the first chunk.');
+    }
+
+    public function test_urgent_and_due_date_toggles_combine_with_tabs_and_old_links_still_work(): void
+    {
+        $urgent = $this->workOrderWithPieces('WO 500', 1);
+        $urgent->deliverables()->first()->forceFill(['flag_codes' => ['urgent']])->save();
+        $this->workOrderWithPieces('WO 501', 1);
+        $numbers = fn ($page): array => collect($page->instance()->rows()->items())->map(fn ($row) => $row->workOrder->number)->sort()->values()->all();
+
+        $page = Livewire::actingAs($this->manager())->test(OverviewPage::class)->call('setTab', 'active')->set('urgent', true);
+        $this->assertSame(['WO 500'], $numbers($page));
+        $page->assertSee(__('Urgent'))->call('clearFilter', 'urgent');
+        $this->assertSame(['WO 500', 'WO 501'], $numbers($page));
+
+        $legacy = Livewire::withQueryParams(['tab' => 'urgent'])->actingAs($this->manager())->test(OverviewPage::class);
+        $legacy->assertSet('tab', 'all')->assertSet('urgent', true);
     }
 
     public function test_editing_a_work_order_column_goes_through_the_action_and_logs_old_and_new(): void
@@ -113,7 +137,7 @@ class OverviewPageTest extends DeliveryTestCase
 
         Livewire::actingAs($this->manager())->test(OverviewRowLine::class, ['workOrderId' => $first->id])
             ->call('saveWorkOrderField', 'number', 'WO 501')
-            ->assertReturned(['ok' => false])
+            ->assertReturned(fn (array $result): bool => $result['ok'] === false && filled($result['message']))
             ->assertDispatched('toast');
 
         $this->assertSame('WO 500', $first->fresh()->number);
@@ -141,6 +165,76 @@ class OverviewPageTest extends DeliveryTestCase
         }
     }
 
+    public function test_one_deliverable_can_be_edited_from_the_accordion_and_varying_values_unify_from_the_line(): void
+    {
+        $workOrder = $this->workOrderWithPieces('WO 500', 2);
+        [$first, $second] = Deliverable::query()->where('work_order_id', $workOrder->id)->orderBy('id')->get()->all();
+        $line = Livewire::actingAs($this->manager())->test(OverviewRowLine::class, ['workOrderId' => $workOrder->id]);
+
+        $line->call('saveLineField', 'production_note', 'Only the first', $first->id)->assertReturned(['ok' => true, 'value' => 'Only the first']);
+        $this->assertSame('Only the first', $this->legacyRow($first)->production_note);
+        $this->assertNull($this->legacyRow($second)->production_note);
+
+        // The line shows the first value; typing that same value from the line still writes it to every deliverable.
+        $line->call('saveLineField', 'production_note', 'Only the first');
+        $this->assertSame('Only the first', $this->legacyRow($second)->production_note);
+
+        $other = $this->workOrderWithPieces('WO 600', 1)->deliverables()->first();
+        $line->call('saveLineField', 'production_note', 'Nope', $other->id)->assertReturned(fn (array $result): bool => $result['ok'] === false);
+        $this->assertNull($this->legacyRow($other)->production_note);
+    }
+
+    public function test_the_estimate_review_saves_on_every_deliverable_and_unknown_reviewers_are_refused(): void
+    {
+        $workOrder = $this->workOrderWithPieces('WO 500', 2);
+        $line = Livewire::actingAs($this->manager())->test(OverviewRowLine::class, ['workOrderId' => $workOrder->id]);
+
+        $line->call('saveLineField', 'review_status', 'camila')->assertReturned(['ok' => true, 'value' => 'CAMILA'])->assertSee('INV');
+        foreach ($workOrder->deliverables()->get() as $piece) {
+            $this->assertSame('CAMILA', $this->legacyRow($piece)->review_status);
+        }
+
+        $line->call('saveLineField', 'review_status', 'Bob')->assertReturned(fn (array $result): bool => $result['ok'] === false);
+        $line->call('saveLineField', 'review_status', '')->assertReturned(['ok' => true, 'value' => null])->assertSee('EST');
+    }
+
+    public function test_the_designer_can_be_changed_for_the_whole_line_or_one_deliverable(): void
+    {
+        $workOrder = $this->workOrderWithPieces('WO 500', 2);
+        $closed = $this->deliverable(DeliverableStatus::DONE, ['task_name' => 'Delivered piece'], $workOrder);
+        $ana = $this->designer('Ana');
+        $bea = $this->designer('Bea');
+        [$first, $second] = Deliverable::query()->where('work_order_id', $workOrder->id)->whereKeyNot($closed->id)->orderBy('id')->get()->all();
+        $line = Livewire::actingAs($this->manager())->test(OverviewRowLine::class, ['workOrderId' => $workOrder->id]);
+
+        $line->call('assignDesigner', $ana->id)->assertReturned(['ok' => true]);
+        $this->assertSame([$ana->id, $ana->id], [$first->fresh()->assignee_id, $second->fresh()->assignee_id]);
+        $this->assertNull($closed->fresh()->assignee_id, 'Closed work keeps its designer.');
+        $this->assertSame(1, $this->eventCount($first, 'assignee_changed'));
+
+        $line->call('assignDesigner', $bea->id, $second->id);
+        $this->assertSame([$ana->id, $bea->id], [$first->fresh()->assignee_id, $second->fresh()->assignee_id]);
+
+        $line->call('assignDesigner', null, $first->id);
+        $this->assertNull($first->fresh()->assignee_id);
+    }
+
+    public function test_only_lines_someone_else_changed_refresh_when_the_page_checks(): void
+    {
+        $changed = $this->workOrderWithPieces('WO 500', 1);
+        $untouched = $this->workOrderWithPieces('WO 501', 1);
+        $page = Livewire::actingAs($this->manager())->test(OverviewPage::class);
+
+        $page->call('checkForChanges')->assertNotDispatched("overview-line-stale.{$changed->id}");
+
+        $this->travel(5)->seconds();
+        $changed->deliverables()->first()->forceFill(['production_note' => 'Edited elsewhere'])->save();
+
+        $page->call('checkForChanges')
+            ->assertDispatched("overview-line-stale.{$changed->id}")
+            ->assertNotDispatched("overview-line-stale.{$untouched->id}");
+    }
+
     public function test_the_row_component_refuses_designers_even_when_called_directly(): void
     {
         $workOrder = $this->workOrderWithPieces('WO 500');
@@ -148,6 +242,8 @@ class OverviewPageTest extends DeliveryTestCase
 
         Livewire::actingAs($lead)->test(OverviewRowLine::class, ['workOrderId' => $workOrder->id])
             ->call('saveWorkOrderField', 'number', 'WO 999')->assertForbidden();
+        Livewire::actingAs($lead)->test(OverviewRowLine::class, ['workOrderId' => $workOrder->id])
+            ->call('assignDesigner', $lead->id)->assertForbidden();
 
         $this->assertSame('WO 500', $workOrder->fresh()->number);
     }

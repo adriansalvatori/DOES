@@ -2,16 +2,20 @@
 
 namespace App\Livewire\Overview\Page;
 
+use App\Application\Delivery\Actions\AssignDeliverable;
 use App\Application\Delivery\Actions\UpdateOverviewLineFields;
 use App\Application\Delivery\Actions\UpdateWorkOrderOverviewFields;
 use App\Application\Delivery\Data\OverviewFilters;
 use App\Application\Delivery\Data\OverviewRow;
 use App\Application\Delivery\Queries\OverviewQuery;
 use App\Domain\Delivery\Exceptions\WorkflowException;
+use App\Domain\Delivery\Models\Deliverable;
 use App\Domain\Delivery\Models\WorkOrder;
 use App\Enums\UserRole;
+use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -75,21 +79,50 @@ class OverviewRowLine extends Component
     }
 
     /**
-     * Saves a note, date or checkmark of the line.
+     * Saves a note, date, checkmark or estimate review of the line: on every deliverable, or just one from the accordion.
      */
-    public function saveLineField(string $field, mixed $value): array
+    public function saveLineField(string $field, mixed $value, ?int $deliverableId = null): array
     {
         $this->guard();
 
         $workOrder = WorkOrder::query()->findOrFail($this->workOrderId);
+        $only = $deliverableId !== null ? Deliverable::query()->findOrFail($deliverableId) : null;
 
-        return $this->attempt(function () use ($workOrder, $field, $value): array {
-            $diff = app(UpdateOverviewLineFields::class)($workOrder, [$field => $value], Auth::user());
+        return $this->attempt(function () use ($workOrder, $field, $value, $only): array {
+            $diff = app(UpdateOverviewLineFields::class)($workOrder, [$field => $value], Auth::user(), $only);
             $this->dispatch('toast', message: __('Saved.'));
 
             return ['ok' => true, 'value' => array_key_exists($field, $diff) ? $diff[$field]['new'] : $value];
         });
     }
+
+    /**
+     * Hands the open deliverables of the line (or one of them) to a designer, or clears the designer.
+     */
+    public function assignDesigner(?int $userId, ?int $deliverableId = null): array
+    {
+        $this->guard();
+
+        $assignee = $userId !== null ? User::query()->designTeam()->findOrFail($userId) : null;
+        $deliverables = Deliverable::query()
+            ->where('work_order_id', $this->workOrderId)
+            ->when($deliverableId !== null, fn ($query) => $query->whereKey($deliverableId))
+            ->get()
+            ->reject(fn (Deliverable $deliverable): bool => (bool) $deliverable->status?->isClosed());
+
+        return $this->attempt(function () use ($deliverables, $assignee): array {
+            $changed = $deliverables->filter(fn (Deliverable $deliverable): bool => app(AssignDeliverable::class)($deliverable, $assignee, Auth::user()))->count();
+            $this->dispatch('toast', message: $changed > 0 ? __('Saved.') : __('No changes.'));
+
+            return ['ok' => true];
+        });
+    }
+
+    /**
+     * Someone else changed this line: render it again.
+     */
+    #[On('overview-line-stale.{workOrderId}')]
+    public function refreshLine(): void {}
 
     private function storedValue(WorkOrder $workOrder, string $field): mixed
     {
@@ -103,19 +136,21 @@ class OverviewRowLine extends Component
     }
 
     /**
-     * @return array{ok: bool, value?: mixed}
+     * @return array{ok: bool, value?: mixed, message?: string}
      */
     private function attempt(callable $useCase): array
     {
         try {
             return $useCase();
         } catch (WorkflowException $exception) {
-            $this->dispatch('toast', message: $exception->getMessage(), type: 'error');
+            $message = $exception->getMessage();
         } catch (AuthorizationException) {
-            $this->dispatch('toast', message: __('You are not allowed to do this.'), type: 'error');
+            $message = __('You are not allowed to do this.');
         }
 
-        return ['ok' => false];
+        $this->dispatch('toast', message: $message, type: 'error');
+
+        return ['ok' => false, 'message' => $message];
     }
 
     public function render()

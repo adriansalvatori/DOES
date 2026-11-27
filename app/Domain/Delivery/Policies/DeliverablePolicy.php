@@ -130,6 +130,11 @@ class DeliverablePolicy
         return Roles::isManager($user);
     }
 
+    public function assign(User $user, Deliverable $deliverable): bool
+    {
+        return Roles::isManager($user);
+    }
+
     public function moveInProduction(User $user, Deliverable $deliverable): bool
     {
         return $this->isStaff($user) && ! $user->isSales();

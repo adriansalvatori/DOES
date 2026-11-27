@@ -17,6 +17,8 @@ final readonly class OverviewRow
      * @param  list<string>  $designers  Distinct assignee names.
      * @param  list<DeliverableFlag>  $flags
      * @param  array<string, int>  $statusCounts  Deliverable count per status code.
+     * @param  ?string  $reviewStatus  Who reviewed the estimate (CS or CAMILA), from the first deliverable that has it.
+     * @param  list<string>  $varies  Line fields whose value differs between the deliverables shown.
      */
     public function __construct(
         public WorkOrder $workOrder,
@@ -30,5 +32,12 @@ final readonly class OverviewRow
         public array $statusCounts,
         public bool $checked,
         public PromiseHealth $health,
+        public ?string $reviewStatus = null,
+        public array $varies = [],
     ) {}
+
+    public function varies(string $field): bool
+    {
+        return in_array($field, $this->varies, true);
+    }
 }

@@ -6,9 +6,6 @@
                     <x-lucide-merge class="w-4 h-4" aria-hidden="true" /> {{ __('Merge :count work orders', ['count' => count($selected)]) }}
                 </button>
             @endif
-            <button type="button" class="ui-btn ui-btn-primary" x-on:click="$dispatch('open-create-work-order', {})">
-                <x-lucide-plus class="w-4 h-4" aria-hidden="true" /> {{ __('New work order') }}
-            </button>
         </x-slot:actions>
         <x-slot:toolbar>
             <div class="flex items-center gap-1 rounded-control bg-sunken p-0.5" role="tablist">

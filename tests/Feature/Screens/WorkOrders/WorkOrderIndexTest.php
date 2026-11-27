@@ -89,13 +89,13 @@ class WorkOrderIndexTest extends TestCase
             ->assertSeeHtml('bg-wo');
     }
 
-    public function test_rows_link_to_the_work_order_page_and_new_button_opens_the_modal(): void
+    public function test_rows_link_to_the_work_order_page_and_the_new_button_lives_only_in_the_top_bar(): void
     {
         $workOrder = $this->workOrder('Kuyen');
 
         Livewire::actingAs(User::factory()->admin()->create())->test(WorkOrderIndex::class)
             ->assertSeeHtml(route('work-orders.show', $workOrder))
-            ->assertSeeHtml('open-create-work-order');
+            ->assertDontSeeHtml('open-create-work-order');
     }
 
     public function test_paginates_by_25(): void
@@ -115,7 +115,7 @@ class WorkOrderIndexTest extends TestCase
         $admin = User::factory()->admin()->create();
 
         app()->setLocale('en');
-        Livewire::actingAs($admin)->test(WorkOrderIndex::class)->assertSee('Work orders')->assertSee('New work order');
+        Livewire::actingAs($admin)->test(WorkOrderIndex::class)->assertSee('Work orders')->assertDontSee('New work order', 'The top bar already has it.');
 
         app()->setLocale('es');
         $html = Livewire::actingAs($admin)->test(WorkOrderIndex::class)->html();

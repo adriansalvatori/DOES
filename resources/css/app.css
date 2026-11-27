@@ -117,6 +117,7 @@ body {
  *   Surfaces:         .ui-card  .ui-section-title  .ui-label (form label)  .ui-kbd
  *   Tables:           <table class="ui-table">  (sticky sentence-case header, 44px rows, hover tint)
  *   Done work:        .ui-done  (dimmed, never struck through)
+ *   Dense grid:       <table class="ui-grid"> + .ui-cell-input  (Excel-style: 32px rows, always-on inputs, .is-frozen columns)
  */
 @layer components {
     .ui-input {
@@ -210,6 +211,55 @@ body {
 
     .ui-done {
         @apply text-ink-3;
+    }
+
+    /* Dense grid for Excel-style screens (Overview): 32px rows, 12px text, cells that are always inputs. */
+    .ui-grid {
+        @apply w-max min-w-full border-separate border-spacing-0 text-meta text-ink;
+    }
+    .ui-grid > thead > tr > th {
+        @apply sticky top-0 z-20 h-8 whitespace-nowrap border-b border-line-strong bg-canvas px-1.5 text-left align-middle text-meta font-medium text-ink-3;
+    }
+    .ui-grid > tbody > tr > td {
+        @apply h-8 border-b border-line bg-surface px-1 py-0.5 align-middle;
+    }
+    .ui-grid > tbody > tr.is-line:hover > td,
+    .ui-grid > tbody > tr.is-line:focus-within > td {
+        @apply bg-sunken;
+    }
+    .ui-grid > tbody > tr > td.is-danger {
+        @apply bg-danger-soft;
+    }
+    .ui-grid > tbody > tr > td.is-warn {
+        @apply bg-warn-soft;
+    }
+    .ui-grid > tbody > tr.is-detail > td {
+        @apply bg-canvas;
+    }
+    .ui-cell-input {
+        @apply h-7 w-full min-w-0 truncate rounded border border-transparent bg-transparent px-1 text-left text-meta text-ink placeholder:text-ink-3;
+        @apply hover:border-line focus:border-ink focus:bg-surface focus:outline-none focus:ring-2 focus:ring-ink/10;
+    }
+    .ui-cell-input[type='date'] {
+        @apply tabular-nums;
+    }
+    .ui-cell-input[type='date']::-webkit-calendar-picker-indicator {
+        @apply m-0 w-0 opacity-0;
+    }
+    .ui-cell-input[type='date']:hover::-webkit-calendar-picker-indicator,
+    .ui-cell-input[type='date']:focus::-webkit-calendar-picker-indicator {
+        @apply ml-0.5 w-3 opacity-60;
+    }
+    @media (min-width: 1024px) {
+        .ui-grid .is-frozen {
+            @apply sticky z-10;
+        }
+        .ui-grid > thead > tr > th.is-frozen {
+            @apply z-30;
+        }
+        .ui-grid .is-frozen-last {
+            box-shadow: inset -1px 0 0 var(--color-line-strong), 6px 0 8px -6px rgb(0 0 0 / 0.18);
+        }
     }
 }
 

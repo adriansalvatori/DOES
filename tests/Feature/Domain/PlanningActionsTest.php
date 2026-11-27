@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Domain;
 
+use App\Application\Delivery\Actions\AssignDeliverable;
 use App\Application\Delivery\Actions\PlanDeliverable;
 use App\Application\Delivery\Actions\UnplanDeliverable;
 use App\Domain\Delivery\Enums\BlockReason;
@@ -171,5 +172,44 @@ class PlanningActionsTest extends DeliveryTestCase
         $this->expectException(AuthorizationException::class);
 
         app(UnplanDeliverable::class)($this->deliverable(DeliverableStatus::IN_DESIGN), $this->designer());
+    }
+
+    public function test_assigning_changes_the_designer_but_keeps_the_planned_day(): void
+    {
+        $first = $this->designer('Ana');
+        $second = $this->designer('Bea');
+        $deliverable = $this->deliverable(DeliverableStatus::READY, ['assignee_id' => $first->id, 'planned_for' => '2026-10-02']);
+
+        $this->assertTrue(app(AssignDeliverable::class)($deliverable, $second, $this->manager()));
+        $this->assertFalse(app(AssignDeliverable::class)($deliverable, $second, $this->manager()), 'Same designer again is a no-op.');
+
+        $deliverable->refresh();
+        $this->assertSame($second->id, $deliverable->assignee_id);
+        $this->assertSame('2026-10-02', $deliverable->planned_for->toDateString());
+        $event = $deliverable->events()->where('event_type', 'assignee_changed')->sole();
+        $this->assertSame(['from_id' => $first->id, 'to_id' => $second->id], array_intersect_key($event->metadata, array_flip(['from_id', 'to_id'])));
+    }
+
+    public function test_assigning_closed_work_or_an_inactive_designer_is_refused(): void
+    {
+        $inactive = $this->designer('Old');
+        $inactive->forceFill(['active' => false])->save();
+
+        try {
+            app(AssignDeliverable::class)($this->deliverable(DeliverableStatus::READY), $inactive, $this->manager());
+            $this->fail('An inactive designer was accepted.');
+        } catch (WorkflowException) {
+        }
+
+        $this->expectException(WorkflowException::class);
+        app(AssignDeliverable::class)($this->deliverable(DeliverableStatus::DONE), $this->designer(), $this->manager());
+    }
+
+    public function test_designers_cannot_reassign_work(): void
+    {
+        $this->expectException(AuthorizationException::class);
+
+        $designer = $this->designer();
+        app(AssignDeliverable::class)($this->deliverable(DeliverableStatus::READY, ['assignee_id' => $designer->id]), null, $designer);
     }
 }

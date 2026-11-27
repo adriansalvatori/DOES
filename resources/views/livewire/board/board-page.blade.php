@@ -1,14 +1,5 @@
 <div wire:poll.visible.30s="checkForChanges" class="h-full flex flex-col gap-3 min-h-0 overflow-hidden">
     <x-ui.page-header :title="__('Board')">
-        @if($this->menuAbilities['createWorkOrder'])
-            <x-slot:actions>
-                <button type="button" class="ui-btn ui-btn-primary" @click="$dispatch('open-create-work-order', {})">
-                    <x-lucide-plus aria-hidden="true" />
-                    <span>{{ __('New work order') }}</span>
-                </button>
-            </x-slot:actions>
-        @endif
-
         <x-slot:toolbar>
             <div class="inline-flex items-center gap-0.5 p-0.5 rounded-control bg-sunken shrink-0" role="group" aria-label="{{ __('Area') }}">
                 @foreach(\App\Domain\Delivery\Enums\Area::cases() as $areaOption)
